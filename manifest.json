@@ -1,0 +1,10 @@
+{
+	"id": "markitdown-flow",
+	"name": "MarkItDown Flow",
+	"version": "0.1.0",
+	"minAppVersion": "0.15.0",
+	"description": "Convert PDFs, Office documents, images, archives, audio and more to structured Markdown via Microsoft MarkItDown — with offline → AI → Azure Document Intelligence → Content Understanding fallback phases.",
+	"author": "greatgc-flow",
+	"authorUrl": "https://github.com/greatgc-flow/MarkItDown-Flow",
+	"isDesktopOnly": true
+}

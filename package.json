@@ -1,0 +1,43 @@
+{
+	"name": "markitdown-flow",
+	"version": "0.1.0",
+	"description": "Obsidian plugin: convert files to Markdown via Microsoft MarkItDown with offline → AI → Azure Document Intelligence → Content Understanding fallback phases.",
+	"main": "main.js",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/greatgc-flow/MarkItDown-Flow.git"
+	},
+	"scripts": {
+		"generate-bundled": "node scripts/generate-bundled-scripts.mjs",
+		"predev": "npm run generate-bundled",
+		"dev": "node esbuild.config.mjs",
+		"prebuild": "npm run generate-bundled",
+		"build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
+		"pretest": "npm run generate-bundled",
+		"test": "jest",
+		"version": "node version-bump.mjs && git add manifest.json versions.json"
+	},
+	"keywords": [
+		"obsidian",
+		"obsidian-plugin",
+		"markitdown",
+		"markdown",
+		"conversion",
+		"pdf",
+		"docx",
+		"azure-document-intelligence"
+	],
+	"author": "greatgc-flow",
+	"license": "MIT",
+	"devDependencies": {
+		"@types/jest": "^30.0.0",
+		"@types/node": "^20.11.0",
+		"builtin-modules": "3.3.0",
+		"esbuild": "0.25.0",
+		"jest": "^30.3.0",
+		"obsidian": "latest",
+		"ts-jest": "^29.4.6",
+		"tslib": "^2.6.0",
+		"typescript": "^5.4.0"
+	}
+}
