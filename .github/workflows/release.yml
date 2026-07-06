@@ -10,6 +10,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      id-token: write # Required for artifact attestations
+      attestations: write
 
     steps:
       - uses: actions/checkout@v3
@@ -29,6 +31,14 @@ jobs:
           # Create engine zip to attach to the release (optional, since it's copied by the plugin on start, but good for backup)
           zip -r engine.zip engine/
 
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@v1
+        with:
+          subject-path: |
+            main.js
+            styles.css
+            manifest.json
+
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
@@ -37,5 +47,6 @@ jobs:
             manifest.json
             styles.css
             engine.zip
+          generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
