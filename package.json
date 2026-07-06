@@ -1,6 +1,6 @@
 {
 	"name": "markitdown-flow",
-	"version": "1.0.3",
+	"version": "1.0.4",
 	"description": "Obsidian plugin: convert files to Markdown via Microsoft MarkItDown with offline → AI → Azure Document Intelligence → Content Understanding fallback phases.",
 	"main": "main.js",
 	"repository": {
