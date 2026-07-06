@@ -105,9 +105,6 @@ export class FolderConvertModal extends Modal {
 				return;
 			}
 
-			// Determine the root folder path from the first file's webkitRelativePath
-			const firstFile = folderInput.files[0];
-			const rootFolderName = firstFile.webkitRelativePath.split('/')[0];
 
 			// Collect files from the HTML file input (these always include subfolders
 			// because webkitdirectory returns all descendants). We filter based on the

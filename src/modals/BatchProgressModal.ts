@@ -45,7 +45,7 @@ export class BatchProgressModal extends Modal {
 			`Conversion complete: ${success} successful, ${failed} failed`
 		);
 		this.currentFileEl.setText('Done!');
-		setTimeout(() => this.close(), 2000);
+		window.setTimeout(() => this.close(), 2000);
 	}
 
 	onClose() {

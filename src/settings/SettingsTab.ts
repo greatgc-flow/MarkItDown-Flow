@@ -1,4 +1,4 @@
-import { App, Notice, PluginSettingTab, Setting } from 'obsidian';
+import { App, PluginSettingTab, Setting } from 'obsidian';
 import type MarkitdownPlugin from '../../main';
 import { PluginArgsEditor } from './PluginArgsEditor';
 import { getStrings, type UIStrings } from '../utils/i18n';
@@ -6,7 +6,7 @@ import { DEFAULT_IMAGE_PIPELINE_CONFIG } from '../types/settings';
 
 export class SettingsTab extends PluginSettingTab {
 	plugin: MarkitdownPlugin;
-	private pythonPathDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+	private pythonPathDebounceTimer: number | null = null;
 
 	constructor(app: App, plugin: MarkitdownPlugin) {
 		super(app, plugin);
@@ -15,7 +15,7 @@ export class SettingsTab extends PluginSettingTab {
 
 	hide(): void {
 		if (this.pythonPathDebounceTimer) {
-			clearTimeout(this.pythonPathDebounceTimer);
+			window.clearTimeout(this.pythonPathDebounceTimer);
 			this.pythonPathDebounceTimer = null;
 			this.plugin.refreshDependencies().catch(console.error);
 		}
@@ -23,7 +23,7 @@ export class SettingsTab extends PluginSettingTab {
 
 	private cancelPythonPathDebounce(): void {
 		if (this.pythonPathDebounceTimer) {
-			clearTimeout(this.pythonPathDebounceTimer);
+			window.clearTimeout(this.pythonPathDebounceTimer);
 			this.pythonPathDebounceTimer = null;
 		}
 	}
@@ -49,8 +49,8 @@ export class SettingsTab extends PluginSettingTab {
 				.onChange(async (value) => {
 					this.plugin.settings.pythonPath = value;
 					await this.plugin.saveSettings();
-					if (this.pythonPathDebounceTimer) clearTimeout(this.pythonPathDebounceTimer);
-					this.pythonPathDebounceTimer = setTimeout(async () => {
+					if (this.pythonPathDebounceTimer) window.clearTimeout(this.pythonPathDebounceTimer);
+					this.pythonPathDebounceTimer = window.setTimeout(async () => {
 						this.pythonPathDebounceTimer = null;
 						await this.plugin.refreshDependencies();
 						if (this.containerEl.isConnected) this.display();

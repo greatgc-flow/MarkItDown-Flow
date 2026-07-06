@@ -7,7 +7,7 @@ import { MarkitdownSettings } from '../types/settings';
  * break YAML parsing.
  */
 function yamlEscape(value: string): string {
-	if (/[:#\[\]{}&*!|>'"`,@%\\]/.test(value) || value.trim() !== value) {
+	if (/[:#[\]{}&*!|>'"`,@%\\]/.test(value) || value.trim() !== value) {
 		return `"${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
 	}
 	return value;

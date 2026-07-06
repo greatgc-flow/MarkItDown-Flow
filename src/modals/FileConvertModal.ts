@@ -1,9 +1,9 @@
-import { App, Modal, Notice, TFile } from 'obsidian';
+import { App, Modal, Notice } from 'obsidian';
 import * as path from 'path';
 import * as fs from 'fs';
 import type MarkitdownPlugin from '../../main';
 import { FILE_INPUT_ACCEPT } from '../utils/fileTypes';
-import { getVaultBasePath, resolveOutputFolder, resolveStructuredOutputPath, toVaultRelative } from '../utils/paths';
+import { getVaultBasePath, resolveOutputFolder, resolveStructuredOutputPath } from '../utils/paths';
 
 export class FileConvertModal extends Modal {
 	private plugin: MarkitdownPlugin;

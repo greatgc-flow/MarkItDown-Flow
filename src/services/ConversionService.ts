@@ -8,7 +8,6 @@ import {
 import {
 	getVaultBasePath,
 	resolveOutputFolder,
-	resolveFilenameTemplate,
 	resolveStructuredOutputPath,
 	resolveAssetDir,
 	toVaultRelative,
