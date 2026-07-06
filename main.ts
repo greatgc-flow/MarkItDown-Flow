@@ -193,6 +193,8 @@ export default class MarkitdownPlugin extends Plugin {
 	private registerDropHandler() {
 		this.registerEvent(
 			this.app.workspace.on('editor-drop', (evt: DragEvent, editor: Editor, _info: MarkdownView | MarkdownFileInfo) => {
+				if (evt.defaultPrevented) return;
+				
 				const files = evt.dataTransfer?.files;
 				if (!files || files.length === 0) return;
 
