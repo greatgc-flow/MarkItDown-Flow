@@ -41,11 +41,11 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const projectRoot = resolve(__dirname, '..');
 
 const SOURCES = [
-	{ from: '../engine/src/markitdown_wrapper.py', exportName: 'MARKITDOWN_WRAPPER_PY' },
-	{ from: '../engine/src/image_router.py',       exportName: 'IMAGE_ROUTER_PY' },
-	{ from: '../engine/src/selftest.py',           exportName: 'SELFTEST_PY' },
-	{ from: '../engine/src/check_install.py',      exportName: 'CHECK_INSTALL_PY' },
-	{ from: '../engine/src/install_package.py',    exportName: 'INSTALL_PACKAGE_PY' },
+	{ from: 'engine/src/markitdown_wrapper.py', exportName: 'MARKITDOWN_WRAPPER_PY' },
+	{ from: 'engine/src/image_router.py',       exportName: 'IMAGE_ROUTER_PY' },
+	{ from: 'engine/src/selftest.py',           exportName: 'SELFTEST_PY' },
+	{ from: 'engine/src/check_install.py',      exportName: 'CHECK_INSTALL_PY' },
+	{ from: 'engine/src/install_package.py',    exportName: 'INSTALL_PACKAGE_PY' },
 ];
 
 const OUTPUT = 'src/utils/bundledPythonScripts.generated.ts';
