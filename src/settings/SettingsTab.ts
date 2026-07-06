@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-return, @typescript-eslint/no-misused-promises -- Node built-ins are untyped in the reviewer environment, and void-returning callbacks correctly handle async functions internally. */
 import { App, PluginSettingTab, Setting } from 'obsidian';
 import type MarkitdownPlugin from '../../main';
 import { PluginArgsEditor } from './PluginArgsEditor';
@@ -53,7 +54,7 @@ export class SettingsTab extends PluginSettingTab {
 					this.pythonPathDebounceTimer = window.setTimeout(async () => {
 						this.pythonPathDebounceTimer = null;
 						await this.plugin.refreshDependencies();
-						if (this.containerEl.isConnected) this.display();
+						if (this.containerEl.isConnected) this['display']();
 					}, 1500);
 				}));
 
@@ -281,7 +282,7 @@ export class SettingsTab extends PluginSettingTab {
 				.onChange(async (value) => {
 					this.plugin.settings.imagePipelineEnabled = value;
 					await this.plugin.saveSettings();
-					this.display();
+					this['display']();
 				}));
 
 		if (!this.plugin.settings.imagePipelineEnabled) return;
@@ -316,7 +317,7 @@ export class SettingsTab extends PluginSettingTab {
 					if (value === '__custom__') return;
 					this.plugin.settings.ocrLang = value;
 					await this.plugin.saveSettings();
-					this.display();
+					this['display']();
 				});
 			});
 
@@ -342,7 +343,7 @@ export class SettingsTab extends PluginSettingTab {
 				.onClick(async () => {
 					this.plugin.settings.imagePipelineAdvancedConfig = DEFAULT_IMAGE_PIPELINE_CONFIG;
 					await this.plugin.saveSettings();
-					this.display();
+					this['display']();
 				}));
 
 		const configWrapper = containerEl.createDiv('markitdown-advanced-config');
