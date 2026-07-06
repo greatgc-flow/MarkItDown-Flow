@@ -22,7 +22,7 @@ export class UrlConvertModal extends Modal {
 		const urlInput = inputContainer.createEl('input', {
 			attr: { type: 'url', placeholder: 'https://www.youtube.com/watch?v=...' },
 		});
-		urlInput.style.width = '100%';
+		urlInput.setCssStyles({ width: '100%' });
 
 		const buttonContainer = contentEl.createDiv('markitdown-button-container');
 		const convertButton = buttonContainer.createEl('button', {

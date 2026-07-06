@@ -73,7 +73,7 @@ export class SetupModal extends Modal {
 
 		// Progress log area
 		const logEl = el.createDiv('markitdown-setup-log');
-		logEl.style.display = 'none';
+		logEl.setCssStyles({ display: 'none' });
 
 		const buttonContainer = el.createDiv('markitdown-button-container');
 
@@ -89,7 +89,7 @@ export class SetupModal extends Modal {
 			installBtn.disabled = true;
 			installBtn.setText('Installing...');
 			cancelBtn.disabled = true;
-			logEl.style.display = 'block';
+			logEl.setCssStyles({ display: 'block' });
 			logEl.empty();
 
 			try {

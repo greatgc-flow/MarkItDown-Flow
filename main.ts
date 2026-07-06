@@ -325,7 +325,7 @@ export default class MarkitdownPlugin extends Plugin {
 			return;
 		}
 		try {
-			// eslint-disable-next-line @typescript-eslint/no-var-requires
+			// eslint-disable-next-line @typescript-eslint/no-var-requires -- Requires electron module dynamically for desktop environments
 			const { shell } = require('electron');
 			const failureReason = await shell.openPath(logsDir);
 			// Electron returns "" on success, an error string on failure.

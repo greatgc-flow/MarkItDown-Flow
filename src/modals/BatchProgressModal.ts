@@ -19,7 +19,7 @@ export class BatchProgressModal extends Modal {
 		// Progress bar
 		const progressBar = contentEl.createDiv('markitdown-progress-bar');
 		this.progressFill = progressBar.createDiv('markitdown-progress-fill');
-		this.progressFill.style.width = '0%';
+		this.progressFill.setCssStyles({ width: '0%' });
 
 		// Status text
 		this.statusEl = contentEl.createDiv('markitdown-progress-status');
@@ -32,7 +32,7 @@ export class BatchProgressModal extends Modal {
 
 	updateProgress(current: number, currentFile: string, success: number, failed: number) {
 		const pct = this.totalFiles > 0 ? Math.round((current / this.totalFiles) * 100) : 0;
-		this.progressFill.style.width = `${pct}%`;
+		this.progressFill.setCssStyles({ width: `${pct}%` });
 		this.statusEl.setText(
 			`${current} / ${this.totalFiles} files converted (${success} successful, ${failed} failed)`
 		);
@@ -40,7 +40,7 @@ export class BatchProgressModal extends Modal {
 	}
 
 	complete(success: number, failed: number) {
-		this.progressFill.style.width = '100%';
+		this.progressFill.setCssStyles({ width: '100%' });
 		this.statusEl.setText(
 			`Conversion complete: ${success} successful, ${failed} failed`
 		);

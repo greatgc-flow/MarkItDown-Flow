@@ -176,7 +176,6 @@ Styles for the Markitdown Obsidian plugin
   font-weight: 500;
 }
 
-<<<<<<< HEAD
 /* Resolved path hint */
 .markitdown-resolved-path-hint {
   font-size: 0.85em;
@@ -456,7 +455,7 @@ Styles for the Markitdown Obsidian plugin
   word-break: break-all;
 }
 
-.markitdown-history-clear-btn {
-  background-color: var(--background-modifier-error) !important;
-  color: var(--text-error) !important;
+button.markitdown-history-clear-btn {
+  background-color: var(--background-modifier-error);
+  color: var(--text-error);
 }

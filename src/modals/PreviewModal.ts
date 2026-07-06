@@ -33,14 +33,18 @@ export class PreviewModal extends Modal {
 		contentEl.addClass('markitdown-preview-modal');
 
 		// Force the Obsidian modal container to constrain its height
-		modalEl.style.maxHeight = '80vh';
-		modalEl.style.display = 'flex';
-		modalEl.style.flexDirection = 'column';
-		contentEl.style.display = 'flex';
-		contentEl.style.flexDirection = 'column';
-		contentEl.style.overflow = 'hidden';
-		contentEl.style.flex = '1';
-		contentEl.style.minHeight = '0';
+		modalEl.setCssStyles({
+			maxHeight: '80vh',
+			display: 'flex',
+			flexDirection: 'column'
+		});
+		contentEl.setCssStyles({
+			display: 'flex',
+			flexDirection: 'column',
+			overflow: 'hidden',
+			flex: '1',
+			minHeight: '0'
+		});
 
 		contentEl.createEl('h2', { text: 'Conversion preview' });
 
