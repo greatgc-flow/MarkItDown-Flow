@@ -5,7 +5,7 @@ export interface ConversionLogEntry {
 	success: boolean;
 	error?: string;
 	processingTimeMs?: number;
-	imagesExtracted?: number;
+	assetsExtracted?: number;
 }
 
 export interface PluginArgEntry {
@@ -37,6 +37,8 @@ export interface MarkitdownSettings {
 	enablePlugins: boolean;
 	pluginArgs: PluginArgEntry[];
 	docintelEndpoint: string;
+	docintelCredential?: string;
+	llmApiKey?: string;
 	outputPath: string;
 	assetExtractionEnabled: boolean;
 	assetSubfolderTemplate: string;
@@ -71,6 +73,8 @@ export const DEFAULT_SETTINGS: MarkitdownSettings = {
 	enablePlugins: false,
 	pluginArgs: [],
 	docintelEndpoint: '',
+	docintelCredential: '',
+	llmApiKey: '',
 	outputPath: '',
 	assetExtractionEnabled: false,
 	assetSubfolderTemplate: '{filename}-assets',
@@ -94,6 +98,8 @@ export interface ConversionOptions {
 	enablePlugins?: boolean;
 	pluginArgs?: Record<string, unknown>;
 	docintelEndpoint?: string;
+	docintelCredential?: string;
+	llmApiKey?: string;
 	extractAssets?: boolean;
 	assetDir?: string;
 	postProcess?: {
@@ -107,7 +113,7 @@ export interface ConversionResult {
 	outputPath?: string;
 	error?: string;
 	processingTime?: number;
-	imagesExtracted?: number;
+	assetsExtracted?: number;
 }
 
 export interface DependencyStatus {

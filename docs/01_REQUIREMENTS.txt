@@ -1,0 +1,498 @@
+
+
+
+[목적]
+
+MarkItDown ( https://github.com/microsoft/markitdown )의 기능을 모두 활용하는 옵시디언 플러그 인을 만들거야.
+
+옵시디언 플러그인 템플릿(예제 : https://github.com/ethanolivertroy/obsidian-markitdown)은 여기 있고,
+내 깃허브는 (현재 비어있음 - https://github.com/greatgc-flow/MarkItDown-Flow) 여기 있어.
+
+내가 실험용으로 작업하던 게 있는데, 옵시디언 플러그인 템플릿 기반으로, 내 MarkItDown-Flow에 다시 체계적으로 플러그인을 만들고 싶어.
+
+
+
+
+
+
+
+
+
+
+============================================
+
+"타임아웃/토큰 제한으로 중단" 상황 뿐 아니라. 위와같이 "화자 입력" 이 필요한 상황 등, 사용자의 확인/입력이 필요할때 멈췄다가 이어서 작업할있수 있도록 범용적으로 개선하고 싶어
+AI와 사용자와의 인터페이스 (진행사항 세부 공유 및 모호한 부분은 사용자를 통해 보완 하도록 기능 일시정지 후 입력 받기), 
+
+
+
+
+
+
+좋아. 지금 모든 내용 누락없이 유지하는 범위 내에 서 아래사항 엄밀하게 적용 및 검토 해줘. 조금 더 심플한 방향으로 다듬 고 싶어.,
+- 공통 함수 화 할 수 있는 모든 기능을 범용, 재사용 가능한 함수로 일반화/공통화 하고(가능하면, 기존 존재하는 범용 라이브러리 사용. 추가 패키지 설치 가능)
+- 특이사항은 Biz, 단에서 대응 할 수 있도록 파라메터화, 변수화, 하여 사용자가 유기적으로 대응 할 수있도록 해줘.
+- 로그는 디버깅 가능하도록 상세화, 
+- 모든 파라메터의 의미, 입력가능한 목록, 필수 기본값 모두 주석 등의 방법으로 표기 및 사전 지정하고, 
+- 입/출력/프로세싱 관련 validation 및 Waning 로그 출력.
+- 해당 모듈은 외부에서 N번 요청 될 수 있으므로, 전체적인 진행에 차질 없도록 해야함 (모덜 메시지박스 출력, 특정 프로그램 실행 등 지양)
+- 입력 형식 및 출력 형식(원본파일의 파일 속성 정보, exif 정보, offline, online 등 추출 정보)은 일반적이고 일정하게 재귀적/구조적으로 표기될 수 있도록 공통화.일반화.
+- base문서가 없는 원본의 경우, 빈 md파일을 base문서로 생성하여 출력 형식이 일관되도록 보완.
+- 전체적으로 재귀적으로 모든 항목들이 일반성/유연성/확장성/단순성/예외처리 일관성을 유지하고있는지 검토.
+- 연계할 수 있는 모든 API (LLM등) 계정발급 링크 주석으로 표기.
+- 파라미터 적용 및 가이드 (마크다운) 도 소스 내에 주석/예시 등으로 포함시켜줘.
+- 모든 변수/파라메터에 대한 설명, 주석, 입력 예시가 명시적으로 한번이라도 제시되어있는지 검토 및 보완.
+- Global 배포/사용 관점(소스, 주석 등 영어를 기본값으로 설정 및 출력, 그리고 다국어 지원여부(utf-8, 특수문자 안정성 등) 검토) 에서도 적합한지 검토 및 보완 (예: KST 시간, 출력 언어 지정 가능하도록 개선)
+- 최소 영어(Default), 한국어, 일본어, 중국어, 힌디어, 프랑스어, 스페인어, 아랍어 지원.
+- 타임존도 옵션처리 (시스템 타임존을 디폴트로 적용 함)
+- os / 플랫폼 독립적인지 (windows / linux / ios / mobile (안드로이드,ios 등) 등 고려)
+- 모든 문화권, 플랫폼 독립적으로 공통화 되어있는지 검토 및 문화권/플랫폼 특성을 모두 파라메터등으로 별도 처리.
+- 적용 된 모든 요건 빠짐없이 상세하게 명시.
+- global standard 및 최신 기술 경향에 맞게 만들어 졌는지 점검
+- 가능 한 안정 된 외부 패키지 의존 및 사용 (타 패키지 업데이트 시 본 소스의 기능도 향상되도록.)
+- 핵심 Core 패키지 (https://github.com/microsoft/markitdown) 와의 최신소스 확인하여 연동 성 확인 및 보완.
+- 적용 된 모든 요건 빠짐없이 표기(주석으로).
+- 실행시 필요한 모든 패키지 (예: pip install martitdown 등)  설치방법 표기 (주석으로)
+
+- 하드코딩 지양(가능 한 일반화/논리적으로 대응).  노코드 지향 (가능 한 풍부한 옵션/설정만으로 유연대응 하도록)
+- AI는 강제 사용옵션이 켜져있거나, 꼭 경우에만 사용.(토큰 절약 모드), 표준 출력에는 AI사용을 강제하는 항목은 없어야 함. (offline모드로만도 동작하도록)
+- 각 Phase(offline , online ai, doc_intelli 모드 등) 는 상호 독립적일것. 
+- 로그파일의 기본 출력폴더는 사용자 계정 루트폴더.
+
+- 재귀적/구조적으로 출력형식이 같도록. (첨부 된 파일의 속성정보, exif정보 등)
+- 출력 형식(원본파일의 파일 속성 정보, exif 정보, offline, online 등 추출 정보)은 일반적이고 일정하게 재귀적/구조적으로 표기될 수 있도록 공통화.일반화.
+
+- UI에서 Full Test 수행 및 결과 확인 할 수 있도록 구성 (별도 디렉토리에 샘플파일 및 스크립트 등 모아놓기)
+
+
+
+Azure Document Intelligence 는 최신모델 (2024-11-30 4.0 GA) 사용하도록 개선해줘.
+Azure Content Understanding 도 최신모델 사용할 수 있도록 개선해줘. 
+LLM API (ChatGPT, Claude, Gemini 등) 사용할 수 있는 설정 예제 및 코드 적절한지 검토 해줘
+
+
+
+[목적]
+- 멀티모달 파일을 md파일로 변환하는 옵시디언 플러그인(markitdown 활용.)을 만들거야. 
+- OS(win/ios/linux 등), 모바일(안드로이드/ios 등) 가능한 모든 플랫폼을 지원하는 플러그인으로 만들거야.
+
+[현황]
+- 현재, "markitdown_wrapper.py" 파일에 내 모든 요구사항을 반영한 핵심 코드가 들어있고, 그 외의 파일은 obsidian-markitdown 에서 가져온 그대로야.
+
+[요청사항
+- 출력창에는 변경된 사항만 간단히 출력해줘.
+- 첨부 zip 파일에 내가 작업하던 내용이 있어. 압축을 풀어서 내 요구사항을 반영 한 뒤, 다시 압축을 해서 내가 다운받도록 해줘.
+- 핵심 코드의 내용이 다른 파일들에 적용 되도록 해줘 (UI 등)
+- "--extract-images / --image-dir" 항목은 의미가 asset으로 확장되었으므로 명칭을 바꿔줘.
+- UI에 입력파일의 Base경로를 입력하는 항목을 추가해줘. 이를 기준으로 입력파일의 상대경로를 계산, 출력파일의 경로를 구조화 하기 위함이야.(출력파일 경로에 반영해줘.)
+- UI는 깔끔하게 MECE하게 재구성 하고, 환경 설정하는 부분도 개선해줘.
+- Command에 Log파일 폴더를 여는 명령 추가해줘.
+- 기존 Command 들 
+- 안되는건 안된다고 말해줘
+
+[참고]
+- 필요한 경우 다음 깃허브의 소스들을 참고.
+	https://github.com/obsidianmd/obsidian-sample-plugin
+	https://github.com/microsoft/markitdown
+	https://github.com/ethanolivertroy/obsidian-markitdown
+	
+
+============
+
+
+[API Console Links for Integrations]
+
+* OpenAI (GPT-4o)          : https://platform.openai.com/api-keys
+
+* Anthropic (Claude 3.5)   : https://console.anthropic.com/settings/keys
+
+* Google (Gemini 1.5)      : https://aistudio.google.com/app/apikey
+
+* Azure Document Intel     : https://portal.azure.com/
+
+
+
+
+
+
+	
+	irm https://claude.ai/install.ps1 | iex
+	winget install --id Git.Git -e --source winget
+	패스 경로 추가 %USERPROFILE%\.local\bin
+
+	프로젝트 디렉토리에서 터미널을 열고 Claude Code를 시작하십시오:
+	cd /path/to/your/project
+	claude
+
+	최근 대화 및 최신 업데이트가 포함된 Claude Code 환영 화면이 표시됩니다. 사용 가능한 명령을 보려면 /help를 입력하거나 이전 대화를 계속하려면 /resume을 입력
+	Claude 구독 또는 Console 계정의 경우 프롬프트를 따라 브라우저에서 인증을 완료하십시오. 나중에 계정을 전환하거나 다시 인증하려면 실행 중인 세션 내에서 /login을 입력하십시오:
+	/login
+
+
+
+
+==============================
+
+
+
+
+
+
+[개선 1]
+plugin_kwargs (실행부(convert)로 가는 값) 이 있는 정보 중에, 
+꼭 converter_kwargs (생성자(MarkItDown)로 가는 값)으로 들어가야 하는 정보는
+converter_kwargs 쪽으로 옮겨줘. 
+
+그리고, 사용자가 MarkItDown 으로 전달하는 파라메터(생성자 등) 키 와 이에 해당하는 값을 잘못 입력했을 경우에 경고 해주고,
+잘 모르는 항목은 꼭 누락없이 모두 실행부쪽 파라메터로 추가해줘.
+
+그리고 아래 각 항목(키)들에 대한 MarkItDown 소스 상 Default 값을 지정해주고, 변경가능한 값을 Array에 빠짐없이 명시, 주석에 뜻과 적용할 수 있는 값을 기입해줘.
+(아래 내용 중, 현재 키에 대한 값으로 기입된 정보는  MarkItDown 소스 상 default 값이 nullorEmpty 일 경우에만 디폴드 값으로 적용 해줘.)
+
+
+그리고 llm_client 등의 AI 관련한 키값들은 
+사용자가 입력 한 docintel_endpoint를 기준으로 분석해서 
+나머지 값들은(사용자가 입력하지 않은경우) 자동으로 최신 모델, 버전이 적용되도록 해줘. (gemini, chatgpt, azure, 클로드 등 대응되도록)
+그리고 시스템 환경변수는 사용하지 말고, 꼭 파라메터로 입력받은 정보로 판단 및 적용 해줘.
+
+<Args>
+enable_plugins True
+
+docintel_endpoint "https://greatgc.cognitiveservices.azure.com/"
+docintel_credential "<API_KEY_REMOVED_FOR_SECURITY>"
+docintel_file_types 
+
+pdf_layout True
+pdf_dpi 300
+pdf_tables "auto"
+
+extend_wide_tables True
+
+keep_data_uris True
+
+extract_decorations True
+convert_strikethrough True
+preserve_font_styles True
+
+max_image_size 1024
+
+heading_as_h1 False
+strip_white_spaces True
+ignore_scanned_under_text True
+ignore_links False
+overlap_threshold 2
+sort_by_position True
+join_broken_words True
+
+llm_client
+llm_model 
+llm_prompt 
+llm_detail 
+page_range 
+</Args>
+
+내가 누락한 키가 있으면 보완/추가해줘.
+
+
+[개선 2]
+이미지 경로에 공백이 있을경우의 방어로직
+이미지 저장경로를 "images\{원본_filename}￦" 으로 지정 한 경우, 원본파일이 띄어쓰기가 있으면 아래처럼 에러가 나.(옵시디언쪽 에러)
+예)**![](./-images--영수증 1_docx_2026-05-22_174632/image_001.jpg)**
+==> file names cannot end with a dot or space 유발. 
+(경로 중간에 공백이 있는데도 이 에러가 남.)
+
+[개선 3]
+image_dir 내용 중간에(양 끝단은 제외) 포함 된 "/ 또는 ￦" 문자의 경우, 단순히 다른 문자("_"등)로 바꾸지 말고, subfolder를 재귀적으로 생성하여 이미지 경로를 구조화 해줘.
+이미지 경들는 드라이브 문자가 들어가지 않고, 정확히 지정될 수 있도록 잘 고려해줘.
+(잘못된 예: "![](../../../D_/Vault/Conv/markitdown-outp/_images-%EC%98%81%EC%88%98%EC%A6%9D%201_docx_2026-05-22_200941/image_001.jpg)")
+
+[개선 4]
+임시 디렉토리(win 디스크 정리 시 지워질 수 있는)에 Log 기입 후 작업 정상/비정상 등(변환 성공한 파일, 실패한 파일, 이미지로 저장 성공한 파일, 실패한 파일 등) ==> 경로의 경우 Full 경로 기입.
+sys.exit 등 프로그램 종료 전 상황, print 등 사용자에게 보고한 내용 모두 로깅 해줘.
+성공/실패 한 파일 취합의 용이성을 위해, 파일의 경로(Full경로)를 같은 줄에 Log로 표시해줘.
+
+
+[개선 5]
+AI API 세팅이 되었는지 여부는 환경변수 대신, docintel_endpoint 정보 유무로 판단해줘.
+첫 시도에는 AI API 없이 Offline으로만 MarkItDown 을 수행하고, 결과가 "Conversion produced empty output" 일 경우에만,
+AI API에 접속하여 재시도 하도록 개선 해줘.
+
+
+[개선 6]
+최종으로 아래 소스를 참고해서 전체적으로 검토/보완 해줘.
+(소스 및 파라메터 참고 : https://github.com/microsoft/markitdown)
+
+
+[개선 7]
+추가로 개선할 거 있으면 다 개선해줘. (재귀적으로 MECE하게 검토 및 보완)
+
+
+
+
+
+
+전체 소스 출력해줘
+
+===============================
+
+
+[Args]
+enable_plugins True
+
+docintel_endpoint "https://greatgc.cognitiveservices.azure.com/"
+docintel_credential "<API_KEY_REMOVED_FOR_SECURITY>"
+docintel_file_types ["pdf"]
+
+pdf_layout True
+pdf_dpi 300
+pdf_tables "auto"
+
+extend_wide_tables True
+
+keep_data_uris True
+
+extract_decorations True
+convert_strikethrough True
+preserve_font_styles True
+
+max_image_size 1024
+
+heading_as_h1 False
+strip_white_spaces True
+ignore_scanned_under_text True
+ignore_links False
+overlap_threshold 2
+sort_by_position True
+join_broken_words True
+
+llm_client
+llm_model gpt-4o
+llm_prompt "Extract all text from this image, preserving layout and table structures strictly. Output in Korean."
+llm_detail "High"
+
+page_range [1,5]
+==========
+
+
+# MarkItDown-Flow: 오프라인 우선 이미지/표 처리 모듈 추가 요청
+
+## 목적
+현재 `markitdown_wrapper.py`의 이미지/스캔본 처리를 강화한다.
+**오프라인 도구를 최대한 동원하고, 통합 신뢰도가 임계값 미달일 때만 AI를 호출**하도록 한다.
+최종 목적: RAG 전처리(Gemini 타겟). 한국어 비중 높음.
+
+## 핵심 설계 원칙
+1. **오프라인 우선**: AI 호출은 최후 수단. 비용/프라이버시/속도 모두 절감.
+2. **앙상블 기반 신뢰도**: 단일 엔진 신뢰도는 신뢰 불가. 여러 엔진 + 일치도 + 분산으로 통합 점수 산출.
+3. **타입별 라우팅**: 이미지를 분류한 뒤 타입에 맞는 처리 적용 (photo/document/table/diagram/blank).
+4. **구조 신뢰도 분리**: 표는 OCR 신뢰도가 아닌 "그리드 정합성" 기준으로 평가.
+5. **Lazy Loading 유지**: 모든 신규 의존성은 기존 패턴대로 lazy import.
+
+---
+
+## 구현 요청 사항
+
+### 1. 새 모듈 파일 추가
+`src/utils/image_router.py` (또는 기존 구조에 맞는 위치)에 다음 컴포넌트들을 구현:
+
+- `ImageClassifier` — 이미지 타입 분류 (photo/document/table/diagram/blank)
+- `ImagePreprocessor` — deskew, denoise, binarize, super-resolution
+- `OCREnsemble` — Tesseract + EasyOCR + PaddleOCR 앙상블
+- `TableExtractor` — Table Transformer 기반 표 구조 추출
+- `SmartImageRouter` — 위 컴포넌트를 조합한 메인 라우터
+
+### 2. 이미지 분류 (오프라인 휴리스틱)
+```python
+def classify_image(pil_image) -> str:
+    """photo / document / table / diagram / blank"""
+    # 1. blank 감지: 평균 픽셀 값 극단 (245+ 또는 10-)
+    # 2. document vs photo: 흑백 양극단 픽셀 비율 (>60% → document)
+    # 3. table 감지: Hough Line으로 수평/수직선 다수 검출 시
+    # 4. diagram: edge density 높지만 텍스트 비율 낮음
+    # 반환: "photo" | "document" | "table" | "diagram" | "blank"
+```
+
+### 3. 전처리 파이프라인
+```python
+def preprocess_scan(image) -> tuple[Image, dict]:
+    """기울기 보정, 노이즈 제거, 이진화, 업스케일"""
+    # 1. deskew: Canny + HoughLinesP로 기울기 검출 후 회전
+    # 2. denoise: cv2.fastNlMeansDenoising
+    # 3. binarize: cv2.adaptiveThreshold (Otsu)
+    # 4. super-resolution: 짧은 변이 1000px 미만이면 Real-ESRGAN 또는 OpenCV super_res
+    # 반환: (전처리된 이미지, {"skew_angle": float, "was_upscaled": bool})
+    # skew_angle은 후속 신뢰도 디스카운트에 사용됨
+```
+
+### 4. OCR 앙상블 + 통합 신뢰도
+```python
+def ensemble_ocr_with_confidence(image, lang='kor+eng') -> dict:
+    """3개 엔진 돌려서 통합 신뢰도 산출"""
+    # 엔진별 실행 (각각 try/except, 실패 엔진은 제외)
+    # - Tesseract: pytesseract.image_to_data로 conf 추출
+    # - EasyOCR: reader.readtext로 (text, conf) 리스트
+    # - PaddleOCR: ocr.ocr로 결과 + score
+    
+    # 통합 신뢰도 공식 (가중합, 0~100):
+    # - engine_conf_mean      × 0.30   # 엔진 자체 평균 신뢰도
+    # - cross_engine_agreement × 0.35  # SequenceMatcher pairwise 평균 × 100
+    # - length_consistency     × 0.15  # 1 - CV(텍스트 길이)
+    # - cleanliness            × 0.10  # 1 - garbage_char_ratio
+    # - conf_stdev_inverse     × 0.10  # max(0, 1 - stdev/30) × 100
+    
+    # garbage 정의: re.findall(r'[^\w\s가-힣.,!?;:\-/()]', text) / len(text)
+    
+    # 최종 텍스트 선택: agreement > 0.7일 때 max conf 엔진 결과 채택, 아니면 None
+    
+    return {
+        'text': str | None,
+        'confidence': float,            # 0~100
+        'breakdown': dict,              # 각 항목 점수
+        'engine_results': dict,         # 디버깅용 원본
+        'should_escalate_to_ai': bool   # confidence < 70 or text is None
+    }
+```
+
+### 5. 표 추출 + 구조 신뢰도
+```python
+def extract_table_with_structure_confidence(image) -> dict:
+    """Microsoft Table Transformer로 표 구조 분석"""
+    # 1. microsoft/table-transformer-structure-recognition로 셀 그리드 검출
+    # 2. 각 셀 OCR (앙상블)
+    # 3. 구조 신뢰도 산출:
+    #    - row_alignment: 같은 row 셀들 y좌표 분산 (낮을수록 좋음)
+    #    - col_count_consistency: 1 - stdev(row별 col 개수) / mean
+    #    - cell_detection_conf: 셀별 검출 score 평균
+    # 4. column_consistency: 각 열의 데이터 타입 일관성 (숫자/날짜/문자 비율)
+    
+    return {
+        'table': list[dict],            # [{row, col, bbox, text, ocr_conf}, ...]
+        'structure_confidence': float,  # 0~1
+        'column_consistency': float,    # 0~1
+        'unified_confidence': float,    # 위 둘 + OCR 가중합
+        'should_escalate_to_ai': bool   # structure<0.5 or column<0.6
+    }
+```
+
+### 6. 메인 라우터 (의사결정 트리)
+```python
+class SmartImageRouter:
+    def route(self, image_source, ai_configs, cfg) -> dict:
+        """
+        1. 이미지 로드 → classify_image
+        2. blank → 스킵
+        3. photo → 메타데이터만 (llm_prompt 있을 때만 AI)
+        4. document/diagram:
+           - preprocess_scan (skew_angle 기록)
+           - ensemble_ocr_with_confidence
+           - skew_angle > 5도면 confidence *= 0.9
+           - should_escalate_to_ai → True면 _run_ai 호출
+        5. table:
+           - extract_table_with_structure_confidence
+           - should_escalate_to_ai → True면 AI hint와 함께 위임
+        
+        반환 형식은 기존 _run_offline / _run_ai와 호환되게:
+        {"content": str, "status": str, "confidence": float, "method": str}
+        """
+```
+
+### 7. 기존 `MarkItDownEngine`과의 통합
+`MarkItDownEngine.run_conversion`에서 이미지 MIME 처리 흐름을 변경:
+
+- 현재: `ai_target_mimes` 매칭 시 바로 `_run_ai` 호출
+- 변경: 이미지 MIME이면 **먼저 `SmartImageRouter.route()` 호출**, 결과의 `should_escalate_to_ai`가 True일 때만 기존 `_run_ai` 폴백
+
+### 8. ConfigManager에 신규 파라미터 추가
+```python
+'ocr_confidence_threshold':     (int,   70,    None, "OCR 통합 신뢰도 AI 에스컬레이션 임계값"),
+'table_structure_threshold':    (float, 0.5,   None, "표 구조 신뢰도 임계값"),
+'enable_ocr_ensemble':          (bool,  True,  None, "OCR 앙상블 활성화 (False면 Tesseract만)"),
+'enable_table_extraction':      (bool,  True,  None, "Table Transformer 활성화"),
+'enable_super_resolution':      (bool,  False, None, "저해상도 이미지 업스케일 (느림)"),
+'ocr_engines':                  (list,  ['tesseract', 'easyocr', 'paddleocr'], None, "사용할 OCR 엔진"),
+'preprocess_deskew':            (bool,  True,  None, "기울기 자동 보정"),
+```
+
+### 9. 의존성 관리 (Lazy Loading 필수)
+```bash
+# Core (기존)
+pip install markitdown Pillow geopy
+
+# OCR Ensemble (선택)
+pip install pytesseract easyocr paddlepaddle paddleocr
+
+# Table Extraction (선택)
+pip install transformers torch timm
+
+# Preprocessing (선택)
+pip install opencv-python numpy
+
+# Super Resolution (선택, 무거움)
+pip install realesrgan basicsr
+```
+
+기존 코드의 lazy import 패턴 따라서 모든 신규 의존성도 try/except ImportError로 감싸고, 미설치 시 해당 엔진/기능만 비활성화되고 나머지는 정상 동작하도록.
+
+### 10. 로깅
+기존 LoggerSetup 패턴 그대로 사용. 각 단계마다 다음 정보 DEBUG 로그:
+- 분류 결과
+- 전처리 단계별 정보 (skew_angle 등)
+- 엔진별 OCR 결과 (텍스트 일부 + 신뢰도)
+- 통합 신뢰도 breakdown
+- AI 에스컬레이션 여부와 이유
+
+---
+
+## 우선순위
+1. **P0**: `ImageClassifier`, `ImagePreprocessor` (deskew만), `OCREnsemble` (Tesseract + EasyOCR)
+2. **P1**: `SmartImageRouter`, `MarkItDownEngine` 통합, ConfigManager 파라미터
+3. **P2**: PaddleOCR 추가, `TableExtractor`
+4. **P3**: Super-resolution, 고급 전처리
+
+P0/P1까지만 구현해도 AI 호출이 크게 줄어들 것으로 예상.
+
+## 검증
+구현 후 테스트용으로 다음 이미지 케이스 처리 결과를 보여줄 것:
+- (1) 깨끗한 한국어 문서 스캔 → 신뢰도 90+, AI 미호출
+- (2) 기울어진 스캔본 → deskew 후 신뢰도 회복
+- (3) 정형 표 → 표 구조 추출 성공
+- (4) 자연 사진 → EXIF만, OCR 스킵
+
+
+
+
+==================
+
+
+# MarkItDown Flow 운영 및 최적화 요건 정의서
+
+## 1. 파이프라인 라우팅 및 엔진 최적화 (Pipeline & Routing)
+- [ ] 단계별 강제 실행 방지
+  - `exhaustive_mode: false` 설정으로 불필요한 후순위 API 호출 원천 차단
+- [ ] 파일 특성에 따른 타겟 MIME 및 Phase 분리
+  - 일반 사진, 인포그래픽 (`image/*`) -> Phase 2 (LLM Vision)에 할당하여 맥락적 설명 추출
+  - 표, 체크박스가 포함된 문서/영수증 (`application/pdf` 등) -> Phase 3 (Azure Doc Intel, `prebuilt-layout`)에 할당하여 레이아웃 보존
+  - 비디오/오디오 (`video/*`, `audio/*`) -> Phase 4 (Azure Content)에 제한적 할당
+- [ ] 프롬프트를 통한 1차 분류 로직 (Phase 2)
+  - `llm_prompt`에 "텍스트 위주 문서인지, 풍경/사물 사진인지 AI가 먼저 판단하여 처리 방식을 달리하라"는 지시어 추가
+- [ ] 한글 OCR(Tesseract) 정확도 보정
+  - `config='--psm 6'` (단일 텍스트 블록 가정) 옵션을 추가하여 한글 글자 사이 불필요한 공백 생성 문제 해결
+  - (옵션) 영어/숫자는 Tesseract, 한글 구역은 EasyOCR로 처리하는 하이브리드 전처리 검토
+
+## 2. API 비용 통제 및 장애 대응 (Cost & Failover)
+- [ ] 외부 클라우드 예산 한도(Hard Limit) 설정
+  - 대량 배치(Batch) 작업 시 과금 폭탄을 막기 위해 Azure, OpenAI 콘솔에서 예산 알림 및 차단 설정 필수
+- [ ] 실시간 로깅 모니터링
+  - 대규모 변환 작업 시 터미널에서 `tail -f ~/omnidata_logs/engine_YYYYMMDD.log`를 실행하여 HTTP 429(Rate Limit) 에러 즉각 인지
+- [ ] Phase 2 (LLM Vision) 우회(Failover) 라우팅 구성
+  - `ai_clients` 배열 순서를 [우선순위 고성능 모델] -> [대체용 저비용/무료 모델 (예: Gemini 2.0 Flash)] 순으로 구성하여 쿼터 초과 시 자동 대비
+
+## 3. 파이썬 의존성 및 인프라 관리 (Environment Isolation)
+- [ ] 전용 가상 환경(venv) 격리 구축
+  - 시스템 전역 환경 충돌을 막기 위해 옵시디언 볼트(Vault) 외부 안전한 경로에 가상 환경 구축 (예: `~/.obsidian_python_env`)
+- [ ] 플러그인 런타임 수동 바인딩
+  - 플러그인 설정의 **Python path**를 가상 환경의 실행 파일 경로(`.../bin/python`)로 직접 지정
+- [ ] 인프라 재구성(Teardown) 원칙
+  - 의존성 꼬임 발생 시 개별 패키지 디버깅 대신, 가상 환경 폴더 전체 삭제(`rm -rf`) 후 재설치하는 방식으로 관리
+- [ ] 미사용 모듈 원천 차단
+  - 사용하지 않는 Phase(예: 4단계)는 파이썬 패키지(azure-ai-contentunderstanding 등) 설치를 생략하고 설정의 Endpoint 값을 비워둠

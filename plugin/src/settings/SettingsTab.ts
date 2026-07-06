@@ -189,7 +189,7 @@ export class SettingsTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName('Azure Document Intelligence endpoint')
-			.setDesc('Endpoint URL for Azure AI Document Intelligence (e.g. https://your-resource.cognitiveservices.azure.com/). Enter the API key in the Plugin Arguments editor below.')
+			.setDesc('Endpoint URL for Azure AI Document Intelligence (e.g. https://your-resource.cognitiveservices.azure.com/).')
 			.addText(text => text
 				.setPlaceholder('https://your-resource.cognitiveservices.azure.com/')
 				.setValue(this.plugin.settings.docintelEndpoint)
@@ -197,6 +197,32 @@ export class SettingsTab extends PluginSettingTab {
 					this.plugin.settings.docintelEndpoint = value;
 					await this.plugin.saveSettings();
 				}));
+
+		new Setting(containerEl)
+			.setName('Azure Document Intelligence credential (API Key)')
+			.setDesc('Securely stored API key for Azure Document Intelligence. Sent via environment variable, never exposed in logs.')
+			.addText(text => {
+				text.inputEl.type = 'password';
+				text.setPlaceholder('Enter your API key')
+					.setValue(this.plugin.settings.docintelCredential || '')
+					.onChange(async (value) => {
+						this.plugin.settings.docintelCredential = value;
+						await this.plugin.saveSettings();
+					});
+			});
+
+		new Setting(containerEl)
+			.setName('LLM API Key (OpenAI/Azure OpenAI)')
+			.setDesc('API key for LLM fallback processing when offline OCR fails. Sent via environment variable.')
+			.addText(text => {
+				text.inputEl.type = 'password';
+				text.setPlaceholder('Enter your LLM API key')
+					.setValue(this.plugin.settings.llmApiKey || '')
+					.onChange(async (value) => {
+						this.plugin.settings.llmApiKey = value;
+						await this.plugin.saveSettings();
+					});
+			});
 
 		new Setting(containerEl)
 			.setName('Enable plugins')

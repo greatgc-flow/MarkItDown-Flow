@@ -149,7 +149,7 @@ class LoggerSetup:
         file_handler.setLevel(logging.DEBUG)
         file_handler.setFormatter(formatter)
         
-        console_handler = logging.StreamHandler(sys.stdout)
+        console_handler = logging.StreamHandler(sys.stderr)
         console_handler.setLevel(logging.INFO)
         console_handler.setFormatter(formatter)
  
@@ -1060,9 +1060,7 @@ def main():
     # ─────────────────────────────────────────────────────────────────────────
     # CLI contract with the TypeScript layer (MarkitdownConverter.ts):
     #   - stdout  : on success, a single JSON line
-    #               {"success": true, "images_extracted": N, "processing_time_ms": M}
-    #               ("images_extracted" key kept for backwards compatibility with the
-    #               existing TS contract even though the concept is now "assets".)
+    #               {"success": true, "assets_extracted": N, "processing_time_ms": M}
     #   - stderr  : on failure, a single JSON line {"error": "...", "type": "..."}
     #   - exit    : 0 = success, 1 = failure
     # All human-readable logs go to ~/omnidata_logs/engine_YYYYMMDD.log (and to the
@@ -1095,6 +1093,18 @@ def main():
             raw_kwargs['enable_plugins'] = True
         if args.docintel_endpoint:
             raw_kwargs.setdefault('docintel_endpoint', args.docintel_endpoint)
+            
+        doc_cred = os.environ.get('DOCINTEL_CREDENTIAL')
+        if doc_cred:
+            raw_kwargs['docintel_credential'] = doc_cred
+            
+        llm_key = os.environ.get('LLM_API_KEY')
+        if llm_key:
+            if 'ai_clients' in raw_kwargs and isinstance(raw_kwargs['ai_clients'], list) and len(raw_kwargs['ai_clients']) > 0:
+                raw_kwargs['ai_clients'][0]['api_key'] = llm_key
+            else:
+                raw_kwargs['ai_clients'] = [{'client_type': 'openai', 'api_key': llm_key, 'model': 'gpt-4o'}]
+
         pipeline = OmniDataPipeline(raw_kwargs)
 
         master_md = f"---\nSource: {full_src}\nConverted at: {get_time_str(pipeline.cfg.get('timezone_offset'))}\n---\n\n"
@@ -1118,7 +1128,7 @@ def main():
         elapsed_ms = int((time.time() - start_time) * 1000)
         print(json.dumps({
             "success": True,
-            "images_extracted": pipeline.asset_count,
+            "assets_extracted": pipeline.asset_count,
             "processing_time_ms": elapsed_ms,
         }))
     except Exception as e:

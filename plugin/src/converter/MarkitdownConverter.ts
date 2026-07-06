@@ -98,8 +98,26 @@ export class MarkitdownConverter {
 		const scriptPath = getPythonScriptPath('markitdown_wrapper.py', this.pluginDir);
 		const args = this.buildArgs(sourceArgs, outputPath, options);
 
+		// T7: Check for missing API keys if AI features are enabled
+		if (options?.docintelEndpoint && !options?.docintelCredential?.trim()) {
+			return {
+				success: false,
+				error: 'API key is missing: docintelCredential is required when docintelEndpoint is set',
+				processingTime: Date.now() - startTime,
+			};
+		}
+
+		// T5: Pass API keys via environment variables, not CLI arguments
+		const env: Record<string, string> = {};
+		if (options?.docintelCredential) {
+			env['DOCINTEL_CREDENTIAL'] = options.docintelCredential;
+		}
+		if (options?.llmApiKey) {
+			env['LLM_API_KEY'] = options.llmApiKey;
+		}
+
 		try {
-			const result = await runPythonScript(this.pythonPath, scriptPath, args);
+			const result = await runPythonScript(this.pythonPath, scriptPath, args, env);
 
 			if (result.exitCode !== 0) {
 				return {
@@ -139,7 +157,7 @@ export class MarkitdownConverter {
 				success: true,
 				outputPath,
 				processingTime: Date.now() - startTime,
-				imagesExtracted: MarkitdownConverter.parseImagesExtracted(result.stdout),
+				assetsExtracted: MarkitdownConverter.parseAssetsExtracted(result.stdout),
 			};
 		} catch (error: unknown) {
 			const rawMessage = error instanceof Error ? error.message : String(error);
@@ -164,10 +182,10 @@ export class MarkitdownConverter {
 	}
 
 	/** Parse the wrapper's stdout (single JSON line) for the asset count. */
-	private static parseImagesExtracted(stdout: string): number {
+	private static parseAssetsExtracted(stdout: string): number {
 		try {
 			const response = JSON.parse(stdout);
-			return response?.images_extracted ?? 0;
+			return response?.assets_extracted ?? 0;
 		} catch {
 			// stdout may be empty or non-JSON — count as zero.
 			return 0;

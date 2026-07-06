@@ -41,6 +41,7 @@ Notes:
 from __future__ import annotations
 
 import logging
+import os
 import re
 import statistics
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -49,6 +50,37 @@ from typing import Any, Optional
 
 # The wrapper sets up the "OmniDataEngine" logger; we attach the same.
 logger = logging.getLogger("OmniDataEngine")
+
+
+def _configure_tesseract() -> None:
+    """
+    Auto-detect and configure Tesseract on Windows (UB-Mannheim install).
+    Sets:
+      - pytesseract.tesseract_cmd  → binary path
+      - TESSDATA_PREFIX             → user tessdata dir (if it has more lang files)
+    Safe to call multiple times (idempotent).
+    """
+    if os.name != 'nt':
+        return
+    bin_path = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
+    if not os.path.exists(bin_path):
+        return
+
+    # pytesseract: point at the binary
+    try:
+        import pytesseract  # type: ignore
+        pytesseract.pytesseract.tesseract_cmd = bin_path
+    except ImportError:
+        pass
+
+    # TESSDATA_PREFIX: prefer user dir (~/.tessdata) if it has kor.traineddata
+    user_tessdata = os.path.join(os.path.expanduser('~'), '.tessdata')
+    if os.path.isfile(os.path.join(user_tessdata, 'kor.traineddata')):
+        os.environ.setdefault('TESSDATA_PREFIX', user_tessdata)
+        logger.debug(f"[Tesseract] TESSDATA_PREFIX → {user_tessdata}")
+
+
+_configure_tesseract()
 
 
 # ─────────────────────────────────────────────────────────────────────────────

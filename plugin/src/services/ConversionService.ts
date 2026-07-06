@@ -103,8 +103,8 @@ export class ConversionService {
 	 */
 	postConversionNotice(label: string, result: ConversionResult): void {
 		if (result.success) {
-			const msg = result.imagesExtracted
-				? `${label} (${result.imagesExtracted} assets extracted)`
+			const msg = result.assetsExtracted
+				? `${label} (${result.assetsExtracted} assets extracted)`
 				: `${label} successfully`;
 			new Notice(msg);
 		} else {
@@ -140,6 +140,8 @@ export class ConversionService {
 		const options: ConversionOptions = {
 			enablePlugins: settings.enablePlugins,
 			docintelEndpoint: settings.docintelEndpoint || undefined,
+			docintelCredential: settings.docintelCredential || undefined,
+			llmApiKey: settings.llmApiKey || undefined,
 		};
 
 		const baseArgs: Record<string, unknown> =
@@ -191,7 +193,7 @@ export class ConversionService {
 			success: result.success,
 			error: result.error,
 			processingTimeMs: elapsed,
-			imagesExtracted: result.imagesExtracted,
+			assetsExtracted: result.assetsExtracted,
 		});
 		await this.plugin.saveSettings();
 

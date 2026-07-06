@@ -78,9 +78,9 @@ export class HistoryModal extends Modal {
 		if (entry.processingTimeMs !== undefined) {
 			details.push(`${entry.processingTimeMs}ms`);
 		}
-		if (entry.imagesExtracted !== undefined && entry.imagesExtracted > 0) {
+		if (entry.assetsExtracted !== undefined && entry.assetsExtracted > 0) {
 			details.push(
-				`${entry.imagesExtracted} asset${entry.imagesExtracted !== 1 ? 's' : ''} extracted`
+				`${entry.assetsExtracted} asset${entry.assetsExtracted !== 1 ? 's' : ''} extracted`
 			);
 		}
 		if (details.length > 0) {
