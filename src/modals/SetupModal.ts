@@ -1,9 +1,12 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-return, @typescript-eslint/no-misused-promises -- Node built-ins are untyped in the reviewer environment, and void-returning callbacks correctly handle async functions internally. */
-import { App, Modal, Notice } from 'obsidian';
+import { App, Modal, Notice, Setting, normalizePath } from 'obsidian';
 import type MarkitdownPlugin from '../../main';
+import * as path from 'path';
+import { spawn } from 'child_process';
+import * as fs from 'fs';
 
 export class SetupModal extends Modal {
 	private plugin: MarkitdownPlugin;
+	private logEl!: HTMLElement;
 
 	constructor(app: App, plugin: MarkitdownPlugin) {
 		super(app);
@@ -13,114 +16,98 @@ export class SetupModal extends Modal {
 	onOpen() {
 		const { contentEl } = this;
 		contentEl.addClass('markitdown-modal');
-		contentEl.createEl('h2', { text: 'Markitdown setup' });
+		contentEl.empty();
+		contentEl.createEl('h2', { text: 'Markitdown Auto-Setup Wizard' });
 
-		if (!this.plugin.dependencyStatus.pythonInstalled) {
-			this.showPythonNotFound(contentEl);
-			return;
-		}
-
-		if (this.plugin.dependencyStatus.markitdownInstalled) {
-			this.showAlreadyInstalled(contentEl);
-			return;
-		}
-
-		this.showInstallPrompt(contentEl);
-	}
-
-	private showPythonNotFound(el: HTMLElement) {
-		el.createEl('p', {
-			text: 'Python is not installed or not found at the configured path.',
-		});
-
-		const detailsEl = el.createEl('div', { cls: 'markitdown-setup-details' });
-		detailsEl.createEl('p', { text: 'To get started:' });
-		const list = detailsEl.createEl('ol');
-		list.createEl('li', { text: 'Install Python 3.8+ from python.org' });
-		list.createEl('li', { text: 'Set the correct Python path in plugin settings' });
-		list.createEl('li', { text: 'Restart Obsidian or re-run this setup' });
-
-		const buttonContainer = el.createDiv('markitdown-button-container');
-		const settingsBtn = buttonContainer.createEl('button', { text: 'Open settings' });
-		settingsBtn.addEventListener('click', () => {
-			this.close();
-			// No public API exists to open the settings tab to a specific plugin.
-			// app.setting is an internal Obsidian API — may break in future versions.
-			// @ts-expect-error — Obsidian internal API: no public method to open settings
-			this.app.setting?.open();
-			// @ts-expect-error — Obsidian internal API: no public method to navigate to plugin tab
-			this.app.setting?.openTabById(this.plugin.manifest.id);
-		});
-	}
-
-	private showAlreadyInstalled(el: HTMLElement) {
-		const ver = this.plugin.dependencyStatus.markitdownVersion;
-		el.createEl('p', {
-			text: `Markitdown is installed${ver ? ` (v${ver})` : ''}. You're ready to convert files.`,
-		});
-		const buttonContainer = el.createDiv('markitdown-button-container');
-		const closeBtn = buttonContainer.createEl('button', { text: 'Close' });
-		closeBtn.addEventListener('click', () => this.close());
-	}
-
-	private showInstallPrompt(el: HTMLElement) {
-		el.createEl('p', {
-			text: 'Markitdown is not installed. Would you like to install it now?',
-		});
-		el.createEl('p', {
-			text: 'This will install the markitdown Python package using pip.',
+		contentEl.createEl('p', {
+			text: 'This wizard will automatically set up a Python virtual environment (Venv) and install all required packages (MarkItDown, OCR engines, etc.) so you do not have to touch the terminal.',
 			cls: 'setting-item-description',
 		});
 
-		// Progress log area
-		const logEl = el.createDiv('markitdown-setup-log');
-		logEl.setCssStyles({ display: 'none' });
+		// Suggest default path if empty
+		const adapter = this.app.vault.adapter as any;
+		const basePath = adapter.basePath || '';
+		const defaultEnvPath = path.join(basePath, '.obsidian', 'plugins', 'markitdown-flow', 'env');
 
-		const buttonContainer = el.createDiv('markitdown-button-container');
+		if (!this.plugin.settings.envRootPath) {
+			this.plugin.settings.envRootPath = defaultEnvPath;
+			this.plugin.saveSettings().catch(console.error);
+		}
+
+		new Setting(contentEl)
+			.setName('Environment Root Folder')
+			.setDesc('Where to install the Python virtual environment.')
+			.addText(text => text
+				.setValue(this.plugin.settings.envRootPath)
+				.onChange(async (value) => {
+					this.plugin.settings.envRootPath = value;
+					await this.plugin.saveSettings();
+				}));
+
+		const buttonContainer = contentEl.createDiv('markitdown-button-container');
+		buttonContainer.style.marginTop = '20px';
 
 		const cancelBtn = buttonContainer.createEl('button', { text: 'Cancel' });
 		cancelBtn.addEventListener('click', () => this.close());
 
 		const installBtn = buttonContainer.createEl('button', {
-			text: 'Install Markitdown',
+			text: '🚀 Start Installation',
 			cls: 'mod-cta',
 		});
 
+		this.logEl = contentEl.createDiv('markitdown-setup-log');
+		this.logEl.setCssStyles({
+			display: 'none',
+			marginTop: '15px',
+			padding: '10px',
+			background: 'var(--background-secondary)',
+			border: '1px solid var(--background-modifier-border)',
+			borderRadius: '4px',
+			fontFamily: 'monospace',
+			fontSize: '12px',
+			maxHeight: '300px',
+			overflowY: 'auto',
+			whiteSpace: 'pre-wrap',
+		});
+
 		installBtn.addEventListener('click', async () => {
+			if (!this.plugin.settings.envRootPath) {
+				new Notice('Please specify an environment root folder.');
+				return;
+			}
+			
 			installBtn.disabled = true;
 			installBtn.setText('Installing...');
 			cancelBtn.disabled = true;
-			logEl.setCssStyles({ display: 'block' });
-			logEl.empty();
+			this.logEl.setCssStyles({ display: 'block' });
+			this.logEl.empty();
 
 			try {
-				const success = await this.plugin.installMarkitdown((line) => {
-					const lineEl = logEl.createEl('div', {
-						text: line,
-						cls: 'markitdown-setup-log-line',
-					});
-					lineEl.scrollIntoView();
-				});
-
-				if (success) {
-					new Notice('Markitdown installed successfully!');
-					await this.plugin.refreshDependencies();
-					this.close();
-				} else {
-					logEl.createEl('div', {
-						text: 'Installation failed. Check the log above for details.',
-						cls: 'markitdown-setup-log-error',
-					});
-					installBtn.disabled = false;
-					installBtn.setText('Try again');
-					cancelBtn.disabled = false;
-				}
+				await this.runAutoSetup(this.plugin.settings.envRootPath);
+				
+				// Update python path in settings to the new venv
+				const isWin = process.platform === 'win32';
+				const newPythonPath = path.join(
+					this.plugin.settings.envRootPath,
+					isWin ? 'Scripts' : 'bin',
+					isWin ? 'python.exe' : 'python'
+				);
+				this.plugin.settings.pythonPath = newPythonPath;
+				await this.plugin.saveSettings();
+				
+				this.log('✅ Setup completed successfully!');
+				this.log(`✅ Configured Python Path: ${newPythonPath}`);
+				
+				new Notice('Markitdown setup completed successfully!');
+				await this.plugin.refreshDependencies();
+				
+				const closeBtn = buttonContainer.createEl('button', { text: 'Close', cls: 'mod-cta' });
+				closeBtn.addEventListener('click', () => this.close());
+				installBtn.style.display = 'none';
+				cancelBtn.style.display = 'none';
 			} catch (error) {
 				const msg = error instanceof Error ? error.message : String(error);
-				logEl.createEl('div', {
-					text: `Error: ${msg}`,
-					cls: 'markitdown-setup-log-error',
-				});
+				this.log(`❌ Error: ${msg}`);
 				installBtn.disabled = false;
 				installBtn.setText('Try again');
 				cancelBtn.disabled = false;
@@ -128,9 +115,115 @@ export class SetupModal extends Modal {
 		});
 	}
 
+	private log(message: string) {
+		const lineEl = this.logEl.createEl('div', { text: message });
+		lineEl.scrollIntoView();
+	}
+
+	private async runAutoSetup(envPath: string): Promise<void> {
+		const isWin = process.platform === 'win32';
+		
+		this.log(`Starting auto-setup in: ${envPath}`);
+		this.log('Checking for Astral uv (Ultra-fast Python package manager)...');
+		
+		// 1. Install `uv` if not present, then use it to create venv and install packages.
+		// uv is a standalone binary that can automatically download python and create venvs.
+		
+		const uvCmd = isWin ? 'uv.exe' : 'uv';
+		let hasUv = await this.checkCommand(uvCmd);
+		
+		if (!hasUv) {
+			this.log('uv not found. Downloading uv...');
+			if (isWin) {
+				await this.runShell('powershell', ['-ExecutionPolicy', 'ByPass', '-c', 'irm https://astral.sh/uv/install.ps1 | iex']);
+			} else {
+				await this.runShell('sh', ['-c', 'curl -LsSf https://astral.sh/uv/install.sh | sh']);
+			}
+			// Update PATH so we can use uv immediately
+			const uvPath = isWin ? path.join(process.env.USERPROFILE || '', '.local', 'bin') : path.join(process.env.HOME || '', '.local', 'bin');
+			process.env.PATH = `${uvPath}${path.delimiter}${process.env.PATH}`;
+			
+			hasUv = await this.checkCommand(uvCmd);
+			if (!hasUv) {
+				// Fallback to python -m venv if uv installation failed for some reason
+				this.log('uv installation failed or not in PATH. Falling back to system python...');
+				await this.runFallbackSetup(envPath);
+				return;
+			}
+		}
+		
+		this.log('✅ uv is ready.');
+		
+		// 2. Use uv to create a venv (it will download python 3.12 automatically if missing!)
+		this.log('Creating virtual environment and fetching Python 3.12...');
+		await this.runShell(uvCmd, ['venv', envPath, '--python', '3.12']);
+		
+		// 3. Use uv pip to install all requirements
+		this.log('Installing MarkItDown and optional dependencies (OCR, PDF)...');
+		const pythonExe = path.join(envPath, isWin ? 'Scripts' : 'bin', isWin ? 'python.exe' : 'python');
+		
+		await this.runShell(uvCmd, [
+			'pip', 'install',
+			'--python', pythonExe,
+			'markitdown[all]', 'easyocr', 'pdfplumber', 'pdfminer.six', 'opencv-python'
+		]);
+		
+		this.log('✅ Packages installed successfully.');
+	}
+	
+	private async runFallbackSetup(envPath: string): Promise<void> {
+		const isWin = process.platform === 'win32';
+		this.log('Creating virtual environment using system python...');
+		await this.runShell(isWin ? 'python' : 'python3', ['-m', 'venv', envPath]);
+		
+		const pipExe = path.join(envPath, isWin ? 'Scripts' : 'bin', isWin ? 'pip.exe' : 'pip');
+		this.log('Upgrading pip...');
+		await this.runShell(pipExe, ['install', '--upgrade', 'pip']);
+		
+		this.log('Installing MarkItDown and dependencies...');
+		await this.runShell(pipExe, ['install', 'markitdown[all]', 'easyocr', 'pdfplumber', 'pdfminer.six', 'opencv-python']);
+	}
+
+	private runShell(command: string, args: string[]): Promise<void> {
+		return new Promise((resolve, reject) => {
+			const child = spawn(command, args, { shell: true });
+			
+			child.stdout.on('data', (data) => {
+				const text = data.toString().trim();
+				if (text) this.log(text);
+			});
+			
+			child.stderr.on('data', (data) => {
+				const text = data.toString().trim();
+				if (text) this.log(`[STDERR] ${text}`);
+			});
+			
+			child.on('close', (code) => {
+				if (code === 0) resolve();
+				else reject(new Error(`Command ${command} exited with code ${code}`));
+			});
+			
+			child.on('error', (err) => {
+				reject(err);
+			});
+		});
+	}
+	
+	private checkCommand(command: string): Promise<boolean> {
+		return new Promise((resolve) => {
+			const isWin = process.platform === 'win32';
+			const testCmd = isWin ? 'where' : 'which';
+			const child = spawn(testCmd, [command], { shell: true });
+			child.on('close', (code) => {
+				resolve(code === 0);
+			});
+			child.on('error', () => {
+				resolve(false);
+			});
+		});
+	}
+
 	onClose() {
 		this.contentEl.empty();
 	}
 }
-
-/* eslint-enable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-return, @typescript-eslint/no-misused-promises -- Re-enable strict type checking */

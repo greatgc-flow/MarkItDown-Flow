@@ -58,6 +58,27 @@ export class SettingsTab extends PluginSettingTab {
 					}, 1500);
 				}));
 
+		new Setting(containerEl)
+			.setName('Python Venv Root Path (Optional)')
+			.setDesc('Path where the plugin will automatically create a Python virtual environment (Leave empty to use plugin directory).')
+			.addText(text => text
+				.setPlaceholder('C:\\my_obsidian_env')
+				.setValue(this.plugin.settings.envRootPath)
+				.onChange(async (value) => {
+					this.plugin.settings.envRootPath = value;
+					await this.plugin.saveSettings();
+				}));
+
+		const setupBtnContainer = containerEl.createDiv('markitdown-setup-btn-container');
+		setupBtnContainer.style.marginTop = '10px';
+		setupBtnContainer.style.marginBottom = '20px';
+		const setupBtn = setupBtnContainer.createEl('button', { text: '🚀 Run Auto-Setup Wizard (Install Python & Packages)', cls: 'mod-cta' });
+		setupBtn.addEventListener('click', () => {
+			import('../modals/SetupModal').then(({ SetupModal }) => {
+				new SetupModal(this.app, this.plugin).open();
+			}).catch(console.error);
+		});
+
 		const configuredPath = this.plugin.settings.pythonPath || 'python';
 		const resolvedPath = this.plugin.resolvedPythonPath;
 		if (resolvedPath && resolvedPath !== configuredPath) {

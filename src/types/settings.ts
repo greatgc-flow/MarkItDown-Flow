@@ -40,6 +40,7 @@ export interface MarkitdownSettings {
 	docintelCredential?: string;
 	llmApiKey?: string;
 	outputPath: string;
+	envRootPath: string;
 	assetExtractionEnabled: boolean;
 	assetSubfolderTemplate: string;
 	/**
@@ -76,6 +77,7 @@ export const DEFAULT_SETTINGS: MarkitdownSettings = {
 	docintelCredential: '',
 	llmApiKey: '',
 	outputPath: '',
+	envRootPath: '',
 	assetExtractionEnabled: false,
 	assetSubfolderTemplate: '{filename}-assets',
 	inputBasePath: '',
