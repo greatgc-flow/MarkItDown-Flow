@@ -2,14 +2,15 @@
  * Private spool for structured engine stdout (20_SHELL.md REQ-SHL-13).
  * Transport storage only, never publication staging. Filesystem is injected.
  */
-import type { Decoded, RunReport } from './protocol';
-import { NotImplementedError } from './errors';
+import { decodeReport, type Decoded, type RunReport } from './protocol';
 
 /** Bounded read size used when draining a spool file. */
 export const SPOOL_READ_BUFFER_BYTES = 65536;
 
 /** Owned spool file name: `mdflow-spool-<nonce>.json` inside the owned directory. */
 export const SPOOL_NAME_PATTERN = /^mdflow-spool-[0-9a-f]{16}\.json$/;
+
+const NONCE_PATTERN = /^[0-9a-f]{16}$/;
 
 export interface SpoolFs {
   append(name: string, chunk: Uint8Array): Promise<void>;
@@ -20,30 +21,66 @@ export interface SpoolFs {
 }
 
 export class Spool {
-  constructor(_fs: SpoolFs, _nonce: string) {
-    throw new NotImplementedError('Spool');
+  private readonly fileName: string;
+  private written = false;
+
+  constructor(private readonly fs: SpoolFs, nonce: string) {
+    if (!NONCE_PATTERN.test(nonce)) throw new Error('spool nonce must be 16 lowercase hex characters');
+    this.fileName = `mdflow-spool-${nonce}.json`;
   }
 
   get name(): string {
-    throw new NotImplementedError('Spool.name');
+    return this.fileName;
   }
 
-  write(_chunk: Uint8Array): Promise<void> {
-    throw new NotImplementedError('Spool.write');
+  async write(chunk: Uint8Array): Promise<void> {
+    this.written = true;
+    await this.fs.append(this.fileName, chunk);
   }
 
   /** Drain with bounded reads, decode, then remove the file whether or not decoding succeeded. */
-  finish(): Promise<Decoded<RunReport>> {
-    throw new NotImplementedError('Spool.finish');
+  async finish(): Promise<Decoded<RunReport>> {
+    try {
+      if (!this.written) return { ok: false, diagnostic: 'shell.PROTOCOL', reason: 'report missing' };
+      const parts: Uint8Array[] = [];
+      let offset = 0;
+      for (;;) {
+        const chunk = await this.fs.read(this.fileName, offset, SPOOL_READ_BUFFER_BYTES);
+        if (chunk.length === 0) break;
+        parts.push(chunk);
+        offset += chunk.length;
+      }
+      const whole = new Uint8Array(offset);
+      let position = 0;
+      for (const part of parts) {
+        whole.set(part, position);
+        position += part.length;
+      }
+      let text: string;
+      try {
+        text = new TextDecoder('utf-8', { fatal: true }).decode(whole);
+      } catch {
+        return { ok: false, diagnostic: 'shell.PROTOCOL', reason: 'report is not UTF-8' };
+      }
+      return decodeReport(text);
+    } catch {
+      return { ok: false, diagnostic: 'shell.PROTOCOL', reason: 'spool unreadable' };
+    } finally {
+      await this.discard();
+    }
   }
 
   /** Cancel/handled failure: remove without decoding. */
-  discard(): Promise<void> {
-    throw new NotImplementedError('Spool.discard');
+  async discard(): Promise<void> {
+    try {
+      await this.fs.remove(this.fileName);
+    } catch {
+      // Already gone or not removable: nothing owned remains to recover from this handle.
+    }
   }
 }
 
 /** Names in the owned directory that are verified owned stale spools; others are left alone. */
-export function recoverableSpools(_names: readonly string[]): string[] {
-  throw new NotImplementedError('recoverableSpools');
+export function recoverableSpools(names: readonly string[]): string[] {
+  return names.filter((name) => SPOOL_NAME_PATTERN.test(name));
 }
