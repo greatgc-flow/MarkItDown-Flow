@@ -56,3 +56,9 @@ Votes: cx APPROVE-TDD (88/100, 8 fix-during-TDD items, review/R7_cx_ratify.md); 
 | ID | Resolution |
 |---|---|
 | R26 | Execution plan = orchestrator plan P1-P5 amended by Fable C1-C9 verbatim: step-0 contracts/conftest/trace/pyproject/CI skeleton by cx before forks; v1 deleted in first commit (done); ledger.py wholly in wt-engine-core; strict red-green (collectable red, no test edits to go green, logs in build/trace/redgreen/); goldens only via orchestrator `tools/golden.py gen`; runtime dep markitdown-gc>=0.3.5,<0.4 (lock 0.3.5), test deps pinned separately; shell starts with pure step 8; honest loop exit: orchestrator-runnable gates PASS + N/A list reviewed; 3-OS CI gates and manual M-01..04 require push + named human attestation. F-01 (Key provider fingerprint) SPEC amendment by Fable before step 3. |
+
+## Amendments (MECE round 1)
+| ID | Resolution | Basis |
+|---|---|---|
+| R27 (pending Fable vote) | Packaging simplification: drop hand-built 15-cell universal lock + wheel/license catalog; ship pure-Python wheel on the release, declared `markitdown-gc>=0.3.5,<0.4` from PyPI (0.3.5 published, orchestrator-verified), ONE CI-generated hashed reference requirements file, matrix install checks. Votes: cx (proposer) APPROVE, ag APPROVE, orchestrator APPROVE. | M1-V34/V35 |
+| R28 | `fx("all")` credits class_stage cells only for tests that genuinely iterate every class (S0-S3, S13); not S8/S11. trace.py must enforce; resulting gaps get dedicated tests. | ag M1 horizontal, cc proposal |
