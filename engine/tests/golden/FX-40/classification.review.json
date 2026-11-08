@@ -1,0 +1,32 @@
+{
+ "date": "2026-11-09",
+ "independent": {
+  "action": "report_only",
+  "label": "X",
+  "need": "UNKNOWN",
+  "route": "UNSUPPORTED",
+  "row": 3
+ },
+ "method": "independent-oracle-diff",
+ "reviewer": "ag.effort (gemini-3.8-flash-high), independent derivation from SPEC DRAFT-3.1 §3 without implementation access; diffed by orchestrator (cc, claude-opus-5-5)",
+ "sniff": {
+  "bytes": 0,
+  "ext": "pdf",
+  "format": "pdf",
+  "issues": [
+   {
+    "code": "E_CORRUPT",
+    "message": "file is empty"
+   }
+  ],
+  "magic": "",
+  "path": "FX-40.pdf",
+  "reasons": [
+   "unsupported_format"
+  ],
+  "root": 0,
+  "route": "UNSUPPORTED",
+  "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+ },
+ "verdict": "PASS"
+}

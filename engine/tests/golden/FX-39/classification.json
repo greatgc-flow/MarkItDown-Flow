@@ -1,0 +1,19 @@
+{
+ "action": "report_only",
+ "candidates_unique": [],
+ "coverage_state": "not_run",
+ "decision": "not_run",
+ "issues": [
+  {
+   "code": "E_UNSUPPORTED",
+   "message": "E unsupported."
+  }
+ ],
+ "label": "X",
+ "need": "UNKNOWN",
+ "reasons": [
+  "unsupported_format"
+ ],
+ "route": "UNSUPPORTED",
+ "uninspected_pages": 0
+}

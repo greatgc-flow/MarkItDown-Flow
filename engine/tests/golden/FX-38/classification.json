@@ -1,0 +1,19 @@
+{
+ "action": "report_only",
+ "candidates_unique": [],
+ "coverage_state": "not_run",
+ "decision": "not_run",
+ "issues": [
+  {
+   "code": "E_MEDIA_OUT_OF_SCOPE",
+   "message": "E media out of scope."
+  }
+ ],
+ "label": "X",
+ "need": "UNKNOWN",
+ "reasons": [
+  "media_out_of_scope"
+ ],
+ "route": "UNSUPPORTED",
+ "uninspected_pages": 0
+}

@@ -1,0 +1,25 @@
+{
+ "date": "2026-11-09",
+ "independent": {
+  "action": "recurse",
+  "label": "C",
+  "need": "NONE",
+  "route": "CONTAINER",
+  "row": 7
+ },
+ "method": "independent-oracle-diff",
+ "reviewer": "ag.effort (gemini-3.8-flash-high), independent derivation from SPEC DRAFT-3.1 §3 without implementation access; diffed by orchestrator (cc, claude-opus-5-5)",
+ "sniff": {
+  "bytes": 282433,
+  "ext": "zip",
+  "format": "zip",
+  "issues": [],
+  "magic": "504b030414000000080000002100f6d0",
+  "path": "FX-43.zip",
+  "reasons": [],
+  "root": 0,
+  "route": "CONTAINER",
+  "sha256": "9b1e79cc2c31cc2a5bffbfe0835e7fda15fc9aed19b75168afa5153fd5be63ac"
+ },
+ "verdict": "PASS"
+}

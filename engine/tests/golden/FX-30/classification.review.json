@@ -1,0 +1,25 @@
+{
+ "date": "2026-11-09",
+ "independent": {
+  "action": "convert_only",
+  "label": "U",
+  "need": "UNKNOWN",
+  "route": "NATIVE",
+  "row": "9c"
+ },
+ "method": "independent-oracle-diff",
+ "reviewer": "ag.effort (gemini-3.8-flash-high), independent derivation from SPEC DRAFT-3.1 §3 without implementation access; diffed by orchestrator (cc, claude-opus-5-5)",
+ "sniff": {
+  "bytes": 15,
+  "ext": "csv",
+  "format": "csv",
+  "issues": [],
+  "magic": "6e616d652c76616c75650a612c310a",
+  "path": "FX-30.csv",
+  "reasons": [],
+  "root": 0,
+  "route": "NATIVE",
+  "sha256": "09c516e8448baa8bb6584b41f3527e4d3bda42381270f5ad0995b85ac655ec88"
+ },
+ "verdict": "PASS"
+}

@@ -1,0 +1,25 @@
+{
+ "date": "2026-11-09",
+ "independent": {
+  "action": "convert_only",
+  "label": "U",
+  "need": "UNKNOWN",
+  "route": "NATIVE",
+  "row": "11b"
+ },
+ "method": "independent-oracle-diff",
+ "reviewer": "ag.effort (gemini-3.8-flash-high), independent derivation from SPEC DRAFT-3.1 §3 without implementation access; diffed by orchestrator (cc, claude-opus-5-5)",
+ "sniff": {
+  "bytes": 2560,
+  "ext": "xls",
+  "format": "xls",
+  "issues": [],
+  "magic": "d0cf11e0a1b11ae10000000000000000",
+  "path": "FX-34.xls",
+  "reasons": [],
+  "root": 0,
+  "route": "NATIVE",
+  "sha256": "076f6c0aa93094548ec8d52ede94c829d096f86fdbc4fd6605f8d7a919aef459"
+ },
+ "verdict": "PASS"
+}

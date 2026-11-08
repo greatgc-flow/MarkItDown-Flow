@@ -1,0 +1,17 @@
+{
+ "action": "convert_only",
+ "candidates_unique": [],
+ "coverage_state": "complete",
+ "decision": "no_candidates",
+ "issues": [
+  {
+   "code": "W_TRIAGE_INCONSISTENT",
+   "message": "W triage inconsistent."
+  }
+ ],
+ "label": "U",
+ "need": "UNKNOWN",
+ "reasons": [],
+ "route": "NATIVE",
+ "uninspected_pages": 0
+}

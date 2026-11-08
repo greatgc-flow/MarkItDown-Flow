@@ -1,0 +1,33 @@
+{
+ "action": "convert_and_ocr",
+ "candidates_unique": [
+  {
+   "id": "image",
+   "kind": "image",
+   "page": null,
+   "priority": "normal",
+   "priority_core": "high",
+   "refs": 1
+  }
+ ],
+ "coverage_state": "none",
+ "decision": "ocr_recommended",
+ "issues": [
+  {
+   "code": "W_IMAGE_PROBE",
+   "message": "W image probe."
+  },
+  {
+   "code": "W_TRIAGE_PARTIAL",
+   "message": "W triage partial."
+  }
+ ],
+ "label": "U",
+ "need": "UNKNOWN",
+ "reasons": [
+  "core:image_probe_failed",
+  "cand:standalone_image"
+ ],
+ "route": "NATIVE",
+ "uninspected_pages": 0
+}

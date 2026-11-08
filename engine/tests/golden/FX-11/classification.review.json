@@ -1,0 +1,25 @@
+{
+ "date": "2026-11-09",
+ "independent": {
+  "action": "convert_and_ocr",
+  "label": "S",
+  "need": "FULL",
+  "route": "NATIVE",
+  "row": 17
+ },
+ "method": "independent-oracle-diff",
+ "reviewer": "ag.effort (gemini-3.8-flash-high), independent derivation from SPEC DRAFT-3.1 §3 without implementation access; diffed by orchestrator (cc, claude-opus-5-5)",
+ "sniff": {
+  "bytes": 360432,
+  "ext": "tiff",
+  "format": "tiff",
+  "issues": [],
+  "magic": "49492a00080000000a00000104000100",
+  "path": "FX-11.tiff",
+  "reasons": [],
+  "root": 0,
+  "route": "NATIVE",
+  "sha256": "5d248f4e418656c7b554c1ef8a721f7726c2eb50b258f9b72eea0ad3e7cfae86"
+ },
+ "verdict": "PASS"
+}

@@ -1,0 +1,25 @@
+{
+ "date": "2026-11-09",
+ "independent": {
+  "action": "report_only",
+  "label": "L",
+  "need": "UNKNOWN",
+  "route": "LEGACY",
+  "row": 6
+ },
+ "method": "independent-oracle-diff",
+ "reviewer": "ag.effort (gemini-3.8-flash-high), independent derivation from SPEC DRAFT-3.1 §3 without implementation access; diffed by orchestrator (cc, claude-opus-5-5)",
+ "sniff": {
+  "bytes": 19,
+  "ext": "rtf",
+  "format": "rtf",
+  "issues": [],
+  "magic": "7b5c72746631204f776e206669787475",
+  "path": "FX-36.rtf",
+  "reasons": [],
+  "root": 0,
+  "route": "LEGACY",
+  "sha256": "88075f8f15443d1b4a5d7585994000478ee5825c63ad6dba862f1021b135d4d8"
+ },
+ "verdict": "PASS"
+}

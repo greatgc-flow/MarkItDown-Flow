@@ -1,0 +1,17 @@
+{
+ "action": "convert_only",
+ "candidates_unique": [],
+ "coverage_state": "complete",
+ "decision": "no_candidates",
+ "issues": [
+  {
+   "code": "W_EXT_MISMATCH",
+   "message": "extension .docx does not match detected format pdf"
+  }
+ ],
+ "label": "T",
+ "need": "NONE",
+ "reasons": [],
+ "route": "NATIVE",
+ "uninspected_pages": 0
+}

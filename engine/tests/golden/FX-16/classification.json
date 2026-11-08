@@ -1,0 +1,37 @@
+{
+ "action": "convert_and_ocr",
+ "candidates_unique": [
+  {
+   "id": "word/media/image1.png",
+   "kind": "image",
+   "page": null,
+   "priority": "low",
+   "priority_core": "low",
+   "refs": 1
+  },
+  {
+   "id": "word/media/image2.png",
+   "kind": "image",
+   "page": null,
+   "priority": "low",
+   "priority_core": "low",
+   "refs": 1
+  }
+ ],
+ "coverage_state": "complete",
+ "decision": "review",
+ "issues": [
+  {
+   "code": "W_REVIEW_PRIORITY",
+   "message": "W review priority."
+  }
+ ],
+ "label": "M",
+ "need": "PARTIAL",
+ "reasons": [
+  "cand:embedded_image",
+  "cand:embedded_image"
+ ],
+ "route": "NATIVE",
+ "uninspected_pages": 0
+}

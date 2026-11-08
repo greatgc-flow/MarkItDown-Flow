@@ -1,0 +1,27 @@
+{
+ "date": "2026-11-09",
+ "independent": {
+  "action": "report_only",
+  "label": "P",
+  "need": "UNKNOWN",
+  "route": "PROTECTED",
+  "row": 2
+ },
+ "method": "independent-oracle-diff",
+ "reviewer": "ag.effort (gemini-3.8-flash-high), independent derivation from SPEC DRAFT-3.1 §3 without implementation access; diffed by orchestrator (cc, claude-opus-5-5)",
+ "sniff": {
+  "bytes": 126,
+  "ext": "zip",
+  "format": "zip",
+  "issues": [],
+  "magic": "504b0304140001000800000021002244",
+  "path": "FX-26.zip",
+  "reasons": [
+   "zip_flag_bit"
+  ],
+  "root": 0,
+  "route": "PROTECTED",
+  "sha256": "b6bd29cdc2c1041847389d319a676f37aa4b657e3ac743504eb88f4ca6a2cb39"
+ },
+ "verdict": "PASS"
+}

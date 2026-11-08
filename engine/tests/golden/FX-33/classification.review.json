@@ -1,0 +1,25 @@
+{
+ "date": "2026-11-09",
+ "independent": {
+  "action": "convert_only",
+  "label": "U",
+  "need": "UNKNOWN",
+  "route": "NATIVE",
+  "row": "9c"
+ },
+ "method": "independent-oracle-diff",
+ "reviewer": "ag.effort (gemini-3.8-flash-high), independent derivation from SPEC DRAFT-3.1 §3 without implementation access; diffed by orchestrator (cc, claude-opus-5-5)",
+ "sniff": {
+  "bytes": 156,
+  "ext": "epub",
+  "format": "epub",
+  "issues": [],
+  "magic": "504b0304140000000800000021005499",
+  "path": "FX-33.epub",
+  "reasons": [],
+  "root": 0,
+  "route": "NATIVE",
+  "sha256": "9db2742e474d5d707344fbf92e98b5f7bb7a2a7dc317d03dadf7e67427bd50b0"
+ },
+ "verdict": "PASS"
+}

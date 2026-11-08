@@ -1,0 +1,32 @@
+{
+ "action": "convert_and_ocr",
+ "candidates_unique": [
+  {
+   "id": "p2",
+   "kind": "page",
+   "page": 2,
+   "priority": "normal",
+   "priority_core": "high",
+   "refs": 1
+  },
+  {
+   "id": "p4",
+   "kind": "page",
+   "page": 4,
+   "priority": "normal",
+   "priority_core": "high",
+   "refs": 1
+  }
+ ],
+ "coverage_state": "complete",
+ "decision": "ocr_recommended",
+ "issues": [],
+ "label": "M",
+ "need": "PARTIAL",
+ "reasons": [
+  "cand:scan_like",
+  "cand:scan_like"
+ ],
+ "route": "NATIVE",
+ "uninspected_pages": 0
+}
