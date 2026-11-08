@@ -2,7 +2,6 @@
  * Progress details from engine events (20_SHELL.md REQ-SHL-09): stage, file
  * counts and unit outcomes, never invented completed work.
  */
-import { NotImplementedError } from '../pure/errors';
 import type { ProgressEvent, Stage } from '../pure/framing';
 
 export interface ProgressSummary {
@@ -22,6 +21,46 @@ export interface ProgressSummary {
   exit: number | null;
 }
 
-export function summarizeProgress(_events: readonly ProgressEvent[]): ProgressSummary {
-  throw new NotImplementedError('summarizeProgress');
+export function summarizeProgress(events: readonly ProgressEvent[]): ProgressSummary {
+  const summary: ProgressSummary = {
+    stage: null,
+    currentFile: null,
+    filesTotal: null,
+    filesEnded: 0,
+    unitsDone: 0,
+    unitsPending: 0,
+    unitsFailed: 0,
+    filesAwaitingConsent: 0,
+    exit: null,
+  };
+  for (const event of events) {
+    switch (event.ev) {
+      case 'run_start':
+        summary.filesTotal = event.files;
+        break;
+      case 'file_start':
+        summary.currentFile = event.file;
+        summary.filesTotal = event.total;
+        break;
+      case 'stage':
+        summary.stage = event.stage;
+        summary.currentFile = event.file;
+        break;
+      case 'approve_required':
+        summary.filesAwaitingConsent += 1;
+        break;
+      case 'file_end':
+        summary.filesEnded += 1;
+        summary.unitsDone += event.units.done;
+        summary.unitsPending += event.units.pending;
+        summary.unitsFailed += event.units.failed;
+        break;
+      case 'run_end':
+        summary.exit = event.exit;
+        break;
+      default:
+        break;
+    }
+  }
+  return summary;
 }

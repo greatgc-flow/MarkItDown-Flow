@@ -94,7 +94,8 @@ it(R('JT-14 the view carries no run-level hash, token estimate, run totals or in
     }
   };
   walk(view);
-  for (const key of keys) expect(key).not.toMatch(/token|run_hash|runHash|interrupt|total_cost|totalCost|runTotal|units\b/i);
+  // `selectedUnits` is a per-file count from the Plan; a raw `units` list is the invented field.
+  for (const key of keys) expect(key).not.toMatch(/token|run_hash|runHash|interrupt|total_cost|totalCost|runTotal|^units$/i);
   expect(JSON.stringify(view)).not.toContain('"units":[');
 });
 
@@ -131,7 +132,7 @@ it(R('JT-14 Keep pending is the default: closing or Escape yields no authorizati
   kept.open();
   kept.keepPending();
   await expect(kept.decision).resolves.toEqual({ approved: false });
-  expect(kept.isOpen).toBe(false);
+  expect(mockState.openModals).not.toContain(kept);
   const approved = new ConsentModal(createApp(), view, 'en');
   approved.open();
   approved.approve();

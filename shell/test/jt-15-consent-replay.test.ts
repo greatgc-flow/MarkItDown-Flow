@@ -1,20 +1,21 @@
 /**
  * JT-15 / REQ-SHL-15: `plan` on the original selection, then after approval
- * one `run` replay of the exact batch/root invocation with repeated
- * `--yes <file-hash>` and `--approved-by plugin:modal`; provider none runs
- * without a modal; cache warming keeps hashes; changed content or engine
- * denial is shown for fresh review, never auto-approved; cancel prevents the
- * replay; no authorization survives reload; no per-file replay.
+ * one `run` replay of the exact batch/root invocation with a plugin-owned
+ * `--yes-file` (SPEC 8.4/10.2, R7 F-03) and `--approved-by plugin:modal`;
+ * provider none runs without a modal; cache warming keeps hashes; changed
+ * content or engine denial is shown for fresh review, never auto-approved;
+ * cancel prevents the replay; no authorization survives reload; no per-file
+ * replay; the yes-file is deleted after the run.
  */
 import { req } from './req';
 import type { ConsentDecision, ConsentViewModel } from '../src/ui/consent-modal';
 import { ShellCoordinator, type CoordinatorDeps, type JobReport } from '../src/ui/coordinator';
-import { APPROVED_BY_MODAL, approvedHashesIn, replayInvariantArgs } from '../src/process/launcher';
+import { APPROVED_BY_MODAL, approvedHashesIn, parseYesFile, replayInvariantArgs } from '../src/process/launcher';
 import type { SpawnRequest } from '../src/process/types';
 import { FakeClock, flush } from './fixtures/fake-clock';
 import { FakeFs, FakeSpoolFs } from './fixtures/fake-fs';
 import { chunksOf, FakeSpawner, type ScriptedChild } from './fixtures/fake-spawner';
-import { fx71Bytes, fx71Exit, fx71PlanObjects } from './fixtures/fx71';
+import { fx71Bytes, fx71Exit, fx71PlanObjects, fx71YesFile } from './fixtures/fx71';
 import { bytes, plan as syntheticPlan, planStdout } from './fixtures/protocol';
 import { abs, HOST_ENV, KEY_VALUE, OPENAI_PROVIDER, PLUGIN_DIR, settingsV2, VAULT_ROOT } from './fixtures/shell-settings';
 import type { SettingsV2 } from '../src/pure/settings';
@@ -27,12 +28,20 @@ const PLAN_MIXED_HASHES = (fx71PlanObjects('plan-mixed.stdout.json') as { plan_h
 
 type Decider = (view: ConsentViewModel) => Promise<ConsentDecision>;
 
+interface CapturedYesFile {
+  path: string;
+  /** Content at spawn time (the file is deleted after the run). */
+  text: string | undefined;
+}
+
 interface Harness {
   coordinator: ShellCoordinator;
   spawner: FakeSpawner;
+  fs: FakeFs;
   consentCalls: ConsentViewModel[];
   notices: string[];
   history: string[];
+  yesFiles: CapturedYesFile[];
   deps: CoordinatorDeps;
 }
 
@@ -54,7 +63,12 @@ function harness(
   decide: Decider = async (view) => ({ approved: true, hashes: view.files.filter((f) => f.requestsToSend > 0 || f.approvedBudget > 0).map((f) => f.planHash) }),
 ): Harness {
   const fs = new FakeFs({ directories: [VAULT_ROOT, OUT, INPUT_ROOT, PLUGIN_DIR, abs(PLUGIN_DIR, 'cache')] });
-  const spawner = new FakeSpawner(script);
+  const yesFiles: CapturedYesFile[] = [];
+  const spawner = new FakeSpawner((request, index) => {
+    const at = request.args.indexOf('--yes-file');
+    if (at >= 0) yesFiles.push({ path: request.args[at + 1], text: fs.text(request.args[at + 1]) });
+    return script(request, index);
+  });
   const consentCalls: ConsentViewModel[] = [];
   const notices: string[] = [];
   const history: string[] = [];
@@ -83,7 +97,7 @@ function harness(
     log: null,
     nonce: () => '0123456789abcdef',
   };
-  return { coordinator: new ShellCoordinator(deps), spawner, consentCalls, notices, history, deps };
+  return { coordinator: new ShellCoordinator(deps), spawner, fs, consentCalls, notices, history, yesFiles, deps };
 }
 
 async function runJob(h: Harness, selection = { kind: 'folder' as const, paths: [INPUT_ROOT] }): Promise<JobReport> {
@@ -94,14 +108,19 @@ async function runJob(h: Harness, selection = { kind: 'folder' as const, paths: 
   return current;
 }
 
+function normalized(p: string): string {
+  return p.replace(/\\/g, '/').toLowerCase();
+}
+
 const remoteSettings = settingsV2({ provider: { ...OPENAI_PROVIDER } });
 
-it(R('JT-15 remote work: plan on the original selection, then one run replay with repeated --yes <file-hash> and --approved-by plugin:modal'), async () => {
+it(R('JT-15 remote work: plan on the original selection, then one run replay with an owned --yes-file of the displayed hashes and --approved-by plugin:modal'), async () => {
   const h = harness(remoteSettings, (request) => (request.args[2] === 'plan' ? recordedPlan('plan-mixed.stdout.json') : recordedRun('consent-5-approved')));
   const report = await runJob(h);
   expect(h.spawner.commands).toEqual(['plan', 'run']);
   const [plan, run] = h.spawner.requests;
   expect(plan.args).not.toContain('--yes');
+  expect(plan.args).not.toContain('--yes-file');
   expect(plan.args).not.toContain('-o');
   expect(replayInvariantArgs(run.args)).toEqual(replayInvariantArgs(plan.args));
   expect(run.cwd).toBe(plan.cwd);
@@ -109,16 +128,23 @@ it(R('JT-15 remote work: plan on the original selection, then one run replay wit
   expect(run.env.MDFLOW_API_KEY).toBe(KEY_VALUE);
   expect(run.args).not.toContain(KEY_VALUE);
   expect(run.args[run.args.indexOf('-o') + 1]).toBe(OUT);
+  // SPEC 8.4/10.2: one private yes-file written by the shell, one plan_hash per line, passed once.
+  expect(run.args.filter((t) => t === '--yes-file')).toHaveLength(1);
+  expect(run.args).not.toContain('--yes');
+  expect(h.yesFiles).toHaveLength(1);
+  const yesFile = h.yesFiles[0];
+  expect(normalized(yesFile.path).startsWith(normalized(PLUGIN_DIR) + '/')).toBe(true);
+  expect(yesFile.text).toBeDefined();
   const displayed = h.consentCalls[0].files.filter((f) => f.approvedBudget > 0).map((f) => f.planHash);
-  expect(approvedHashesIn(run.args)).toEqual(displayed);
+  expect(parseYesFile(yesFile.text ?? '')).toEqual(displayed);
+  expect(approvedHashesIn(run.args, () => yesFile.text ?? null)).toEqual(displayed);
   expect(displayed).toEqual(PLAN_MIXED_HASHES.filter((p) => p.approved.keys_unique > 0).map((p) => p.plan_hash));
+  for (const line of (yesFile.text ?? '').split(/\r?\n/)) expect(line === '' || line.startsWith('#') || /^[0-9a-f]{64}$/.test(line)).toBe(true);
   expect(run.args[run.args.indexOf('--approved-by') + 1]).toBe(APPROVED_BY_MODAL);
   expect(run.args.filter((t) => t === '--approved-by')).toHaveLength(1);
-  // No run-level hash, bare --yes, --yes-file written by the shell or custom root flag.
-  const yesIndexes = run.args.map((t, i) => (t === '--yes' ? i : -1)).filter((i) => i >= 0);
-  for (const i of yesIndexes) expect(run.args[i + 1]).toMatch(/^[0-9a-f]{64}$/);
-  expect(run.args).not.toContain('--yes-file');
+  // No run-level hash, shell manifest or root-preserving custom flag; the yes-file is gone after the run.
   expect(run.args.some((t) => /root|manifest|batch-hash|run-hash/i.test(t))).toBe(false);
+  expect(h.fs.text(yesFile.path)).toBeUndefined();
   expect(h.consentCalls).toHaveLength(1);
   expect(report.decision).toEqual({ approved: true, hashes: displayed });
   expect(report.run?.status.code).toBe(0);
@@ -136,17 +162,20 @@ it(R('JT-15 fifty files yield one modal and one approved run; the directory root
   expect(h.consentCalls).toHaveLength(1);
   expect(h.consentCalls[0].files).toHaveLength(50);
   const run = h.spawner.requests[1];
-  expect(approvedHashesIn(run.args)).toEqual(fifty.map((p) => p.plan_hash));
+  expect(h.yesFiles).toHaveLength(1);
+  expect(parseYesFile(h.yesFiles[0].text ?? '')).toEqual(fifty.map((p) => p.plan_hash));
+  expect(run.args.filter((t) => t === '--yes-file')).toHaveLength(1);
   expect(run.args.slice(3, 4)).toEqual([INPUT_ROOT]);
   expect(run.args.some((t) => t.endsWith('file-7.pdf'))).toBe(false);
 });
 
-it(R('JT-15 provider none runs without a consent modal and without --yes'), async () => {
+it(R('JT-15 provider none runs without a consent modal and without any authorization argument'), async () => {
   const h = harness(settingsV2(), () => recordedRun('run-mixed'));
   const report = await runJob(h);
   expect(h.spawner.commands).toEqual(['run']);
   expect(h.consentCalls).toEqual([]);
   expect(h.spawner.requests[0].args).not.toContain('--yes');
+  expect(h.spawner.requests[0].args).not.toContain('--yes-file');
   expect(h.spawner.requests[0].args).not.toContain('--approved-by');
   expect(h.spawner.requests[0].args[h.spawner.requests[0].args.indexOf('--provider') + 1]).toBe('none');
   expect(report.decision).toBeNull();
@@ -154,25 +183,31 @@ it(R('JT-15 provider none runs without a consent modal and without --yes'), asyn
   expect(h.history).toEqual(['partial_failure']);
 });
 
-it(R('JT-15 Keep pending / dismissal: the plan ran, no run is launched, no egress, outcome pending consent'), async () => {
+it(R('JT-15 Keep pending / dismissal: the plan ran, no run is launched, no yes-file is written, outcome pending consent'), async () => {
   const h = harness(remoteSettings, (request) => (request.args[2] === 'plan' ? recordedPlan('plan-mixed.stdout.json') : recordedRun('consent-5-approved')), async () => ({ approved: false }));
   const report = await runJob(h);
   expect(h.spawner.commands).toEqual(['plan']);
+  expect(h.yesFiles).toEqual([]);
+  expect(h.fs.mutations.filter((m) => /yes/i.test(m))).toEqual([]);
   expect(report.decision).toEqual({ approved: false });
   expect(report.run).toBeNull();
   expect(h.history).toEqual(['pending_consent']);
   expect(h.coordinator.active).toBe(false);
 });
 
-it(R('JT-15 cache warming leaves the per-file hash stable: cold and warm Plans authorize identically'), () => {
-  const cold = fx71PlanObjects('consent-1-plan.stdout.json') as { plan_hash: string; status: { units: { cached: number } } }[];
-  const warm = fx71PlanObjects('consent-4-plan-warm.stdout.json') as { plan_hash: string; status: { units: { cached: number } } }[];
+it(R('JT-15 cache warming leaves the per-file hash stable: cold and warm Plans produce the same yes-file (FX-71 consent recordings)'), () => {
+  const cold = fx71PlanObjects('consent-1-plan.stdout.json') as { plan_hash: string; approved: { keys_unique: number }; status: { units: { cached: number } } }[];
+  const warm = fx71PlanObjects('consent-4-plan-warm.stdout.json') as typeof cold;
   expect(warm.map((p) => p.plan_hash)).toEqual(cold.map((p) => p.plan_hash));
   expect(cold[0].status.units.cached).toBe(0);
   expect(warm[0].status.units.cached).toBe(2);
-  const coldArgs = ['-m', 'mdflow', 'run', INPUT_ROOT, '-o', OUT, ...cold.flatMap((p) => ['--yes', p.plan_hash]), '--approved-by', APPROVED_BY_MODAL];
-  const warmArgs = ['-m', 'mdflow', 'run', INPUT_ROOT, '-o', OUT, ...warm.flatMap((p) => ['--yes', p.plan_hash]), '--approved-by', APPROVED_BY_MODAL];
-  expect(approvedHashesIn(warmArgs)).toEqual(approvedHashesIn(coldArgs));
+  const approvable = (plans: typeof cold): string[] => plans.filter((p) => p.approved.keys_unique > 0).map((p) => p.plan_hash);
+  expect(approvable(warm)).toEqual(approvable(cold));
+  // The recorded yes-file the engine accepted for the warm run lists exactly those hashes.
+  expect(fx71YesFile('consent-yes-2.txt')).toEqual(approvable(cold));
+  const text = `# approved\n\n${approvable(warm).join('\n')}\n`;
+  expect(parseYesFile(text)).toEqual(approvable(cold));
+  expect(approvedHashesIn(['-m', 'mdflow', 'run', INPUT_ROOT, '-o', OUT, '--yes-file', 'x.txt', '--approved-by', APPROVED_BY_MODAL], () => text)).toEqual(approvable(cold));
 });
 
 it(R('JT-15 changed approved content or engine denial is displayed as pending for fresh review, never auto-approved or retried'), async () => {
@@ -186,6 +221,8 @@ it(R('JT-15 changed approved content or engine denial is displayed as pending fo
   expect(report.run?.outcome).toBe('pending_consent');
   expect(h.history).toEqual(['pending_consent']);
   expect(h.notices).toContain('engine.E_APPROVAL_REQUIRED');
+  expect(h.yesFiles).toHaveLength(1);
+  expect(h.fs.text(h.yesFiles[0].path)).toBeUndefined();
   const denied = harness(remoteSettings, (request) =>
     request.args[2] === 'plan'
       ? recordedPlan('plan-mixed.stdout.json')
@@ -216,6 +253,7 @@ it(R('JT-15 cancel while the modal is open prevents the replay; unload behaves t
   (release as unknown as ((d: ConsentDecision) => void) | null)?.({ approved: true, hashes: PLAN_MIXED_HASHES.map((p) => p.plan_hash) });
   const report = await (h.coordinator.current as Promise<JobReport>);
   expect(h.spawner.commands).toEqual(['plan']);
+  expect(h.yesFiles).toEqual([]);
   expect(report.run).toBeNull();
   expect(h.history).toEqual(['cancelled']);
   expect(h.notices).toContain('shell.CANCELLED');
@@ -231,6 +269,7 @@ it(R('JT-15 cancel while the modal is open prevents the replay; unload behaves t
   (release as unknown as ((d: ConsentDecision) => void) | null)?.({ approved: true, hashes: PLAN_MIXED_HASHES.map((p) => p.plan_hash) });
   await (unloaded.coordinator.current as Promise<JobReport> | null);
   expect(unloaded.spawner.commands).toEqual(['plan']);
+  expect(unloaded.yesFiles).toEqual([]);
 });
 
 it(R('JT-15 no authorization survives reload: a new coordinator plans again and asks again'), async () => {
@@ -243,6 +282,7 @@ it(R('JT-15 no authorization survives reload: a new coordinator plans again and 
   await runJob(reloaded);
   expect(reloaded.spawner.commands).toEqual(['plan', 'run']);
   expect(reloaded.consentCalls).toHaveLength(1);
+  expect(reloaded.yesFiles).toHaveLength(1);
 });
 
 it(R('JT-15 the modal is only ever fed decoded full Plans from plan stdout, never approve_required summaries'), async () => {

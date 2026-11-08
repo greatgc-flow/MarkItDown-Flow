@@ -172,6 +172,8 @@ Cell = primary `S<stage>:FM<n>` (section 5).
 | T-SEL-02 | REQ-SEL-02 | FX-02 | S4:FM3 |
 | T-SEL-03 | REQ-SEL-01 (`p2` < `p10`) | FX-02(12p) | S4:FM0 |
 | T-SEL-04 | REQ-SEL-01, REQ-MAP-08 | FX-17 | S4:FM12 |
+| T-SEL-05 | REQ-SEL-01 (mixed PDF: only scan pages `p2`,`p4` are units; M1-H closure of S4:K03) | FX-03 | S4:FM0 |
+| T-SEL-06 | REQ-SEL-01, REQ-SEL-02 (capped PDF: no unit past the cap; 200-unit bound all-or-none; M1-H S4:K04) | FX-07 | S4:FM3 |
 | T-PLN-01 | REQ-PLN-01 (7.1 schema + equations; `frames_total` only rasters) | all | S8:FM0 |
 | T-PLN-02 | REQ-PLN-02 (`approved` field flip changes hash; `status` flip / cache prefill does not) | FX-03 | S8:FM12 |
 | T-PLN-03 | REQ-PLN-03 | FX-19 | S8:FM11 |
@@ -182,11 +184,21 @@ Cell = primary `S<stage>:FM<n>` (section 5).
 | T-PLN-08 | REQ-PLN-08 (`est_max_cost "0.024000"`; unknown -> null) | FX-03 | S8:FM0 |
 | T-PLN-09 | REQ-PLN-05 (`status.requests_to_send` counts misses only) | FX-02, FX-61 | S8:FM3 |
 | T-PLN-10 | REQ-PLN-02 (`command_env_names`, destination, argv template in fingerprint -> hash) | FX-63 | S8:FM10 |
+| T-PLN-11 | REQ-PLN-01, REQ-CTR-03 (zip container has its own zero-cost Plan; members plan separately; M1-H S8:K14) | FX-43 | S8:FM0 |
+| T-PLN-12 | REQ-PLN-01, REQ-APR-01 (protected: zero-cost Plan, no consent, no Core, no send; M1-H S8:K15) | FX-05,25 | S8:FM0 |
+| T-PLN-13 | REQ-PLN-01, REQ-APR-01 (corrupt/empty: zero-cost Plan, no consent, no Core, no send; M1-H S8:K16) | FX-06,40 | S8:FM0 |
 | T-CNV-01 | REQ-CNV-01 | FX-03 | S5:FM1 |
 | T-CNV-02 | REQ-CNV-02 | FX-03 | S5:FM0 |
 | T-CNV-03 | REQ-CNV-03 (media before `.md`; identical media not rewritten) | FX-16,21,22,23,24 | S5:FM0 |
 | T-CNV-04 | REQ-CNV-04 | FX-03,16 | S5:FM12 |
 | T-CNV-05 | REQ-CNV-05 (sockets forbidden; URI-like filename; renamed audio as `.txt` -> r9a) | FX-38b, FX-64 | S5:FM9 |
+| T-CNV-06 | REQ-CNV-02 (native text PDF through real Core: per-page text, no leak, no OCR markers; M1-H S5:K01) | FX-01 | S5:FM0 |
+| T-CNV-07 | REQ-CNV-02 (scan PDF: clean Convert, empty pages kept; M1-H S5:K02) | FX-02 | S5:FM0 |
+| T-CNV-08 | REQ-CNV-02, REQ-ASM-04 (1001-page PDF: every page converted past the inspection cap; M1-H S5:K04) | FX-07 | S5:FM0 |
+| T-CNV-09 | REQ-CNV-03 (standalone PNG/JPEG: one Core call, original bytes, format hint; M1-H S5:K05) | FX-09,10 | S5:FM0 |
+| T-CNV-10 | REQ-CNV-03 (multiframe TIFF/GIF converted once, not per frame; M1-H S5:K06) | FX-11,12 | S5:FM0 |
+| T-CNV-11 | REQ-CNV-03 (csv/html/md/epub: one call, own hint, no media extraction; M1-H S5:K11) | FX-30,31,32,33 | S5:FM0 |
+| T-CNV-12 | REQ-CNV-02, REQ-CNV-03 (extension mismatch dispatches on the sniffed format; M1-H S5:K18) | FX-41 | S5:FM0 |
 | T-RND-01 | REQ-RND-01 | FX-02 | S6:FM12 |
 | T-RND-02 | REQ-RND-02 (`frames_total`, single JPEG bytes passthrough) | FX-09,10,11 | S6:FM0 |
 | T-RND-03 | REQ-RND-03 | FX-12,16,18 | S6:FM4 |
@@ -195,6 +207,7 @@ Cell = primary `S<stage>:FM<n>` (section 5).
 | T-RND-06 | REQ-RND-06 | FX-08 | S6:FM3 |
 | T-RND-07 | REQ-RND-03 (`W_MEDIA_MULTIFRAME`) | FX-12 in docx | S6:FM11 |
 | T-RND-08 | REQ-RND-02, REQ-RND-04 (`image_probe_failed`) | FX-15 | S6:FM10 |
+| T-RND-09 | REQ-RND-01, REQ-MAP-01 (mixed PDF: rasters only for selected scan pages; M1-H S6:K03) | FX-03 | S6:FM0 |
 | T-LKP-01 | REQ-LKP-01 | FX-02, FX-66 | S7:FM0 |
 | T-LKP-02 | REQ-LKP-02 (`failed` overwritten; two concurrent runs, one valid entry) | FX-66, FX-55 | S7:FM12 |
 | T-LKP-03 | REQ-LKP-03 | FX-66, FX-65 | S7:FM12 |
@@ -215,6 +228,9 @@ Cell = primary `S<stage>:FM<n>` (section 5).
 | T-TRX-04 | REQ-TRX-04, REQ-SEC-07 | FX-61 | S10:FM3 |
 | T-TRX-05 | REQ-TRX-05 | - | S10:FM10 |
 | T-TRX-06 | REQ-TRX-06 (rerun resends lost Key; `--help` duplicate-charge sentence) | FX-65 | S10:FM7 |
+| T-TRX-07 | REQ-TRX-01 (pure scan PDF: every rendered page PNG is sent and recorded; M1-H S10:K02) | FX-02 | S10:FM12 |
+| T-TRX-08 | REQ-TRX-01, REQ-TRX-03, REQ-APR-07 (mixed PDF: partial failure, raise and swapped raster are per page; M1-H S10:K03) | FX-03 | S10:FM6 |
+| T-TRX-09 | REQ-TRX-01, REQ-TRX-03 (embedded media png/jpeg/gif/emf: sent as rendered, mime refusal; M1-H S10:K07) | FX-16,18 | S10:FM6 |
 | T-ASM-01 | REQ-ASM-01 | FX-03 | S11:FM0 |
 | T-ASM-02 | REQ-ASM-02 | FX-02,49 | S11:FM9 |
 | T-ASM-03 | REQ-ASM-03 | FX-03 | S11:FM0 |
@@ -231,9 +247,13 @@ Cell = primary `S<stage>:FM<n>` (section 5).
 | T-ASM-14 | REQ-ASM-P3 | FX-03 | S11:FM9 |
 | T-ASM-15 | REQ-ASM-06 (every pending reason incl. `provider_failed:<code>`) | FX-03, FX-61 | S11:FM6 |
 | T-ASM-16 | REQ-ASM-06, REQ-MAP-03 (placements = link-line count or 1; two units on one line; 17a/17b) | FX-17 | S11:FM12 |
+| T-ASM-17 | REQ-ASM-06, REQ-RPT-03 (protected: no Markdown, no marker, `E_ENCRYPTED` reported; M1-H S11:K15) | FX-05,25 | S11:FM0 |
+| T-ASM-18 | REQ-ASM-06, REQ-RPT-03 (corrupt/empty: no Markdown, no marker, `E_CORRUPT` reported; M1-H S11:K16) | FX-06,40 | S11:FM0 |
 | T-WRT-01 | REQ-WRT-01, REQ-SEC-05 | FX-02 | S12:FM9 |
 | T-WRT-02 | REQ-WRT-02 | FX-02,43 | S12:FM5 |
 | T-WRT-03 | REQ-SNF-01b, REQ-ASM-02 (`E_OUTPUT_COLLISION` never reaches Convert) | FX-52 | S12:FM12 |
+| T-WRT-04 | REQ-WRT-01, REQ-CNV-03 (Office output: awkward media names stay in `<parent>/media`; hostile media names refused; M1-H S12:K07) | FX-16,21 | S12:FM9 |
+| T-WRT-05 | REQ-WRT-01, REQ-CTR-01 (container outputs nest under the zip path; traversal refused; slip zip stays inside; M1-H S12:K14) | FX-43,44 | S12:FM9 |
 | T-RPT-01 | REQ-RPT-01 (stdout one JSON; stderr lines <= 64 KiB) | all | S13:FM0 |
 | T-RPT-02 | REQ-RPT-02 (unit equations, `requests.sent <= max_requests`) | all | S13:FM0 |
 | T-RPT-03 | REQ-RPT-03 (every 7.5 code; precedence 1>2>4>3>0, 130 overrides) | - | S13:FM10 |

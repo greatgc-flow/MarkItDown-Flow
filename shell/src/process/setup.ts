@@ -4,10 +4,10 @@
  * for the user's own terminal. Nothing is installed, downloaded or executed as
  * a fallback interpreter.
  */
-import type { Env, Presence } from '../pure/env';
-import { NotImplementedError } from '../pure/errors';
-import type { Clock, HostPlatform, Spawner } from './types';
-import type { VersionGate, VersionPolicy } from './version-gate';
+import { type Env, keyPresence, type Presence, scrubEngineEnv } from '../pure/env';
+import { diagnosticsCopy } from './log';
+import type { Clock, HostPlatform, Spawner, SpawnRequest } from './types';
+import { captureProbe, probeVersion, RELEASE_LOCK, VERSION_PROBE_TIMEOUT_MS, type VersionGate, type VersionPolicy } from './version-gate';
 
 /** Optional bootstrap probes when `enginePython` is unset; they only prefill instructions. */
 export const BOOTSTRAP_PROBE_CANDIDATES: readonly { command: string; args: readonly string[] }[] = [
@@ -25,13 +25,18 @@ export interface BootstrapProbe {
 }
 
 export interface BootstrapPaths {
-  /** Extracted `engine.zip` root, as the user will type it. */
-  engineRoot: string;
+  /** Directory holding the verified release wheel, as the user will type it. */
+  downloadDir: string;
   /** Target venv directory. */
   venvDir: string;
   /** Bootstrap interpreter command (`py -3.14`, `python3.14`, or the migrated hint). */
   bootstrapPython: string;
 }
+
+/** Release wheel attached to the GitHub release (R27). */
+export const ENGINE_WHEEL = 'mdflow-2.0.0-py3-none-any.whl';
+/** Declared Core policy, visible in the example even though the wheel metadata already declares it. */
+export const CORE_REQUIREMENT = 'markitdown-gc>=0.3.5,<0.4';
 
 export interface SetupDiagnostics {
   enginePython: string | null;
@@ -60,12 +65,103 @@ export interface SetupDeps {
   vault?: string;
 }
 
-/** Render the 25_PACKAGING section 2 command blocks with the given paths substituted. */
-export function renderBootstrapInstructions(_paths: BootstrapPaths): { windows: string; posix: string } {
-  throw new NotImplementedError('renderBootstrapInstructions');
+const DEFAULT_PATHS: Record<HostPlatform, BootstrapPaths> = {
+  win32: { downloadDir: 'C:\\Downloads\\mdflow-2.0.0', venvDir: 'C:\\mdflow-venvs\\2.0.0', bootstrapPython: 'py -3.14' },
+  posix: { downloadDir: '/path/to/mdflow-2.0.0', venvDir: '/path/to/mdflow-venvs/2.0.0', bootstrapPython: 'python3.14' },
+};
+
+function quote(value: string): string {
+  return `'${value.replace(/'/g, "''")}'`;
+}
+
+/**
+ * Render the R27 user-terminal recipe (25_PACKAGING section 2): verify the release wheel,
+ * create a venv, wheel-only install from the download directory (Core from PyPI), check, probe.
+ */
+export function renderBootstrapInstructions(paths: BootstrapPaths): { windows: string; posix: string } {
+  const venv = paths.venvDir.replace(/[\\/]+$/, '');
+  const winPython = `& ${quote(`${venv}\\Scripts\\python.exe`)}`;
+  const windows = [
+    `Set-Location -LiteralPath ${quote(paths.downloadDir)}`,
+    `${paths.bootstrapPython} -m venv ${quote(paths.venvDir)}`,
+    `${winPython} -m pip install --only-binary=:all: ${quote(`.\\${ENGINE_WHEEL}`)} ${quote(CORE_REQUIREMENT)}`,
+    `${winPython} -m pip check`,
+    `${winPython} -m mdflow version`,
+    `${winPython} -m mdflow selftest`,
+  ].join('\n');
+  const posixPython = quote(`${venv}/bin/python`);
+  const posix = [
+    `cd ${quote(paths.downloadDir)}`,
+    `${paths.bootstrapPython} -m venv ${quote(paths.venvDir)}`,
+    `${posixPython} -m pip install --only-binary=:all: ${quote(`./${ENGINE_WHEEL}`)} ${quote(CORE_REQUIREMENT)}`,
+    `${posixPython} -m pip check`,
+    `${posixPython} -m mdflow version`,
+    `${posixPython} -m mdflow selftest`,
+  ].join('\n');
+  return { windows, posix };
+}
+
+function parsePythonVersion(text: string): string | null {
+  const match = /Python\s+(\d+\.\d+(?:\.\d+)?)/.exec(text);
+  return match ? match[1] : null;
+}
+
+async function bootstrapProbes(deps: SetupDeps): Promise<BootstrapProbe[]> {
+  const probes: BootstrapProbe[] = [];
+  for (const candidate of BOOTSTRAP_PROBE_CANDIDATES) {
+    const request: SpawnRequest = {
+      command: candidate.command,
+      args: [...candidate.args],
+      cwd: deps.cwd,
+      env: scrubEngineEnv(deps.hostEnv, 'none'),
+      shell: false,
+      windowsHide: true,
+    };
+    const capture = await captureProbe(deps.spawner, request, deps.clock, VERSION_PROBE_TIMEOUT_MS);
+    let result: BootstrapProbe['result'] = 'failed';
+    if (capture.timedOut) result = 'timeout';
+    else if (!capture.error && capture.status?.code === 0) result = 'ok';
+    probes.push({
+      command: candidate.command,
+      args: [...candidate.args],
+      result,
+      version: result === 'ok' ? parsePythonVersion(capture.stdout + capture.stderr) : null,
+    });
+  }
+  return probes;
 }
 
 /** Collect diagnostics: version probe of `enginePython` first; bootstrap probes only when unconfigured. */
-export async function collectSetupDiagnostics(_deps: SetupDeps): Promise<SetupDiagnostics> {
-  throw new NotImplementedError('collectSetupDiagnostics');
+export async function collectSetupDiagnostics(deps: SetupDeps): Promise<SetupDiagnostics> {
+  const policy = deps.policy ?? RELEASE_LOCK;
+  let gate: VersionGate | null = null;
+  let probes: BootstrapProbe[] = [];
+  if (deps.enginePython) {
+    gate = await probeVersion(deps.enginePython, { spawner: deps.spawner, clock: deps.clock, hostEnv: deps.hostEnv, cwd: deps.cwd, policy });
+  } else {
+    probes = await bootstrapProbes(deps);
+  }
+  const defaults = DEFAULT_PATHS[deps.platform];
+  const detected = probes.find((p) => p.result === 'ok');
+  const bootstrapPython = deps.paths?.bootstrapPython ?? (detected ? [detected.command, ...detected.args.filter((a) => a !== '--version')].join(' ') : deps.bootstrapPythonHint ?? defaults.bootstrapPython);
+  const paths: BootstrapPaths = {
+    downloadDir: deps.paths?.downloadDir ?? defaults.downloadDir,
+    venvDir: deps.paths?.venvDir ?? defaults.venvDir,
+    bootstrapPython,
+  };
+  const instructions = renderBootstrapInstructions(paths);
+  const redact = { home: deps.home, vault: deps.vault };
+  const summary = diagnosticsCopy(
+    { version: gate, probes, codes: [], paths: deps.enginePython ? [deps.enginePython] : [] },
+    redact,
+  );
+  return {
+    enginePython: deps.enginePython,
+    gate,
+    bootstrapProbes: probes,
+    instructions,
+    apiKey: keyPresence(deps.hostEnv),
+    jobsEnabled: gate?.enabled === true,
+    summary,
+  };
 }

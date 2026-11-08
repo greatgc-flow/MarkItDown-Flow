@@ -7,3 +7,4 @@ export * from './setup-modal';
 export * from './history-modal';
 export * from './data-store';
 export * from './progress';
+export * from './settings-tab';

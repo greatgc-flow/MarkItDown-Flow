@@ -8,7 +8,7 @@
 import * as path from 'node:path';
 import type { Plugin as ObsidianPlugin } from 'obsidian';
 import { req } from './req';
-import { App, asFake, createApp, Menu, mockState, Plugin as MockPlugin, testManifest, TFile, TFolder } from './__mocks__/obsidian';
+import { App, asFake, Menu, mockState, Plugin as MockPlugin, testManifest, TFile, TFolder } from './__mocks__/obsidian';
 import { type CoordinatorDeps, type EntryPoint, type Selection, ShellCoordinator } from '../src/ui/coordinator';
 import { type FilePicker, registerEntryPoints, selectionFromDrop } from '../src/ui/entry-points';
 import { FakeClock } from './fixtures/fake-clock';

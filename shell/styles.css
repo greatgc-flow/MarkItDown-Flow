@@ -1,0 +1,54 @@
+/* MarkItDown Flow 2.0.0 shell styles (clean-room, 20_SHELL.md REQ-SHL-01). */
+
+.mdflow-consent-files {
+  max-height: 50vh;
+  overflow-y: auto;
+  border: 1px solid var(--background-modifier-border);
+  padding: 0.5em;
+}
+
+.mdflow-consent-file {
+  padding: 0.5em 0;
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.mdflow-consent-file:last-child {
+  border-bottom: none;
+}
+
+.mdflow-consent-row {
+  font-family: var(--font-monospace);
+  font-size: var(--font-ui-smaller);
+  word-break: break-all;
+}
+
+.mdflow-consent-label {
+  color: var(--text-muted);
+}
+
+.mdflow-consent-billing,
+.mdflow-consent-ack,
+.mdflow-consent-warning,
+.mdflow-setup-warning {
+  color: var(--text-warning);
+}
+
+.mdflow-consent-buttons,
+.mdflow-setup-buttons {
+  display: flex;
+  gap: 0.5em;
+  justify-content: flex-end;
+  margin-top: 1em;
+}
+
+.mdflow-setup-commands {
+  white-space: pre-wrap;
+  user-select: text;
+  font-size: var(--font-ui-smaller);
+}
+
+.mdflow-history ul {
+  max-height: 50vh;
+  overflow-y: auto;
+  font-size: var(--font-ui-smaller);
+}

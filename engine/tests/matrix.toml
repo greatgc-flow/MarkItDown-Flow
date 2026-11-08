@@ -526,7 +526,11 @@ owner = "S0:FM12"
 # ======================================================================= file class x stage (117 cells)
 # Stages with an `fx("all")` test (S0 S1 S2 S3 S8 S11 S13) cover every class; the stages below do not.
 
-# ---- S4 Select: covered K02 K07
+# M1-H (MECE round 1, horizontal): S5:K01 K02 K04 K05 K06 K11 K18, S4:K03 K04, S6:K03 and S10:K02 were declared
+# N/A by delegation; dedicated tests T-CNV-06..12, T-SEL-05/06, T-RND-09 and T-TRX-07 (stage_io/test_class_closure.py)
+# now cover them, so those cells are no longer listed here.
+
+# ---- S4 Select: covered K02 K03 K04 K07
 [[class_stage]]
 classes = ["K01", "K10", "K11", "K12", "K13", "K15", "K16", "K17", "K18", "K19", "K20"]
 stages = ["S4"]
@@ -534,29 +538,17 @@ reason = "Sources of these classes carry no OCR candidates (convert_only or repo
 owner = "S3"
 
 [[class_stage]]
-classes = ["K03", "K04", "K05", "K06", "K08", "K09", "K14"]
+classes = ["K05", "K06", "K08", "K09", "K14"]
 stages = ["S4"]
 reason = "Select acts on the common Candidate contract (id, kind, page, priority) independent of the source class; page and media ordering is asserted on K02 and K07."
 owner = "S4:K02"
 
-# ---- S5 Convert: covered K03 K07 K08 K09 K10 K13
+# ---- S5 Convert: covered K01 K02 K03 K04 K05 K06 K07 K08 K09 K10 K11 K13 K18
 [[class_stage]]
 classes = ["K12", "K15", "K16", "K17", "K19"]
 stages = ["S5"]
 reason = "report_only sources are never converted."
 owner = "S3"
-
-[[class_stage]]
-classes = ["K01", "K02", "K04", "K18"]
-stages = ["S5"]
-reason = "PDF-bytes sources use the same one-page-at-a-time Core conversion asserted on K03 (T-CNV-01/02, CT-05); K18 is a PDF named .docx."
-owner = "S5:K03"
-
-[[class_stage]]
-classes = ["K05", "K06", "K11"]
-stages = ["S5"]
-reason = "mdflow adds no format-specific Convert logic: one offline Core call per source (T-CNV-01, T-CNV-05); image and g2b verdicts are pinned at Triage (CT-12)."
-owner = "S5:K03"
 
 [[class_stage]]
 classes = ["K14"]
@@ -570,11 +562,11 @@ stages = ["S5"]
 reason = "A directory tree is discovered at Sniff; each discovered file is converted as its own class."
 owner = "S1:K20"
 
-# ---- S6 Render: covered K02 K05 K06 K07
+# ---- S6 Render: covered K02 K03 K05 K06 K07
 [[class_stage]]
-classes = ["K03", "K04"]
+classes = ["K04"]
 stages = ["S6"]
-reason = "Pages of mixed and capped PDFs render by the same page path as K02 (T-RND-01/04/06); capping is decided at Classify."
+reason = "Pages of capped PDFs render by the same page path as K02 (T-RND-01/04/06) and K03 (T-RND-09); capping is decided at Classify and Select (T-SEL-06)."
 owner = "S6:K02"
 
 [[class_stage]]
@@ -645,11 +637,11 @@ stages = ["S9"]
 reason = "Consent is requested per file; members and directory entries are covered through their own classes."
 owner = "S9:K02"
 
-# ---- S10 Transcribe: covered K03 K07
+# ---- S10 Transcribe: covered K02 K03 K07
 [[class_stage]]
-classes = ["K01", "K02", "K04", "K05", "K06", "K08", "K09"]
+classes = ["K01", "K04", "K05", "K06", "K08", "K09"]
 stages = ["S10"]
-reason = "Transcribe receives one Unit raster at a time (REQ-TRX-01) and is independent of the source class; asserted on K03 and K07."
+reason = "Transcribe receives one Unit raster at a time (REQ-TRX-01) and is independent of the source class; asserted on K02, K03 and K07."
 owner = "S10:K03"
 
 [[class_stage]]

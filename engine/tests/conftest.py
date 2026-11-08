@@ -10,6 +10,31 @@ import sys
 
 import pytest
 
+
+def _sandbox_temp_prelude():
+    """Explicit test-only bridge for Python 3.15's restricted-token Windows DACL.
+
+    Production chmod/mkdir calls and real desktop security evidence stay separate.
+    The bridge is opt-in, Windows-only and limited to test paths inside the repo.
+    """
+    return '''
+import os, pathlib
+if os.name == 'nt' and os.environ.get('M1_WINDOWS_TEST_TEMP') == '1':
+    _test_root = pathlib.Path(%r).resolve()
+    _mkdir = os.mkdir
+    def _test_mkdir(path, mode=0o777, *, dir_fd=None):
+        target = pathlib.Path(path).absolute()
+        if mode == 0o700 and target.is_relative_to(_test_root):
+            mode = 0o777
+        return _mkdir(path, mode, dir_fd=dir_fd)
+    os.mkdir = _test_mkdir
+''' % str(Path(__file__).resolve().parents[2])
+
+
+def pytest_sessionstart(session):
+    if os.environ.get('M1_WINDOWS_TEST_TEMP') == '1':
+        exec(_sandbox_temp_prelude(), {})
+
 REPO_ROOT = Path(__file__).resolve().parents[2]
 _spec = importlib.util.spec_from_file_location("mdflow_trace", REPO_ROOT / "tools/trace.py")
 trace = importlib.util.module_from_spec(_spec)
@@ -149,7 +174,7 @@ def cli_command():
     src = str(REPO_ROOT / "engine" / "src")
 
     def command(*args, code=None, prelude=""):
-        bootstrap = f"import sys; sys.path.insert(0, {src!r});\n"
+        bootstrap = f"import sys; sys.path.insert(0, {src!r});\n" + _sandbox_temp_prelude()
         entry = code if code is not None else (
             "import runpy; runpy.run_module('mdflow', run_name='__main__')"
         )
