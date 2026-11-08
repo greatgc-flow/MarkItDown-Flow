@@ -144,9 +144,110 @@ def golden_problems(root: Path) -> list[str]:
     return []
 
 
+MATRIX_STAGES = [f"S{n}" for n in range(14)]
+MATRIX_FMS = [f"FM{n}" for n in range(13)]
+MATRIX_CLASSES = [f"K{n:02d}" for n in range(1, 21)]
+REPORT_ONLY = {"K12", "K13", "K15", "K16", "K17", "K19"}
+FLOOR_STAGE_FM = {("S3", f"FM{n}") for n in (0, 1, 2, 3, 4, 10, 11, 12)} | {
+    ("S1", "FM1"), ("S1", "FM2"), ("S1", "FM3"), ("S1", "FM9"), ("S2", "FM1"), ("S2", "FM10"),
+    ("S6", "FM1"), ("S6", "FM3"), ("S7", "FM1"), ("S7", "FM5"), ("S9", "FM8"), ("S10", "FM6"),
+    ("S10", "FM7"), ("S12", "FM5"), ("S12", "FM9"), ("S0", "FM7"), ("S0", "FM10"), ("S0", "FM12")}
+FLOOR_CLASS_STAGE = {(k, s) for k in MATRIX_CLASSES for s in ("S3", "S13")} | {
+    (k, "S11") for k in MATRIX_CLASSES if k not in REPORT_ONLY}
+
+
+def fixture_classes(root: Path) -> dict[str, set[str]]:
+    """FX id -> file classes from the manifest table (`-` and `all` rows have no class)."""
+    text = (root / "docs/renewal/30_TESTPLAN.md").read_text(encoding="utf-8")
+    manifest = text.split("## 3. Fixture manifest", 1)[1].split("## 4.", 1)[0]
+    classes = {}
+    for line in manifest.splitlines():
+        cells = line.split("|")
+        if line.startswith("| ") and len(cells) > 3:
+            for identity in re.findall(r"\bFX-\d{2}\b", cells[1]):
+                classes[identity] = set(re.findall(r"K\d{2}", cells[2]))
+    return classes
+
+
 def matrix_problems(root: Path, tests: list[dict]) -> list[str]:
-    """Verify both generated coverage grids and reasoned N/A declarations."""
-    raise NotImplementedError("Matrix verification requires the applicability manifest")
+    """Both generated grids (stage x failure mode, class x stage): covered or reasoned N/A.
+
+    Coverage is derived from the markers only: a test covers its single `cov` cell, and the class x stage
+    cell of every class of its `fx` ids (`fx("all")` = every class). `engine/tests/matrix.toml` supplies
+    applicability only; floor cells can never be declared N/A. An N/A that is covered is not a problem.
+    """
+    try:
+        import tomllib
+    except ModuleNotFoundError:  # Python 3.10
+        import tomli as tomllib
+    path = root / "engine/tests/matrix.toml"
+    if not path.is_file():
+        return [f"missing applicability manifest: {path.relative_to(root).as_posix()}"]
+    declared = tomllib.loads(path.read_text(encoding="utf-8"))
+    problems = []
+    classes_of = fixture_classes(root)
+    covered_fm, covered_class = set(), set()
+    for test in tests:
+        cov = test["markers"].get("cov", [])
+        if len(cov) != 1 or len(cov[0]) != 2:
+            continue
+        stage, mode = cov[0]
+        covered_fm.add((stage, mode))
+        fixtures = set(marker_values(test, "fx"))
+        klasses = set(MATRIX_CLASSES) if "all" in fixtures else set().union(*(classes_of.get(f, set()) for f in fixtures))
+        covered_class |= {(k, stage) for k in klasses}
+    na_fm, na_class = {}, {}
+
+    def reason_owner(entry, label):
+        if not str(entry.get("reason", "")).strip():
+            problems.append(f"{label}: N/A without a reason")
+        return str(entry.get("owner", ""))
+
+    for entry in declared.get("stage_fm", []):
+        owner = reason_owner(entry, f"stage_fm {entry.get('stages')}x{entry.get('fms')}")
+        match = re.fullmatch(r"(S\d+):(FM\d+)", owner)
+        if not match or (match[1], match[2]) not in covered_fm:
+            problems.append(f"stage_fm owner is not a covered cell: {owner!r} for {entry.get('stages')}x{entry.get('fms')}")
+        for stage in entry.get("stages", []):
+            for mode in entry.get("fms", []):
+                if stage not in MATRIX_STAGES or mode not in MATRIX_FMS:
+                    problems.append(f"unknown stage/FM in manifest: {stage}:{mode}")
+                elif (stage, mode) in na_fm:
+                    problems.append(f"cell declared twice: {stage}:{mode}")
+                na_fm[(stage, mode)] = owner
+    for entry in declared.get("class_stage", []):
+        owner = reason_owner(entry, f"class_stage {entry.get('classes')}x{entry.get('stages')}")
+        for klass in entry.get("classes", []):
+            for stage in entry.get("stages", []):
+                if klass not in MATRIX_CLASSES or stage not in MATRIX_STAGES:
+                    problems.append(f"unknown class/stage in manifest: {klass}:{stage}")
+                    continue
+                if (klass, stage) in na_class:
+                    problems.append(f"cell declared twice: {klass}:{stage}")
+                na_class[(klass, stage)] = owner
+                target = (klass, owner) if re.fullmatch(r"S\d+", owner) else \
+                    tuple(reversed(owner.split(":"))) if re.fullmatch(r"S\d+:K\d{2}", owner) else None
+                if target is None or target not in covered_class:
+                    problems.append(f"class_stage owner is not a covered cell: {owner!r} for {klass}:{stage}")
+    for stage in MATRIX_STAGES:
+        for mode in MATRIX_FMS:
+            cell = (stage, mode)
+            if cell in FLOOR_STAGE_FM and cell not in covered_fm:
+                problems.append(f"floor cell not covered: {stage}:{mode}")
+            if cell in FLOOR_STAGE_FM and cell in na_fm:
+                problems.append(f"floor cell declared N/A: {stage}:{mode}")
+            if cell not in covered_fm and cell not in na_fm:
+                problems.append(f"stage x failure-mode cell neither covered nor N/A: {stage}:{mode}")
+    for klass in MATRIX_CLASSES:
+        for stage in MATRIX_STAGES:
+            cell = (klass, stage)
+            if cell in FLOOR_CLASS_STAGE and cell not in covered_class:
+                problems.append(f"floor class cell not covered: {klass}:{stage}")
+            if cell in FLOOR_CLASS_STAGE and cell in na_class:
+                problems.append(f"floor class cell declared N/A: {klass}:{stage}")
+            if cell not in covered_class and cell not in na_class:
+                problems.append(f"class x stage cell neither covered nor N/A: {klass}:{stage}")
+    return problems
 
 
 def write_registry(root: Path, requirements: dict, tests: list[dict]) -> None:
