@@ -31,6 +31,7 @@ import platform
 import shutil
 import subprocess
 import sys
+import zipfile
 
 REPO = Path(__file__).resolve().parents[1]
 OUT_DEFAULT = REPO / "shell/test/fixtures/fx71"
@@ -38,6 +39,7 @@ WORK_DEFAULT = REPO / "build/trace/fx71-work"
 SENTINEL = "sk-fx71-dummy-sentinel-0000"  # not a credential; must never be recorded
 LINE_LIMIT = 64 * 1024
 MODEL = "gpt-4.1-mini"
+PLACEHOLDER = "<WORK>"  # stands for the recording work directory wherever the engine printed it absolutely
 LARGE_PAGES = 200  # the pretty Plan stdout must exceed the 64 KiB progress-line limit
 
 
@@ -260,9 +262,10 @@ class Recorder:
         self.out, self.work = out, work
         self.entries: dict[str, dict] = {}
         self.gen = load_gen()
-        home, tmp = work / "home", work / "tmp"
-        for folder in (home, tmp):
-            folder.mkdir(parents=True, exist_ok=True)
+        # HOME is the work dir itself: the engine reports out/cache as absolute paths but shortens the home prefix
+        # to "~", so reports read "~/out-mixed" instead of a machine path.
+        home, tmp = work, work / "tmp"
+        tmp.mkdir(parents=True, exist_ok=True)
         base = {k: v for k, v in os.environ.items()
                 if not k.upper().startswith("MDFLOW_") and k.upper() not in {"PYTHONPATH", "PYTHONHOME"}}
         # Workspace-local TEMP: Python 3.15 on Windows cannot use mode=0700 temp dirs in the sandbox.
@@ -284,10 +287,23 @@ class Recorder:
         target.write_bytes(data)
 
     # process --------------------------------------------------------------
+    def portable(self, data: bytes) -> tuple[bytes, int]:
+        """Replace any remaining absolute work-dir prefix by PLACEHOLDER (the leak check still runs afterwards)."""
+        count = 0
+        for spelling in sorted({str(self.work), self.work.as_posix(), json.dumps(str(self.work))[1:-1]},
+                               key=len, reverse=True):
+            raw = spelling.encode("utf-8")
+            count += data.count(raw)
+            data = data.replace(raw, PLACEHOLDER.encode("ascii"))
+        return data, count
+
     def save(self, name: str, data: bytes, *, argv, exit_code, stream, env_names, note=""):
+        data, replaced = self.portable(data)
         entry = {"kind": "recorded", "stream": stream, "argv": argv, "exit": exit_code, "env_names": env_names,
                  "bytes": len(data), "sha256": hashlib.sha256(data).hexdigest(),
                  "eol": "crlf" if b"\r\n" in data else "lf"}
+        if replaced:
+            entry["placeholder_replacements"] = replaced
         if note:
             entry["note"] = note
         self.entries[name] = entry
@@ -330,6 +346,15 @@ class Recorder:
         self.put_bytes("inputs", ".DS_Store", b"\x00\x00\x00\x01Bud1")
         self.put("bad", "broken.pdf", "FX-06")
         self.put("bad", "empty.pdf", "FX-40")
+        # mdflow's Sniff rejects garbage PDFs itself (E_CORRUPT, Triage never runs). To record a *Core* triage report
+        # with a `corrupt` issue the file must pass Sniff: a valid zip/docx whose relationships XML is truncated.
+        # Core then reports corrupt "Package XML could not be inspected." (ocr_triage_0.3.5 _Package.xml).
+        generated = self.gen.generate("FX-16", self.work / "scratch")
+        with zipfile.ZipFile(generated) as archive:
+            members = {name: archive.read(name) for name in archive.namelist()}
+        rels = "word/_rels/document.xml.rels"
+        members[rels] = members[rels][:len(members[rels]) // 2]
+        self.put_bytes("bad", "garbled.docx", self.gen.zip_bytes(sorted(members.items())))
         self.put("large", "긴 문서.pdf", "FX-02", pages=LARGE_PAGES)
         (self.work / "ocr_echo.py").write_text(
             "import sys\nsys.stdout.reconfigure(encoding='utf-8')\nprint('모의 OCR 텍스트 (fx71)')\n", encoding="utf-8")
@@ -436,7 +461,10 @@ class Recorder:
                       "`python ocr_echo.py {input}` (no network)",
             "recording_host": {"platform": platform.platform(), "python": platform.python_version()},
             "engine": self.version,
-            "note": "recorded = verbatim child output (real timestamps; re-recording changes the bytes; stdout/stderr "
+            "placeholder": {PLACEHOLDER: "recording work directory; HOME was set to it, so the engine prints `~/...`; "
+                                         "any other absolute spelling was replaced by this token (see "
+                                         "`placeholder_replacements` per file)"},
+            "note": "recorded = verbatim child output (except the placeholder) (real timestamps; re-recording changes the bytes; stdout/stderr "
                     "newlines are those of the recording host, see `eol`). derived = deterministic transform of one "
                     "recorded parent, never engine output. Check with: python tools/record_protocol.py --verify",
             "files": dict(sorted(self.entries.items())),

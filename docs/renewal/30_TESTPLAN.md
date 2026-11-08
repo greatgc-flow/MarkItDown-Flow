@@ -147,6 +147,8 @@ Cell = primary `S<stage>:FM<n>` (section 5).
 | T-SNF-08 | REQ-SNF-07 | FX-53 | S1:FM5 |
 | T-SNF-09 | REQ-SNF-08 | FX-46,48 | S1:FM3 |
 | T-SNF-10 | REQ-SNF-09 (lying size aborted at declared+64 KiB, `E_ZIP_BOMB`, peak memory < 1 MiB) | FX-54 | S1:FM9 |
+| T-SNF-11 | REQ-SNF-03 (pure part of T-SNF-04: magic precedence, empty bytes; step 2) | FX-13,40,41 | S1:FM0 |
+| T-SNF-12 | REQ-SNF-06 (pure part of T-SNF-07: result shape, canonical hashes; step 2) | all | S1:FM0 |
 | T-TRI-01 | REQ-TRI-01 (spy: every NATIVE incl. txt/csv; never other routes) | FX-28,30,31,05 | S2:FM0 |
 | T-TRI-02 | REQ-TRI-02 (raise on csv and pdf -> `E_TRIAGE_FAIL`) | FX-02,30 | S2:FM1 |
 | T-TRI-03 | REQ-TRI-03 (`schema_version 2` injected on pdf and md) | FX-60, FX-02, FX-32 | S2:FM10 |
@@ -356,7 +358,7 @@ File classes: `K01` pdf_text, `K02` pdf_scan, `K03` pdf_mixed, `K04` pdf_capped,
 |---|---|---|
 | 0 | `tools/trace.py`, marker plugin, `golden.py`, `mutate.py`, fixture generators, CI skeleton | T-META-01..04, PT-10, PT-07 |
 | 1 | Contract pins (installed Core only) + goldens | CT-01..CT-14, T-META-03 |
-| 2 | PURE: `canonical_json`/hashes, `detect_format`, `classify` | T-SNF-04/07 (pure part), T-CLS-01..13, T-GEN-04 |
+| 2 | PURE: `canonical_json`/hashes, `detect_format`, `classify` | T-SNF-11/12 (pure parts of T-SNF-04/07), T-CLS-01..13, T-GEN-04 |
 | 3 | PURE: `select`, `plan` (approved/status, hash, budget, cost), ledger **key** + entry validation, `approve` | T-SEL-*, T-PLN-*, T-MAP-07/08, T-LKP-04, T-APR-01/02/05/07/08 |
 | 4 | PURE: `assemble` (frontmatter, `esc_*`, placements, reserved names), TRX-04 post-processing, exit map, redaction | T-ASM-*, T-MAP-01..05, T-TRX-04, T-RPT-03, T-SEC-02 |
 | 5 | IO: Sniff (zip/CFB/PDF, streamed reads), Triage wrapper, Convert, Render | T-SNF-*, T-CTR-*, T-TRI-*, T-CNV-*, T-RND-*, T-MAP-06 |

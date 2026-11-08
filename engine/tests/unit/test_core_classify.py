@@ -18,7 +18,7 @@ def issue_codes(c):
 @pytest.mark.req("REQ-SNF-03")
 @pytest.mark.cov("S1", "FM0")
 @pytest.mark.fx("FX-13", "FX-40", "FX-41")
-def test_T_SNF_04_pure_magic_precedence_and_empty(core_api, core_data):
+def test_T_SNF_11_pure_magic_precedence_and_empty(core_api, core_data):
     detect = core_api.sniff_pure.detect_format
     for header, ext, expected in ((b"%PDF-1.4\n", "docx", "pdf"),
         (b"RIFF\x08\0\0\0WEBP", "bin", "webp"), (b"II+\0", "bin", "tiff"),
@@ -43,7 +43,7 @@ def test_T_SNF_04_pure_magic_precedence_and_empty(core_api, core_data):
 @pytest.mark.req("REQ-SNF-06")
 @pytest.mark.cov("S1", "FM0")
 @pytest.mark.fx("all")
-def test_T_SNF_07_pure_result_and_canonical_hashes(core_api, core_data):
+def test_T_SNF_12_pure_result_and_canonical_hashes(core_api, core_data):
     value = {"z": [None, True, 3], "가": "é\n", "a": {"b": 2}}
     expected = core_data.canonical(value)
     assert core_api.hashing.canonical_json(value) == expected

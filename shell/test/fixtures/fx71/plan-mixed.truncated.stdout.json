@@ -1,0 +1,230 @@
+{
+  "v": 1,
+  "approved": {
+    "file": {
+      "path": "b c.docx",
+      "sha256": "df0040649e78a0e8faa3326ee570ee4660399848908bd9348013f98c9df38d62",
+      "bytes": 276663,
+      "format": "docx"
+    },
+    "classification": {
+      "route": "NATIVE",
+      "need": "PARTIAL",
+      "label": "M",
+      "action": "convert_and_ocr",
+      "decision": "review",
+      "coverage_state": "complete"
+    },
+    "provider": {
+      "name": "openai-compatible",
+      "model": "gpt-4.1-mini",
+      "egress": true,
+      "cost_hint": null,
+      "max_batch": 1,
+      "retries": 2,
+      "destination": "https://api.openai.com/v1/chat/completions",
+      "proxy": null,
+      "command_env_names": []
+    },
+    "provider_fingerprint": "7e7a10136c727a9702c0c92cfb4d288110ed737ea13ba4f39b14f9898c3a001a",
+    "prompt_version": "p1",
+    "dpi": 200,
+    "units": [
+      {
+        "kind": "media",
+        "source_id": "word/media/image1.png",
+        "page": null,
+        "status": "eligible",
+        "raster_sha256": "f69c00924b35305ae8e33d526021959cd6853c9f5ef6abe8c99c154b2daf83d3",
+        "dpi": 0,
+        "mime": "image/png",
+        "bytes": 120366,
+        "priority": "low",
+        "priority_core": "low",
+        "also": [],
+        "media_file": "media/f69c00924b35.png"
+      },
+      {
+        "kind": "media",
+        "source_id": "word/media/image2.png",
+        "page": null,
+        "status": "eligible",
+        "raster_sha256": "8efec5969d6a70f6ba54ffd7afeb13dc39df081367a73d040e7bffc33059b4c5",
+        "dpi": 0,
+        "mime": "image/png",
+        "bytes": 120364,
+        "priority": "low",
+        "priority_core": "low",
+        "also": [],
+        "media_file": "media/8efec5969d6a.png"
+      }
+    ],
+    "units_total": 2,
+    "keys_unique": 2,
+    "max_requests": 6,
+    "est_max_cost": null,
+    "cost_known": false,
+    "approve_threshold": 20,
+    "threshold_exceeded": false,
+    "sensitive_hits": [],
+    "oversize": false
+  },
+  "status": {
+    "units": {
+      "eligible": 2,
+      "cached": 0,
+      "skipped_low_priority": 0,
+      "oversize": 0,
+      "render_failed": 0,
+      "unsupported_media_format": 0
+    },
+    "requests_to_send": 2,
+    "uninspected_pages": 0,
+    "frames_total": null
+  },
+  "plan_hash": "a80d66b3fa9f7d95ecc3dba770b6eaf01cd8ddd4934e5d0c66d31ea703b5efda"
+}
+{
+  "v": 1,
+  "approved": {
+    "file": {
+      "path": "memo.txt",
+      "sha256": "346da39eb9f4cabf4e6125f94c23e8076b2f40e4cbb76bac96219fd906992127",
+      "bytes": 29,
+      "format": "txt"
+    },
+    "classification": {
+      "route": "NATIVE",
+      "need": "NONE",
+      "label": "T",
+      "action": "convert_only",
+      "decision": "no_candidates",
+      "coverage_state": "not_applicable"
+    },
+    "provider": {
+      "name": "openai-compatible",
+      "model": "gpt-4.1-mini",
+      "egress": true,
+      "cost_hint": null,
+      "max_batch": 1,
+      "retries": 2,
+      "destination": "https://api.openai.com/v1/chat/completions",
+      "proxy": null,
+      "command_env_names": []
+    },
+    "provider_fingerprint": "7e7a10136c727a9702c0c92cfb4d288110ed737ea13ba4f39b14f9898c3a001a",
+    "prompt_version": "p1",
+    "dpi": 200,
+    "units": [],
+    "units_total": 0,
+    "keys_unique": 0,
+    "max_requests": 0,
+    "est_max_cost": null,
+    "cost_known": false,
+    "approve_threshold": 20,
+    "threshold_exceeded": false,
+    "sensitive_hits": [],
+    "oversize": false
+  },
+  "status": {
+    "units": {
+      "eligible": 0,
+      "cached": 0,
+      "skipped_low_priority": 0,
+      "oversize": 0,
+      "render_failed": 0,
+      "unsupported_media_format": 0
+    },
+    "requests_to_send": 0,
+    "uninspected_pages": 0,
+    "frames_total": null
+  },
+  "plan_hash": "754bff6e896d1b6a7592b8badeff40d2c40397aaa687a67e5e01ae8d9afed2f9"
+}
+{
+  "v": 1,
+  "approved": {
+    "file": {
+      "path": "sub/a.pdf",
+      "sha256": "73fa749cd0e87e33e6183cc992b2f7f21ccf2a05272ee2a0452457115443f93e",
+      "bytes": 9430,
+      "format": "pdf"
+    },
+    "classification": {
+      "route": "NATIVE",
+      "need": "PARTIAL",
+      "label": "M",
+      "action": "convert_and_ocr",
+      "decision": "ocr_recommended",
+      "coverage_state": "complete"
+    },
+    "provider": {
+      "name": "openai-compatible",
+      "model": "gpt-4.1-mini",
+      "egress": true,
+      "cost_hint": null,
+      "max_batch": 1,
+      "retries": 2,
+      "destination": "https://api.openai.com/v1/chat/completions",
+      "proxy": null,
+      "command_env_names": []
+    },
+    "provider_fingerprint": "7e7a10136c727a9702c0c92cfb4d288110ed737ea13ba4f39b14f9898c3a001a",
+    "prompt_version": "p1",
+    "dpi": 200,
+    "units": [
+      {
+        "kind": "page",
+        "source_id": "p2",
+        "page": 2,
+        "status": "eligible",
+        "raster_sha256": "b1e4da256260c21ea37de42fcb4b8219583dfb6913284c1244911f60fc2e3411",
+        "dpi": 200,
+        "mime": "image/png",
+        "bytes": 26762,
+        "priority": "normal",
+        "priority_core": "high"
+      },
+      {
+        "kind": "page",
+        "source_id": "p4",
+        "page": 4,
+        "status": "eligible",
+        "raster_sha256": "b1e4da256260c21ea37de42fcb4b8219583dfb6913284c1244911f60fc2e3411",
+        "dpi": 200,
+        "mime": "image/png",
+        "bytes": 26762,
+        "priority": "normal",
+        "priority_core": "high"
+      }
+    ],
+    "units_total": 2,
+    "keys_unique": 1,
+    "max_requests": 3,
+    "est_max_cost": null,
+    "cost_known": false,
+    "approve_threshold": 20,
+    "threshold_exceeded": false,
+    "sensitive_hits": [],
+    "oversize": false
+  },
+  "status": {
+    "units": {
+      "eligible": 2,
+      "cached": 0,
+      "skipped_low_priority": 0,
+      "oversize": 0,
+      "render_failed": 0,
+      "unsupported_media_format": 0
+    },
+    "requests_to_send": 1,
+    "uninspected_pages": 0,
+    "frames_total": null
+  },
+  "plan_hash": "f918a5c781905fce7e7eca0c08f41192e0e2d475f2867c9ad1f1e1514eb14e84"
+}
+{
+  "v": 1,
+  "approved": {
+    "file": {
+      "path": "ë
