@@ -1,7 +1,7 @@
 """Shared stage contracts from SPEC sections 2, 5, 7 and 8.
 
 TypedDicts describe data; runtime validation belongs to the owning stages.
-Key construction stays in ledger.py, including the pending F-01 amendment.
+Key construction stays in ledger.py (DRAFT-3.1).
 """
 
 from typing import Literal, Mapping, TypedDict
@@ -188,6 +188,7 @@ class LedgerEntry(UnitResult):
     v: Literal[1]
     key_id: str
     key: dict[str, object]  # The normative Key is owned by ledger.py (F-01).
+    provider: dict[str, object]
     unit: LedgerUnit
     consent: Consent | None
     tools: dict[str, str]
@@ -224,9 +225,11 @@ EXIT_PRECEDENCE = (130, 1, 2, 4, 3, 0)
 
 def canonical_json(value: object) -> bytes:
     """Return SPEC canonical UTF-8 JSON bytes (pure behavior in step 2)."""
-    raise NotImplementedError("Canonical serialization belongs to step 2")
+    from .hashing import canonical_json as serialize
+    return serialize(value)
 
 
 def key_id(key: Mapping[str, object]) -> str:
     """Hash an already constructed Key; construction is owned by ledger.py."""
-    raise NotImplementedError("Key hashing belongs to step 3")
+    from .hashing import key_id as hash_key
+    return hash_key(key)
