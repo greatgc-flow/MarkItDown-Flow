@@ -50,3 +50,9 @@ Q1 Is dropping Azure DocIntel/CU from the built-in set acceptable (kept only via
 |---|---|---|
 | R24 | SPEC DRAFT-2 accepted as basis (Fable: 27 findings fixed, 8 partially/rejected with reasons in SPEC §13). X-13 `--tag` frontmatter key: DROPPED. X-14 `--no-media`: DROPPED (minimalism; YAGNI). | orchestrator, Fable recommendation |
 | R25 | CI runner labels per cx verification: `macos-14` retired 2026-11-02 -> use current documented labels (25_PACKAGING). HWP/HWPX ship in markitdown-gc by default; no `[hwp]` extra. | cx (web/gh verified) |
+
+## Ratification (round 7) - TDD kickoff UNANIMOUS
+Votes: cx APPROVE-TDD (88/100, 8 fix-during-TDD items, review/R7_cx_ratify.md); cc APPROVE-TDD (153 REQ -> 197 tests, 0 missing); Fable APPROVE-TDD + plan CHANGE C1-C9 (review/R7_fable_ratify.md); ag plan APPROVE.
+| ID | Resolution |
+|---|---|
+| R26 | Execution plan = orchestrator plan P1-P5 amended by Fable C1-C9 verbatim: step-0 contracts/conftest/trace/pyproject/CI skeleton by cx before forks; v1 deleted in first commit (done); ledger.py wholly in wt-engine-core; strict red-green (collectable red, no test edits to go green, logs in build/trace/redgreen/); goldens only via orchestrator `tools/golden.py gen`; runtime dep markitdown-gc>=0.3.5,<0.4 (lock 0.3.5), test deps pinned separately; shell starts with pure step 8; honest loop exit: orchestrator-runnable gates PASS + N/A list reviewed; 3-OS CI gates and manual M-01..04 require push + named human attestation. F-01 (Key provider fingerprint) SPEC amendment by Fable before step 3. |
