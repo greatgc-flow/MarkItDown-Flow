@@ -231,7 +231,7 @@ it(R('JT-04 argv snapshot contains no template, tag, media-toggle or OCR-languag
   expect(argv.slice(0, 3)).toEqual(['-m', 'mdflow', 'run']);
   expect(argv).toContain('D:\\vault\\inbox\\보고서 3분기.pdf');
   expect(argv).toContain('/home/a/dir with spaces/x$(rm).docx');
-  for (const token of argv.filter((t) => t.startsWith('-'))) {
+  for (const token of argv.slice(3).filter((t) => t.startsWith("-"))) {
     expect(SPEC_10_2_SHELL_OPTIONS.has(token)).toBe(true);
   }
   const joined = argv.join('\u0000');
