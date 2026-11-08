@@ -19,7 +19,7 @@
 | R7 Providers v2.0 | `none` (default; emits plan + pending markers), `openai-compatible` (single stdlib-HTTP adapter: OpenAI/Azure OpenAI/Gemini-compat/Anthropic-compat/Ollama via base_url), `command` (template, secrets via env, explicit trust flag). Azure DocIntel/CU removed from 2.0 (whole-document, not unit-level) -> migration notice; `command` can wrap `markitdown-gc -d`. peerhub = dev tool + documented `command` recipe, NOT a dependency (D3 KEEP, unanimous). | cx/fable |
 | R8 Secrets | Env only; scrub child env; redact logs/progress/exceptions; no keys in persisted provider config. | cx#7 |
 | R9 i18n | en + ko shipped, key-based table-driven; other 6 languages = v1 strings kept only if migrating is free, else deferred (not scaffolded). | cx, fable, ag |
-| R10 Runtime/distribution | Engine = pure-Python package `mdflow` + pinned lock; plugin SetupModal creates a dedicated venv in plugin dir and installs pinned `markitdown-gc`; user Python only used to bootstrap. Versioned JSON-lines progress/error protocol with cancellation. | ag#3, fable D1, cx D1/D10 |
+| R10 Runtime/distribution (AMENDED r2: Obsidian Developer policies forbid plugins to 'Install or update themselves or their dependencies', verified in obsidianmd/obsidian-developer-docs) | Engine = pure-Python package `mdflow` + pinned lock; the plugin NEVER installs/updates anything: SetupModal only DIAGNOSES (python found? engine+core versions? handshake) and shows copy-paste bootstrap/upgrade commands to run in the user's own terminal (dedicated venv recommended). Versioned JSON-lines progress/error protocol with cancellation. | ag#3, fable D1, cx D1/D10 |
 | R11 LibreOffice | Dropped from 2.0 (LEGACY -> report with reason + hint). Revisit 2.1 with original+derived provenance. | ag, fable, cx(bounded) |
 | R12 Tests | pytest (engine; programmatic + small real fixtures; malformed/encrypted/oversize/partial-failure/cache-invalidation) + jest (shell) + contract tests pinned to markitdown-gc version range, fail loud on schema_version!=1. CI: win+ubuntu+macos; py3.10 and 3.14 required, 3.15 allowed-failure. | fable D9, cx D9 |
 | R13 Quality bar | "100/100" = every checklist item in 90_ACCEPTANCE.md PASS with evidence (tests green + measurable thresholds: classification accuracy 100% on labelled fixtures, 0 unit loss/duplication, idempotent rerun = 0 provider calls). Scores are per-criterion and evidence-linked, never self-asserted. | cx#5, fable |
@@ -27,3 +27,11 @@
 
 ## Open questions for the user (batched, ask once)
 Q1 Is dropping Azure DocIntel/CU from the built-in set acceptable (kept only via `command`)? Q2 Default OCR provider when user configures none: `none` (plan only) - confirm. Q3 Sensitive-glob defaults. Q4 Real-API OCR smoke test needs a key/quota approval (offline mocks used otherwise).
+
+## Amendments (round 2)
+| ID | Resolution | Basis |
+|---|---|---|
+| R15 Fork hygiene | v1 TS shell was 'inherited largely intact' from ethanolivertroy/obsidian-markitdown (MIT). Obsidian policy: forks only with approval; diverging projects 'should inherit no code from the original repo'. v2 shell is therefore CLEAN-ROOM (written from SPEC, no copied code); MIT attribution kept in README/LICENSE as courtesy. Supersedes cx PKG 'preserve useful shell code' where code is upstream-derived. | policy text |
+| R16 Disclosures | README MUST disclose: network use (which remote services, why), access to files outside vaults (engine reads/writes outside vault paths, cache dir), no client telemetry, account/API key requirement for optional OCR. | policy text |
+| R17 Output naming | Output keeps original extension (`q3.pdf.md`) - engine contract (Fable obj. 3); shell may display differently. dpi is an explicit option, no auto-CJK rule (Fable obj. 2). openai-compatible max_batch=1 in 2.0. | Fable r2 |
+| R18 Reference pinning | markitdown-gc 0.3.5 GUIDE + ocr_triage.py copied read-only to docs/renewal/ref/ for peers; contract tests CT-* pin vocab (reasons incl. scan_like, embedded_image, standalone_image, suspect_text_layer, low_text_nonblank, image_with_text_layer, external_media, decor_media, unresolved_embed...). | Fable obj. 1 |
