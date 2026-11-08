@@ -43,12 +43,12 @@ Fixtures are generated at test time into `tmp_path` (deterministic: fixed zip ti
 
 ## 2. Traceability mechanism (R20)
 
-1. **Markers.** Engine: `@pytest.mark.req("REQ-...", ...)`, `@pytest.mark.cov("S<n>","FM<n>")` (exactly one primary cell), `@pytest.mark.fx("FX-nn", ...)`. Test id = function-name prefix `test_T_ASM_06_<slug>` / `test_CT_08_...` / `test_PT_05_...`. `conftest.py` copies markers to junit `<property>` (`req tid cov fx plat`).
+1. **Markers.** Engine: `@pytest.mark.req("REQ-...", ...)`, `@pytest.mark.cov("S<n>","FM<n>")` (exactly one primary cell), `@pytest.mark.fx("FX-nn", ...)`. `scope("schema")` marks common schema/equivalence assertions rather than actual source-class execution. Test id = function-name prefix `test_T_ASM_06_<slug>` / `test_CT_08_...` / `test_PT_05_...`. `conftest.py` copies markers to junit `<property>` (`req tid cov fx plat`).
 2. **Jest.** `req("REQ-SHL-02", "REQ-SHL-12")("JT-02 <description>")` helper builds the title `REQ-SHL-02 REQ-SHL-12: JT-02 <description>`; it throws at registration on unknown/duplicate ids. `jest-junit` titles are parsed by `trace.py`.
 3. **Registry.** Collection (pytest plugin) and `jest --listTests --json` write `build/trace/registry.json`.
 4. **Meta-tests** (`T-META-*`, first in CI, no Core needed). Spec REQ ids = definition lines `^(- )?REQ-[A-Z]+-[A-Za-z0-9]+` of `10_SPEC.md`, `20_SHELL.md`, `25_PACKAGING.md` (deleted ids exempt). FAIL if: a spec REQ has 0 registered tests; a marker names an unknown REQ; a test lacks `req`; test ids duplicate or break the grammar; a `fx` id is missing from the manifest; a golden differs from `GOLDEN.lock` or was made by another Core; registered `req` set differs from section 4 (marker may be a superset, never a subset); this file omits a spec REQ or names an undefined one; a matrix cell is neither covered nor N/A-with-reason.
 5. **Mutation self-test (PT-10):** copy of repo with (a) a marker deleted, (b) an invented REQ id, (c) a fixture removed -> each makes `trace.py check` exit non-zero.
-6. **Results.** `trace.py report` reads junit from 6 engine cells, 3 shell cells, packaging cells. Test PASS = ran and passed on every expected cell. REQ COVERED = >= 1 PASS and none FAIL. Output separates **automated** results from **manual** sign-offs (MAN) and never merges them into one coverage figure.
+6. **Results.** `trace.py report` emits registration/applicability views only. `trace.py score` reads JUnit from the six engine cells, three shell cells and packaging cells. Test PASS = ran and passed on every expected cell. REQ COVERED = >= 1 PASS and none FAIL. Output separates **automated** results from **manual** sign-offs (MAN) and never merges them into one coverage figure.
 7. **Matrices** (section 5) are generated only from markers + `matrix.toml` + fixture manifest.
 
 ## 3. Fixture manifest
@@ -286,6 +286,72 @@ Cell = primary `S<stage>:FM<n>` (section 5).
 
 (REQ-SEC-05 -> T-WRT-01; REQ-SEC-07 -> T-TRX-04, per SPEC 11 aliases.)
 
+### 4.1.1 M1 engine regression registrations (DRAFT-3.3)
+
+| Test | Requirements | Fixtures | Cell |
+|---|---|---|---|
+| T-GEN-52 | REQ-PKG-02 | FX-72 | S0:FM9 |
+| T-SNF-50 | REQ-SNF-01, REQ-SNF-01b, REQ-GEN-07 | FX-51, FX-53 | S0:FM5 |
+| T-SNF-51 | REQ-SNF-06, REQ-PLN-02, REQ-TRI-05 | FX-28 | S1:FM12 |
+| T-CNV-50 | REQ-SNF-09, REQ-CNV-01 | FX-54, FX-16 | S5:FM3 |
+| T-RND-50 | REQ-SNF-09, REQ-RND-03 | FX-16 | S6:FM3 |
+| T-CTR-50 | REQ-CTR-02, REQ-GEN-07 | FX-50, FX-16 | S1:FM3 |
+| T-WRT-50 | REQ-WRT-01, REQ-SEC-05 | FX-28, FX-51 | S12:FM9 |
+| T-WRT-51 | REQ-CNV-03, REQ-GEN-05, REQ-GEN-06 | FX-16 | S12:FM0 |
+| T-LKP-50 | REQ-LKP-04, REQ-ASM-10 | FX-66 | S7:FM9 |
+| T-RPT-50 | REQ-RPT-01, REQ-SEC-02 | FX-71 | S13:FM3 |
+| T-RPT-51 | REQ-RPT-01, REQ-RPT-03, REQ-GEN-10 | FX-28, FX-65 | S13:FM5 |
+| T-TRX-50 | REQ-SEC-04, REQ-TRX-03 | FX-63 | S10:FM3 |
+| T-TRX-51 | REQ-GEN-09, REQ-TRX-03 | FX-62, FX-67 | S10:FM6 |
+| T-CLI-50 | REQ-RPT-03, REQ-PLN-08 | FX-28 | S0:FM1 |
+| T-PLN-50 | REQ-PLN-08 | FX-09 | S8:FM0 |
+| T-TRX-52 | REQ-TRX-03, REQ-GEN-10, REQ-SEC-02 | FX-61, FX-66 | S10:FM6 |
+| T-SEC-50 | REQ-SEC-01, REQ-SEC-02 | FX-62 | S0:FM9 |
+| T-RND-51 | REQ-MAP-05, REQ-RND-03 | FX-24 | S6:FM4 |
+| T-SEL-50 | REQ-MAP-03, REQ-SEL-01, REQ-GEN-07 | FX-17 | S4:FM12 |
+| T-SNF-52 | REQ-SNF-04, REQ-SNF-05, REQ-SNF-07 | FX-01, FX-27 | S1:FM2 |
+| T-CLS-50 | REQ-CLS-01, REQ-CLS-06 | FX-60, FX-24 | S3:FM9 |
+| T-CLS-51 | REQ-CLS-01, REQ-CLS-06 | FX-30, FX-60 | S3:FM10 |
+| T-PLN-51 | REQ-PLN-02, REQ-PLN-04 | FX-60 | S8:FM10 |
+| T-TRX-53 | REQ-APR-07, REQ-ASM-06 | FX-09, FX-65 | S10:FM8 |
+| T-RND-52 | REQ-RND-05 | FX-02 | S6:FM0 |
+| T-RND-53 | REQ-RND-06 | FX-08 | S6:FM3 |
+| T-RND-54 | REQ-RND-03 | FX-11, FX-16 | S6:FM11 |
+| T-WRT-52 | REQ-SNF-01b, REQ-ASM-02 | FX-52 | S12:FM12 |
+| T-LKP-51 | REQ-LKP-05 | FX-09, FX-65 | S7:FM5 |
+| T-PLN-52 | REQ-PLN-02 | FX-09 | S8:FM12 |
+| T-CLS-52 | REQ-CLS-01, REQ-CLS-05 | FX-60 | S3:FM1 |
+| T-META-50 | REQ-PKG-10 | FX-60 | S0:FM10 |
+| T-META-51 | REQ-PKG-10 | FX-60 | S0:FM10 |
+| T-META-52 | REQ-PKG-10 | FX-60 | S0:FM10 |
+| T-GEN-50 | REQ-GEN-03 | FX-60 | S0:FM10 |
+| T-GEN-51 | REQ-PKG-02 | FX-72 | S0:FM9 |
+| T-CNV-51 | REQ-CNV-04, REQ-GEN-06 | FX-28 | S5:FM12 |
+| T-CLS-53 | REQ-CLS-01, REQ-SEL-01, REQ-TRX-01 | FX-03, FX-60 | S4:FM2 |
+| T-TRX-55 | REQ-PLN-05, REQ-TRX-01 | FX-61 | S10:FM12 |
+| T-CNV-52 | REQ-CNV-01, REQ-WRT-02 | FX-16, FX-65 | S5:FM5 |
+| T-CNV-53 | REQ-CNV-04, REQ-GEN-05, REQ-GEN-09 | FX-28, FX-65 | S5:FM7 |
+| T-TRX-54 | REQ-APR-07, REQ-TRX-03 | FX-63, FX-65 | S10:FM5 |
+| T-TRX-56 | REQ-TRX-03 | FX-63 | S10:FM4 |
+| T-TRX-57 | REQ-TRX-01, REQ-TRX-02 | FX-09 | S10:FM0 |
+| T-ASM-50 | REQ-LKP-04, REQ-ASM-01, REQ-ASM-10 | FX-09, FX-66 | S11:FM1 |
+| T-PLN-53 | REQ-PLN-01, REQ-APR-01 | FX-35, FX-39 | S8:FM4 |
+| T-RPT-52 | REQ-RPT-02, REQ-RPT-03 | FX-09, FX-61 | S13:FM1 |
+| T-TRI-50 | REQ-TRI-01, REQ-SEL-01, REQ-APR-01 | FX-09, FX-60 | S2:FM2 |
+| T-PLN-54 | REQ-PLN-01, REQ-APR-01 | FX-27 | S8:FM2 |
+| T-SNF-53 | REQ-SNF-01 | FX-51 | S1:FM0 |
+| T-SEL-51 | REQ-SEL-01, REQ-CLS-06 | FX-30, FX-60 | S4:FM4 |
+| T-CNV-54 | REQ-MAP-03, REQ-GEN-07 | FX-17 | S5:FM12 |
+| T-GEN-53 | REQ-GEN-07, REQ-WRT-02, REQ-RPT-03 | FX-51, FX-65 | S0:FM5 |
+| T-CTR-51 | REQ-SNF-08, REQ-CTR-02 | FX-45, FX-46 | S1:FM3 |
+| T-SNF-54 | REQ-SNF-06, REQ-CTR-03 | FX-43 | S1:FM12 |
+| T-RPT-53 | REQ-RPT-02 | FX-09 | S13:FM3 |
+| T-RPT-54 | REQ-RPT-02 | FX-09 | S13:FM6 |
+| T-RPT-55 | REQ-RPT-02 | FX-09 | S13:FM8 |
+| T-RPT-56 | REQ-RPT-02 | FX-09 | S13:FM11 |
+
+M1 red logs distinguish original behavioral failures from deliberate in-memory oracle mutations. Windows restricted-token temp adaptation is an explicit test-only bridge; it is not desktop/ACL certification. Runtime target and real release-asset evidence remain independent gates.
+
 ### 4.2 Contract tests vs installed `markitdown-gc` (ids as cited by SPEC 3.0/11)
 
 | Test | Pins | REQ |
@@ -364,12 +430,12 @@ Every REQ id defined in `10_SPEC.md` (incl. new REQ-SNF-09), `20_SHELL.md` (SHL-
 
 ## 5. Generated MECE matrices
 
-`trace.py report` writes `MATRIX_STAGE_FM.md` and `MATRIX_CLASS_STAGE.md`; **never hand-edited**. Inputs: markers, FX `class`, `engine/tests/matrix.toml` (applicability only).
+`trace.py report` writes `build/trace/matrices.json` (stage_failure, class_stage, common_schema_assertions, class_execution_registrations); **never hand-edited**. Inputs: markers, FX `class`, `engine/tests/matrix.toml` (applicability only).
 
 **Axes.** Stages `S1..S13` = SPEC section 4 (Sniff, Triage, Classify, Select, Convert, Render, Lookup, Plan, Approve, Transcribe, Assemble, Write, Report) + `S0` general (startup, CLI, cancellation, cross-run). Failure modes (primary cause of the injected condition; lowest applicable number; `FM0` if none): `FM0` nominal; `FM1` corrupt/invalid or internal failure; `FM2` protected/encrypted; `FM3` bound exceeded (bytes, units, pixels, zip, threshold, length); `FM4` unsupported/out-of-scope/legacy; `FM5` local IO/permission; `FM6` provider failure; `FM7` interruption/crash/forced kill; `FM8` consent missing/denied/stale/unused; `FM9` hostile or security-relevant input; `FM10` contract/vocabulary/version drift; `FM11` partial coverage/cap/low priority/unmapped; `FM12` duplicate/collision/concurrency/idempotency/determinism.
 File classes: `K01` pdf_text, `K02` pdf_scan, `K03` pdf_mixed, `K04` pdf_capped, `K05` raster_single, `K06` raster_multiframe, `K07` office (docx/pptx/xlsx), `K08` hwpx, `K09` hwp5, `K10` text_g2a (txt/log), `K11` g2b (csv/tsv/json/md/html/epub/xls), `K12` legacy, `K13` media, `K14` zip_container, `K15` protected, `K16` corrupt/zero/unreadable, `K17` oversize, `K18` ext_mismatch, `K19` unknown_ext, `K20` dir_tree.
 
-**Exclusive and exhaustive by construction.** (1) Each engine test has exactly one primary `cov` cell. (2) Every cell of the 14x13 stage-FM grid and the 20x14 class-stage grid is COVERED (>= 1 passing test) or declared `N/A` in `matrix.toml` with `reason` and `owner` cell; an undeclared empty cell fails `trace.py check`; an N/A cell that is covered is a warning. (3) Class-stage cell = a passing test whose `fx` includes a fixture of that class and whose `cov` stage is that stage.
+**Exclusive and exhaustive by construction.** (1) Each engine test has exactly one primary `cov` cell. (2) Every cell of the 14x13 stage-FM grid and the 20x14 class-stage grid is REGISTERED to an assertion or declared `N/A` in `matrix.toml` with `reason` and `owner` cell; an undeclared empty cell fails `trace.py check`; an N/A cell that is registered appears as registered in the compatibility projection. (3) The class_stage registration projection includes explicit common-schema equivalences and does not assert runtime class execution. scope(schema) assertions are listed separately and excluded from class_execution_registrations; executed status requires the corresponding per-platform JUnit evidence. Class applicability ownership remains separate from this engine fix.
 **Floor (cannot be N/A):** all `S3` x FM0/1/2/3/4/10/11/12; `S1:FM1/2/3/9`; `S2:FM1/10`; `S6:FM1/3`; `S7:FM1/5`; `S9:FM8`; `S10:FM6/7`; `S12:FM5/9`; `S0:FM7/10/12`; every class x `S3`; every class x `S13` (GEN-07); every class except report-only K12,K13,K15,K16,K17,K19 x `S11`.
 
 ## 6. TDD order (red -> green; each step ends with `trace.py check` green for its REQs)

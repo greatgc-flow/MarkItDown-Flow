@@ -114,6 +114,7 @@ def test_T_TRI_04_report_returned_verbatim(tmp_path, gen, fake_core):
 @pytest.mark.req("REQ-TRI-05")
 @pytest.mark.cov("S2", "FM0")
 @pytest.mark.fx("all")
+@pytest.mark.scope("schema")
 def test_T_TRI_05_triage_does_not_touch_the_file(tmp_path, gen, fake_core):
     for name, path in gen.sample_files(tmp_path).items():
         if name == "empty.pdf":

@@ -26,4 +26,5 @@ markers = [
     "cov(stage, failure_mode): exactly one primary matrix cell",
     "fx(*ids): fixture IDs, or all",
     "plat(platform): collect only on posix or windows",
+    "scope(kind): schema or execution; common schema is not class execution",
 ]

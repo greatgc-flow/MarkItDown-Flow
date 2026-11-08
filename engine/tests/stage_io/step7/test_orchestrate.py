@@ -58,6 +58,7 @@ def test_T_GEN_06_successful_warm_rerun_changes_no_output_or_cache(flow, gen, st
 @pytest.mark.req("REQ-GEN-07")
 @pytest.mark.cov("S13", "FM0")
 @pytest.mark.fx("all")
+@pytest.mark.scope("schema")
 def test_T_GEN_07_every_discovered_source_and_skip_is_reported_once(flow, gen):
     files = gen.sample_files(flow.inputs)
     flow.put("mismatch.txt", gen.png_noise())
@@ -109,6 +110,7 @@ def test_T_GEN_08_default_none_has_pending_markers_and_zero_egress(flow, gen, so
 @pytest.mark.req("REQ-GEN-10")
 @pytest.mark.cov("S13", "FM10")
 @pytest.mark.fx("all")
+@pytest.mark.scope("schema")
 def test_T_GEN_10_closed_mdflow_codes_exclude_verbatim_triage(flow, gen, monkeypatch, repo_root):
     # A novel candidate reason belongs to Core; the engine reports its own closed warning code.
     source = flow.put("image.png", gen.png_noise())
@@ -158,6 +160,7 @@ def test_T_GEN_10_closed_mdflow_codes_exclude_verbatim_triage(flow, gen, monkeyp
 @pytest.mark.req("REQ-RPT-02")
 @pytest.mark.cov("S13", "FM0")
 @pytest.mark.fx("all")
+@pytest.mark.scope("schema")
 @pytest.mark.parametrize("scenario", ["ok", "cached", "none", "approval", "failed", "oversize",
                                       "low_priority", "render_failed", "unsupported_media", "shared_key"])
 def test_T_RPT_02_unit_equations_and_request_budget(flow, gen, step7_data, mock_provider, monkeypatch, scenario):
@@ -254,3 +257,31 @@ def _retry_failed_and_pending(flow, gen, mock_provider, monkeypatch):
     flow.assert_report(second, 0)
     assert len(rerun.calls) == 2 and all(c["raster"] != succeeded for c in rerun.calls)
     assert second["files"][0]["units"] == dict(total=3, eligible=3, cached=1, transcribed=2, pending=0, failed=0)
+
+
+@pytest.mark.req("REQ-RPT-02")
+@pytest.mark.cov("S13", "FM3")
+@pytest.mark.fx("FX-09")
+def test_T_RPT_53_m1_report_oversize(flow, gen, step7_data, mock_provider, monkeypatch):
+    test_T_RPT_02_unit_equations_and_request_budget(flow, gen, step7_data, mock_provider, monkeypatch, 'oversize')
+
+
+@pytest.mark.req("REQ-RPT-02")
+@pytest.mark.cov("S13", "FM6")
+@pytest.mark.fx("FX-09")
+def test_T_RPT_54_m1_report_failed(flow, gen, step7_data, mock_provider, monkeypatch):
+    test_T_RPT_02_unit_equations_and_request_budget(flow, gen, step7_data, mock_provider, monkeypatch, 'failed')
+
+
+@pytest.mark.req("REQ-RPT-02")
+@pytest.mark.cov("S13", "FM8")
+@pytest.mark.fx("FX-09")
+def test_T_RPT_55_m1_report_approval(flow, gen, step7_data, mock_provider, monkeypatch):
+    test_T_RPT_02_unit_equations_and_request_budget(flow, gen, step7_data, mock_provider, monkeypatch, 'approval')
+
+
+@pytest.mark.req("REQ-RPT-02")
+@pytest.mark.cov("S13", "FM11")
+@pytest.mark.fx("FX-09")
+def test_T_RPT_56_m1_report_low_priority(flow, gen, step7_data, mock_provider, monkeypatch):
+    test_T_RPT_02_unit_equations_and_request_budget(flow, gen, step7_data, mock_provider, monkeypatch, 'low_priority')

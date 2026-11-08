@@ -1,14 +1,17 @@
 """Provider ``command`` (SPEC 8.2).
 
 ``shlex.split(template, posix=True)``, placeholders ``{input}`` (temp raster path) and ``{mime}``
-substituted argument-wise, ``subprocess.run(argv, shell=False, env=<allowlist + command_env>)`` looked up
-as the ``subprocess.run`` module attribute. The child env is exactly ``ALLOWED_ENV`` plus the
+substituted argument-wise, ``subprocess.Popen(argv, shell=False, env=<allowlist + command_env>)`` with
+bounded pipe capture. The child env is exactly ``ALLOWED_ENV`` plus the
 ``--command-env`` names that exist in the parent environment.
 """
 
 from __future__ import annotations
 
 import json
+import queue
+import threading
+from pathlib import Path
 import os
 import shlex
 import subprocess
@@ -67,39 +70,77 @@ class CommandProvider:
     def transcribe(self, unit, raster, prompt) -> UnitResult:
         started = time.monotonic()
         mime = unit.get("mime") or "image/png"
-        raster_path = output_path = ""
+        parent = Path(unit['_raster_path']).parent if unit.get('_raster_path') else None
         try:
-            handle, raster_path = tempfile.mkstemp(prefix="mdflow-", suffix=_SUFFIXES.get(mime, ".bin"))
-            with os.fdopen(handle, "wb") as raster_file:
-                raster_file.write(raster)
-            handle, output_path = tempfile.mkstemp(prefix="mdflow-out-", suffix=".txt")
-            argv = [word.replace("{input}", raster_path).replace("{mime}", mime) for word in self._template]
-            try:
-                with os.fdopen(handle, "wb") as sink:
-                    completed = subprocess.run(
-                        argv, shell=False, env=self._child_env(), stdin=subprocess.DEVNULL, stdout=sink,
-                        stderr=subprocess.DEVNULL, timeout=self._timeout_s, check=False)
-            except subprocess.TimeoutExpired:
-                return _failed("E_PROVIDER_TIMEOUT", "command exceeded the time limit", started)
-            except OSError as exc:
-                return _failed("E_PROVIDER_CONFIG", f"command could not be started ({type(exc).__name__})", started)
-            if completed.returncode != 0:
-                return _failed("E_PROVIDER_HTTP", f"command exited with status {completed.returncode}", started,
-                               completed.returncode)
-            with open(output_path, "rb") as produced:
-                payload = produced.read(MAX_OUTPUT_BYTES + 1)
-            if len(payload) > MAX_OUTPUT_BYTES:
-                return _failed("E_PROVIDER_OUTPUT", "command output exceeds 4 MiB", started)
-            text = payload.decode("utf-8", errors="replace")
-            if not text.strip():
-                return _failed("E_PROVIDER_OUTPUT", "command produced no output", started)
-            return {"status": "ok", "text": text, "error": None, "duration_ms": int((time.monotonic() - started) * 1000)}
+            with tempfile.TemporaryDirectory(prefix='mdflow-command-', dir=parent) as work:
+                raster_path = Path(work) / ('input' + _SUFFIXES.get(mime, '.bin'))
+                # This is the verified in-memory payload, never a second read of mutable source data.
+                with open(raster_path, 'xb') as stream:
+                    stream.write(raster)
+                argv = [word.replace('{input}', str(raster_path)).replace('{mime}', mime) for word in self._template]
+                return self._capture(argv, started)
         except OSError as exc:
-            return _failed("E_PROVIDER_CONFIG", f"command input could not be prepared ({type(exc).__name__})", started)
+            return _failed('E_PROVIDER_CONFIG', f'command input could not be prepared ({type(exc).__name__})', started)
+
+    def _capture(self, argv, started) -> UnitResult:
+        child = None
+        reader = None
+        stopped = threading.Event()
+        chunks = queue.Queue(maxsize=2)
+        deadline = started + self._timeout_s
+        try:
+            child = subprocess.Popen(argv, shell=False, env=self._child_env(), stdin=subprocess.DEVNULL,
+                                     stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+            def drain():
+                try:
+                    while not stopped.is_set():
+                        chunk = child.stdout.read1(65536)
+                        while not stopped.is_set():
+                            try:
+                                chunks.put(chunk, timeout=.05)
+                                break
+                            except queue.Full:
+                                pass
+                        if not chunk:
+                            return
+                except (OSError, ValueError):
+                    pass
+            reader = threading.Thread(target=drain, daemon=True, name='mdflow-command-output')
+            reader.start()
+            payload = bytearray()
+            while True:
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    return _failed('E_PROVIDER_TIMEOUT', 'command exceeded the time limit', started)
+                try:
+                    chunk = chunks.get(timeout=min(.05, remaining))
+                except queue.Empty:
+                    if not reader.is_alive():
+                        return _failed('E_PROVIDER_OUTPUT', 'command output could not be read', started)
+                    continue
+                if not chunk:
+                    break
+                payload.extend(chunk)
+                if len(payload) > MAX_OUTPUT_BYTES:
+                    return _failed('E_PROVIDER_OUTPUT', 'command output exceeds 4 MiB', started)
+            try:
+                code = child.wait(timeout=max(.001, deadline - time.monotonic()))
+            except subprocess.TimeoutExpired:
+                return _failed('E_PROVIDER_TIMEOUT', 'command exceeded the time limit', started)
+            if code != 0:
+                return _failed('E_PROVIDER_HTTP', f'command exited with status {code}', started, code)
+            text = payload.decode('utf-8', errors='replace')
+            if not text.strip():
+                return _failed('E_PROVIDER_OUTPUT', 'command produced no output', started)
+            return dict(status='ok', text=text, error=None, duration_ms=int((time.monotonic() - started) * 1000))
+        except OSError as exc:
+            return _failed('E_PROVIDER_CONFIG', f'command could not be started ({type(exc).__name__})', started)
         finally:
-            for leftover in (raster_path, output_path):
-                if leftover:
-                    try:
-                        os.unlink(leftover)
-                    except OSError:
-                        pass
+            stopped.set()
+            if child is not None:
+                if child.poll() is None:
+                    child.kill()
+                child.wait()
+                child.stdout.close()
+            if reader is not None:
+                reader.join(timeout=1)

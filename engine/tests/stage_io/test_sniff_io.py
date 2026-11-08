@@ -207,6 +207,7 @@ def test_T_SNF_06_corruption_detectors(tmp_path, gen):
 @pytest.mark.req("REQ-SNF-06")
 @pytest.mark.cov("S1", "FM0")
 @pytest.mark.fx("all")
+@pytest.mark.scope("schema")
 def test_T_SNF_07_sniff_result_schema_and_single_hash(tmp_path, gen):
     for name, path in gen.sample_files(tmp_path).items():
         result = sniff_io.sniff(path, logical=f"logical/{name}", root=3)

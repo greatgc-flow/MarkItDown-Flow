@@ -73,6 +73,67 @@ def engine_wheel(bundle: Path) -> tuple[str, bytes]:
         return names[0], archive.read(names[0])
 
 
+def assert_full_lock_rejects_dependency_mutations(release_bundle, work, *, pip_prefix=None, offline=False):
+    """Exercise the real complete lock, including transitives, in a local wheelhouse.
+
+    The release control downloads only hash-authorized target wheels. The small
+    mode-A control supplies its own three wheels and never accesses an index.
+    """
+    from email.parser import Parser
+    work.mkdir(parents=True)
+    with zipfile.ZipFile(release_bundle / 'engine.zip') as archive:
+        archive.extractall(work)
+    prefix = pip_prefix or [sys.executable, '-m', 'pip']
+    def run(arguments):
+        return subprocess.run([*prefix, *arguments], cwd=work, capture_output=True,
+                              text=True, encoding='utf-8', timeout=600)
+    download = run(['download', '--no-cache-dir', '--require-hashes', '--only-binary=:all:',
+                    '--find-links', './wheels', '-r', 'engine.lock', '--dest', 'wheelhouse',
+                    *(['--no-index'] if offline else ['--index-url', 'https://pypi.org/simple'])])
+    assert download.returncode == 0, download.stdout + download.stderr
+    dependencies = []
+    for path in sorted((work / 'wheelhouse').glob('*.whl')):
+        with zipfile.ZipFile(path) as archive:
+            metadata_name, = [n for n in archive.namelist() if n.endswith('.dist-info/METADATA')]
+            metadata = Parser().parsestr(archive.read(metadata_name).decode())
+        name = metadata['Name'].lower().replace('_', '-')
+        if name not in {'mdflow', 'markitdown-gc'}:
+            dependencies.append((name, path))
+    assert dependencies, 'the full-lock oracle needs a real transitive dependency'
+    name, wheel = dependencies[0]
+    lock = (work / 'engine.lock').read_text(encoding='utf-8')
+    logical = []
+    buffer = ''
+    for line in lock.splitlines():
+        part = line.strip()
+        if not part or part.startswith('#'): continue
+        buffer += part.rstrip('\\').rstrip() + ' '
+        if not part.endswith('\\'):
+            logical.append(buffer.strip())
+            buffer = ''
+    chosen = next(line for line in logical if re.match(re.escape(name) + r'==', line.replace('_', '-'), re.I))
+    missing = [line for line in logical if line != chosen]
+    unhashed = [re.sub(r'\s+--hash=\S+', '', line) if line == chosen else line for line in logical]
+    def install(lines, label):
+        req = work / (label + '.txt')
+        req.write_text('\n'.join(lines) + '\n', encoding='utf-8')
+        return run(['install', '--no-cache-dir', '--ignore-installed', '--require-hashes', '--only-binary=:all:',
+                    '--no-index', '--find-links', './wheelhouse', '--target', label + '-site', '-r', req.name])
+    good = install(logical, 'good')
+    assert good.returncode == 0, good.stdout + good.stderr
+    for lines, label in ((missing, 'missing-pin'), (unhashed, 'missing-hash')):
+        rejected = install(lines, label)
+        text = (rejected.stdout + rejected.stderr).lower()
+        assert rejected.returncode != 0 and ('hash' in text or 'pinned' in text), text
+    original = wheel.read_bytes()
+    try:
+        wheel.write_bytes(original + b'\0')
+        rejected = install(logical, 'changed-dependency')
+        assert rejected.returncode != 0 and 'do not match the hashes' in (rejected.stdout + rejected.stderr).lower()
+    finally:
+        wheel.write_bytes(original)
+
+
 @pytest.mark.release
 @pytest.mark.req("REQ-PKG-01")
 @pytest.mark.cov("S0", "FM0")
@@ -118,7 +179,7 @@ def test_PT_01_engine_zip_inventory_wheel_metadata_and_run_outside_the_source_tr
 @pytest.mark.req("REQ-PKG-02")
 @pytest.mark.cov("S0", "FM10")
 @pytest.mark.fx("FX-72")
-def test_PT_02_lock_is_exact_hash_checked_wheel_only_and_a_changed_wheel_fails(release_bundle, tmp_path):
+def test_PT_02_lock_is_exact_hash_checked_wheel_only_and_a_changed_wheel_fails(release_bundle, tmp_path, cli_command):
     lock = (release_bundle / "engine.lock").read_text(encoding="utf-8")
     with zipfile.ZipFile(release_bundle / "engine.zip") as archive:
         inner = [n for n in archive.namelist() if n.endswith("engine.lock")]
@@ -158,6 +219,39 @@ def test_PT_02_lock_is_exact_hash_checked_wheel_only_and_a_changed_wheel_fails(r
     assert install(good).returncode == 0
     tampered = install(bad)
     assert tampered.returncode != 0 and "do not match the hashes" in (tampered.stdout + tampered.stderr).lower()
+    assert_full_lock_rejects_dependency_mutations(release_bundle, tmp_path / 'full-lock',
+        pip_prefix=cli_command(code='from pip._internal.cli.main import main; raise SystemExit(main())'))
+
+
+@pytest.mark.req('REQ-PKG-02')
+@pytest.mark.cov('S0', 'FM9')
+@pytest.mark.fx('FX-72')
+def test_T_GEN_52_m1_v32_offline_dependency_hash_mutation_control(tmp_path, cli_command):
+    """Three real tiny wheels prove the stronger oracle runs without release assets."""
+    bundle = tmp_path / 'bundle'
+    bundle.mkdir()
+    members, requirements = {}, []
+    packages = [('mdflow', '2.0.0', 'markitdown-gc>=0.3.5,<0.4'),
+                ('markitdown_gc', '0.3.5', 'm1-dependency>=1'), ('m1_dependency', '1.0', None)]
+    for name, version, dependency in packages:
+        stream = io.BytesIO()
+        info = f'{name}-{version}.dist-info'
+        with zipfile.ZipFile(stream, 'w') as archive:
+            metadata = f'Metadata-Version: 2.1\nName: {name}\nVersion: {version}\n'
+            if dependency: metadata += f'Requires-Dist: {dependency}\n'
+            archive.writestr(info + '/METADATA', metadata)
+            archive.writestr(info + '/WHEEL', 'Wheel-Version: 1.0\nRoot-Is-Purelib: true\nTag: py3-none-any\n')
+            archive.writestr(name + '/__init__.py', '')
+            archive.writestr(info + '/RECORD', '')
+        wheel = f'{name}-{version}-py3-none-any.whl'
+        members['wheels/' + wheel] = stream.getvalue()
+        requirement = './wheels/' + wheel if name == 'mdflow' else name.replace('_', '-') + '==' + version
+        requirements.append(requirement + ' --hash=sha256:' + sha(stream.getvalue()))
+    members['engine.lock'] = ('\n'.join(requirements) + '\n').encode()
+    with zipfile.ZipFile(bundle / 'engine.zip', 'w') as archive:
+        for name, data in members.items(): archive.writestr(name, data)
+    assert_full_lock_rejects_dependency_mutations(bundle, tmp_path / 'closure', offline=True,
+        pip_prefix=cli_command(code='from pip._internal.cli.main import main; raise SystemExit(main())'))
 
 
 @pytest.mark.release

@@ -120,6 +120,7 @@ def test_T_ASM_05_in_situ_and_unmapped_appendix(core_api, core_data):
 @pytest.mark.req("REQ-ASM-06")
 @pytest.mark.cov("S11", "FM12")
 @pytest.mark.fx("all")
+@pytest.mark.scope("schema")
 def test_T_ASM_06_exact_blocks_markers_and_placement_total(core_api, core_data):
     good, pending = core_data.unit("p2"), core_data.unit("p4")
     e = core_data.entry(good, text="Own OCR text")

@@ -48,7 +48,7 @@ def _proxy(env: Mapping[str, str]) -> str | None:
         parts.port  # noqa: B018 - validates the port
     except ValueError:
         raise ProviderConfigError("MDFLOW_PROXY is not a valid proxy URL") from None
-    if parts.scheme.lower() not in ("http", "https") or not parts.hostname:
+    if parts.scheme.lower() not in ("http", "https") or not parts.hostname or '@' in parts.netloc:
         raise ProviderConfigError("MDFLOW_PROXY is not a valid proxy URL")
     return raw
 
@@ -68,7 +68,10 @@ def build_provider(
     if name == "none":
         from .none import NoneProvider
 
-        return NoneProvider()
+        provider = NoneProvider()
+        if cost_hint is not None:
+            provider.meta['cost_hint'] = cost_hint
+        return provider
     if name == "openai-compatible":
         from .openai_compat import DEFAULT_BASE_URL, OpenAICompatProvider
 

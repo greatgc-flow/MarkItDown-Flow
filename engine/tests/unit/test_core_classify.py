@@ -43,6 +43,7 @@ def test_T_SNF_11_pure_magic_precedence_and_empty(core_api, core_data):
 @pytest.mark.req("REQ-SNF-06")
 @pytest.mark.cov("S1", "FM0")
 @pytest.mark.fx("all")
+@pytest.mark.scope("schema")
 def test_T_SNF_12_pure_result_and_canonical_hashes(core_api, core_data):
     value = {"z": [None, True, 3], "가": "é\n", "a": {"b": 2}}
     expected = core_data.canonical(value)
@@ -151,6 +152,7 @@ def test_T_CLS_04_priorities_unknown_reasons_and_issue_codes(core_api, core_fx):
 @pytest.mark.req("REQ-CLS-05")
 @pytest.mark.cov("S3", "FM0")
 @pytest.mark.fx("all")
+@pytest.mark.scope("schema")
 def test_T_CLS_05_every_golden_matches_named_review(core_api, core_fx, repo_root):
     root = repo_root / "engine/tests/golden"
     reports = sorted(root.glob("FX-*/triage.json"))

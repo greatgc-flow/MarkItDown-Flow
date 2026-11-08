@@ -27,6 +27,7 @@ from datetime import datetime
 from typing import Callable, Mapping, Sequence, TypedDict
 
 from .contracts import Consent, Issue, LedgerEntry, Unit
+from . import approve, report
 
 _MESSAGE_LIMIT = 500
 
@@ -90,12 +91,13 @@ def _normalise(raw: object) -> dict:
     if raw.get("status") == "ok" and isinstance(raw.get("text"), str):
         return {"status": "ok", "text": raw["text"], "error": None, "duration_ms": duration}
     error = raw.get("error")
-    if raw.get("status") == "failed" and isinstance(error, dict) and isinstance(error.get("code"), str):
+    if raw.get("status") == "failed" and isinstance(error, dict) and isinstance(error.get('code'), str) and error.get('code') in {
+            'E_PROVIDER_HTTP', 'E_PROVIDER_TIMEOUT', 'E_PROVIDER_OUTPUT', 'E_PROVIDER_CONFIG'}:
         exit_status = error.get("exit")
         return {
             "status": "failed", "text": None, "duration_ms": duration,
             "error": {
-                "code": error["code"], "message": str(error.get("message", ""))[:_MESSAGE_LIMIT],
+                "code": error["code"], "message": report.diagnostics({'message': str(error.get('message', ''))})['message'],
                 "exit": exit_status if isinstance(exit_status, int) and not isinstance(exit_status, bool) else None,
             },
         }
@@ -171,7 +173,11 @@ def run_transcribe(
                 raster = handle.read()
         except OSError:
             raster = None
-        if raster is None or hashlib.sha256(raster).hexdigest() != job["key"]["raster_sha256"]:
+        try:
+            if raster is None:
+                raise approve.ApprovalDenied('Raster could not be read.')
+            approve.verify_raster({'raster_sha256': job['key']['raster_sha256']}, raster)
+        except approve.ApprovalDenied:
             outcome["denied"].append(job["key_id"])
             outcome["issues"].append({
                 "code": "E_APPROVAL_DENIED", "key_id": job["key_id"],
@@ -180,7 +186,8 @@ def run_transcribe(
             continue
         outcome["sent"] += 1
         try:
-            result = _normalise(provider.transcribe(unit, raster, prompt))  # type: ignore[attr-defined]
+            provider_unit = dict(unit, _raster_path=job['raster_path']) if meta['name'] == 'command' else unit
+            result = _normalise(provider.transcribe(provider_unit, raster, prompt))  # type: ignore[attr-defined]
         except Exception as exc:  # BaseException (crash, interrupt) propagates untouched
             result = _failed_result("E_PROVIDER_CONFIG", f"provider raised {type(exc).__name__}")
         del raster

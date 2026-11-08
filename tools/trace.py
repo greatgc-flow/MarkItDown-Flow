@@ -59,7 +59,7 @@ def discover_tests(root: Path) -> list[dict]:
                 if not name.startswith("pytest.mark."):
                     continue
                 key = name.removeprefix("pytest.mark.")
-                if key in {"req", "cov", "fx", "plat"}:
+                if key in {"req", "cov", "fx", "plat", 'scope'}:
                     markers.setdefault(key, []).append([ast.literal_eval(arg) for arg in decorator.args])
             if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
                 if node.name.startswith("test_"):
@@ -78,6 +78,18 @@ def discover_tests(root: Path) -> list[dict]:
 
 def marker_values(test: dict, name: str) -> list:
     return [value for group in test["markers"].get(name, []) for value in group]
+
+
+def test_classes(test: dict, classes: dict, *, include_schema=False) -> set[str]:
+    """Only actual fixture consumption contributes to the execution projection.
+
+    The compatibility registration projection may include schema equivalences;
+    it is explicitly separate from execution and never a passing-test claim.
+    """
+    if not include_schema and 'schema' in marker_values(test, 'scope'):
+        return set()
+    fixtures = set(marker_values(test, 'fx'))
+    return set(MATRIX_CLASSES) if 'all' in fixtures else set().union(*(classes.get(f, set()) for f in fixtures))
 
 
 def coverage_problems(requirements: dict, tests: list[dict]) -> dict[str, list[str]]:
@@ -197,8 +209,7 @@ def matrix_problems(root: Path, tests: list[dict]) -> list[str]:
             continue
         stage, mode = cov[0]
         covered_fm.add((stage, mode))
-        fixtures = set(marker_values(test, "fx"))
-        klasses = set(MATRIX_CLASSES) if "all" in fixtures else set().union(*(classes_of.get(f, set()) for f in fixtures))
+        klasses = test_classes(test, classes_of, include_schema=True)
         covered_class |= {(k, stage) for k in klasses}
     na_fm, na_class = {}, {}
 
@@ -322,17 +333,18 @@ def report(root: Path, destination: Path) -> dict:
     except ImportError:
         import tomli as tomllib
     na = tomllib.loads((root / "engine/tests/matrix.toml").read_text(encoding="utf-8"))
-    fm, ks = {}, {}
+    fm, ks, execution = {}, {}, {}
     for test in tests:
         values = test["markers"].get("cov", [])
         if len(values) != 1 or len(values[0]) != 2:
             continue
         stage, failure = values[0]
         fm.setdefault(f"{stage}:{failure}", []).append(test["nodeid"])
-        fixtures = marker_values(test, "fx")
-        covered = set(MATRIX_CLASSES) if "all" in fixtures else set().union(*(classes.get(f, set()) for f in fixtures))
+        covered = test_classes(test, classes, include_schema=True)
         for klass in covered:
             ks.setdefault(f"{klass}:{stage}", []).append(test["nodeid"])
+        for klass in test_classes(test, classes):
+            execution.setdefault(f'{klass}:{stage}', []).append(test['nodeid'])
     def grid(keys, covered, kind, axes):
         result = {}
         for key in keys:
@@ -345,7 +357,10 @@ def report(root: Path, destination: Path) -> dict:
         return result
     result = {"stage_failure": grid((f"{s}:{f}" for s in MATRIX_STAGES for f in MATRIX_FMS), fm, "stage_fm", ("stages", "fms")),
               "class_stage": grid((f"{k}:{s}" for k in MATRIX_CLASSES for s in MATRIX_STAGES), ks, "class_stage", ("classes", "stages")),
-              "automated": {"registration_only": True, "problems": matrix_problems(root, tests)},
+              'class_execution_registrations': execution,
+              'common_schema_assertions': [t['nodeid'] for t in tests if 'schema' in marker_values(t, 'scope')],
+              "automated": {"registration_only": True, 'class_stage_includes_schema_equivalences': True,
+                            'execution_requires_junit': True, "problems": matrix_problems(root, tests)},
               "manual": {k: {"status": "requires named review", "file": v} for k, v in MANUAL_FILES.items()}}
     destination.parent.mkdir(parents=True, exist_ok=True)
     destination.write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")

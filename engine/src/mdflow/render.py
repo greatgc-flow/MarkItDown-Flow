@@ -44,9 +44,10 @@ class RenderResult(TypedDict):
 class _Failure(Exception):
     """A unit that cannot be rendered; ``message`` is safe for diagnostics."""
 
-    def __init__(self, message: str, *, unsupported: bool = False) -> None:
+    def __init__(self, message: str, *, unsupported: bool = False, code: str = 'E_RENDER_FAIL') -> None:
         super().__init__(message)
         self.unsupported = unsupported
+        self.code = code
 
 
 def _png_bytes(image) -> bytes:
@@ -147,25 +148,36 @@ def _frame_count(data: bytes) -> int:
 
 def _render_media(
     data: bytes, unit: Unit, run_temp: Path, max_pixels: int, issues: list[dict],
+    *, format: str, max_bytes: int, remaining: list[int],
 ) -> tuple[bytes, str, str]:
     from PIL import Image, ImageOps
 
     media_file = unit.get("media_file")
+    if format == 'hwp' and (unit.get('_payload_kind', unit.get('payload_kind')) == 'stored_ole_stream' or not media_file):
+        raise _Failure('HWP5 media is an unsupported stored stream or was not extracted', unsupported=True)
     try:
         if media_file:
             candidate = (run_temp / media_file)
-            if candidate.stat().st_size > sniff_io.DEFAULT_MAX_BYTES:
-                raise _Failure("media file exceeds the byte bound")
-            raw = candidate.read_bytes()
+            declared = candidate.stat().st_size
+            collected = bytearray()
+            with candidate.open('rb') as stream:
+                while chunk := stream.read(65536):
+                    collected.extend(chunk)
+                    sniff_io._check_limits(len(collected), declared, max_bytes, remaining[0])
+            raw = bytes(collected)
         else:
             try:
-                raw = sniff_io.read_member_bytes(data, unit["source_id"])
+                raw = sniff_io.read_member_bytes(data, unit["source_id"], max_bytes=max_bytes,
+                                                 total_remaining=remaining[0])
             except KeyError:
                 raise _Failure("media member is not present", unsupported=True) from None
             except sniff_io.ZipReadError as exc:
                 if exc.code == "E_CORRUPT":
                     raise _Failure("media member is not readable", unsupported=True) from None
-                raise _Failure(f"media member is unreadable ({exc.code})") from None
+                raise _Failure(f"media member is unreadable ({exc.code})", code=exc.code) from None
+        remaining[0] -= len(raw)
+    except sniff_io.ZipReadError as exc:
+        raise _Failure('media exceeds a source byte bound', code=exc.code) from None
     except OSError as exc:
         raise _Failure(f"media file could not be read ({type(exc).__name__})", unsupported=True) from None
     try:
@@ -201,10 +213,13 @@ def render_units(
     run_temp: str | Path,
     dpi: int = 200,
     max_pixels: int = 50_000_000,
+    max_bytes: int = sniff_io.DEFAULT_MAX_BYTES,
+    total_remaining: int | None = None,
 ) -> RenderResult:
     temp = Path(run_temp)
     temp.mkdir(parents=True, exist_ok=True)
     fmt = sniff["format"]
+    remaining = [sniff_io.DEFAULT_ZIP_TOTAL_BYTES if total_remaining is None else total_remaining]
     result: RenderResult = {"units": [], "rasters": {}, "frames_total": None, "issues": []}
     if fmt in _RASTER_FORMATS:
         result["frames_total"] = _frame_count(data)
@@ -223,7 +238,8 @@ def render_units(
             source_id = unit["source_id"]
             try:
                 if unit["kind"] == "media":
-                    payload, mime, suffix = _render_media(data, unit, temp, max_pixels, result["issues"])
+                    payload, mime, suffix = _render_media(data, unit, temp, max_pixels, result["issues"],
+                        format=fmt, max_bytes=max_bytes, remaining=remaining)
                     updated["dpi"] = 0
                 elif fmt == "pdf":
                     if document is None:
@@ -250,7 +266,7 @@ def render_units(
                     result["issues"].append({"code": "W_MEDIA_FORMAT", "unit": source_id, "message": str(failure)})
                 else:
                     updated["status"] = "render_failed"
-                    result["issues"].append({"code": "E_RENDER_FAIL", "unit": source_id, "message": str(failure)})
+                    result["issues"].append({"code": failure.code, "unit": source_id, "message": str(failure)})
             except Exception as exc:
                 updated["raster_sha256"] = None
                 updated["mime"] = None

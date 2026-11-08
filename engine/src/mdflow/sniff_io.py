@@ -27,6 +27,7 @@ import hashlib
 import io
 import os
 import re
+import stat
 import struct
 import zipfile
 import zlib
@@ -114,7 +115,13 @@ def _is_link(path: str) -> bool:
     if os.path.islink(path):
         return True
     isjunction = getattr(os.path, "isjunction", None)
-    return bool(isjunction and isjunction(path))
+    if isjunction and isjunction(path):
+        return True
+    try:
+        return bool(getattr(os.lstat(path), 'st_file_attributes', 0) &
+                    getattr(stat, 'FILE_ATTRIBUTE_REPARSE_POINT', 0x400))
+    except FileNotFoundError:
+        return False
 
 
 def _inside(candidate: str, folder: str) -> bool:
@@ -125,6 +132,7 @@ def _walk(directory: str, prefix: str, excluded: list[str], found: list[tuple[st
     try:
         names = sorted(os.listdir(directory))
     except OSError:
+        found.append((prefix.rstrip('/') or os.path.basename(directory.rstrip('/\\')), directory))
         return
     for name in names:
         full = os.path.join(directory, name)
@@ -150,8 +158,23 @@ def discover(roots: Sequence[str | Path], *, exclude: Sequence[str | Path] = ())
     skipped: list[Skipped] = []
     seen_real: set[str] = set()
     seen_output: set[str] = set()
+    seen_roots: set[str] = set()
     for index, root in enumerate(roots):
         root_text = os.fspath(root)
+        name = os.path.basename(os.path.abspath(root_text)) or root_text
+        if name.startswith('.'):
+            skipped.append({'path': name, 'code': 'W_SKIPPED_HIDDEN'})
+            continue
+        if _is_link(root_text):
+            skipped.append({'path': name, 'code': 'W_SKIPPED_SYMLINK'})
+            continue
+        real_root = _real(root_text)
+        if any(_inside(real_root, folder) for folder in excluded):
+            continue
+        if real_root in seen_roots:
+            skipped.append({'path': name, 'code': 'W_DUPLICATE_INPUT'})
+            continue
+        seen_roots.add(real_root)
         if os.path.isdir(root_text):
             found: list[tuple[str, str]] = []
             _walk(root_text, "", excluded, found, skipped)
@@ -390,12 +413,6 @@ def _zip_preflight(infos: Sequence[zipfile.ZipInfo], zip_entries: int, zip_total
 def _check_pdf(fp: BinaryIO, size: int) -> tuple[list[str], bool]:
     """(protection reasons, corrupt)."""
     reasons: list[str] = []
-    fp.seek(max(0, size - _PDF_TAIL))
-    tail = fp.read(_PDF_TAIL)
-    fp.seek(0)
-    head = fp.read(4096)
-    if b"/Encrypt" in tail or b"/Encrypt" in head:
-        reasons.append("pdf_encrypt_trailer")
     try:
         import pypdfium2 as pdfium
     except ImportError:
@@ -410,6 +427,8 @@ def _check_pdf(fp: BinaryIO, size: int) -> tuple[list[str], bool]:
             return reasons, False
         return reasons, True
     try:
+        if pdfium.raw.FPDF_GetSecurityHandlerRevision(document) >= 0:
+            reasons.append('pdf_encrypt_trailer')
         document.close()
     except Exception:
         pass
@@ -486,8 +505,13 @@ def _analyze(
                 fmt = "hwp"
                 try:
                     props = cfb.read_head("FileHeader", 40)
-                except (_CfbError, struct.error, OSError):
-                    props = b""
+                except OSError:
+                    raise
+                except (_CfbError, struct.error):
+                    props = b''
+                    issues.append(_issue('E_CORRUPT', 'HWP FileHeader is unreadable'))
+                if len(props) < 40 and not any(i['code'] == 'E_CORRUPT' for i in issues):
+                    issues.append(_issue('E_CORRUPT', 'HWP FileHeader is truncated'))
                 if len(props) >= 37 and (props[36] >> 1) & 1:
                     route, reasons = "PROTECTED", ["hwp5_encrypted"]
             elif ext in ("xls", "msg"):
@@ -684,6 +708,9 @@ class _Expansion:
 
     def expand(self, fp: BinaryIO, prefix: str, depth: int) -> bool:
         """Append members of one archive; False when a container-level bound was exceeded."""
+        if depth > self.zip_depth:
+            self.issues.append(_issue('E_ZIP_DEPTH', 'Archive exceeds the depth bound'))
+            return False
         fp.seek(0)
         try:
             archive = zipfile.ZipFile(fp)
@@ -735,6 +762,21 @@ class _Expansion:
                 sniffed["issues"].append(_issue("E_ZIP_PATH", "member name is unsafe or duplicates an earlier member"))
             self.members.append({"logical": logical, "member": name, "depth": depth, "data": data, "sniff": sniffed})
             blocking = {"E_CORRUPT", "E_TOO_LARGE", "E_ZIP_ENTRIES", "E_ZIP_TOTAL", "E_ZIP_BOMB", "E_ZIP_PATH", "E_ENCRYPTED"}
+            package_bounds = [i for i in sniffed['issues'] if i['code'] in {'E_ZIP_ENTRIES', 'E_ZIP_TOTAL', 'E_ZIP_BOMB'}]
+            if sniffed['format'] in _ZIP_FAMILY_NATIVE | _ZIP_FAMILY_LEGACY and package_bounds:
+                self.issues.extend(package_bounds)
+                return False
+            if sniffed['format'] in _ZIP_FAMILY_NATIVE | _ZIP_FAMILY_LEGACY and not any(i['code'] in blocking for i in sniffed['issues']):
+                with zipfile.ZipFile(io.BytesIO(data)) as package:
+                    internal = package.infolist()
+                self.entries += len(internal)
+                self.total += sum(item.file_size for item in internal)
+                code = 'E_ZIP_ENTRIES' if self.entries > self.zip_entries else 'E_ZIP_TOTAL' if self.total > self.zip_total_bytes else None
+                if code:
+                    problem = _issue(code, 'Nested package exceeds the cumulative archive budget')
+                    sniffed['issues'].append(problem)
+                    self.issues.append(problem)
+                    return False
             if sniffed["route"] == "CONTAINER" and not any(i["code"] in blocking for i in sniffed["issues"]):
                 if depth + 1 > self.zip_depth:
                     sniffed["issues"].append(_issue("E_ZIP_DEPTH", f"nested archive exceeds depth {self.zip_depth}"))
@@ -765,4 +807,7 @@ def expand_container(
         state.issues.append(_issue("E_SNIFF_IO", f"archive could not be read ({type(exc).__name__})"))
         ok = False
     # container-level bounds are evaluated cumulatively; nothing is processed once one trips
-    return {"logical": logical, "issues": state.issues, "members": state.members if ok else []}
+    if not ok:
+        for member in state.members:
+            member['sniff']['issues'].extend(i for i in state.issues if i not in member['sniff']['issues'])
+    return {"logical": logical, "issues": state.issues, "members": state.members}

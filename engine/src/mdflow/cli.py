@@ -24,6 +24,10 @@ class UsageError(ValueError):
 
 
 class _Parser(argparse.ArgumentParser):
+    def __init__(self, *args, **kwargs):
+        kwargs['allow_abbrev'] = False
+        super().__init__(*args, **kwargs)
+
     def error(self, message):
         # argparse's raw message may echo an unrecognised credential argument.
         raise UsageError("Invalid command or option; use --help for the supported syntax.")
@@ -98,6 +102,10 @@ def _error(code: str, message: str) -> int:
 
 def _options(args: argparse.Namespace) -> dict:
     opts = vars(args).copy()
+    if opts['provider'] != 'command' and (
+            opts['command'] is not None or opts['command_egress'] is not None or
+            opts['command_env'] or opts['trust_command']):
+        raise UsageError('Command options require --provider command.')
     if opts["max_bytes"] > 268435456:
         raise UsageError("--max-bytes exceeds Core's 256 MiB cap.")
     try:
@@ -127,7 +135,19 @@ def _options(args: argparse.Namespace) -> dict:
 
 def _classification(path: Path, *, logical: str | None = None) -> dict:
     sniff = sniff_io.sniff(path, logical=logical or path.name)
-    outcome = triage.run_triage(path, sniff)
+    if sniff['route'] == 'NATIVE' and not any(i['code'].startswith('E_') for i in sniff['issues']):
+        try:
+            data = orchestrate._source_bytes(path, sniff, 268435456)
+        except OSError:
+            sniff['issues'].append({'code': 'E_SNIFF_IO', 'message': 'Source changed or could not be read after Sniff.'})
+            outcome = triage.run_triage(path, sniff)
+        else:
+            with tempfile.TemporaryDirectory(prefix='mdflow-classify-') as work:
+                snapshot = Path(work) / ('source.' + sniff['format'])
+                snapshot.write_bytes(data)
+                outcome = triage.run_triage(snapshot, sniff)
+    else:
+        outcome = triage.run_triage(path, sniff)
     decision = classify.classify(dict(sniff, issues=[*sniff["issues"], *outcome["issues"]]), outcome["report"])
     return dict(sniff=sniff, triage=outcome["report"], classification=decision)
 
@@ -221,16 +241,29 @@ def main(argv: list[str] | None = None) -> int:
             ("model", "cost_hint", "command", "command_egress", "command_env", "trust_command")})
         if args.command_name == "plan":
             opts.update(_plan_only=True, _on_plan=lambda value: _print(value, pretty=True))
+        terminal = []
+        if args.command_name == 'run':
+            opts['_on_run_end'] = terminal.append
         value = orchestrate.run(args.paths, opts, provider=provider)
         if args.command_name == "run":
-            try:
-                report.publish(value, stdout=sys.stdout, report_path=args.report)
-            except OSError:
-                # Stdout remains the authoritative report even if its extra copy fails.
-                if value["files"]:
-                    value["files"][0]["issues"].append({"code": "E_OUTPUT_IO", "message": "Run report could not be written."})
-                value["exit"] = assemble.exit_code(["E_OUTPUT_IO"], cancelled=value["exit"] == 130)
-                report.publish(value, stdout=sys.stdout)
+            if args.report is not None:
+                try:
+                    write.atomic_write(args.report, (report._json(value) + '\n').encode('utf-8'))
+                except OSError:
+                    issue = {'code': 'E_OUTPUT_IO', 'message': 'Run report could not be written.'}
+                    if value['files']:
+                        value['files'][0]['issues'].append(issue)
+                    else:
+                        value.setdefault('issues', []).append(issue)
+                    value['exit'] = assemble.exit_code(['E_OUTPUT_IO'], cancelled=value['exit'] == 130)
+                    if args.progress == 'jsonl':
+                        report.emit_progress(dict(v=1, ev='error', ts=value['finished'], file=None, **issue), sys.stderr)
+            if args.progress == 'jsonl':
+                event = terminal[0]
+                failed = sum(bool(assemble.exit_code([i['code'] for i in f['issues']])) for f in value['files'])
+                event.update(exit=value['exit'], files_failed=failed, files_ok=len(value['files']) - failed)
+                report.emit_progress(event, sys.stderr)
+            report.publish(value, stdout=sys.stdout)
         return value["exit"]
     except UsageError as exc:
         return _error("E_USAGE", str(exc))

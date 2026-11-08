@@ -306,8 +306,8 @@ def test_T_SEC_03_command_child_gets_allowlisted_env_and_argument_wise_argv(tmp_
     assert meta["destination"] == expected_destination
 
     recorded = []
-    real_run = subprocess.run
-    monkeypatch.setattr(subprocess, "run", lambda *a, **k: (recorded.append((a, k)), real_run(*a, **k))[1])
+    real_popen = subprocess.Popen
+    monkeypatch.setattr(subprocess, "Popen", lambda *a, **k: (recorded.append((a, k)), real_popen(*a, **k))[1])
     raster = gen.png_noise(seed=3)
     result = provider.transcribe(gen.page_unit("p1", raster), raster, transcribe.load_prompt("p1"))
 

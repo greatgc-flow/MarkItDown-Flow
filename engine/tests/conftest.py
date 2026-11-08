@@ -47,6 +47,7 @@ def pytest_configure(config):
         "cov": "one primary stage and failure-mode cell",
         "fx": "fixture IDs or all",
         "plat": "posix or windows; absent on other platforms",
+        "scope": "schema for common contracts; execution for actual fixture consumption",
     }.items():
         config.addinivalue_line("markers", f"{name}(*args): {description}")
 
@@ -57,7 +58,7 @@ def pytest_collection_modifyitems(config, items):
     for item in items:
         markers = {
             name: [list(marker.args) for marker in item.iter_markers(name)]
-            for name in ("req", "cov", "fx", "plat")
+            for name in ("req", "cov", "fx", "plat", "scope")
         }
         tid = trace.test_id(item.originalname or item.name)
         # Direct properties also work with JUnit xunit2 (no record_property warning).

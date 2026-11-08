@@ -162,7 +162,7 @@ def _failure(result: WriteResult, exc: BaseException) -> WriteResult:
 def publish_source(
     out_dir: str | Path,
     md_rel: str,
-    md_bytes: bytes,
+    md_bytes: bytes | None,
     media: Mapping[str, str | Path] | None = None,
 ) -> WriteResult:
     result: WriteResult = {"ok": True, "written": [], "unchanged": [], "issues": []}
@@ -171,7 +171,8 @@ def publish_source(
     artifacts: list[tuple[str, str, bytes | Path]] = []
     for name, source in (media or {}).items():
         artifacts.append((posixpath.join(folder, "media", name), name, Path(source)))
-    artifacts.append((md_rel, "", md_bytes))
+    if md_bytes is not None:
+        artifacts.append((md_rel, "", md_bytes))
     try:
         for relative, media_name, payload in artifacts:
             if media_name and (media_name != os.path.basename(media_name) or media_name in (".", "..")):

@@ -68,6 +68,7 @@ def test_T_TRX_04_normalization_fence_whitespace_length_order(core_api, raw, exp
 @pytest.mark.req("REQ-RPT-03")
 @pytest.mark.cov("S13", "FM10")
 @pytest.mark.fx("all")
+@pytest.mark.scope("schema")
 def test_T_RPT_03_every_spec_code_and_precedence(core_api, repo_root):
     spec = (repo_root / "docs/renewal/10_SPEC.md").read_text(encoding="utf-8")
     section = spec.split("### 7.5 ", 1)[1].split("## 8.", 1)[0]

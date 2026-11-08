@@ -653,9 +653,24 @@ def deny_open(monkeypatch, target) -> None:
 
 def pid_alive(pid: int) -> bool:
     if os.name == "nt":
-        # tasklist output uses the OEM code page (e.g. cp949); PID digits are ASCII.
-        raw = subprocess.run(["tasklist", "/FI", f"PID eq {pid}", "/NH"], capture_output=True).stdout
-        return str(pid) in raw.decode("ascii", errors="replace")
+        # tasklist can take longer than a short-lived readiness fixture itself.
+        # Query the exact owned PID without launching another process or parsing
+        # localized output. A still-open handle also avoids PID string matches.
+        import ctypes
+        from ctypes import wintypes
+        kernel = ctypes.WinDLL('kernel32', use_last_error=True)
+        kernel.OpenProcess.argtypes = (wintypes.DWORD, wintypes.BOOL, wintypes.DWORD)
+        kernel.OpenProcess.restype = wintypes.HANDLE
+        kernel.GetExitCodeProcess.argtypes = (wintypes.HANDLE, ctypes.POINTER(wintypes.DWORD))
+        kernel.CloseHandle.argtypes = (wintypes.HANDLE,)
+        handle = kernel.OpenProcess(0x1000, False, pid)
+        if not handle:
+            return ctypes.get_last_error() == 5
+        try:
+            code = wintypes.DWORD()
+            return bool(kernel.GetExitCodeProcess(handle, ctypes.byref(code))) and code.value == 259
+        finally:
+            kernel.CloseHandle(handle)
     try:
         os.kill(pid, 0)
     except ProcessLookupError:

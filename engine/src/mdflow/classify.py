@@ -16,6 +16,53 @@ def _well_typed(report: dict, fmt: str) -> bool:
         return False
     if not isinstance(report.get("rules_version"), str):
         return False
+    for name in ('pages', 'rasters'):
+        if any(not isinstance(item, dict) for item in report[name]):
+            return False
+    def number(value):
+        return type(value) in (int, float)
+    def vector(value, length):
+        return isinstance(value, list) and len(value) == length and all(number(v) for v in value)
+    for page in report['pages']:
+        integers = ('n', 'rotation', 'chars', 'nonspace_chars', 'cid_count', 'replacement_count',
+                    'private_use_count', 'vector_objects', 'image_count')
+        if not all(type(page.get(k)) is int for k in integers):
+            return False
+        if not vector(page.get('bbox_pt'), 4) or not all(number(page.get(k)) for k in ('unresolved_glyph_share', 'image_area_ratio')):
+            return False
+        if type(page.get('images_truncated')) is not bool or not isinstance(page.get('images'), list) or any(not isinstance(v, dict) for v in page['images']):
+            return False
+        if 'text_sample' in page and not isinstance(page['text_sample'], str):
+            return False
+    for raster in report['rasters']:
+        if not isinstance(raster.get('id'), str) or not {'frame', 'px', 'mode', 'dpi_tag', 'exif_orientation', 'bytes'} <= raster.keys():
+            return False
+        if any(raster[k] is not None and type(raster[k]) is not int for k in ('frame', 'exif_orientation', 'bytes')):
+            return False
+        if raster['px'] is not None and not vector(raster['px'], 2):
+            return False
+        if raster['mode'] is not None and not isinstance(raster['mode'], str):
+            return False
+    if fmt in OFFICE:
+        media = report.get('media')
+        if not isinstance(media, list) or any(not isinstance(m, dict) or not isinstance(m.get('id'), str) for m in media):
+            return False
+        for m in media:
+            if not {'where', 'px', 'bytes', 'ext', 'decor', 'references'} <= m.keys():
+                return False
+            if not isinstance(m['ext'], str) or type(m['decor']) is not bool or not isinstance(m['references'], list):
+                return False
+            if any(not isinstance(ref, dict) for ref in m['references']):
+                return False
+            if m['bytes'] is not None and type(m['bytes']) is not int:
+                return False
+            if m['px'] is not None and not vector(m['px'], 2):
+                return False
+        if fmt == 'hwp' and any(
+            not isinstance(m.get('payload_sha256'), str) or
+            not re.fullmatch('[0-9a-f]{64}', m['payload_sha256']) or
+            m.get('payload_kind') not in {'parser_image_payload', 'stored_ole_stream'} for m in media):
+            return False
     cov, file = report["coverage"], report["file"]
     if not {"pages_total", "pages_inspected"} <= cov.keys() or not {"sha256", "bytes", "format"} <= file.keys():
         return False
@@ -100,6 +147,8 @@ def classify(sniff: dict, triage: object) -> dict:
                            if result["route"] == "NATIVE" else {"CONTAINER": "C", "LEGACY": "L", "PROTECTED": "P", "UNSUPPORTED": "X"}[result["route"]])
         if code:
             issue(code)
+        if result['action'] == 'report_only':
+            result['candidates_unique'] = []
         return result
 
     # Preflight conditions precede all access to the Core envelope.
@@ -161,7 +210,7 @@ def classify(sniff: dict, triage: object) -> dict:
         issue("W_REVIEW_PRIORITY")
     if fmt in G2A:
         return finish(need="NONE", action="convert_only") if result["coverage_state"] == "not_applicable" else finish("E_UNSUPPORTED", new_route="UNSUPPORTED")
-    if "encrypted" in core_codes:
+    if fmt not in G2A | G2B and "encrypted" in core_codes:
         return finish("E_ENCRYPTED", new_route="PROTECTED")
     if fmt in G2B:
         return finish("W_MEDIA_NOT_INSPECTED", action="convert_only")

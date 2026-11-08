@@ -16,6 +16,7 @@ from mdflow import report
 @pytest.mark.req("REQ-RPT-01", "REQ-SEC-02", "REQ-GEN-05")
 @pytest.mark.cov("S13", "FM0")
 @pytest.mark.fx("all")
+@pytest.mark.scope("schema")
 def test_T_RPT_01_one_full_report_and_bounded_redacted_progress(tmp_path, monkeypatch):
     ts = "2026-11-09T00:00:00+00:00"
     home, secret = str(tmp_path / "private-home"), "secret-at-character-boundary"

@@ -12,7 +12,10 @@ import stat
 import subprocess
 import sys
 import time
-import tomllib
+try:
+    import tomllib
+except ModuleNotFoundError:
+    import tomli as tomllib
 import weakref
 import zipfile
 
@@ -474,6 +477,19 @@ def test_T_RND_53_m1_v26_pixel_bound_precedes_expensive_decode(tmp_path, gen, mo
     good = render.render_units(data, sniff=gen.fake_sniff('x.pdf', data, fmt='pdf'),
         units=[gen.pre_render_unit('p1', 1)], run_temp=tmp_path / 'good')
     assert good['units'][0]['status'] == 'eligible' and calls == ['pdf']
+    from PIL import ImageFile
+    image_calls, real_load = [], ImageFile.ImageFile.load
+    def loaded(image, *args, **kwargs):
+        image_calls.append(image.size)
+        return real_load(image, *args, **kwargs)
+    monkeypatch.setattr(ImageFile.ImageFile, 'load', loaded)
+    raster = gen.bmp_noise()
+    refused = render.render_units(raster, sniff=gen.fake_sniff('x.bmp', raster, fmt='bmp'),
+        units=[gen.pre_render_unit('image', 1, dpi=0)], run_temp=tmp_path / 'image-bad', max_pixels=1)
+    assert refused['units'][0]['status'] == 'render_failed' and image_calls == []
+    allowed = render.render_units(raster, sniff=gen.fake_sniff('x.bmp', raster, fmt='bmp'),
+        units=[gen.pre_render_unit('image', 1, dpi=0)], run_temp=tmp_path / 'image-good')
+    assert allowed['units'][0]['status'] == 'eligible' and image_calls
 
 
 @pytest.mark.req('REQ-RND-03')
@@ -630,3 +646,279 @@ def test_T_CLS_53_m1_v38_core_encrypted_cannot_produce_executable_units(repo_roo
     actual = classify.classify(sn, raw)
     assert actual['route'] == 'PROTECTED' and actual['action'] == 'report_only'
     assert select.select(actual, {'file': {'format': 'pdf'}})['units'] == []
+
+
+@pytest.mark.req('REQ-PLN-05', 'REQ-TRX-01')
+@pytest.mark.cov('S10', 'FM12')
+@pytest.mark.fx('FX-61')
+def test_T_TRX_55_m1_v37_attempt_accounting_never_patches_provider_methods(gen):
+    class Provider:
+        meta = gen.ScriptedProvider().meta
+        requests_sent = 0
+        @property
+        def _post_once(self):
+            return self.send
+        def send(self):
+            self.requests_sent += 1
+        def transcribe(self, *args):
+            for _ in range(3): self._post_once()
+            return dict(status='ok', text='three attempts', error=None, duration_ms=0)
+    provider = Provider()
+    measured = orchestrate._MeasuredProvider(provider)
+    assert measured.transcribe({}, b'', None)['text'] == 'three attempts'
+    assert measured.calls == provider.requests_sent == 3
+
+
+@pytest.mark.req('REQ-CNV-01', 'REQ-WRT-02')
+@pytest.mark.cov('S5', 'FM5')
+@pytest.mark.fx('FX-16', 'FX-65')
+def test_T_CNV_52_m1_v02_conversion_temp_io_error_is_per_source(flow, step7_data):
+    source = flow.put('a.docx', step7_data.docx_bytes())
+    sibling = flow.put('b.txt', b'Own sibling text')
+    def convert_behavior(spy, index, data, ext, *args):
+        if ext == '.docx': raise PermissionError('injected media temp failure')
+        return 'Own sibling text'
+    flow.core.behavior = convert_behavior
+    value = flow.run([source, sibling])
+    assert value['exit'] == 2 and 'E_CONVERT_FAIL' in codes(value)
+    assert value['files'][0]['outputs'] and value['files'][1]['outputs'] == ['b.txt.md']
+    assert 'Own sibling text' in (flow.out / 'b.txt.md').read_text(encoding='utf-8')
+
+
+@pytest.mark.req('REQ-CNV-04', 'REQ-GEN-05', 'REQ-GEN-09')
+@pytest.mark.cov('S5', 'FM7')
+@pytest.mark.fx('FX-28', 'FX-65')
+def test_T_CNV_53_m1_v02_interrupted_base_cache_retries_without_reading_temp(flow, gen, monkeypatch):
+    source = flow.put('note.txt', gen.txt_utf8())
+    original = os.replace
+    def interrupted(src, dst):
+        if 'base' in Path(dst).parts:
+            raise gen.SimulatedCrash('interrupted base-cache publication')
+        return original(src, dst)
+    with monkeypatch.context() as patch:
+        patch.setattr(os, 'replace', interrupted)
+        with pytest.raises(gen.SimulatedCrash): flow.run([source])
+    assert not list(flow.out.glob('*.md')) and not list(flow.cache.glob('base/*.md'))
+    strays = list(flow.cache.rglob('*.tmp-*'))
+    assert strays and len(flow.core.calls) == 1
+    value = flow.run([source])
+    assert value['exit'] == 0 and len(flow.core.calls) == 2
+    assert (flow.out / 'note.txt.md').exists()
+
+
+@pytest.mark.req('REQ-APR-07', 'REQ-TRX-03')
+@pytest.mark.cov('S10', 'FM5')
+@pytest.mark.fx('FX-63', 'FX-65')
+def test_T_TRX_54_m1_v03_unreadable_raster_denied_and_sibling_continues(tmp_path, gen, mock_provider):
+    first = gen.make_job(tmp_path, 'p1', gen.png_noise(seed=1))
+    second = gen.make_job(tmp_path, 'p2', gen.png_noise(seed=2))
+    Path(first['raster_path']).unlink()
+    provider = mock_provider(egress=False)
+    result = transcribe.run_transcribe([first, second], provider, prompt=transcribe.load_prompt('p1'),
+        force=False, max_requests=2, consent=None, tools=gen.TOOLS, now=gen.NOW,
+        publish=lambda value: None, postprocess=assemble.postprocess_text)
+    assert result['denied'] == [first['key_id']] and result['ok'] == 1
+    assert [call['unit']['source_id'] for call in provider.calls] == ['p2']
+
+
+@pytest.mark.req('REQ-TRX-03')
+@pytest.mark.cov('S10', 'FM4')
+@pytest.mark.fx('FX-63')
+def test_T_TRX_56_m1_v03_mime_refusal_before_provider(tmp_path, gen, mock_provider):
+    provider = mock_provider(egress=False, accepts=['image/png'])
+    job = gen.make_job(tmp_path, 'image', gen.jpeg_noise(), mime='image/jpeg')
+    result = transcribe.run_transcribe([job], provider, prompt=transcribe.load_prompt('p1'), force=False,
+        max_requests=1, consent=None, tools=gen.TOOLS, now=gen.NOW,
+        publish=lambda value: None, postprocess=assemble.postprocess_text)
+    assert provider.calls == [] and result['sent'] == 0 and result['failed'] == 1
+    assert result['entries'][job['key_id']]['error']['code'] == 'E_PROVIDER_CONFIG'
+
+
+@pytest.mark.req('REQ-TRX-01', 'REQ-TRX-02')
+@pytest.mark.cov('S10', 'FM0')
+@pytest.mark.fx('FX-09')
+def test_T_TRX_57_m1_v01_nominal_result_is_durably_published(flow, gen, mock_provider):
+    source = flow.put('photo.png', gen.png_noise())
+    provider = mock_provider(egress=False)
+    value = flow.run([source], provider=provider)
+    assert value['exit'] == 0 and len(provider.calls) == 1
+    record, = list(flow.cache.glob('units/**/*.json'))
+    entry = json.loads(record.read_text(encoding='utf-8'))
+    assert entry['status'] == 'ok' and entry['text'] == 'text for image' and entry['error'] is None
+    assert entry['key_id'] == ledger.key_id(entry['key']) and entry['created'] == gen.NOW.isoformat(timespec='seconds')
+    assert entry['text'] in (flow.out / 'photo.png.md').read_text(encoding='utf-8')
+
+
+@pytest.mark.req('REQ-LKP-04', 'REQ-ASM-01', 'REQ-ASM-10')
+@pytest.mark.cov('S11', 'FM1')
+@pytest.mark.fx('FX-09', 'FX-66')
+def test_T_ASM_50_m1_v03_invalid_cache_never_reaches_assembly(flow, gen, mock_provider, monkeypatch):
+    source = flow.put('photo.png', gen.png_noise())
+    assert flow.run([source], provider=mock_provider(egress=False))['exit'] == 0
+    target, = list(flow.cache.glob('units/**/*.json'))
+    entry = json.loads(target.read_text(encoding='utf-8'))
+    del entry['created']
+    target.write_text(json.dumps(entry), encoding='utf-8')
+    original, observed = assemble.assemble, []
+    def checked(body, units, entries, meta):
+        for result in entries.values():
+            assert datetime.fromisoformat(result['created']).tzinfo is not None
+        observed.append(True)
+        return original(body, units, entries, meta)
+    monkeypatch.setattr(assemble, 'assemble', checked)
+    value = flow.run([source], provider=mock_provider(egress=False))
+    assert value['exit'] == 0 and observed == [True] and 'W_CACHE_CORRUPT' in codes(value)
+
+
+@pytest.mark.req('REQ-PLN-01', 'REQ-APR-01')
+@pytest.mark.cov('S8', 'FM4')
+@pytest.mark.fx('FX-35', 'FX-39')
+def test_T_PLN_53_m1_v01_report_only_sources_have_zero_work_plans(flow, gen):
+    sources = [flow.put('legacy.doc', gen.cfb_legacy()), flow.put('unknown.blob', b'unknown bytes')]
+    plans = []
+    value = flow.run(sources, _plan_only=True, _on_plan=plans.append)
+    assert value['exit'] == 2 and len(plans) == 2
+    for p in plans:
+        assert p['approved']['classification']['action'] == 'report_only'
+        assert p['approved']['units'] == [] and p['approved']['keys_unique'] == p['status']['requests_to_send'] == 0
+    assert flow.core.calls == [] and not flow.out.exists()
+
+
+@pytest.mark.req('REQ-RPT-02', 'REQ-RPT-03')
+@pytest.mark.cov('S13', 'FM1')
+@pytest.mark.fx('FX-09', 'FX-61')
+def test_T_RPT_52_m1_v01_internal_provider_failure_has_consistent_report(flow, gen, mock_provider):
+    source = flow.put('photo.png', gen.png_noise())
+    provider = mock_provider(egress=False)
+    provider.script = [('raise', RuntimeError('internal provider failure'))]
+    value = flow.run([source], provider=provider)
+    f, = value['files']
+    assert value['exit'] == 4 and codes(value) == {'E_PROVIDER_CONFIG'}
+    assert f['units'] == dict(total=1, eligible=1, cached=0, transcribed=0, pending=0, failed=1)
+    assert f['requests'] == dict(to_send=1, sent=1, ok=0, failed=1)
+
+
+@pytest.mark.req('REQ-TRI-01', 'REQ-SEL-01', 'REQ-APR-01')
+@pytest.mark.cov('S2', 'FM2')
+@pytest.mark.fx('FX-09', 'FX-60')
+def test_T_TRI_50_m1_v03_core_discovered_protection_has_no_work(flow, gen, mock_provider, monkeypatch):
+    from mdflow import triage
+    source = flow.put('image.png', gen.png_noise())
+    original = triage.run_triage
+    def encrypted(path, sn):
+        outcome = original(path, sn)
+        outcome['report']['issues'].append({'code': 'encrypted', 'detail': 'Core found protection'})
+        return outcome
+    monkeypatch.setattr(triage, 'run_triage', encrypted)
+    def forbidden(*args, **kwargs): pytest.fail('report_only cannot render or look up a Key')
+    monkeypatch.setattr(render, 'render_units', forbidden)
+    monkeypatch.setattr(ledger.Ledger, 'lookup', forbidden)
+    provider = mock_provider(egress=True)
+    value = flow.run([source], provider=provider)
+    f, = value['files']
+    assert value['exit'] == 2 and f['route'] == 'PROTECTED' and f['action'] == 'report_only'
+    assert f['units']['total'] == 0 and f['requests']['sent'] == 0 and f['outputs'] == []
+    assert f['triage']['issues'][-1]['code'] == 'encrypted' and f['consent'] is None
+    assert flow.core.calls == [] and provider.calls == []
+
+
+@pytest.mark.req('REQ-PLN-01', 'REQ-APR-01')
+@pytest.mark.cov('S8', 'FM2')
+@pytest.mark.fx('FX-27')
+def test_T_PLN_54_m1_v01_protected_source_metadata_plan_has_zero_work(flow, gen):
+    source = flow.put('locked.hwp', gen.hwp5_min(encrypted=True))
+    plans = []
+    value = flow.run([source], _plan_only=True, _on_plan=plans.append)
+    assert value['exit'] == 2 and len(plans) == 1
+    p = plans[0]
+    assert p['approved']['classification']['route'] == 'PROTECTED'
+    assert p['approved']['units'] == [] and p['approved']['keys_unique'] == p['approved']['max_requests'] == 0
+    assert p['status']['requests_to_send'] == 0 and not flow.out.exists()
+
+
+@pytest.mark.req('REQ-SNF-01')
+@pytest.mark.cov('S1', 'FM0')
+@pytest.mark.fx('FX-51')
+def test_T_SNF_53_m1_v06_dot_root_is_not_a_hidden_entry(flow, monkeypatch):
+    flow.put('note.txt', b'Own source')
+    monkeypatch.chdir(flow.inputs)
+    result = sniff_io.discover([Path('.')])
+    assert [f['logical'] for f in result['files']] == ['note.txt']
+    assert result['skipped'] == []
+
+
+@pytest.mark.req('REQ-SEL-01', 'REQ-CLS-06')
+@pytest.mark.cov('S4', 'FM4')
+@pytest.mark.fx('FX-30', 'FX-60')
+def test_T_SEL_51_m1_v22_convert_only_does_not_schedule_ocr(repo_root):
+    sn, raw = golden(repo_root, 'FX-30')
+    raw['decision'] = 'unknown'
+    raw['coverage']['state'] = 'none'
+    raw['candidates'] = [dict(id='uninspected/media.png', kind='image', page=None,
+                              priority='high', reasons=['embedded_image'])]
+    c = classify.classify(sn, raw)
+    assert c['action'] == 'convert_only' and c['candidates_unique'], 'real G2b decision row retains evidence'
+    assert select.select(c, {'file': {'format': sn['format']}})['units'] == []
+
+
+@pytest.mark.req('REQ-MAP-03', 'REQ-GEN-07')
+@pytest.mark.cov('S5', 'FM12')
+@pytest.mark.fx('FX-17')
+def test_T_CNV_54_m1_v20_short_filename_collision_fails_before_conversion(flow, step7_data, mock_provider, monkeypatch):
+    source = flow.put('document.docx', step7_data.docx_bytes())
+    with zipfile.ZipFile(source) as archive:
+        images = [archive.read(n) for n in archive.namelist() if n.startswith('word/media/')]
+    assert len(images) == 2 and images[0] != images[1]
+    original = orchestrate.sha256
+    class Digest:
+        def __init__(self, value): self.value = value
+        def hexdigest(self): return self.value
+    def forced(data):
+        for index, payload in enumerate(images):
+            if data == payload: return Digest('a' * 12 + str(index) * 52)
+        return original(data)
+    monkeypatch.setattr(orchestrate, 'sha256', forced)
+    provider = mock_provider(egress=False)
+    value = flow.run([source], provider=provider)
+    assert value['exit'] == 2 and 'E_OUTPUT_COLLISION' in codes(value)
+    assert flow.core.calls == [] and provider.calls == [] and value['files'][0]['outputs'] == []
+
+
+@pytest.mark.req('REQ-GEN-07', 'REQ-WRT-02', 'REQ-RPT-03')
+@pytest.mark.cov('S0', 'FM5')
+@pytest.mark.fx('FX-51', 'FX-65')
+def test_T_GEN_53_m1_v02_empty_run_temp_failure_is_not_success(flow, monkeypatch):
+    def denied(*args, **kwargs): raise PermissionError('injected run temp failure')
+    monkeypatch.setattr(orchestrate.tempfile, 'TemporaryDirectory', denied)
+    value = flow.run()
+    assert value['exit'] == 2 and value['files'] == []
+    assert codes(value) == {'E_OUTPUT_IO'}
+
+
+@pytest.mark.req('REQ-SNF-08', 'REQ-CTR-02')
+@pytest.mark.cov('S1', 'FM3')
+@pytest.mark.fx('FX-45', 'FX-46')
+@pytest.mark.parametrize('case', ['zero_depth', 'nested_bomb'])
+def test_T_CTR_51_m1_v08_root_and_nested_package_bounds(gen, case):
+    data = gen.make_zip({'a.txt': b'a'}) if case == 'zero_depth' else gen.make_zip({'bomb.docx': gen.zip_bomb('c')})
+    result = sniff_io.expand_container(data, logical='root.zip', zip_depth=0 if case == 'zero_depth' else 3)
+    expected = 'E_ZIP_DEPTH' if case == 'zero_depth' else 'E_ZIP_BOMB'
+    assert expected in {i['code'] for i in result['issues']}
+
+
+@pytest.mark.req('REQ-SNF-06', 'REQ-CTR-03')
+@pytest.mark.cov('S1', 'FM12')
+@pytest.mark.fx('FX-43')
+def test_T_SNF_54_m1_v07_container_replacement_cannot_change_inventory(flow, gen, monkeypatch):
+    source = flow.put('bundle.zip', gen.make_zip({'old.txt': b'old'}))
+    original = sniff_io.sniff
+    def replaced(path, **kwargs):
+        sn = original(path, **kwargs)
+        if Path(path) == source:
+            source.write_bytes(gen.make_zip({'new.txt': b'new'}))
+        return sn
+    monkeypatch.setattr(sniff_io, 'sniff', replaced)
+    value = flow.run([source])
+    assert value['exit'] == 2 and codes(value) == {'E_SNIFF_IO'}
+    assert [f['path'] for f in value['files']] == ['bundle.zip']
+    assert flow.core.calls == [] and value['files'][0]['outputs'] == []

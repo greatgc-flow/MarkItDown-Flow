@@ -69,6 +69,7 @@ def test_T_SEL_04_refs_informational_and_equal_members_merge(core_api, core_fx, 
 @pytest.mark.req("REQ-PLN-01")
 @pytest.mark.cov("S8", "FM0")
 @pytest.mark.fx("all")
+@pytest.mark.scope("schema")
 @pytest.mark.parametrize("fmt,frames", (("pdf", None), ("png", 1), ("tiff", 3), ("docx", None)))
 def test_T_PLN_01_exact_schema_and_all_equations(core_build_plan, core_data, fmt, frames):
     units = [core_data.unit("p2"), core_data.unit("p4"), core_data.unit("p5", status="render_failed")]

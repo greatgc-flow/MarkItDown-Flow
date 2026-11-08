@@ -102,6 +102,7 @@ class OpenAICompatProvider:
         self._api_key = api_key
         self._timeout_s = timeout_s
         self.proxy = proxy
+        self.requests_sent = 0
         self._opener = _NoRedirectOpener.build(proxy)
         self.meta = {
             "name": "openai-compatible", "model": model, "egress": True, "cost_hint": cost_hint, "max_batch": 1,
@@ -130,6 +131,8 @@ class OpenAICompatProvider:
 
     def _post_once(self, body: bytes) -> tuple[str, object]:
         """('ok', raw bytes) | ('retry', status) | ('http', status) | ('timeout', None) | ('output', None)."""
+        deadline = time.monotonic() + self._timeout_s
+        self.requests_sent += 1
         request = urllib.request.Request(
             self.meta["destination"], data=body, method="POST",
             headers={
@@ -153,7 +156,18 @@ class OpenAICompatProvider:
                     return "http", status
                 data = bytearray()
                 while True:
-                    chunk = response.read(_READ_CHUNK)
+                    remaining = deadline - time.monotonic()
+                    if remaining <= 0:
+                        return 'timeout', None
+                    # HTTPResponse.read1 makes at most one underlying read. Refresh
+                    # the socket timeout against the same monotonic deadline.
+                    raw = getattr(getattr(response, 'fp', None), 'raw', None)
+                    sock = getattr(raw, '_sock', None)
+                    if sock is not None:
+                        sock.settimeout(remaining)
+                    chunk = getattr(response, 'read1', response.read)(_READ_CHUNK)
+                    if time.monotonic() >= deadline:
+                        return 'timeout', None
                     if not chunk:
                         break
                     data += chunk

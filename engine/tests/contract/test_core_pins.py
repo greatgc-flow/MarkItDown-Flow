@@ -20,6 +20,7 @@ CORPUS = ("FX-01", "FX-02", "FX-03", "FX-04", "FX-06", "FX-07", "FX-09", "FX-11"
 @pytest.mark.req("REQ-GEN-02", "REQ-TRI-03")
 @pytest.mark.cov("S2", "FM10")
 @pytest.mark.fx("all")
+@pytest.mark.scope("schema")
 @pytest.mark.parametrize("fx", CORPUS)
 def test_CT_01_schema_rules_and_v1_types(installed_core, contract_fx, fx):
     report = installed_core[2](contract_fx.path(fx))
@@ -38,6 +39,7 @@ def test_CT_01_schema_rules_and_v1_types(installed_core, contract_fx, fx):
 @pytest.mark.req("REQ-CLS-05", "REQ-CLS-06")
 @pytest.mark.cov("S3", "FM10")
 @pytest.mark.fx("all")
+@pytest.mark.scope("schema")
 def test_CT_02_decision_and_state_vocabularies(installed_core, contract_fx):
     reports = [installed_core[2](contract_fx.path(fx)) for fx in CORPUS]
     assert {r["decision"] for r in reports} == {"ocr_recommended", "review", "no_candidates", "unknown"}
@@ -47,6 +49,7 @@ def test_CT_02_decision_and_state_vocabularies(installed_core, contract_fx):
 @pytest.mark.req("REQ-CLS-05", "REQ-GEN-10", "REQ-TRI-04")
 @pytest.mark.cov("S2", "FM10")
 @pytest.mark.fx("all")
+@pytest.mark.scope("schema")
 def test_CT_03_closed_vocabulary_and_regenerated_goldens(installed_core, contract_fx, contract_data, repo_root, tmp_path):
     # Supplement exercised reports with the installed module's literal emissions;
     # rarely reached bound/dependency paths still participate in vocabulary drift.

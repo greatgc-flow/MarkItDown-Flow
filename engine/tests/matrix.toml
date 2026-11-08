@@ -1,10 +1,10 @@
 # Applicability declaration for the generated MECE matrices (30_TESTPLAN section 5, R20).
 #
 # This file holds applicability ONLY. Coverage is generated from `@pytest.mark.cov`/`fx` markers and the
-# fixture manifest; nothing here claims a test exists. A cell that is neither COVERED by a passing test nor
-# listed below fails `tools/trace.py check` (T-META-04). A listed cell that is also covered is a warning.
+# fixture manifest; nothing here claims a test exists. A cell that is neither registered to an assertion nor
+# listed below fails `tools/trace.py check` (T-META-04). A listed cell that is also registered is displayed as registered.
 #
-# Schema (the verifier is tools/trace.py `matrix_problems`, still a stub in step 11):
+# Schema (the verifier is tools/trace.py `matrix_problems`, implemented registration verifier):
 #   [[stage_fm]]  cross product `stages` x `fms` of the 14x13 stage/failure-mode grid (S0..S13 x FM0..FM12)
 #   [[class_stage]] cross product `classes` x `stages` of the 20x14 file-class/stage grid (K01..K20 x S0..S13)
 #   reason  why the cell cannot occur or is not separately testable (must be non-empty prose)
@@ -13,21 +13,19 @@
 #
 # `fx("all")` in a test marker expands to every fixture of the manifest, i.e. every class. Stages with an
 # "all" test (S0 T-META-*, S1 T-SNF-07, S2 T-TRI-05, S3 T-CLS-05, S8 T-PLN-01, S11 T-ASM-06, S13 T-RPT-01/02,
-# T-GEN-07/10) therefore cover all 20 classes and need no class_stage entry.
+# T-GEN-07/10) therefore register common equivalences for all 20 classes, without claiming runtime class execution.
 #
 # FLOOR (30_TESTPLAN section 5) is never declared here: all S3 x FM0/1/2/3/4/10/11/12; S1:FM1/2/3/9; S2:FM1/10;
 # S6:FM1/3; S7:FM1/5; S9:FM8; S10:FM6/7; S12:FM5/9; S0:FM7/10/12; every class x S3, S13, and (except the
 # report-only K12 K13 K15 K16 K17 K19) S11.
 #
-# Honest gaps (applicable but with no dedicated test today; declared so they are visible, not hidden):
-#   S10:FM0 has no nominal-only test (success is asserted inside T-TRX-01 whose primary cell is FM12).
-#   S13:FM1 failure shapes are parametrised inside T-RPT-02 (primary cell S13:FM0).
-#   S12:FM0 nominal write is asserted by every end-to-end test whose primary cell is elsewhere.
-#   Review these three when a test is added or re-celled; they are not claims of inapplicability.
+# M1: applicability and registration are distinct from executed JUnit evidence.
+# Common schema equivalences are labelled scope(schema); class execution registrations are separate.
+# Previously declared nominal/report gaps now have directly registered scenarios.
 
 version = 1
 
-# ======================================================================= stage x failure mode (108 cells)
+# ======================================================================= stage x failure mode (reviewed declarations)
 
 # ---- S0 general (startup, CLI, cancellation, cross-run): covered FM0 FM1 FM7 FM9 FM10 FM12
 [[stage_fm]]
@@ -47,12 +45,6 @@ stages = ["S0"]
 fms = ["FM4"]
 reason = "Unsupported or legacy formats are decided per file by Classify; the general-level equivalent (unsupported Python or Core) is a version-contract failure, FM10."
 owner = "S3:FM4"
-
-[[stage_fm]]
-stages = ["S0"]
-fms = ["FM5"]
-reason = "Local IO failures occur at a concrete stage (output write, cache, temp); the general level adds no distinct IO path."
-owner = "S12:FM5"
 
 [[stage_fm]]
 stages = ["S0"]
@@ -104,12 +96,6 @@ reason = "Sniff yields a complete SniffResult or an error code; partial coverage
 owner = "S3:FM11"
 
 # ---- S2 Triage: covered FM0 FM1 FM4 FM9 FM10
-[[stage_fm]]
-stages = ["S2"]
-fms = ["FM2"]
-reason = "PROTECTED routes are decided at Sniff and never reach Triage (REQ-TRI-01 calls Triage for NATIVE sources only)."
-owner = "S1:FM2"
-
 [[stage_fm]]
 stages = ["S2"]
 fms = ["FM3"]
@@ -166,29 +152,10 @@ reason = "Consent is requested after Classify, Select and Plan."
 owner = "S9:FM8"
 
 [[stage_fm]]
-stages = ["S3"]
-fms = ["FM9"]
-reason = "Classify receives only validated Sniff and Triage objects; hostile input is rejected earlier (zip, path, size) or by V1-V4 validation."
-owner = "S1:FM9"
-
-# ---- S4 Select: covered FM0 FM3 FM11 FM12
-[[stage_fm]]
 stages = ["S4"]
 fms = ["FM1", "FM9", "FM10"]
 reason = "Select is a PURE total function over candidates already validated by Classify (V1-V4, vocabulary, ids); invalid or hostile reports never reach it."
 owner = "S3:FM1"
-
-[[stage_fm]]
-stages = ["S4"]
-fms = ["FM2"]
-reason = "Protected sources stop at Classify with no candidates."
-owner = "S3:FM2"
-
-[[stage_fm]]
-stages = ["S4"]
-fms = ["FM4"]
-reason = "Unsupported and legacy sources stop at Classify with report_only and no candidates."
-owner = "S3:FM4"
 
 [[stage_fm]]
 stages = ["S4"]
@@ -205,33 +172,15 @@ owner = "S3:FM2"
 
 [[stage_fm]]
 stages = ["S5"]
-fms = ["FM3"]
-reason = "Size, entry, depth and pixel bounds are enforced before Convert (Sniff, REQ-SNF-02/08/09) and at Render; Convert adds none."
-owner = "S1:FM3"
-
-[[stage_fm]]
-stages = ["S5"]
 fms = ["FM4"]
 reason = "Unsupported and legacy sources are routed to report_only and never converted."
 owner = "S3:FM4"
 
 [[stage_fm]]
 stages = ["S5"]
-fms = ["FM5"]
-reason = "Convert works in the run temp directory; publication IO and its failures belong to the Write stage."
-owner = "S12:FM5"
-
-[[stage_fm]]
-stages = ["S5"]
 fms = ["FM6", "FM8"]
 reason = "Convert uses offline Core only (REQ-CNV-05) and runs before consent; no provider or consent state exists here."
 owner = "S10:FM6"
-
-[[stage_fm]]
-stages = ["S5"]
-fms = ["FM7"]
-reason = "Convert produces temp-only results; the only durable effects are the atomic writes of the Write stage."
-owner = "S12:FM7"
 
 [[stage_fm]]
 stages = ["S5"]
@@ -309,12 +258,6 @@ owner = "S9:FM8"
 
 [[stage_fm]]
 stages = ["S7"]
-fms = ["FM9"]
-reason = "A hostile or tampered ledger entry is treated as corrupt (v, key_id, fingerprint checks) and missed; entry paths derive from hashes, never from document text."
-owner = "S7:FM1"
-
-[[stage_fm]]
-stages = ["S7"]
 fms = ["FM10"]
 reason = "Ledger version drift (v:2) is one of the REQ-LKP-04 invalid-entry cases and is asserted under FM1."
 owner = "S7:FM1"
@@ -332,13 +275,6 @@ fms = ["FM1", "FM5", "FM6", "FM7", "FM8"]
 reason = "Plan is a PURE function of validated inputs (T-GEN-04) that writes nothing (T-CLI-01); the consent decision itself is made at Approve."
 owner = "S9:FM8"
 
-[[stage_fm]]
-stages = ["S8"]
-fms = ["FM2", "FM4"]
-reason = "Only sources with eligible units are planned; protected, unsupported and legacy sources stop at Classify."
-owner = "S3:FM2"
-
-# ---- S9 Approve: covered FM0 FM3 FM8 FM12
 [[stage_fm]]
 stages = ["S9"]
 fms = ["FM1"]
@@ -378,12 +314,6 @@ owner = "S9:FM3"
 # ---- S10 Transcribe: covered FM3 FM6 FM7 FM9 FM10 FM12
 [[stage_fm]]
 stages = ["S10"]
-fms = ["FM0"]
-reason = "GAP DECLARED: nominal request/response is asserted inside T-TRX-01 (primary cell FM12) and T-TRX-04; no test is primarily nominal."
-owner = "S10:FM12"
-
-[[stage_fm]]
-stages = ["S10"]
 fms = ["FM1"]
 reason = "A provider that raises is a per-Key provider failure (REQ-TRX-03) and is asserted under FM6."
 owner = "S10:FM6"
@@ -396,24 +326,6 @@ owner = "S3:FM2"
 
 [[stage_fm]]
 stages = ["S10"]
-fms = ["FM4"]
-reason = "A unit whose mime the provider does not accept is excluded at Render (unsupported_media_format) before Transcribe."
-owner = "S6:FM4"
-
-[[stage_fm]]
-stages = ["S10"]
-fms = ["FM5"]
-reason = "Local IO during Transcribe is the ledger write, covered at Lookup/Write."
-owner = "S7:FM5"
-
-[[stage_fm]]
-stages = ["S10"]
-fms = ["FM8"]
-reason = "Consent is a precondition checked by Approve and re-verified per Key (REQ-APR-07) before Transcribe is entered."
-owner = "S9:FM8"
-
-[[stage_fm]]
-stages = ["S10"]
 fms = ["FM11"]
 reason = "Units left pending after a failure are rendered by Assemble as pending markers."
 owner = "S11:FM6"
@@ -421,7 +333,7 @@ owner = "S11:FM6"
 # ---- S11 Assemble: covered FM0 FM6 FM9 FM11 FM12
 [[stage_fm]]
 stages = ["S11"]
-fms = ["FM1", "FM5", "FM7"]
+fms = ["FM5", "FM7"]
 reason = "Assemble is a PURE total function (T-ASM-01: IO and clock patched to raise); failures become markers or Write errors, and durable effects belong to Write."
 owner = "S12:FM5"
 
@@ -450,12 +362,6 @@ reason = "The output grammar is fixed by this release (REQ-ASM-03 key order); th
 owner = "S11:FM0"
 
 # ---- S12 Write: covered FM5 FM7 FM9 FM12
-[[stage_fm]]
-stages = ["S12"]
-fms = ["FM0"]
-reason = "GAP DECLARED: nominal atomic write is asserted by every end-to-end test whose primary cell is elsewhere (T-GEN-06, T-CLI-05)."
-owner = "S13:FM0"
-
 [[stage_fm]]
 stages = ["S12"]
 fms = ["FM1"]
@@ -495,21 +401,9 @@ owner = "S11:FM11"
 # ---- S13 Report: covered FM0 FM9 FM10
 [[stage_fm]]
 stages = ["S13"]
-fms = ["FM1"]
-reason = "GAP DECLARED: failure-bearing reports are parametrised inside T-RPT-02 (scenarios ok, failed, oversize, approval), primary cell FM0."
-owner = "S13:FM0"
-
-[[stage_fm]]
-stages = ["S13"]
-fms = ["FM2", "FM3", "FM4", "FM6", "FM8", "FM11"]
+fms = ["FM2", "FM4"]
 reason = "Report aggregates codes produced by earlier stages (REQ-RPT-02 equations, REQ-RPT-03 code map); each cause is injected where it occurs."
 owner = "S13:FM10"
-
-[[stage_fm]]
-stages = ["S13"]
-fms = ["FM5"]
-reason = "A failing --report copy leaves stdout authoritative; the underlying output IO failure is asserted at Write."
-owner = "S12:FM5"
 
 [[stage_fm]]
 stages = ["S13"]

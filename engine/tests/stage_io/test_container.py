@@ -81,7 +81,10 @@ def test_T_CTR_02_depth_entries_total_and_bomb_bounds(tmp_path, gen):
     assert "E_ZIP_TOTAL" not in _codes(single), "each archive alone is under the bound"
     total = sniff_io.expand_container(cumulative_total, logical="cum-total.zip", zip_total_bytes=2500)
     assert "E_ZIP_TOTAL" in {i["code"] for i in total["issues"]}
-    assert total["members"] == []
+    assert {m['logical'] for m in total['members']} == {
+        'cum-total.zip/middle.zip', 'cum-total.zip/middle.zip/inner.zip'}
+    assert all('E_ZIP_TOTAL' in _codes(m['sniff']) for m in total['members']), \
+        'a later bound failure preserves discovered members as report-only evidence'
 
     bomb = _put(tmp_path, "bomb.zip", gen.zip_bomb("a"))
     bombed = sniff_io.expand_container(bomb, logical="bomb.zip")

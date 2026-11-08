@@ -1,5 +1,6 @@
 """Content-addressed transcription identity and atomic ledger storage."""
 from itertools import count
+from datetime import datetime
 import json
 import os
 from pathlib import Path
@@ -26,6 +27,12 @@ def key_id(key: dict) -> str:
 
 def validate_entry(entry: object, requested_key: dict, stem: str) -> bool:
     if not isinstance(entry, dict) or type(entry.get("v")) is not int or entry["v"] != 1:
+        return False
+    try:
+        created = datetime.fromisoformat(entry['created'])
+        if created.tzinfo is None or created.microsecond:
+            return False
+    except (KeyError, TypeError, ValueError):
         return False
     key = entry.get("key")
     if not isinstance(key, dict) or key.keys() != requested_key.keys():

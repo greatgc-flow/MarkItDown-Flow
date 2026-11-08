@@ -43,14 +43,32 @@ def emit_progress(event: dict, stream: TextIO, *,
         if hits:
             value["sensitive_hits"] = hits[:-1]
         else:
-            strings = [(key, child) for key, child in value.items()
-                       if isinstance(child, str) and key not in {"ev", "code", "ts", "plan_hash"}]
+            strings = []
+            containers = []
+            def visit(node):
+                if isinstance(node, dict):
+                    for key, child in node.items():
+                        if isinstance(child, str) and child and key not in {'ev', 'code', 'ts', 'plan_hash'}:
+                            strings.append((node, key, child))
+                        elif isinstance(child, (dict, list)):
+                            visit(child)
+                elif isinstance(node, list):
+                    if len(node) > 1:
+                        containers.append(node)
+                    for key, child in enumerate(node):
+                        if isinstance(child, str) and child:
+                            strings.append((node, key, child))
+                        elif isinstance(child, (dict, list)):
+                            visit(child)
+            visit(value)
             if not strings:
-                raise ValueError("progress event exceeds 64 KiB")
-            key, child = max(strings, key=lambda pair: len(pair[1]))
-            if not child:
-                raise ValueError("progress event exceeds 64 KiB")
-            value[key] = child[:len(child) // 2]
+                if not containers:
+                    raise ValueError('progress fixed fields exceed 64 KiB')
+                container = max(containers, key=len)
+                del container[len(container) // 2:]
+            else:
+                parent, key, child = max(strings, key=lambda pair: len(pair[2].encode('utf-8')))
+                parent[key] = child[:len(child) // 2]
         line = _json(value)
     stream.write(line + "\n")
     stream.flush()

@@ -68,6 +68,19 @@ def _issue(code: str, message: str) -> dict:
     return {"code": code, "message": message}
 
 
+def _source_bytes(path: Path | str, sniff: dict, maximum: int) -> bytes:
+    """One bounded snapshot with the authoritative Sniff identity, never a new identity."""
+    data = bytearray()
+    with open(path, 'rb') as stream:
+        while chunk := stream.read(65536):
+            data.extend(chunk)
+            if len(data) > maximum:
+                raise OSError('Source changed after Sniff.')
+    if len(data) != sniff['bytes'] or sha256(data).hexdigest() != sniff['sha256']:
+        raise OSError('Source changed after Sniff.')
+    return bytes(data)
+
+
 def _empty_file(sniff: dict) -> dict:
     c = classify.classify(sniff, None)
     return dict(path=sniff["path"], root=sniff["root"], sha256=sniff["sha256"],
@@ -86,20 +99,11 @@ class _MeasuredProvider:
         self.calls = 0
 
     def transcribe(self, unit: dict, raster: bytes, prompt: object) -> dict:
-        if not hasattr(self.provider, "_post_once"):
-            self.calls += 1
-            return self.provider.transcribe(unit, raster, prompt)
-        original = self.provider._post_once
-
-        def counted(body):
-            self.calls += 1
-            return original(body)
-
-        self.provider._post_once = counted
+        before = getattr(self.provider, 'requests_sent', None)
         try:
             return self.provider.transcribe(unit, raster, prompt)
         finally:
-            self.provider._post_once = original
+            self.calls += 1 if before is None else self.provider.requests_sent - before
 
 
 class _Pipeline:
@@ -151,7 +155,12 @@ class _Pipeline:
             source = dict(sniff=sn, runtime=discovered["path"])
             sources.append(source)
             if sn["route"] == "CONTAINER" and not any(i["code"].startswith("E_") for i in sn["issues"]):
-                expanded = sniff_io.expand_container(discovered["path"], logical=sn["path"], root=sn["root"],
+                try:
+                    source['data'] = _source_bytes(discovered['path'], sn, self.options['max_bytes'])
+                except OSError:
+                    sn['issues'].append(_issue('E_SNIFF_IO', 'Container changed or could not be read after Sniff.'))
+                    continue
+                expanded = sniff_io.expand_container(source['data'], logical=sn["path"], root=sn["root"],
                     **{k: self.options[k] for k in ("max_bytes", "zip_depth", "zip_entries", "zip_total_bytes")})
                 sn["issues"].extend(expanded["issues"])
                 sources.extend(dict(sniff=m["sniff"], data=m["data"]) for m in expanded["members"])
@@ -165,17 +174,30 @@ class _Pipeline:
             outputs.add(target)
         return sources, found["skipped"]
 
-    def _media_hashes(self, data: bytes, sn: dict, c: dict) -> dict:
+    def _media_hashes(self, data: bytes, sn: dict, c: dict, triage_media: list) -> dict:
         hashes = {}
-        if sn["format"] not in {"docx", "pptx", "xlsx", "hwpx"}:
+        if c['action'] not in {'convert_only', 'convert_and_ocr'} or not c['candidates_unique']:
             return hashes
+        if sn['format'] == 'hwp':
+            hashes = {m['id']: m['payload_sha256'] for m in triage_media}
+        if sn["format"] not in {"docx", "pptx", "xlsx", "hwpx", 'hwp'}:
+            return hashes
+        remaining = self.options['zip_total_bytes']
         for candidate in c["candidates_unique"]:
+            if sn['format'] == 'hwp':
+                continue
             try:
                 raw = sniff_io.read_member_bytes(data, candidate["id"], max_bytes=self.options["max_bytes"],
-                                                 total_remaining=self.options["zip_total_bytes"])
+                                                 total_remaining=remaining)
                 hashes[candidate["id"]] = sha256(raw).hexdigest()
-            except (sniff_io.ZipReadError, KeyError):
-                pass  # Render records the unavailable media's status and reason.
+                remaining -= len(raw)
+            except KeyError:
+                continue  # Missing media is an explicit Render pending status.
+        prefixes = {}
+        for digest in hashes.values():
+            if digest[:12] in prefixes and prefixes[digest[:12]] != digest:
+                raise sniff_io.ZipReadError('Distinct media share a filename prefix.', code='E_OUTPUT_COLLISION')
+            prefixes[digest[:12]] = digest
         return hashes
 
     def summarize(self, entry: dict, units: list[dict], entries: dict, observations: dict,
@@ -204,6 +226,17 @@ class _Pipeline:
         sn, logical = source["sniff"], source["sniff"]["path"]
         self.emit("stage", file=logical, stage="sniff", state="end", ms=0)
         path = source.get("runtime")
+        if sn['route'] == 'NATIVE' and not any(i['code'].startswith('E_') for i in sn['issues']):
+            try:
+                if 'data' not in source:
+                    source['data'] = _source_bytes(path, sn, self.options['max_bytes'])
+                if len(source['data']) != sn['bytes'] or sha256(source['data']).hexdigest() != sn['sha256']:
+                    raise OSError('Source changed after Sniff.')
+            except OSError:
+                sn['issues'].append(_issue('E_SNIFF_IO', 'Source changed or could not be read after Sniff.'))
+                source['data'] = b''
+            else:
+                path = None  # Core and Convert consume the same immutable owned snapshot.
         if path is None:
             # Core gets an opaque owned filename, never an archive member name.
             path = directory / ("source." + sn["format"])
@@ -222,9 +255,17 @@ class _Pipeline:
             except OSError:
                 self.issues(entry, [_issue("E_SNIFF_IO", "Source bytes could not be read.")])
                 entry["action"] = c["action"] = "report_only"
+        triage_media = (outcome['report'] or {}).get('media', [])
+        try:
+            media_hashes = self._media_hashes(data, sn, c, triage_media)
+        except sniff_io.ZipReadError as exc:
+            sn['issues'].append(_issue(exc.code, 'Media preparation exceeded a source bound or collided.'))
+            c = classify.classify(dict(sn, issues=[*sn['issues'], *outcome['issues']]), outcome['report'])
+            entry.update({key: c[key] for key in _CLASS_FIELDS})
+            self.issues(entry, c['issues'])
+            media_hashes = {}
         opts = dict(self.options, file={k: sn[k] for k in ("path", "sha256", "bytes", "format")},
-                    classification=c, triage_media=(outcome["report"] or {}).get("media", []),
-                    media_hashes=self._media_hashes(data, sn, c))
+                    classification=c, triage_media=triage_media, media_hashes=media_hashes)
         selected = self.stage(logical, "select", select.select, c, opts)
         self.summarize(entry, selected["units"], {}, {})
         if selected["oversize"]:
@@ -239,9 +280,18 @@ class _Pipeline:
                 if name:
                     unit["media_file"] = "media/" + name
         eligible = [u for u in selected["units"] if u["status"] == "eligible"]
-        rendered = self.stage(logical, "render", render.render_units, data, sniff=sn, units=eligible,
-                             run_temp=directory, dpi=opts["dpi"], max_pixels=opts["max_pixels"])
+        if c['action'] in {'convert_only', 'convert_and_ocr'}:
+            rendered = self.stage(logical, "render", render.render_units, data, sniff=sn, units=eligible,
+                                 run_temp=directory, dpi=opts["dpi"], max_pixels=opts["max_pixels"],
+                                 max_bytes=opts['max_bytes'], total_remaining=opts['zip_total_bytes'])
+        else:
+            rendered = dict(units=[], rasters={}, frames_total=None, issues=[])
         self.issues(entry, rendered["issues"])
+        if any(i['code'] == 'E_ZIP_BOMB' for i in rendered['issues']):
+            c.update(action='report_only', need='UNKNOWN', label='U', candidates_unique=[])
+            entry.update({key: c[key] for key in _CLASS_FIELDS})
+            selected = dict(units=[], oversize=False)
+            rendered = dict(units=[], rasters={}, frames_total=None, issues=rendered['issues'])
         by_id = {u["source_id"]: u for u in rendered["units"]}
         units = [by_id.get(u["source_id"], u) for u in selected["units"]]
         selected = dict(selected, units=units)
@@ -345,14 +395,20 @@ class _Pipeline:
         existing = self.out / relative
         decision = dict(write=True, issues=[])
         try:
+            write._checked_target(os.fspath(self.out), relative)
             if existing.is_file():
                 decision = assemble.publication_decision(existing.read_text(encoding="utf-8"), text,
                                                         force=self.options["force"])
         except (OSError, UnicodeError):
             decision = dict(write=False, issues=[_issue("E_OUTPUT_IO", "Existing output could not be read.")])
         self.issues(entry, decision["issues"])
+        if any(i['code'] == 'E_OUTPUT_IO' for i in decision['issues']):
+            entry['outputs'] = []
+            return
         if not decision["write"]:
-            entry["outputs"] = [relative]
+            result = write.publish_source(self.out, relative, None, media)
+            self.issues(entry, result['issues'])
+            entry["outputs"] = [relative] if result['ok'] else []
             return
         result = write.publish_source(self.out, relative, text.encode("utf-8"), media)
         self.issues(entry, result["issues"])
@@ -418,8 +474,12 @@ def run(roots: Sequence[Path], options: dict, *, provider=None,
         except (Cancelled, KeyboardInterrupt):
             cancelled = True
         except OSError:
+            problem = _issue('E_OUTPUT_IO', 'Run working files could not be prepared or removed.')
             if value["files"]:
-                pipeline.issues(value["files"][0], [_issue("E_OUTPUT_IO", "Run working files could not be prepared or removed.")])
+                pipeline.issues(value["files"][0], [problem])
+            else:
+                value.setdefault('issues', []).append(problem)
+                pipeline.emit('error', file=None, **problem)
         unused = set(opts["yes_hashes"]) - pipeline.matched_hashes
         if unused:
             warning = _issue("W_APPROVAL_UNUSED", "An approval hash matched no file in this invocation.")
@@ -428,9 +488,15 @@ def run(roots: Sequence[Path], options: dict, *, provider=None,
             else:
                 pipeline.emit("warning", file=None, **warning)
         codes = [issue["code"] for f in value["files"] for issue in f["issues"]]
+        codes.extend(issue['code'] for issue in value.get('issues', []))
         value["exit"] = assemble.exit_code(codes, cancelled=cancelled)
         value["finished"] = pipeline.now().isoformat(timespec="seconds")
         failed = sum(bool(assemble.exit_code([i["code"] for i in f["issues"]])) for f in value["files"])
-        pipeline.emit("run_end", exit=value["exit"], files_ok=len(value["files"]) - failed,
-                      files_failed=failed, provider_calls=pipeline.provider.calls)
+        terminal = dict(v=1, ev='run_end', ts=value['finished'], exit=value['exit'],
+                        files_ok=len(value['files']) - failed, files_failed=failed,
+                        provider_calls=pipeline.provider.calls)
+        if opts.get('_on_run_end'):
+            opts['_on_run_end'](terminal)
+        else:
+            pipeline.emit("run_end", **{k: terminal[k] for k in ('exit', 'files_ok', 'files_failed', 'provider_calls')})
     return value
