@@ -653,8 +653,9 @@ def deny_open(monkeypatch, target) -> None:
 
 def pid_alive(pid: int) -> bool:
     if os.name == "nt":
-        out = subprocess.run(["tasklist", "/FI", f"PID eq {pid}", "/NH"], capture_output=True, text=True).stdout
-        return str(pid) in out
+        # tasklist output uses the OEM code page (e.g. cp949); PID digits are ASCII.
+        raw = subprocess.run(["tasklist", "/FI", f"PID eq {pid}", "/NH"], capture_output=True).stdout
+        return str(pid) in raw.decode("ascii", errors="replace")
     try:
         os.kill(pid, 0)
     except ProcessLookupError:
