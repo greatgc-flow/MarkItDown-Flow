@@ -1,0 +1,21 @@
+# Test tools and fixture generators; never runtime dependencies.
+# TODO: obtain and review target wheel SHA-256 hashes before hash-mode installs.
+# These pins are not the release engine.lock or evidence of target compatibility.
+pytest==9.2.0
+python-docx==1.2.0
+python-pptx==1.0.2
+openpyxl==3.1.5
+pypdf==5.4.0
+# Transitive test dependencies, including Python 3.10 and Windows branches.
+colorama==0.4.6; sys_platform == "win32"
+exceptiongroup==1.2.2; python_version < "3.11"
+tomli==2.2.1; python_version < "3.11"
+iniconfig==2.0.0
+packaging==24.2
+pluggy==1.6.0
+pygments==2.19.2
+lxml==6.1.3
+typing_extensions==4.12.2
+XlsxWriter==3.2.2
+Pillow==12.0.0
+et_xmlfile==2.0.0

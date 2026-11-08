@@ -1,0 +1,138 @@
+"""Requirement registration, offline isolation and deterministic test time."""
+
+from datetime import datetime, timedelta, timezone
+import importlib.util
+import json
+import os
+from pathlib import Path
+import socket
+
+import pytest
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+_spec = importlib.util.spec_from_file_location("mdflow_trace", REPO_ROOT / "tools/trace.py")
+trace = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(trace)
+
+
+def pytest_configure(config):
+    for name, description in {
+        "req": "normative requirement IDs",
+        "cov": "one primary stage and failure-mode cell",
+        "fx": "fixture IDs or all",
+        "plat": "posix or windows; absent on other platforms",
+    }.items():
+        config.addinivalue_line("markers", f"{name}(*args): {description}")
+
+
+@pytest.hookimpl(trylast=True)
+def pytest_collection_modifyitems(config, items):
+    selected, deselected, records = [], [], []
+    for item in items:
+        markers = {
+            name: [list(marker.args) for marker in item.iter_markers(name)]
+            for name in ("req", "cov", "fx", "plat")
+        }
+        tid = trace.test_id(item.originalname or item.name)
+        # Direct properties also work with JUnit xunit2 (no record_property warning).
+        item.user_properties.extend([
+            ("tid", tid),
+            *[(name, json.dumps(groups, separators=(",", ":"))) for name, groups in markers.items()],
+        ])
+        records.append({"nodeid": item.nodeid, "tid": tid, "markers": markers})
+        platforms = [value for group in markers["plat"] for value in group]
+        if platforms and (len(platforms) != 1 or platforms[0] not in {"posix", "windows"}):
+            raise pytest.UsageError(f"Invalid plat marker: {item.nodeid}")
+        current = "windows" if os.name == "nt" else "posix"
+        (deselected if platforms and current not in platforms else selected).append(item)
+    config._mdflow_registry = records
+    items[:] = selected
+    if deselected:
+        config.hook.pytest_deselected(items=deselected)
+    trace.write_registry(REPO_ROOT, trace.requirement_registry(REPO_ROOT), records)
+
+
+@pytest.fixture(scope="session")
+def trace_module():
+    return trace
+
+
+@pytest.fixture(scope="session")
+def repo_root():
+    return REPO_ROOT
+
+
+@pytest.fixture(scope="session")
+def test_registry():
+    # Source discovery makes the meta oracle independent of -k/-m selection.
+    return trace.discover_tests(REPO_ROOT)
+
+
+class SocketGuard:
+    def __init__(self):
+        self.allowed_hosts = set()
+        self.attempts = []
+
+    def check(self, address):
+        self.attempts.append(address)
+        host = address[0] if isinstance(address, tuple) else address
+        if host not in self.allowed_hosts:
+            raise AssertionError("Network access blocked by the test socket guard")
+
+
+@pytest.fixture(autouse=True)
+def socket_guard(monkeypatch):
+    """Block outbound sockets and DNS; mocks may explicitly allow loopback hosts."""
+    guard = SocketGuard()
+
+    def wrap_address(original):
+        def guarded(sock, address, *args):
+            guard.check(address)
+            return original(sock, address, *args)
+        return guarded
+
+    for name in ("connect", "connect_ex"):
+        monkeypatch.setattr(socket.socket, name, wrap_address(getattr(socket.socket, name)))
+    original_sendto = socket.socket.sendto
+
+    def sendto(sock, data, *args):
+        guard.check(args[-1])
+        return original_sendto(sock, data, *args)
+
+    monkeypatch.setattr(socket.socket, "sendto", sendto)
+    for name in ("getaddrinfo", "gethostbyname", "gethostbyname_ex"):
+        original = getattr(socket, name)
+
+        def lookup(host, *args, _original=original, **kwargs):
+            guard.check((host,))
+            return _original(host, *args, **kwargs)
+
+        monkeypatch.setattr(socket, name, lookup)
+    return guard
+
+
+class FakeClock:
+    def __init__(self):
+        self._now = datetime(2026, 11, 9, tzinfo=timezone.utc)
+        self._elapsed = 0.0
+
+    def now(self):
+        return self._now
+
+    def monotonic(self):
+        return self._elapsed
+
+    def advance(self, seconds):
+        if seconds < 0:
+            raise ValueError("Fake time cannot move backwards")
+        self._now += timedelta(seconds=seconds)
+        self._elapsed += seconds
+
+    def sleep(self, seconds):
+        self.advance(seconds)
+
+
+@pytest.fixture
+def fake_clock():
+    """Inject this clock explicitly; pure stages receive fake_clock.now()."""
+    return FakeClock()

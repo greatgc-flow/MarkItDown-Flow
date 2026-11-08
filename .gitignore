@@ -30,3 +30,5 @@ python/__pycache__/
 release/
 src/utils/bundledPythonScripts.generated.ts
 test-extract/
+build/
+.pytest_cache/

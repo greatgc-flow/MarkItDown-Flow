@@ -21,7 +21,7 @@ Platform rule: a test that cannot run on an OS carries `@pytest.mark.plat("posix
 ```
 engine/
   pyproject.toml            # package mdflow; entry python -m mdflow; pytest: --strict-markers
-  mdflow/                   # stage modules (sniff classify select plan ledger assemble ...)
+  src/mdflow/               # stage modules (sniff classify select plan ledger assemble ...)
   tests/
     conftest.py             # plugin: req/cov/fx/plat -> junit properties; socket guard; fake clock
     unit/ integration/      # T-*

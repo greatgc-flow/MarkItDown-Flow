@@ -1,6 +1,6 @@
 # MarkItDown-Flow v2 - Engine Specification (`mdflow`)
 
-Status: SPEC DRAFT-3 (authoritative for TDD). Binding inputs: `00_BRIEF.md`, `01_DECISIONS.md` R1-R25. Pinned Core: `ref/markitdown-gc_GUIDE_0.3.5.md`, `ref/ocr_triage_0.3.5.py.txt` (line refs below are into that file). Scope: Python engine only. The Obsidian shell (`20_SHELL.md`) consumes only section 7 (JSON contracts), section 8.4 (consent) and section 10 (CLI) - the only engine/shell protocol (R19).
+Status: SPEC DRAFT-3.1 (authoritative for TDD). Binding inputs: `00_BRIEF.md`, `01_DECISIONS.md` R1-R25. Pinned Core: `ref/markitdown-gc_GUIDE_0.3.5.md`, `ref/ocr_triage_0.3.5.py.txt` (line refs below are into that file). Scope: Python engine only. The Obsidian shell (`20_SHELL.md`) consumes only section 7 (JSON contracts), section 8.4 (consent) and section 10 (CLI) - the only engine/shell protocol (R19).
 
 Conventions: MUST/SHOULD per RFC 2119. Every normative rule has a stable ID `REQ-<AREA>-<NN>`; draft-1 ids `MAP-nn`, `ASM-Pn`, `SEC-nn` are aliases of `REQ-MAP-nn`, `REQ-ASM-Pn`, `REQ-SEC-nn`. Deleted rules keep their id with `(deleted draft-N, see changelog)`; nothing is renumbered. Values in `code` are literal.
 
@@ -25,7 +25,7 @@ Design rule applied in draft-3 (VerySimpleGuide): where a review found a contrad
 | Eligible unit | Unit with `status` in `{eligible, cached}`: it has a raster and a Key. Other statuses are pending with a reason and have no raster. |
 | Placement | One position in the output where a unit's block or marker is emitted (page anchor, link line, or appendix entry). Computed by Assemble. |
 | Raster | PNG or JPEG bytes actually sent to a provider. Hashed as sent. |
-| Key | Cache identity of a transcription (5.1): raster hash + provider identity + dpi. |
+| Key | Cache identity of a transcription (5.1): `{raster_sha256, provider_fingerprint, dpi}`. |
 | Provider fingerprint | `sha256(canonical_json({name, model, destination, egress, prompt_version, command_env_names}))`. |
 | Ledger entry | Cached JSON record for one Key (7.2). The ledger is the only source of truth for transcriptions. |
 | Request | One provider call for one Key. Eligible units with equal Keys share one request. |
@@ -108,10 +108,10 @@ Design rule applied in draft-3 (VerySimpleGuide): where a review found a contrad
 - REQ-RND-06 MUST: Pixel bound: `width*height > --max-pixels` (default 50000000) computed before decoding (PDF: page box * dpi/72; images: header) -> `E_RENDER_FAIL`, `status = render_failed`, message `pixel_bound`. Pillow's decompression-bomb check stays enabled.
 
 ### 2.7 Lookup (stage 7) and Approve (stage 9)
-- REQ-LKP-01 MUST: For each eligible unit compute its Key (5.1). A ledger entry that passes REQ-LKP-04 with `status == "ok"` is a hit: unit `status = cached`.
+- REQ-LKP-01 MUST: For each eligible unit compute its Key (5.1) = `{raster_sha256, provider_fingerprint, dpi}`. A ledger entry that passes REQ-LKP-04 with `status == "ok"` is a hit: unit `status = cached`. Consequence: any change to provider name, model, destination, egress flag, prompt version or the `--command-env` name set is a miss; a change to a command script's contents alone is a hit (8.2 contract).
 - REQ-LKP-02 MUST: Entries with `status == "failed"` are misses (retryable) and are overwritten on success. There is no in-flight state (12.2); concurrent runs sharing a cache may both send the same Key (last writer wins).
 - REQ-LKP-03 MUST: `--force` treats every entry as a miss but does not delete it until the replacement is published.
-- REQ-LKP-04 MUST: An entry is valid iff: parses as JSON object; `v == 1`; `key_id == sha256(canonical_json(key))` and equals the file stem; `key` equals the requested Key field-by-field; `status in {ok, failed}`; `text` is a string iff `status == ok`; `error` is an object iff `status == failed`. Otherwise `W_CACHE_CORRUPT`, treated as miss, replaced on next write.
+- REQ-LKP-04 MUST: An entry is valid iff: parses as JSON object; `v == 1`; `key_id == sha256(canonical_json(key))` and equals the file stem; `key` equals the requested Key field-by-field (the informational `provider` object is not compared); `status in {ok, failed}`; `text` is a string iff `status == ok`; `error` is an object iff `status == failed`. Otherwise `W_CACHE_CORRUPT`, treated as miss, replaced on next write.
 - REQ-LKP-05 MUST: Ledger write failure -> `E_CACHE_IO` on the unit's file; the result is still used for this run's output; exit contribution 2.
 - REQ-APR-01 MUST: If `provider.egress == false` or `status.requests_to_send == 0`, Approve is a no-op (`consent = null`).
 - REQ-APR-02 MUST: Otherwise consent is required for the file. Accepted forms: bare `--yes` when `threshold_exceeded == false`, `sensitive_hits == []` and `cost_known == true`; or the file's `plan_hash` listed in `--yes HASH` (repeatable) or in `--yes-file FILE` (one hash per line). Consent is per file; there is no run-level hash (12.2).
@@ -312,7 +312,7 @@ Order within a file: 1..12, files sequentially; 13 once per run. Because `plan_h
 ```
 - `status` in `{eligible, cached, skipped_low_priority, oversize, render_failed, unsupported_media_format}`. `raster_sha256`, `mime`, `bytes` are non-null iff `status in {eligible, cached}`. `cached` is set by Lookup; in the hashed `approved` object it is normalised to `eligible` (REQ-PLN-02).
 - `source_id` = the first (codepoint order) Core candidate id of the unit; `also` = other member ids with identical bytes (Office/HWP only). `kind` is mdflow's (`page` for PDF pages and raster frames, `media` for embedded images).
-- Key = `{"raster_sha256": ..., "provider": name, "model": model, "destination": destination, "prompt_version": pv, "dpi": dpi}`; `key_id = sha256(canonical_json(Key))`; cache path `<cache>/units/<key_id[:2]>/<key_id>.json`.
+- Key = `{"raster_sha256": ..., "provider_fingerprint": <glossary>, "dpi": dpi}`; `key_id = sha256(canonical_json(Key))`; cache path `<cache>/units/<key_id[:2]>/<key_id>.json`. The fingerprint's inputs (`name, model, destination, egress, prompt_version, command_env_names`) are stored in the ledger entry's informational `provider` object (7.2) for humans; the Key itself is the three fields.
 - Ordering: Select/Plan use natural sort of `source_id`; Assemble uses document order (page number; media by first link line, unmapped media last by `source_id`).
 
 ### 5.2 Mapping rules
@@ -437,7 +437,8 @@ Equations: `units_total == len(approved.units)`; in `approved.units` every `stat
 {
   "v": 1,
   "key_id": "<64 hex>",
-  "key": {"raster_sha256": "<64 hex>", "provider": "openai-compatible", "model": "gpt-4.1-mini", "destination": "https://api.openai.com/v1/chat/completions", "prompt_version": "p1", "dpi": 200},
+  "key": {"raster_sha256": "<64 hex>", "provider_fingerprint": "<64 hex>", "dpi": 200},
+  "provider": {"name": "openai-compatible", "model": "gpt-4.1-mini", "destination": "https://api.openai.com/v1/chat/completions", "egress": true, "prompt_version": "p1", "command_env_names": []},
   "unit": {"kind": "page", "dpi": 200, "mime": "image/png", "bytes": 183221},
   "status": "ok",
   "text": "…transcription…",
@@ -529,7 +530,7 @@ class Provider(Protocol):
 |---|---|---|---|
 | `none` | false | - | Default. `transcribe` is never called; all eligible units pending `reason=no_provider`. `retries=0`, `cost_hint="0"`. |
 | `openai-compatible` | true | env `MDFLOW_API_KEY` (required), `MDFLOW_BASE_URL` (default `https://api.openai.com/v1`; validated per 7.1), `--model` (required), `MDFLOW_TIMEOUT_S` (default 120), `--cost-hint` (optional), `MDFLOW_PROXY` (optional) | POST `<destination>` via `urllib.request` with an opener that has **no** `HTTPRedirectHandler` (any 3xx -> `E_PROVIDER_HTTP`) and `ProxyHandler({})` unless `MDFLOW_PROXY` is set (then that single proxy; environment proxies ignored). Image as `data:<unit.mime>;base64,…` in `image_url`; `temperature 0`. `retries=2` on HTTP 429/5xx with 2 s, 8 s backoff; otherwise `E_PROVIDER_HTTP`. Timeout -> `E_PROVIDER_TIMEOUT`. Response read in bounded chunks up to 4 MiB; larger, empty or non-string content -> `E_PROVIDER_OUTPUT`. Missing key/model or invalid URL -> `E_PROVIDER_CONFIG` at startup (exit 1). |
-| `command` | declared via `--command-egress true|false` (required, no default) | `--command "<template>"`, `--trust-command` (required), `--command-env NAME` (repeatable), `--model <label>` (required, free text) | Template split with `shlex.split(posix=True)` on every OS (POSIX quoting; Windows paths use forward slashes or doubled backslashes). Placeholders `{input}` (temp raster path), `{mime}` are substituted argument-wise after splitting. `subprocess.run(argv, shell=False)`; stdout read in bounded chunks up to 4 MiB (UTF-8, errors `replace`) = transcription; exit != 0 -> `E_PROVIDER_HTTP` with `error.exit = <n>`; timeout `MDFLOW_TIMEOUT_S` -> kill + `E_PROVIDER_TIMEOUT`. Child env = allowlist `{PATH, SYSTEMROOT, SYSTEMDRIVE, COMSPEC, HOME, USERPROFILE, TEMP, TMP, LANG, LC_ALL}` plus `--command-env` names. `retries=0`. **Cache-validity contract (declared, narrow):** the Key covers the argv template, `--model` label and env *names*, not the script's contents or env values; a user who changes the script's behaviour must change `--model` (or use `--force`). |
+| `command` | declared via `--command-egress true|false` (required, no default) | `--command "<template>"`, `--trust-command` (required), `--command-env NAME` (repeatable), `--model <label>` (required, free text) | Template split with `shlex.split(posix=True)` on every OS (POSIX quoting; Windows paths use forward slashes or doubled backslashes). Placeholders `{input}` (temp raster path), `{mime}` are substituted argument-wise after splitting. `subprocess.run(argv, shell=False)`; stdout read in bounded chunks up to 4 MiB (UTF-8, errors `replace`) = transcription; exit != 0 -> `E_PROVIDER_HTTP` with `error.exit = <n>`; timeout `MDFLOW_TIMEOUT_S` -> kill + `E_PROVIDER_TIMEOUT`. Child env = allowlist `{PATH, SYSTEMROOT, SYSTEMDRIVE, COMSPEC, HOME, USERPROFILE, TEMP, TMP, LANG, LC_ALL}` plus `--command-env` names. `retries=0`. **Cache-validity contract (declared, narrow):** the Key covers, through `provider_fingerprint`, the argv template (`destination`), `--model` label and `command_env_names`, not the script's contents or env values; a user who changes the script's behaviour must change `--model` (or use `--force`). |
 
 Azure DocIntel/CU are not built in (R7); recipes live in `docs/providers/*.md`.
 
@@ -675,10 +676,10 @@ Env: `MDFLOW_API_KEY`, `MDFLOW_BASE_URL`, `MDFLOW_TIMEOUT_S`, `MDFLOW_PROXY`. No
 | RND-04 | Render patched to raise on page 2 -> `E_RENDER_FAIL`, `status render_failed` on p2 only, p1/p3 sent, exit 2. |
 | RND-05 | No raster bytes under out_dir during run (watcher); temp dir absent after run; one raster resident at a time (spy). |
 | RND-06 | 100x100 inch page at 300 dpi -> `render_failed` with `pixel_bound`; raised `--max-pixels` renders. |
-| LKP-01 | Prewritten `ok` entry -> `status cached`, 0 requests. |
+| LKP-01 | Prewritten `ok` entry -> `status cached`, 0 requests. Command provider (T-LKP-06): editing the script body -> hit; changing the `--command-env` name set, `--model`, or the template -> miss. |
 | LKP-02 | `failed` entry -> request sent, entry overwritten `ok`; two concurrent runs on one cache both complete, one entry remains, valid. |
 | LKP-03 | `--force` -> request sent; old entry present until replacement published (fault injection). |
-| LKP-04 | Entries with `v:2`, wrong `key_id`, mismatched `key.destination`, `text:null` with `ok`, `status:"inflight"` -> `W_CACHE_CORRUPT`, miss, replaced. |
+| LKP-04 | Entries with `v:2`, wrong `key_id`, mismatched `key.provider_fingerprint`, `text:null` with `ok`, `status:"inflight"` -> `W_CACHE_CORRUPT`, miss, replaced; a mismatched informational `provider.model` alone does not invalidate. |
 | LKP-05 | Cache dir read-only -> `E_CACHE_IO`, output still contains the transcription, exit 2. |
 | APR-01 | Provider none, or all cached -> `consent null`, no `approve_required` event. |
 | APR-02 | Bare `--yes` refused when threshold/sensitive/unknown cost; `--yes <hash>` and `--yes-file` with two hashes approve two files; third file stays pending. |
@@ -766,6 +767,13 @@ R3-01 pinned contract 3.0/3.4, rows 13/14 deleted · R3-02 `is_raster` · R3-03/
 | SHL-REV-04 | REQ-SEC-01 notes the shell may inject the env var from an in-memory prompt; engine contract unchanged (R8). |
 | SHL-REV-05 | `--yes-file` enables one aggregated batch modal (8.4). |
 | ProviderMeta | `transcribe(unit, raster, prompt)` single-unit signature (batching was dead since R17 `max_batch=1`). |
+
+### 12.3 vs draft-3 (R7 ratification, DRAFT-3.1)
+
+| Finding | Change |
+|---|---|
+| F-01 | Key = `{raster_sha256, provider_fingerprint, dpi}` (glossary, 5.1, REQ-LKP-01); fingerprint inputs moved to the ledger's informational `provider` object (7.2), excluded from REQ-LKP-04 comparison; 8.2 command contract reworded; section 11 LKP-01/LKP-04 oracles updated so T-LKP-06 (env-name set change = miss, script change = hit) tests a normative rule. Test id unchanged. |
+| F-02..F-09 | Not spec text (TESTPLAN layout/fixtures/plat rule, SHELL/PKG `--yes-file`, ACC selector, stub deletion, Core availability). No change here. |
 
 ---
 
