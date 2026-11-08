@@ -88,7 +88,7 @@ def test_T_SNF_02_roots_deduplicated_by_realpath(tmp_path, gen):
 @pytest.mark.req("REQ-SNF-02")
 @pytest.mark.cov("S1", "FM3")
 @pytest.mark.fx("FX-42")
-def test_T_SNF_03_byte_bound_applies_to_files_and_members(tmp_path, gen):
+def test_T_SNF_03_byte_bound_applies_to_files_and_members(tmp_path, gen, cli_command):
     big = _put(tmp_path, "big.txt", gen.zero_padded_text(2 * MIB))
     result = _sniff(big, max_bytes=1048576)
     assert "E_TOO_LARGE" in _codes(result)
@@ -104,7 +104,7 @@ def test_T_SNF_03_byte_bound_applies_to_files_and_members(tmp_path, gen):
     assert _codes(members["bundle.zip/small.txt"]["sniff"]) == set()
 
     proc = subprocess.run(
-        [sys.executable, "-I", "-m", "mdflow", "run", str(exact), "-o", str(tmp_path / "o"), "--max-bytes", "268435457"],
+        cli_command("run", exact, "-o", tmp_path / "o", "--max-bytes", "268435457"),
         capture_output=True, text=True, timeout=60,
     )
     assert proc.returncode == 1

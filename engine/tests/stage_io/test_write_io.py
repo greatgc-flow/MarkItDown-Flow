@@ -25,7 +25,7 @@ def _is_private(path):
 @pytest.mark.req("REQ-GEN-05")
 @pytest.mark.cov("S12", "FM7")
 @pytest.mark.fx("FX-01", "FX-65")
-def test_T_GEN_05_fault_after_temp_leaves_target_absent_or_complete(tmp_path, gen, monkeypatch):
+def test_T_GEN_05_fault_after_temp_leaves_target_absent_or_complete(tmp_path, gen, monkeypatch, cli_command):
     old, new = b"old complete content", gen.pdf_text(1)
     for fault in ("fsync", "replace"):
         for preexisting in (False, True):
@@ -66,7 +66,7 @@ def test_T_GEN_05_fault_after_temp_leaves_target_absent_or_complete(tmp_path, ge
     directory = tmp_path / "killed"
     directory.mkdir()
     target = directory / "memo.docx.md"
-    proc = subprocess.run([sys.executable, "-I", "-c", child, str(target)], capture_output=True, text=True, timeout=60)
+    proc = subprocess.run(cli_command(target, code=child), capture_output=True, text=True, timeout=60)
     assert proc.returncode == 7, proc.stderr
     assert not target.exists()
     strays = _tmp_names(directory, target)

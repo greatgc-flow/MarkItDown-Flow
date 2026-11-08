@@ -6,6 +6,7 @@ import json
 import os
 from pathlib import Path
 import socket
+import sys
 
 import pytest
 
@@ -136,3 +137,23 @@ class FakeClock:
 def fake_clock():
     """Inject this clock explicitly; pure stages receive fake_clock.now()."""
     return FakeClock()
+
+
+@pytest.fixture
+def cli_command():
+    """One isolated launcher for CLI and crash probes; -I ignores PYTHONPATH.
+
+    ``code`` replaces the module entry point only for a deliberately instrumented
+    child (e.g. death inside atomic_write). ``prelude`` runs before the real CLI.
+    """
+    src = str(REPO_ROOT / "engine" / "src")
+
+    def command(*args, code=None, prelude=""):
+        bootstrap = f"import sys; sys.path.insert(0, {src!r});\n"
+        entry = code if code is not None else (
+            "import runpy; runpy.run_module('mdflow', run_name='__main__')"
+        )
+        return [sys.executable, "-I", "-c", bootstrap + prelude + "\n" + entry,
+                *map(str, args)]
+
+    return command

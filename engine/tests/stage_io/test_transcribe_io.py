@@ -220,7 +220,7 @@ def test_T_TRX_05_prompt_text_is_pinned_per_version(gen):
 @pytest.mark.req("REQ-TRX-06")
 @pytest.mark.cov("S10", "FM7")
 @pytest.mark.fx("FX-65")
-def test_T_TRX_06_lost_result_is_sent_again_and_help_discloses_it(gen, mock_provider, run_temp):
+def test_T_TRX_06_lost_result_is_sent_again_and_help_discloses_it(gen, mock_provider, run_temp, cli_command):
     raster = gen.png_noise(seed=61)
     store = {}
 
@@ -247,7 +247,7 @@ def test_T_TRX_06_lost_result_is_sent_again_and_help_discloses_it(gen, mock_prov
     _run(gen, [next_job()], warm, published=[])
     assert warm.calls == [], "once published, the Key is a hit"
 
-    proc = subprocess.run([sys.executable, "-I", "-m", "mdflow", "--help"], capture_output=True, text=True, timeout=60)
+    proc = subprocess.run(cli_command("--help"), capture_output=True, text=True, timeout=60)
     assert proc.returncode == 0, proc.stderr
     assert re.search(r"(?is)duplicate[^.]*charge|charge[^.]*duplicate", proc.stdout), "--help states the duplicate-charge risk"
 
@@ -399,7 +399,7 @@ def test_T_SEC_08_only_the_configured_endpoint_is_contacted(gen, mock_http, sock
 @pytest.mark.req("REQ-SEC-08")
 @pytest.mark.cov("S0", "FM9")
 @pytest.mark.fx("FX-62")
-def test_T_SEC_11_base_url_validation_is_a_startup_config_error(tmp_path, gen, socket_guard):
+def test_T_SEC_11_base_url_validation_is_a_startup_config_error(tmp_path, gen, socket_guard, cli_command):
     base = {"MDFLOW_API_KEY": gen.KEY}
 
     def build(url=None, **env):
@@ -442,8 +442,8 @@ def test_T_SEC_11_base_url_validation_is_a_startup_config_error(tmp_path, gen, s
     source.write_bytes(gen.txt_utf8())
     environment = dict(os.environ, MDFLOW_API_KEY=gen.KEY, MDFLOW_BASE_URL="https://user:pw@api.example.test/v1")
     proc = subprocess.run(
-        [sys.executable, "-I", "-m", "mdflow", "run", str(source), "-o", str(tmp_path / "out"),
-         "--provider", "openai-compatible", "--model", "m"],
+        cli_command("run", source, "-o", tmp_path / "out",
+                    "--provider", "openai-compatible", "--model", "m"),
         capture_output=True, text=True, timeout=60, env=environment)
     text = proc.stdout + proc.stderr
     assert proc.returncode == 1, text

@@ -1,8 +1,6 @@
-"""Console and module entry points, implemented in the CLI step."""
+"""Console and module entry points."""
 
-
-def main() -> int:
-    raise NotImplementedError("CLI behavior belongs to step 7")
+from .cli import main
 
 
 if __name__ == "__main__":
