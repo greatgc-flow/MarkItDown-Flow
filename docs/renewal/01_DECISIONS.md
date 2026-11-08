@@ -44,3 +44,9 @@ Q1 Is dropping Azure DocIntel/CU from the built-in set acceptable (kept only via
 | R21 Acceptance | 90_ACCEPTANCE v2 = list of objectively checkable gates (oracle given per gate), score = generated from CI test results (+ named manual attestations: R15 clean-room, R16 README). No partial rubric. v1 AC draft is superseded. | Fable |
 | R22 Docs layout | 10_SPEC (engine) / 20_SHELL (Obsidian shell, clean-room, behaviour inventory not reuse table) / 25_PACKAGING (dist, CI, release, policy) / 30_TESTPLAN (REQ->TEST->FX) / 90_ACCEPTANCE (gates). Fixture expectations come from pinned golden triage reports (generated from Core), not hand-written ids. | Fable |
 | R23 Spec corrections to apply | cx R3-01..26 + Fable X-40..48: multi-frame `fN` units, duplicate Office candidate ids, capped/partial inspection must not reach FULL, decision-table dead rows 13/14 (issue codes are not states), HWP/hwpx marker, zero-byte -> corrupt, 16-byte sniff, comment-escape in provider text, Windows reserved names, ordering of raster-hash/cache-count fields in Plan, consent must bind executable work, warm-rerun zero-call vs retry/--force. | cx, Fable |
+
+## Amendments (round 4)
+| ID | Resolution | Basis |
+|---|---|---|
+| R24 | SPEC DRAFT-2 accepted as basis (Fable: 27 findings fixed, 8 partially/rejected with reasons in SPEC §13). X-13 `--tag` frontmatter key: DROPPED. X-14 `--no-media`: DROPPED (minimalism; YAGNI). | orchestrator, Fable recommendation |
+| R25 | CI runner labels per cx verification: `macos-14` retired 2026-11-02 -> use current documented labels (25_PACKAGING). HWP/HWPX ship in markitdown-gc by default; no `[hwp]` extra. | cx (web/gh verified) |
