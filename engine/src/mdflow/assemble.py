@@ -88,7 +88,7 @@ def assemble(base_body: str, units: list, ledger_entries: dict,
                 section += "\n" + page_text[number]
             blocks = [block(u["source_id"]) for u in units if u["kind"] == "page" and u["page"] == number]
             if blocks:
-                section += "\n\n" + "\n\n".join(blocks)
+                section += ("\n\n" if page_text.get(number) else "\n") + "\n\n".join(blocks)
             sections.append(section)
         body = "\n\n".join(sections) + ("\n" if sections else "")
     else:
@@ -119,8 +119,19 @@ def assemble(base_body: str, units: list, ledger_entries: dict,
             header[name] = meta[name]
     if fmt == "pdf":
         header["dpi"] = meta.get("dpi", 200)
-    header.update(tools=dict(meta["tools"]), generated=meta["now"], content_sha256=sha256(body.encode("utf-8")))
-    frontmatter = "---\n" + "".join(name + ": " + json.dumps(value, ensure_ascii=False, allow_nan=False) + "\n" for name, value in header.items()) + "---\n"
+    tools = {name: meta["tools"][name] for name in ("mdflow", "markitdown-gc", "pypdfium2", "pillow")
+             if name in meta["tools"]}
+    header.update(tools=tools, generated=meta["now"], content_sha256=sha256(body.encode("utf-8")))
+
+    def scalar(value):
+        return json.dumps(value, ensure_ascii=False, allow_nan=False)
+
+    def yaml_value(value):
+        if isinstance(value, dict):
+            return "{" + ", ".join(name + ": " + scalar(item) for name, item in value.items()) + "}"
+        return scalar(value)
+
+    frontmatter = "---\n" + "".join(name + ": " + yaml_value(value) + "\n" for name, value in header.items()) + "---\n"
     return frontmatter + body, placements
 
 

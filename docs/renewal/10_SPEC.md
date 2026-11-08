@@ -1,6 +1,6 @@
 # MarkItDown-Flow v2 - Engine Specification (`mdflow`)
 
-Status: SPEC DRAFT-3.1 (authoritative for TDD). Binding inputs: `00_BRIEF.md`, `01_DECISIONS.md` R1-R25. Pinned Core: `ref/markitdown-gc_GUIDE_0.3.5.md`, `ref/ocr_triage_0.3.5.py.txt` (line refs below are into that file). Scope: Python engine only. The Obsidian shell (`20_SHELL.md`) consumes only section 7 (JSON contracts), section 8.4 (consent) and section 10 (CLI) - the only engine/shell protocol (R19).
+Status: SPEC DRAFT-3.2 (authoritative for TDD). Binding inputs: `00_BRIEF.md`, `01_DECISIONS.md` R1-R25. Pinned Core: `ref/markitdown-gc_GUIDE_0.3.5.md`, `ref/ocr_triage_0.3.5.py.txt` (line refs below are into that file). Scope: Python engine only. The Obsidian shell (`20_SHELL.md`) consumes only section 7 (JSON contracts), section 8.4 (consent) and section 10 (CLI) - the only engine/shell protocol (R19).
 
 Conventions: MUST/SHOULD per RFC 2119. Every normative rule has a stable ID `REQ-<AREA>-<NN>`; draft-1 ids `MAP-nn`, `ASM-Pn`, `SEC-nn` are aliases of `REQ-MAP-nn`, `REQ-ASM-Pn`, `REQ-SEC-nn`. Deleted rules keep their id with `(deleted draft-N, see changelog)`; nothing is renumbered. Values in `code` are literal.
 
@@ -342,6 +342,7 @@ Order within a file: 1..12, files sequentially; 13 once per run. Because `plan_h
 ...
 ```
 Exactly one blank line between blocks. Anchor for every page/frame `1..P` (actual count) even when not a unit. Standalone single-frame image: `P = 1`, base text empty.
+When an anchored page has empty base text, emit no base-text line, so its block or marker follows the anchor on the next line, with exactly one blank line between page blocks.
 
 ### 6.2 Office in-situ
 Base body is emitted unchanged. Immediately after each body line containing one or more image links, insert a blank line, then for each distinct unit linked on that line (link order, each unit once per line) its block or marker.
@@ -373,6 +374,7 @@ content_sha256: "<64 hex>"
 ---
 ```
 `done = cached + transcribed`; `total = done + pending + failed`. Container index uses the same keys with `format: "zip"`, `route: "CONTAINER"`, `units` all zero, and a body table `| member | label | action | output |`.
+The `units` and `tools` flow mappings use bare keys in the example's order (`total, done, pending, failed` and `mdflow, markitdown-gc, pypdfium2, pillow`), JSON-quoted string values, and one space after each colon and comma.
 
 ### 6.5 Provenance block (exact)
 ```
@@ -774,6 +776,10 @@ R3-01 pinned contract 3.0/3.4, rows 13/14 deleted · R3-02 `is_raster` · R3-03/
 |---|---|
 | F-01 | Key = `{raster_sha256, provider_fingerprint, dpi}` (glossary, 5.1, REQ-LKP-01); fingerprint inputs moved to the ledger's informational `provider` object (7.2), excluded from REQ-LKP-04 comparison; 8.2 command contract reworded; section 11 LKP-01/LKP-04 oracles updated so T-LKP-06 (env-name set change = miss, script change = hit) tests a normative rule. Test id unchanged. |
 | F-02..F-09 | Not spec text (TESTPLAN layout/fixtures/plat rule, SHELL/PKG `--yes-file`, ACC selector, stub deletion, Core availability). No change here. |
+
+### 12.4 DRAFT-3.2: oracle adjudication FX-03
+
+Clarified section 6.1 to omit the base-text line on empty anchored pages, and section 6.4 to require bare flow-mapping keys, JSON-quoted string values, and the example's mapping key order and spacing.
 
 ---
 
