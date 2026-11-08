@@ -5,6 +5,10 @@ import ast
 import json
 from pathlib import Path
 import re
+import fnmatch
+import hashlib
+import os
+import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parents[1]
 SPEC_FILES = ("10_SPEC.md", "20_SHELL.md", "25_PACKAGING.md")
@@ -256,15 +260,206 @@ def write_registry(root: Path, requirements: dict, tests: list[dict]) -> None:
     path.write_text(json.dumps({"v": 1, "requirements": requirements, "tests": tests}, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
+def discover_shell_tests(root: Path) -> list[dict]:
+    """Read real req() registrations; JUnit, separately, proves execution."""
+    records = []
+    for path in sorted((root / "shell/test").glob("*.test.ts")):
+        source = path.read_text(encoding="utf-8")
+        bindings = {m[1]: REQ_PATTERN.findall(m[2]) for m in re.finditer(
+            r"(?:const|let)\s+(\w+)\s*=\s*req\(([^;]+)\);", source)}
+        for match in re.finditer(r"\b(?:it|test)(?:\.each\([\s\S]*?\))?\s*\(\s*(\w+)\(\s*['\"`](JT-[^'\"`]+)['\"`]", source):
+            title = match[2]
+            tid = title.split()[0]
+            records.append({"tid": tid, "nodeid": f"{path.relative_to(root).as_posix()}::{title}",
+                            "markers": {"req": [bindings.get(match[1], [])]}})
+    return records
+
+
+MANUAL_FILES = {"MAN-01": "R15_cleanroom.yml", "MAN-02": "R16_readme_review.yml",
+                "MAN-03": "shell_i18n_review.yml", "MAN-04": "release_rehearsal.yml"}
+
+
+def attest(root: Path, identity: str, folder: Path, expected_commit: str) -> list[str]:
+    """Validate supplied named reviews; never synthesize a human sign-off."""
+    path = folder / MANUAL_FILES[identity]
+    if not path.is_file():
+        return [f"missing named manual sign-off: {path}"]
+    try:
+        source = path.read_text(encoding="utf-8")
+        try:
+            data = json.loads(source)
+        except ValueError:
+            import yaml  # separately pinned release tool, not an engine dependency
+            data = yaml.safe_load(source)
+        errors = []
+        for key in ("id", "reviewer", "date", "commit", "inputs", "checks", "evidence", "verdict"):
+            if not data.get(key):
+                errors.append(f"{identity}: missing {key}")
+        if data.get("id") != identity or data.get("verdict") != "PASS":
+            errors.append(f"{identity}: wrong identity/verdict")
+        if not expected_commit or data.get("commit") != expected_commit:
+            errors.append(f"{identity}: review must bind the candidate commit")
+        for item in data.get("checks") or []:
+            result = item.get("result", item.get("status")) if isinstance(item, dict) else item
+            if result != "PASS":
+                errors.append(f"{identity}: check did not pass")
+        if identity == "MAN-01" and (not data.get("implementer") or data.get("implementer") == data.get("reviewer")):
+            errors.append("MAN-01: independent named implementer/reviewer required")
+        if identity == "MAN-04":
+            from release_evidence import validate_rehearsal
+            errors += validate_rehearsal(data)
+        return errors
+    except (OSError, ValueError, TypeError, AttributeError, ImportError) as error:
+        return [f"{identity}: {error}"]
+
+
+def report(root: Path, destination: Path) -> dict:
+    """Generate both matrices from registrations and reasoned applicability."""
+    tests = discover_tests(root)
+    classes = fixture_classes(root)
+    try:
+        import tomllib
+    except ImportError:
+        import tomli as tomllib
+    na = tomllib.loads((root / "engine/tests/matrix.toml").read_text(encoding="utf-8"))
+    fm, ks = {}, {}
+    for test in tests:
+        values = test["markers"].get("cov", [])
+        if len(values) != 1 or len(values[0]) != 2:
+            continue
+        stage, failure = values[0]
+        fm.setdefault(f"{stage}:{failure}", []).append(test["nodeid"])
+        fixtures = marker_values(test, "fx")
+        covered = set(MATRIX_CLASSES) if "all" in fixtures else set().union(*(classes.get(f, set()) for f in fixtures))
+        for klass in covered:
+            ks.setdefault(f"{klass}:{stage}", []).append(test["nodeid"])
+    def grid(keys, covered, kind, axes):
+        result = {}
+        for key in keys:
+            if key in covered:
+                result[key] = {"status": "registered", "assertions": covered[key]}
+                continue
+            a, b = key.split(":")
+            entry = next((e for e in na.get(kind, []) if a in e.get(axes[0], []) and b in e.get(axes[1], [])), None)
+            result[key] = {"status": "N/A", "reason": entry.get("reason"), "owner": entry.get("owner")} if entry else {"status": "missing"}
+        return result
+    result = {"stage_failure": grid((f"{s}:{f}" for s in MATRIX_STAGES for f in MATRIX_FMS), fm, "stage_fm", ("stages", "fms")),
+              "class_stage": grid((f"{k}:{s}" for k in MATRIX_CLASSES for s in MATRIX_STAGES), ks, "class_stage", ("classes", "stages")),
+              "automated": {"registration_only": True, "problems": matrix_problems(root, tests)},
+              "manual": {k: {"status": "requires named review", "file": v} for k, v in MANUAL_FILES.items()}}
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    destination.write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
+    return result
+
+
+def score(root: Path, evidence: Path, reviews: Path, expected_commit: str) -> dict:
+    """Score only complete per-cell executions plus separate command-oracle evidence."""
+    registry = discover_tests(root) + discover_shell_tests(root)
+    planned = planned_tests(root)
+    results = {}
+    for path in evidence.glob("junit-*.xml"):
+        if "py3.15" in path.name:
+            continue
+        for case in ET.parse(path).iter("testcase"):
+            props = {p.get("name"): p.get("value", "") for p in case.findall("./properties/property")}
+            tid = props.get("tid") or (re.search(r"\b(JT-(?:\d{2}|SHL-19-01))\b", case.get("name", "")) or [""])[0]
+            if not tid:
+                continue
+            good = not any(case.find(k) is not None for k in ("failure", "error", "skipped"))
+            results.setdefault((path.name, tid), []).append(good)
+    try:
+        oracles = json.loads((evidence / "oracles.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        oracles = {}
+    def passed(tid):
+        rows = [t for t in registry if t["tid"] == tid]
+        if not rows:
+            return False
+        shell = tid.startswith("JT-")
+        for runner in ("windows-2022", "ubuntu-24.04", "macos-15-intel"):
+            for py in ([None] if shell else ["3.10", "3.14"]):
+                # A platform-restricted test is required only on the matching OS.
+                platform = "windows" if runner.startswith("windows") else "posix"
+                expected = [r for r in rows if not marker_values(r, "plat") or platform in marker_values(r, "plat")]
+                if not expected:
+                    continue
+                filename = f"junit-shell-{runner}.xml" if shell else f"junit-engine-{runner}-py{py}.xml"
+                packaged = f"junit-pkg-{runner}-py{py}.xml"
+                # Source-suite release-mode skips are superseded by actual packaged execution.
+                values = results.get((packaged, tid), []) if tid.startswith("PT-") else []
+                values = values or results.get((filename, tid), [])
+                if len(values) < len(expected) or not all(values):
+                    return False
+        return True
+    gates = []
+    text = (root / "docs/renewal/90_ACCEPTANCE.md").read_text(encoding="utf-8")
+    for line in text.splitlines():
+        cells = [c.strip() for c in line.split("|")]
+        if len(cells) < 5 or not re.match(r"G-\d{2}\b", cells[1]):
+            continue
+        identity = cells[1].split()[0]
+        patterns = re.findall(r"`([^`]+)`", cells[3])
+        selectors = []
+        for pattern in patterns:
+            match = re.fullmatch(r"(.+-)(\d+)\.\.(?:[A-Z]+-)*(\d+)", pattern)
+            selectors.extend([f"{match[1]}{n:02d}" for n in range(int(match[2]), int(match[3]) + 1)] if match else [pattern])
+        tids = {tid for tid in planned if any(fnmatch.fnmatchcase(tid, p) for p in selectors)}
+        oracle = oracles.get(identity, {})
+        good = bool(tids) and all(passed(t) for t in tids) and oracle.get("exit") == 0 and oracle.get("commit") == expected_commit
+        # A command receipt must preserve its actual stdout and command, not just a PASS flag.
+        good &= bool(oracle.get("command")) and isinstance(oracle.get("stdout"), str) and bool(expected_commit)
+        gates.append({"id": identity, "weight": int(cells[2]), "result": "PASS" if good else "FAIL", "tests": sorted(tids)})
+    manual = [{"id": identity, "weight": weight, "problems": attest(root, identity, reviews, expected_commit)}
+              for identity, weight in zip(MANUAL_FILES, (3, 2, 1, 1))]
+    if len(gates) != 17 or sum(g["weight"] for g in gates) != 93:
+        raise ValueError("acceptance table must define all 17 automated gates with total weight 93")
+    automated_total = sum(g["weight"] for g in gates if g["result"] == "PASS")
+    manual_total = sum(g["weight"] for g in manual if not g["problems"])
+    return {"score": f"SCORE {automated_total + manual_total}/100 (automated {automated_total}/93, manual {manual_total}/7)",
+            "automated": gates, "manual": manual}
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_subparsers(dest="command", required=True).add_parser("check")
-    parser.parse_args(argv)
+    commands = parser.add_subparsers(dest="command", required=True)
+    commands.add_parser("check")
+    rep = commands.add_parser("report", help="generate registration matrices; manual reviews remain separate")
+    rep.add_argument("--output", type=Path, default=ROOT / "build/trace/matrices.json")
+    sc = commands.add_parser("score", description="Report automated and manual acceptance results separately; missing evidence fails.")
+    sc.add_argument("--evidence", type=Path, default=ROOT / "build/trace")
+    sc.add_argument("--attest-dir", type=Path, default=ROOT / "attest")
+    sc.add_argument("--commit", default=os.environ.get("GITHUB_SHA", ""))
+    att = commands.add_parser("attest", help="validate an independently supplied named manual sign-off")
+    att.add_argument("identity", choices=MANUAL_FILES)
+    att.add_argument("--attest-dir", type=Path, default=ROOT / "attest")
+    att.add_argument("--commit", default=os.environ.get("GITHUB_SHA", ""))
+    args = parser.parse_args(argv)
+    if args.command == "report":
+        return int(bool(report(ROOT, args.output)["automated"]["problems"]))
+    if args.command == "attest":
+        errors = attest(ROOT, args.identity, args.attest_dir, args.commit)
+        print("\n".join(errors) if errors else "Named manual record valid; claims require independent verification.")
+        return int(bool(errors))
+    if args.command == "score":
+        result = score(ROOT, args.evidence, args.attest_dir, args.commit)
+        args.evidence.mkdir(parents=True, exist_ok=True)
+        (args.evidence / "acceptance.json").write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
+        print(result["score"])
+        return int(result["score"] != "SCORE 100/100 (automated 93/93, manual 7/7)")
     try:
         requirements = requirement_registry(ROOT)
         tests = discover_tests(ROOT)
-        problems = coverage_problems(requirements, tests)
+        shell = discover_shell_tests(ROOT)
+        problems = coverage_problems(requirements, tests + shell)
         problems["registration_errors"] = registration_problems(ROOT, tests)
+        shell_ids = {t["tid"] for t in shell}
+        for tid, reqs in planned_tests(ROOT).items():
+            if tid.startswith("JT-") and tid not in shell_ids:
+                problems["registration_errors"].append(f"Missing executable Jest registration: {tid}")
+            for record in (t for t in shell if t["tid"] == tid):
+                if not reqs <= set(marker_values(record, "req")):
+                    problems["registration_errors"].append(f"Missing planned Jest requirements: {record['nodeid']}")
+        problems["matrix_errors"] = matrix_problems(ROOT, tests)
         write_registry(ROOT, requirements, tests)
     except (OSError, ValueError, SyntaxError, IndexError) as error:
         print(f"trace check failed: {error}")
@@ -273,7 +468,7 @@ def main(argv: list[str] | None = None) -> int:
     for key, values in problems.items():
         for value in values:
             print(f"{key}: {value}")
-    print("Step 0 registration check only; golden, matrix, Jest and PASS-evidence gates are pending.")
+    print("Registration and applicability checked; executed automated results and named manual reviews are separate gates.")
     return int(any(problems.values()))
 
 

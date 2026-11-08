@@ -1,111 +1,99 @@
-# 🌟 MarkItDown Flow (Enterprise Edition)
+# MarkItDown Flow 2.0.0
 
-![MarkItDown Flow Banner](https://img.shields.io/badge/MarkItDown-Flow-blue?style=for-the-badge&logo=markdown)
-![Obsidian](https://img.shields.io/badge/Obsidian-Plugin-7A3CEF?style=for-the-badge&logo=obsidian)
-![Python](https://img.shields.io/badge/Python-3.10%2B-FFD43B?style=for-the-badge&logo=python)
+MarkItDown Flow converts local documents to Markdown and plans selective OCR for
+pages and images. The engine uses `markitdown-gc` 0.3.5. The desktop Obsidian
+shell uses an engine installed separately in a virtual environment. Release
+verification is still pending; see [packaging verification](docs/renewal/PACKAGING_VERIFICATION.md).
 
-**MarkItDown Flow** is a powerful unified engine and Obsidian plugin that flawlessly converts data of any format—images, PDFs, audio, video, and archives (ZIP)—into pristine Markdown.
+## Setup
 
-Going beyond simple text extraction, it guarantees zero-loss Markdown conversion through a **4-Phase Intelligent Fallback Pipeline** (Offline OCR ➔ AI Vision ➔ Azure DocIntel ➔ Azure Content Understanding).
+Download the standard plugin assets `main.js`, `manifest.json`, and `styles.css`
+from the same release. Download and verify `engine.zip`, `engine.lock`, and
+`SHA256SUMS` separately. Follow [BOOTSTRAP.md](engine/BOOTSTRAP.md) in your own
+terminal, then select the absolute venv Python path in the plugin. The plugin
+never installs Python or dependencies. Keep the venv at its original location.
 
----
+## Network services and purpose
 
-## ✨ Key Features
+The default provider `none` performs local conversion and sends no document data.
+Optional `openai-compatible` OCR sends selected page/image rasters and a prompt
+to the endpoint configured through `MDFLOW_BASE_URL`, using `MDFLOW_MODEL` and
+`MDFLOW_API_KEY`. The standard OpenAI endpoint is `https://api.openai.com/v1`.
+Other endpoints must actually implement this protocol. Native Azure OpenAI,
+Gemini and Anthropic APIs are not configured automatically; using a compatible
+proxy or Ollama requires validating its protocol, destination and model before
+approval. No compatibility test for those services is claimed here. Provider
+privacy and retention follow the configured service's policies; consult
+[OpenAI's data controls](https://platform.openai.com/docs/guides/your-data) when
+using OpenAI. External bootstrap downloads assets from the release host and
+wheels from the Python package index (PyPI). The CLI-only `command` provider
+executes a user-specified program with its declared egress behavior; the shell
+does not configure or execute command providers.
 
-- 📴 **Robust Offline Engine (Phase 1)**: Fast and cost-free offline text extraction utilizing ensemble OCR such as Tesseract and EasyOCR.
-- 🤖 **Smart AI Vision Fallback (Phase 2)**: Automatically routes to **OpenAI (GPT-4o), Anthropic (Claude), and Google (Gemini)** vision models when offline extraction fails or encounters complex images.
-- 🏢 **Azure Enterprise Integration (Phase 3 & 4)**: Perfectly structures complex PDF layouts and multimedia via Azure Document Intelligence (4.0 GA) and Azure Content Understanding.
-- 📦 **Full CLI Support**: Can be used independently as a Python CLI environment anywhere, even without Obsidian.
-- 🛡️ **Ironclad Security**: API keys are injected via environment variables (`process.env`) rather than CLI arguments, ensuring they are never exposed to logs or process monitoring tools.
-- 🌍 **Multilingual & Timezone Support**: Supports 8 languages via the `output_lang` setting and automatically records document metadata aligned to your local timezone (`timezone_offset`).
-- 🗂️ **Physical Inline Asset Extraction**: Physically extracts Base64 images hidden inside Markdown into an independent folder and maps the paths automatically.
+## Outside-vault access
 
----
+The selected engine executable and venv, selected source documents, temporary
+page rasters and transcription cache can be outside the vault. The engine reads
+sources to classify/convert them, creates temporary rasters for selected units,
+and reads the venv to execute dependencies. CLI cache defaults to
+`~/.mdflow/cache`; plugin cache is `<plugin-dir>/cache`. Cache contains
+transcriptions and is retained by default. Explicit clearing can cause paid
+retranscription. Shell-selected output stays inside the vault. Sources and
+outputs are preserved during upgrades and cleanup.
 
-## 🛠️ User Manual: Installation & Usage
+## Telemetry
 
-### 1. Using as an Obsidian Plugin
+There is no client telemetry. Local diagnostic logs help identify failures and
+can include document names; review them before sharing. This statement describes
+the client only: configured OCR providers have their own logging, retention and
+privacy rules. Approval identifies the provider destination and selected data.
+Offline operation with provider `none` requires no provider account or key.
 
-**Installation:**
-1. Clone this repository or download the released files: `main.js`, `manifest.json`, `styles.css`, and the `engine/` folder.
-2. Create the `<your-vault>/.obsidian/plugins/markitdown-flow/` folder inside your Obsidian vault and place all files there.
-3. In Obsidian, go to Settings ➔ **Community plugins** ➔ enable **MarkItDown Flow**.
-4. In the plugin settings screen, set your `Python path` and install the required packages (`markitdown`, `Pillow`, `geopy`, etc.).
+## Account, API key and cost
 
-**Usage:**
-- **Ribbon Icon**: Click to convert a desired file.
-- **Command Palette**: 
-  - `Convert file to Markdown` (Single file conversion)
-  - `Convert folder to Markdown` (Convert an entire folder)
-- **Drag & Drop**: Dragging and dropping an image or PDF file into the editor will automatically convert and insert it into your active note!
+Remote OCR can require an account and API key and incur charges. Supply
+`MDFLOW_API_KEY` only through the launch environment; the shell reports key
+presence and does not persist credentials. Fully quit Obsidian, set the variable
+in your own terminal and launch the actual installed executable from that
+terminal. See [terminal launch instructions](engine/BOOTSTRAP.md#optional-remote-ocr).
+Activating a venv does not change an already running app's environment.
 
----
+Plans show the per-file maximum request budget and estimated maximum cost, or
+unknown cost when pricing is unavailable. These are planning limits, not a
+billing cap. Interrupted requests, retry, force and concurrent cache misses can
+incur additional charges. Forced cancellation may leave the provider processing
+a request. CLI commands run with your user privileges. Review the selected
+rasters, endpoint, model and costs before approving.
 
-### 2. Using as a CLI (Standalone Python Script)
+## Migration and operation
 
-You can use the powerful conversion engine independently in your terminal (CLI) without opening Obsidian.
+Create a separate venv for upgrades, validate it externally and then change the
+selected interpreter; retain the previous venv for rollback. Six local command
+aliases remain: `convert-file`, `convert-folder`, `convert-url`,
+`view-conversion-history`, `open-log-folder`, and `run-image-pipeline-selftest`.
+The URL alias displays removal guidance. Audio/YouTube, Azure fallback routing,
+and inherited wrapper behavior are removed. Command providers are CLI-only.
+Outputs use the fixed document Markdown/media naming defined in the v2 spec.
 
-**Install Required Packages:**
-```bash
-cd engine/src
-pip install markitdown Pillow geopy
-# Optional (if using AI)
-pip install openai anthropic google-genai azure-ai-documentintelligence
-```
+Migration drops removed settings and credentials and keeps a sanitized rollback
+snapshot `data.v1.json.bak`. Old external backups can retain credentials. If a
+migration write fails, the original secret-bearing disk file may remain: jobs
+are blocked and you must remove its credentials manually before syncing. A
+failed write does not prove sanitization. Disable the plugin before rollback;
+preserve current settings/cache, restore verified 1.0.8 assets and the sanitized
+v1 snapshot, and review v1 dependency/network behavior before re-enabling.
+Never give schema-2 settings to v1 or restore removed secrets automatically.
+Published assets stay immutable; public defects require a higher patch version.
 
-**CLI Usage Examples:**
-```bash
-# Basic file conversion (Output saved to a file)
-python markitdown_wrapper.py --input "sample.pdf" --output "result.md"
+## Development and license
 
-# Extract assets (e.g., images) as physical files
-python markitdown_wrapper.py --input "sample.pdf" --output "result.md" --extract-assets --asset-dir "assets/"
+See [25_PACKAGING](docs/renewal/25_PACKAGING.md) for release gates. Build with
+`python tools/build_engine.py` and `python tools/build_release.py`; dependencies
+are explicitly pinned, and missing wheel or review evidence blocks release.
+Required CI targets are Windows x64, Ubuntu x64 and macOS Intel, Python 3.10 and
+3.14; Python 3.15 is experimental. Python 3.11-3.13 need the install/classify
+smokes before being advertised as verified.
 
-# Pass additional options (as a JSON string)
-python markitdown_wrapper.py --input "sample.png" --output "result.md" --plugin-args '{"output_lang": "en", "exhaustive_mode": true}'
-```
-
-*(Security: Do NOT put API keys in `--plugin-args`! Set the `DOCINTEL_CREDENTIAL` and `LLM_API_KEY` environment variables; the Python engine will detect them and operate safely.)*
-
----
-
-## ⚙️ Detailed Options (Plugin Args & Options)
-
-These are the core options that can be passed via the settings screen or CLI `--plugin-args`.
-
-| Option Name | Type | Default | Description |
-|-------------|------|---------|-------------|
-| `output_lang` | string | `"en"` | Output UI language (Supported: `en`, `ko`, `ja`, `zh`, `hi`, `fr`, `es`, `ar`) |
-| `timezone_offset` | float | `null` | Timezone for metadata (e.g., `9.0` for Korea). Applies system local time if unset. |
-| `exhaustive_mode` | boolean | `false` | **Forces execution of all pipelines** (AI, DocIntel, etc.) even if the offline phase succeeds. |
-| `extract_archives` | boolean | `false` | Recursively extracts ZIP and TAR files, converting all contents to Markdown. |
-| `enable_captions` | boolean | `false` | Automatically appends detailed caption generation instructions to AI prompts. |
-| `max_recursion_depth` | int | `5` | Maximum depth limit for recursive extraction of archives. |
-| `docintel_target_mimes` | list | `["application/pdf", ...]` | Target MIME types processed by Azure DocIntel. |
-| `ai_target_mimes` | list | `["image/", ...]` | Target MIME types processed by LLM Vision AI. |
-| `pdf_layout` | boolean | `true` | Preserves layout formatting during PDF conversion (MarkItDown core option). |
-
-*(Note: In the plugin UI, AI model API Keys and Endpoints are securely collected via Password fields.)*
-
----
-
-## 🔒 Security & Privacy
-
-**NEVER hardcode API keys in the source code or GitHub!**
-MarkItDown Flow keeps user API keys strictly local (`data.json`). When invoking the subprocess, it passes them via **Operating System Environment Variables (Env Vars)** instead of Command Line Arguments (CLI), structurally preventing leaks to hackers or process monitoring tools.
-
----
-
-## 👨‍💻 Development & Contributing
-
-```bash
-git clone https://github.com/greatgc-flow/MarkItDown-Flow.git
-cd MarkItDown-Flow
-npm install
-npm run build
-```
-
-## 📜 License
-
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
-The internal core engine of this project utilizes the [Microsoft MarkItDown](https://github.com/microsoft/markitdown) library.
+MIT license; see [LICENSE](LICENSE). Historical MarkItDown Flow contributors and
+Microsoft MarkItDown retain their respective credit and licenses. Third-party
+package licenses and artifact origins are included in the engine inventory.

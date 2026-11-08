@@ -1,52 +1,138 @@
-name: Release Obsidian Plugin
+name: v2 release
 
 on:
   push:
-    tags:
-      - "*"
+    tags: ['2.*']
+  workflow_dispatch:
+    inputs:
+      evidence-run:
+        description: 'Run ID containing named reviews, command-oracle receipts, desktop rehearsal and action review'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
+  ci:
+    uses: ./.github/workflows/ci.yml
+
+  freeze:
+    needs: ci
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: '3.14'
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: release-candidate
+          path: build/candidate/
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: acceptance-evidence
+          path: build/trace/
+      - name: Retrieve independently supplied release evidence
+        if: ${{ inputs.evidence-run != '' }}
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: named-release-evidence
+          path: build/manual/
+          run-id: ${{ inputs.evidence-run }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Freeze only after actual automated and manual gates
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python -m pip install --only-binary=:all: -r engine/requirements-build.txt
+          python tools/build_release.py --verify --tag "$GITHUB_REF_NAME"
+          python tools/release_gate.py --candidate build/candidate --evidence build/trace --manual build/manual
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: frozen-candidate
+          path: build/candidate/
+          if-no-files-found: error
+
+  attest:
+    needs: freeze
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    strategy:
+      fail-fast: false
+      matrix:
+        subject: [main.js, manifest.json, styles.css, engine.zip, engine.lock, SHA256SUMS]
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: frozen-candidate
+          path: build/candidate/
+      - name: Verify transferred subjects
+        run: python3 tools/build_release.py --verify
+      - name: Attest exact tested subject
+        id: provenance
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
+        with:
+          subject-path: build/candidate/${{ matrix.subject }}
+      - name: Retain bundle and constrained verification output
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BUNDLE: ${{ steps.provenance.outputs.bundle-path }}
+          SUBJECT: ${{ matrix.subject }}
+        run: |
+          mkdir -p build/bundles build/verifier
+          cp "$BUNDLE" "build/bundles/$SUBJECT.sigstore.json"
+          gh --version | tee "build/verifier/$SUBJECT.txt"
+          sha256sum "build/candidate/$SUBJECT" | tee -a "build/verifier/$SUBJECT.txt"
+          gh attestation verify "build/candidate/$SUBJECT" --repo "$GITHUB_REPOSITORY" --bundle "build/bundles/$SUBJECT.sigstore.json" --signer-workflow "$GITHUB_REPOSITORY/.github/workflows/release.yml" --source-digest "$GITHUB_SHA" | tee -a "build/verifier/$SUBJECT.txt"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: bundle-${{ matrix.subject }}
+          path: build/bundles/
+          if-no-files-found: error
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: verifier-${{ matrix.subject }}
+          path: build/verifier/
+          if-no-files-found: error
+
+  publish:
+    needs: [ci, freeze, attest]
+    runs-on: ubuntu-24.04
     permissions:
       contents: write
-      id-token: write # Required for artifact attestations
-      attestations: write
-
     steps:
-      - uses: actions/checkout@v3
-
-      - name: Use Node.js
-        uses: actions/setup-node@v3
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
-          node-version: "18.x"
-
-      - name: Build plugin
-        run: |
-          npm install
-          npm run build
-
-      - name: Bundle Python Engine
-        run: |
-          # Create engine zip to attach to the release (optional, since it's copied by the plugin on start, but good for backup)
-          zip -r engine.zip engine/
-
-      - name: Attest build provenance
-        uses: actions/attest-build-provenance@v1
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
-          subject-path: |
-            main.js
-            styles.css
-            manifest.json
-
-      - name: Create Release
-        uses: softprops/action-gh-release@v1
+          name: frozen-candidate
+          path: build/candidate/
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
-          files: |
-            main.js
-            manifest.json
-            styles.css
-            engine.zip
-          generate_release_notes: true
+          pattern: bundle-*
+          path: build/candidate/
+          merge-multiple: true
+      - name: Verify, draft, upload, and compare remote bytes
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python3 tools/build_release.py --verify
+          python3 tools/publish_release.py --candidate build/candidate

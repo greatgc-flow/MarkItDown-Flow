@@ -1,14 +1,42 @@
-name: v2 Step 0
+name: v2 candidate checks
 
 on:
   push:
   pull_request:
+  workflow_call:
 
 permissions:
   contents: read
 
+defaults:
+  run:
+    shell: bash
+
 jobs:
+  candidate:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: '3.14'
+          architecture: x64
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '24.22.2'
+      - run: python -m pip install --only-binary=:all: -r engine/requirements-build.txt
+      - name: Build candidate once (publication uses these exact bytes)
+        run: python tools/build_release.py --tag 2.0.0
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: release-candidate
+          path: build/candidate/
+          if-no-files-found: error
+
   pytest:
+    needs: candidate
     runs-on: ${{ matrix.os }}
     continue-on-error: ${{ matrix.python == '3.15' }}
     strategy:
@@ -17,39 +45,46 @@ jobs:
         os: [windows-2022, ubuntu-24.04, macos-15-intel]
         python: ['3.10', '3.14', '3.15']
     steps:
-      # Candidate identities from 25_PACKAGING; action security review is pending.
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: ${{ matrix.python }}
           architecture: x64
-      - name: Record resolved runtime and runner
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: release-candidate
+          path: build/candidate/
+      - name: Record runtime, runner image and action identities
         shell: bash
         run: |
-          python -c "import platform, sys; print(sys.version); print(platform.machine()); print(platform.platform())"
+          python -c "import platform,sys; print(sys.version); print(platform.machine()); print(platform.platform())"
           echo "Runner image: $ImageOS $ImageVersion"
-          echo "checkout=11bd71901bbe5b1630ceea73d27597364c9af683 setup-python=a26af69be951a213d495a4c3e4e4022e16d87065 upload-artifact=ea165f8d65b6e75b540449e92b4886f43607fa02"
-      - name: Install test tools and engine scaffolding
+          echo "checkout=11bd71901bbe5b1630ceea73d27597364c9af683 setup-python=a26af69be951a213d495a4c3e4e4022e16d87065 download-artifact=d3f86a106a0bac45b974a628896c90dbdf5c8093 upload-artifact=ea165f8d65b6e75b540449e92b4886f43607fa02"
+      - name: Verify transfer and install exact release lock
         run: |
-          python -m pip install -r engine/requirements-test.txt
-          python -m pip install --no-deps -e engine
-      - name: Collect before running the red suite
-        run: python -I -m pytest engine/tests --collect-only -q
-      - name: Run meta tests (expected red at Step 0)
+          python tools/build_release.py --verify
+          python tools/packaged_check.py install --bundle build/candidate --venv build/locked-env
+          python -m pip install --only-binary=:all: -r engine/requirements-test.txt
+          python tools/packaged_check.py install-current --bundle build/candidate
+      - name: Engine pytest including contract, security and offline mocks
         run: python -I -m pytest engine/tests -q --junitxml=build/trace/junit-engine-${{ matrix.os }}-py${{ matrix.python }}.xml
-      - name: Check registrations (expected red at Step 0)
-        if: ${{ always() }}
-        run: python tools/trace.py check
-      - name: Preserve trace evidence
+      - name: Installed Core contract
+        run: python -I -m pytest engine/tests/contract -q
+      - name: Packaged integration outside source tree (spaces and Korean paths)
+        env:
+          MDFLOW_RELEASE_BUNDLE: ${{ github.workspace }}/build/candidate
+        run: python -I -m pytest engine/tests/packaging -k "PT_01 or PT_02 or PT_05 or PT_06 or PT_08 or PT_14" -q --junitxml=build/trace/junit-pkg-${{ matrix.os }}-py${{ matrix.python }}.xml
+      - name: Preserve execution evidence even on failure
         if: ${{ always() }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: trace-${{ matrix.os }}-py${{ matrix.python }}
+          name: engine-${{ matrix.os }}-py${{ matrix.python }}
           path: build/trace/
+          if-no-files-found: error
 
   jest:
-    # Enable with a reviewed exact Node patch and shell-local tool pins in step 8.
-    if: ${{ false }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -57,5 +92,131 @@ jobs:
         os: [windows-2022, ubuntu-24.04, macos-15-intel]
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-      - name: Shell job placeholder
-        run: echo "Pending shell/ and exact supported Node patch verification."
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '24.22.2'
+      - name: Shell production build and Jest
+        working-directory: shell
+        run: |
+          node --version
+          npm --version
+          npm ci
+          npm run typecheck
+          npm run build
+          npm test -- --ci --runInBand --json --outputFile=../build/trace/jest-${{ matrix.os }}.json
+          cp ../build/trace/junit-shell.xml ../build/trace/junit-shell-${{ matrix.os }}.xml
+          JEST_JUNIT_OUTPUT_NAME=junit-codes-${{ matrix.os }}.xml npm test -- --ci --runInBand -t JT-SHL-19-01
+      - name: Preserve full-suite results (code-set rerun is separate)
+        if: ${{ always() }}
+        shell: bash
+        run: test -s build/trace/junit-shell-${{ matrix.os }}.xml
+      - if: ${{ always() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: shell-${{ matrix.os }}
+          path: build/trace/
+          if-no-files-found: error
+
+  contract-min:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: '3.14'
+      - run: |
+          python -m pip install --only-binary=:all: -r engine/requirements-test.txt "markitdown-gc==0.3.5"
+          python -m pip show markitdown-gc
+          python -I -m pytest engine/tests/contract -q --junitxml=build/trace/junit-contract-min.xml
+      - if: ${{ always() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: contract-min
+          path: build/trace/
+          if-no-files-found: error
+
+  contract-max:
+    needs: contract-min
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: '3.14'
+      - name: Resolve newest compatible endpoint; errors fail the gate
+        run: |
+          python -m pip index versions markitdown-gc --index-url https://pypi.org/simple
+          python -m pip install --only-binary=:all: -r engine/requirements-test.txt "markitdown-gc>=0.3.5,<0.4"
+          python -m pip show markitdown-gc
+      - name: Deduplicate equal Core endpoints visibly
+        run: python tools/contract_endpoint.py --suite engine/tests/contract --pytest pytest --output build/trace/junit-contract-max.xml
+      - if: ${{ always() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: contract-max
+          path: build/trace/
+          if-no-files-found: error
+
+  smoke:
+    needs: candidate
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-2022, ubuntu-24.04, macos-15-intel]
+        python: ['3.11', '3.12', '3.13']
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: ${{ matrix.python }}
+          architecture: x64
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: release-candidate
+          path: build/candidate/
+      - name: Locked install, mdflow version and classify smoke
+        run: python tools/packaged_check.py smoke --bundle build/candidate --venv build/smoke-env
+
+  trace:
+    needs: [pytest, jest, contract-min, contract-max, smoke]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: '3.14'
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          pattern: engine-*
+          path: build/trace/
+          merge-multiple: true
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          pattern: shell-*
+          path: build/trace/
+          merge-multiple: true
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          pattern: contract-*
+          path: build/trace/
+          merge-multiple: true
+      - run: |
+          python -m pip install --only-binary=:all: -r engine/requirements-build.txt
+          python tools/trace.py check
+          python tools/trace.py report
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: acceptance-evidence
+          path: build/trace/
+          if-no-files-found: error
