@@ -103,7 +103,10 @@ def registration_problems(root: Path, tests: list[dict]) -> list[str]:
     planned = planned_tests(root)
     manifest = (root / "docs/renewal/30_TESTPLAN.md").read_text(encoding="utf-8")
     manifest = manifest.split("## 3. Fixture manifest", 1)[1].split("## 4.", 1)[0]
-    fixtures = set(re.findall(r"\| (FX-\d{2})\b", manifest))
+    # A manifest row can declare several IDs in its first cell (FX-09 / FX-10,
+    # FX-21 / FX-22, etc.). References in recipe cells are not declarations.
+    fixtures = {identity for line in manifest.splitlines() if line.startswith("| ")
+                for identity in re.findall(r"\bFX-\d{2}\b", line.split("|")[1])}
     for test in tests:
         tid = test["tid"]
         if not tid or tid in seen:
@@ -130,7 +133,15 @@ def registration_problems(root: Path, tests: list[dict]) -> list[str]:
 
 def golden_problems(root: Path) -> list[str]:
     """Verify GOLDEN.lock hashes and installed Core provenance in step 1."""
-    raise NotImplementedError("Golden verification requires step 1 goldens and lock")
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("mdflow_golden_verify", root / "tools/golden.py")
+    golden = importlib.util.module_from_spec(spec)
+    try:
+        spec.loader.exec_module(golden)
+        golden.verify(root)
+    except (AssertionError, OSError, ValueError, KeyError, TypeError, ImportError) as error:
+        return [str(error)]
+    return []
 
 
 def matrix_problems(root: Path, tests: list[dict]) -> list[str]:
