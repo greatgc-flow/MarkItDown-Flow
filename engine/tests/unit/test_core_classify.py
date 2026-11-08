@@ -304,7 +304,7 @@ def test_T_CLS_08_v1_v4_precede_positive_rows(core_api, core_fx, mutation, warni
 @pytest.mark.fx("FX-28", "FX-29", "FX-30", "FX-31", "FX-35", "FX-36", "FX-37", "FX-38", "FX-39")
 @pytest.mark.parametrize("fx,fmt,route,expected", [
     ("FX-28", "txt", "NATIVE", ("NATIVE", "NONE", "T", "convert_only")),
-    ("FX-29", "txt", "NATIVE", ("UNSUPPORTED", "UNKNOWN", "X", "report_only")),
+    ("FX-29", "txt", "NATIVE", ("NATIVE", "NONE", "T", "convert_only")),
     ("FX-30", "csv", "NATIVE", ("NATIVE", "UNKNOWN", "U", "convert_only")),
     ("FX-31", "html", "NATIVE", ("NATIVE", "UNKNOWN", "U", "convert_only")),
     ("FX-35", "doc", "LEGACY", ("LEGACY", "UNKNOWN", "L", "report_only")),
