@@ -107,7 +107,7 @@ export class ShellCoordinator {
 
   constructor(private readonly deps: CoordinatorDeps) {}
 
-  /** Pure projection used by every entry point before any work. The cwd is the engine venv root, never the vault (M3 N-02). */
+  /** Pure projection used by every entry point before any work. The cwd is the engine venv root of the selected interpreter (M3 N-02). */
   buildRequest(selection: Selection): CoordinatorRequest {
     const settings = this.deps.settings();
     return {
@@ -251,11 +251,24 @@ export class ShellCoordinator {
     this.deps.notify('shell.LEGACY_URL');
   }
 
-  private cancelSignal(): Promise<null> {
-    return new Promise((resolve) => {
-      if (this.cancelled) resolve(null);
-      else this.cancelWaiters.push(() => resolve(null));
+  /**
+   * Resolves `null` when Cancel/unload arrives. `release()` removes the waiter once the race it served has settled,
+   * so a finished consent job never leaves a resolver behind for the plugin's lifetime (M6-04).
+   */
+  private cancelSignal(): { signal: Promise<null>; release: () => void } {
+    if (this.cancelled) return { signal: Promise.resolve(null), release: () => undefined };
+    let waiter: () => void = () => undefined;
+    const signal = new Promise<null>((resolve) => {
+      waiter = () => resolve(null);
+      this.cancelWaiters.push(waiter);
     });
+    return {
+      signal,
+      release: () => {
+        const at = this.cancelWaiters.indexOf(waiter);
+        if (at >= 0) this.cancelWaiters.splice(at, 1);
+      },
+    };
   }
 
   private async execute<K extends 'plan' | 'report'>(kind: K, request: ReturnType<typeof buildSpawnRequest>): Promise<EngineResult<K extends 'plan' ? Plan[] : RunReport> | null> {
@@ -314,7 +327,13 @@ export class ShellCoordinator {
       if (needingConsent.length > 0) {
         this.deps.progress?.phase('consent');
         const view = buildConsentView(plans, snapshot.outDir);
-        const decision = await Promise.race([this.deps.consent(view), this.cancelSignal()]);
+        const cancelWait = this.cancelSignal();
+        let decision: ConsentDecision | null;
+        try {
+          decision = await Promise.race([this.deps.consent(view), cancelWait.signal]);
+        } finally {
+          cancelWait.release();
+        }
         if (decision === null || this.cancelled) {
           await this.finishCancelled(snapshot);
           return report;

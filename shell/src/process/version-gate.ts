@@ -325,8 +325,32 @@ export function captureProbe(
   });
 }
 
-/** Spawn `<enginePython> -m mdflow version`, enforce the timeout, evaluate. Never spawns anything else. */
+/**
+ * M6-01: pause before the single retry of a timed-out probe. The engine's optional exiftool/LibreOffice
+ * probes can make a cold first `version` slow (profile creation, antivirus scan); the second attempt runs warm.
+ */
+export const VERSION_PROBE_BACKOFF_MS = 1000;
+
+/**
+ * M6-01: a gate that says nothing about compatibility (the probe did not answer or could not start).
+ * It must never be cached as the jobs verdict: the next job probes again.
+ */
+export function isTransientGate(gate: VersionGate | null): boolean {
+  return gate !== null && !gate.enabled && (gate.reason === 'timeout' || gate.reason === 'spawn_failed');
+}
+
+/** Spawn `<enginePython> -m mdflow version`, enforce the timeout, evaluate. A timeout is retried once after a backoff. */
 export async function probeVersion(enginePython: string, deps: VersionProbeDeps): Promise<VersionGate> {
+  const first = await probeVersionOnce(enginePython, deps);
+  if (!(!first.enabled && first.reason === 'timeout')) return first;
+  await new Promise<void>((resolve) => {
+    deps.clock.setTimeout(resolve, VERSION_PROBE_BACKOFF_MS);
+  });
+  return probeVersionOnce(enginePython, deps);
+}
+
+/** One bounded attempt. Never spawns anything but `version`. */
+async function probeVersionOnce(enginePython: string, deps: VersionProbeDeps): Promise<VersionGate> {
   const request = buildUtilityRequest(enginePython, 'version', deps.hostEnv, deps.cwd);
   const capture = await captureProbe(deps.spawner, request, deps.clock, deps.timeoutMs ?? VERSION_PROBE_TIMEOUT_MS);
   if (capture.error) return blocked('spawn_failed');

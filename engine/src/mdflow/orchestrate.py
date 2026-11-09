@@ -232,7 +232,7 @@ class _Pipeline:
         if convert.legacy_enabled(sn, self.options['preconvert_legacy']):
             try:
                 raw = source['data'] if 'data' in source else _source_bytes(path, sn, self.options['max_bytes'])
-                prepared = self.stage(logical, 'preconvert', convert.convert_legacy, raw, sn,
+                prepared = self.stage(logical, 'convert', convert.convert_legacy, raw, sn,
                     run_temp=directory, timeout_s=self.options['preconvert_timeout_s'], **{k: self.options[k] for k in
                     ('max_bytes', 'zip_entries', 'zip_total_bytes')})
                 self.issues(entry, prepared['issues'])

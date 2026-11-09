@@ -86,7 +86,7 @@ def test_T_CLI_85_libreoffice_version_diagnostics(tmp_path, monkeypatch, capsys,
         monkeypatch.setenv('SOFFICE_PATH', str(exe))
     if state in {'malformed', 'timeout'}:
         def probe(args, **kwargs):
-            assert kwargs['timeout_s'] == 5
+            assert 0 < kwargs['timeout_s'] <= 0.5
             if state == 'timeout':
                 raise TimeoutError('injected deadline')
             return 'not a LibreOffice version'
@@ -194,6 +194,9 @@ def test_T_CNV_94_enabled_legacy_media_reaches_stages(tmp_path, monkeypatch, gen
     assert 'text for ' in text and 'fidelity: "DERIVED"' in text
     assert list((opts['out'] / 'media').iterdir())
     events = [json.loads(line) for line in capsys.readouterr().err.splitlines()]
+    assert {ev['stage'] for ev in events if ev['ev'] == 'stage'} <= {
+        'sniff', 'triage', 'classify', 'select', 'convert', 'render', 'lookup',
+        'plan', 'approve', 'transcribe', 'assemble', 'write'}, 'SPEC 7.3 is a closed vocabulary'
     assert {'select', 'convert', 'render', 'lookup', 'approve', 'transcribe', 'assemble', 'write'} <= {
         ev['stage'] for ev in events if ev['ev'] == 'stage'}
 
@@ -202,7 +205,7 @@ def test_T_CNV_94_enabled_legacy_media_reaches_stages(tmp_path, monkeypatch, gen
 @pytest.mark.cov('S5', 'FM7')
 @pytest.mark.fx('FX-36')
 @pytest.mark.parametrize('failure', ['missing', 'broken', 'timeout'])
-def test_T_CNV_92_preconvert_failure_and_tree_cleanup(tmp_path, monkeypatch, failure):
+def test_T_CNV_92_preconvert_failure_and_tree_cleanup(tmp_path, monkeypatch, failure, capsys):
     from mdflow import orchestrate
     exe = tmp_path / 'absent'
     if failure != 'missing':
@@ -213,10 +216,15 @@ def test_T_CNV_92_preconvert_failure_and_tree_cleanup(tmp_path, monkeypatch, fai
     sibling = tmp_path / 'ok.txt'
     sibling.write_text('Surviving sibling.')
     result = orchestrate.run([source, sibling], dict(out=tmp_path / 'out', cache=tmp_path / 'cache',
-        preconvert_legacy=True, preconvert_timeout_s=1))
+        preconvert_legacy=True, preconvert_timeout_s=1, progress='jsonl'))
     assert result['exit'] == 2
     assert 'E_PRECONVERT' in [i['code'] for i in result['files'][0]['issues']]
     assert result['files'][0]['outputs'] == [] and result['files'][1]['outputs'] == ['ok.txt.md']
+    events = [json.loads(line) for line in capsys.readouterr().err.splitlines()]
+    stages = {ev['stage'] for ev in events if ev['ev'] == 'stage'}
+    assert 'convert' in stages
+    assert stages <= {'sniff', 'triage', 'classify', 'select', 'convert', 'render',
+                      'lookup', 'plan', 'approve', 'transcribe', 'assemble', 'write'}
     if failure != 'missing':
         args = json.loads((exe.parent / 'args.json').read_text())
         assert not Path(args[args.index('--outdir') + 1]).parent.exists()

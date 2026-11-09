@@ -31,6 +31,11 @@ def test_T_META_95_m4_all_bootstrap_engine_probes_are_isolated_and_evidence_is_e
     ('pypdfium2', '5.15.1???', False), ('pypdfium2', ' 5.15.1', False),
     ('pypdfium2', '5.15.1rc1', True), ('pypdfium2', '5.15.1.post1', True),
     ('pillow', '13.0.0???', False), ('pillow', '13.0.0+local', True),
+    ('mdflow', '2.0', True), ('mdflow', '2.0rc1', True),
+    ('mdflow', '2.0.0', True), ('mdflow', '2.0.0rc1', True), ('mdflow', '2.1', False),
+    ('mdflow', '2.1.0.0', False), ('mdflow', '2.0.0.1', True),
+    ('markitdown-gc', '0.4', False), ('python', '3.15', False),
+    ('pillow', '14.0', False), ('pypdfium2', '6.0', False),
 ])
 def test_T_GEN_96_m4_package_version_oracle_checks_full_syntax(field, value, enabled):
     from _support import load_py

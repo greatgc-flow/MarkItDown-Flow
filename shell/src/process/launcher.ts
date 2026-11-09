@@ -42,8 +42,10 @@ export function engineSubcommand(args: readonly string[]): string | undefined {
 /**
  * Fixed working directory for every engine spawn: the venv root of the selected
  * interpreter (`<venv>/bin/python` or `<venv>\Scripts\python.exe` -> `<venv>`).
- * It exists, is user-owned and is not vault content, so even an interpreter
- * launched without `-I` would not see the vault on `sys.path` (M3 N-02).
+ * It exists and is user-owned. It lies outside the vault for the documented venv
+ * locations but is not guaranteed to (a venv the user chose inside the vault gives a
+ * cwd inside it); the `-I` isolated prefix, not the location, keeps the cwd off
+ * `sys.path` (M3 N-02).
  */
 export function engineWorkingDirectory(platform: HostPlatform, enginePython: string): string {
   return parentPath(platform, parentPath(platform, enginePython));
@@ -166,7 +168,7 @@ export function buildSpawnRequest(
   };
 }
 
-/** `<python> -I -X utf8 -m mdflow version` / `selftest` with the baseline environment and a fixed cwd outside the vault. */
+/** `<python> -I -X utf8 -m mdflow version` / `selftest` with the baseline environment and the caller's fixed cwd (the engine venv root; see `engineWorkingDirectory`). */
 export function buildUtilityRequest(enginePython: string, command: 'version' | 'selftest', hostEnv: Env, cwd: string): SpawnRequest {
   return {
     command: enginePython,

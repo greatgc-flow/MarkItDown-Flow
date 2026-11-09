@@ -350,5 +350,9 @@ def progress_events(stderr: str) -> list[dict]:
 
 
 def version_tuple(text: str) -> tuple[int, ...]:
+    """Shell release-segment policy: three components, zero padded, suffix ignored."""
     match = re.match(r"\d+(?:\.\d+)*", text)
-    return tuple(int(n) for n in match[0].split(".")) if match else ()
+    if not match:
+        return ()
+    release = tuple(int(n) for n in match[0].split(".")[:3])
+    return release + (0,) * (3 - len(release))

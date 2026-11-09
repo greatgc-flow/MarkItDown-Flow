@@ -225,11 +225,14 @@ def cli_command():
 
     ``code`` replaces the module entry point only for a deliberately instrumented
     child (e.g. death inside atomic_write). ``prelude`` runs before the real CLI.
+    ``environment`` restores explicit test values inside a contained launcher,
+    before the opt-in temp bridge; Core's process helper scrubs its child env.
     """
     src = str(REPO_ROOT / "engine" / "src")
 
-    def command(*args, code=None, prelude=""):
-        bootstrap = _sandbox_temp_prelude()
+    def command(*args, code=None, prelude="", environment=None):
+        bootstrap = ("import os; os.environ.update(" + repr(environment) + ")\n" if environment else "")
+        bootstrap += _sandbox_temp_prelude()
         if not INSTALLED_MODE:
             bootstrap = f"import sys; sys.path.insert(0, {src!r});\n" + bootstrap
         entry = code if code is not None else (

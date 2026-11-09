@@ -405,14 +405,14 @@ R27/R28 added registrations (existing REQs; precise fixture assertions replace b
 | JT-07 | REQ-SHL-07 | FX-70 |
 | JT-08 | REQ-SHL-08 | - |
 | JT-09 | REQ-SHL-09 (destination/symlink/case rules; atomic BUSY admission; progress summary resets on `run_start` and the incremental reducer equals the whole-stream summary; relative interpreter -> `shell.RUNTIME` before any spawn) | FX-71 |
-| JT-10 | REQ-SHL-10 (version probes only; exiftool/LibreOffice status lines, `"unavailable"` = missing; tool-variable presence; `E_CORE_CONFLICT` guard shown with the interpreter's uninstall command, absent otherwise) | FX-71 |
+| JT-10 | REQ-SHL-10 (M6-01 timeout shown as "no answer", M6-02/03 recipe quoting for hints with spaces and POSIX apostrophes; version probes only; exiftool/LibreOffice status lines, `"unavailable"` = missing; tool-variable presence; `E_CORE_CONFLICT` guard shown with the interpreter's uninstall command, absent otherwise) | FX-71 |
 | JT-11 | REQ-SHL-11 (replay engine-produced streams; invented command/option fails) | FX-71 |
 | JT-12 | REQ-SHL-12 (argv array, `shell:false`; replay snapshot identical: args, cwd, output, cache; nested `inputs/sub/a.pdf` keeps logical `sub/a.pdf`) | FX-71 |
 | JT-13 | REQ-SHL-13 (UTF-8 split/CRLF, 64 KiB limit, unknown events, summary events only, full Plan from `plan` stdout, raw triage `corrupt` retained, report spool removed) | FX-71 |
 | JT-14 | REQ-SHL-14 (50 files -> one modal; per-file fields = Plans; no run/token/interruption fields; Keep pending default; HTML literal) | FX-71 |
 | JT-15 | REQ-SHL-15 (`plan` then same-roots `run` with one plugin-owned `--yes-file` of the displayed hashes + `--approved-by plugin:modal`; consent only for `requests_to_send > 0`; cache warming keeps hash; changed bytes -> no egress; no per-file replay; yes-file deleted after the run) | FX-71 |
 | JT-16 | REQ-SHL-16 (cancel before launch / in modal / during blocked mock request / unload; cancel or dispose while the admission awaits the version gate -> zero spawns, `shell.CANCELLED`/`shell.RUNTIME`, later job admitted; status bar shows Run-only counts after Plan->consent->Run. Real OS process half: cooperative POSIX -> exit 130; forced POSIX + Windows -> native status, interrupted, restart recovers, no owned live process = 90_ACCEPTANCE E-03) | FX-63, FX-71 |
-| JT-17 | REQ-SHL-17 (complete `version` response recorded on a supported host against the release policy itself; protocol 2, schema 2, wrong Pillow/renderer, each missing field -> blocked; version syntax = both package-gate steps, character regex then PEP 440 public grammar: `5.15.1???`/leading whitespace/`3.14garbage`/`5.15.1abc`/`5.15.1..1`/`5.15.1+`/`5.15.1a1b2` blocked, rc/post/`-N`/dev/local admitted, the twelve T-GEN-96 cases mirrored per field; exit-1 `E_CORE_CONFLICT` -> `core_conflict`, other exit 1 -> `exit`; optional exiftool/LibreOffice fields diagnostics only) | FX-71 |
+| JT-17 | REQ-SHL-17 (M6-01: a timed-out probe is retried once after a backoff, timeout/spawn_failed are never cached as the jobs gate, compatibility verdicts are; complete `version` response recorded on a supported host against the release policy itself; protocol 2, schema 2, wrong Pillow/renderer, each missing field -> blocked; version syntax = both package-gate steps, character regex then PEP 440 public grammar: `5.15.1???`/leading whitespace/`3.14garbage`/`5.15.1abc`/`5.15.1..1`/`5.15.1+`/`5.15.1a1b2` blocked, rc/post/`-N`/dev/local admitted, the twelve T-GEN-96 cases mirrored per field; exit-1 `E_CORE_CONFLICT` -> `core_conflict`, other exit 1 -> `exit`; optional exiftool/LibreOffice fields diagnostics only) | FX-71 |
 | JT-18 | REQ-SHL-18 | - |
 | JT-SHL-19-01 | REQ-SHL-19 (parses active Code-column cells of SPEC 7.5; set-equality with table rows and en/ko engine keys, excl. `UNKNOWN`; non-empty; interpolation safe) | - |
 | JT-20 | REQ-SHL-20 (spawns only `version`/`selftest`; 0 sockets; no shell-created raster) | - |
@@ -543,6 +543,9 @@ Reviewed R33 golden changes: FX-30..33/classification.json and classification.re
 
 | T-CNV-95 | REQ-CNV-07, REQ-ASM-03, REQ-CNV-05 | Missing/malformed/wrong-source/non-DERIVED marker or oversized returned Markdown fails closed with E_PRECONVERT; siblings continue. |
 | T-CLI-86 | REQ-GEN-12 | Core-owned loaded-code/metadata mismatch maps to E_CORE_CONFLICT, including version. |
+| T-CLI-87 | REQ-GEN-02, REQ-CNV-06, REQ-CNV-07 | M6: real stalled exiftool, LibreOffice and both together; isolated version child completes within 3 s with all gate fields and unavailable diagnostics; controlled child PATH/tool overrides and opt-in Windows temp bridge survive the containment env scrub; expected sources and launch markers prove the fake tools ran. Core contains descendants on a red timeout. |
+| T-CLI-88 | REQ-GEN-02, REQ-CNV-06, REQ-CNV-07 | M6: each optional version probe has a deadline at most 0.5 s; success, timeout and malformed results are cached per process/environment; explicit reset of both caches isolates every optional-probe test. |
+| T-CLI-89 | REQ-GEN-02, REQ-CNV-06, REQ-CNV-07 | M6: unexpected optional diagnostic exceptions preserve the complete Core/Python compatibility response and exit 0. |
 
 ## 5. Generated MECE matrices
 

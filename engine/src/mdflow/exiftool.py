@@ -18,12 +18,13 @@ import functools
 import os
 import re
 import shutil
-import subprocess
+
+from . import core_guard, runtime_temp
 
 MIN_VERSION = (12, 24)
 IMAGE_EXTENSIONS = frozenset({".png", ".jpg", ".jpeg"})  # the extensions Core's image converter accepts
 _VERSION = re.compile(r"\d+(?:\.\d+)*")
-_TIMEOUT_S = 15
+_TIMEOUT_S = 0.5
 
 
 def _result(status: str, *, path: str | None = None, version: str | None = None, source: str | None = None) -> dict:
@@ -33,12 +34,16 @@ def _result(status: str, *, path: str | None = None, version: str | None = None,
 
 def _probe(candidate: str, source: str) -> dict:
     try:
-        done = subprocess.run([candidate, "-ver"], capture_output=True, text=True, timeout=_TIMEOUT_S, check=False,
-                              stdin=subprocess.DEVNULL)
-    except (OSError, subprocess.SubprocessError, ValueError):
+        # Reuse Core's bounded capture and descendant cleanup. In particular,
+        # killing a Windows .cmd alone leaves inherited PIPE readers alive.
+        with core_guard.quiet_output():
+            from markitdown import _libreoffice as lo
+        with runtime_temp.run_directory() as work:
+            text = lo._execute([candidate, "-ver"], cwd=work, timeout_s=_TIMEOUT_S,
+                               output=work / 'version.log').strip()
+    except Exception:
         return _result("unusable", source=source)
-    text = (done.stdout or "").strip()
-    if done.returncode != 0 or not _VERSION.fullmatch(text):
+    if not _VERSION.fullmatch(text):
         return _result("unusable", source=source)
     if tuple(int(part) for part in text.split(".")) < MIN_VERSION:
         return _result("too_old", version=text, source=source)

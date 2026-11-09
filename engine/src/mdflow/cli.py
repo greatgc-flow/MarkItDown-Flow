@@ -2,6 +2,7 @@
 
 import argparse
 from decimal import Decimal, InvalidOperation
+from functools import lru_cache
 from importlib import metadata
 import json
 import os
@@ -208,6 +209,12 @@ def _exiftool_versions() -> dict:
 def _libreoffice_versions() -> dict:
     """Informational probe using Core's resolver and contained execution helper."""
     explicit = os.environ.get('SOFFICE_PATH', '').strip()
+    return dict(_probe_libreoffice(explicit, os.environ.get('PATH', '')))
+
+
+@lru_cache(maxsize=16)
+def _probe_libreoffice(explicit: str, search_path: str) -> dict:
+    # Cache successes and failures per process/environment, as exiftool does.
     found = dict(libreoffice='unavailable', libreoffice_status='not_found', libreoffice_source=None)
     try:
         with core_guard.quiet_output():
@@ -221,13 +228,32 @@ def _libreoffice_versions() -> dict:
                 lo._write_profile(profile)
                 text = lo._execute([executable, '-env:UserInstallation=' + profile.as_uri(),
                                     '--headless', '--norestore', '--nofirststartwizard', '--version'],
-                                   cwd=work, timeout_s=5, output=work / 'version.log')
+                                   cwd=work, timeout_s=0.5, output=work / 'version.log')
                 match = re.search(r'LibreOffice\s+(\d+(?:\.\d+)+)', text)
                 if match:
                     found.update(libreoffice=match[1], libreoffice_status='ok')
-    except (ImportError, OSError, ValueError):
-        pass
+    except Exception:
+        found.update(libreoffice_status='unusable')
     return found
+
+
+def _optional_tool_versions() -> dict:
+    """Optional diagnostics cannot turn a valid gate response into a CLI error."""
+    result = {}
+    for name, env, probe in (('exiftool', 'EXIFTOOL_PATH', _exiftool_versions),
+                             ('libreoffice', 'SOFFICE_PATH', _libreoffice_versions)):
+        try:
+            result.update(probe())
+        except Exception:
+            result.update({name: 'unavailable', name + '_status': 'unusable',
+                           name + '_source': env if os.environ.get(env, '').strip() else None})
+    return result
+
+
+def reset_optional_tool_probes() -> None:
+    """Forget both tool caches after environment/tool changes in long-lived hosts."""
+    exiftool.reset()
+    _probe_libreoffice.cache_clear()
 
 
 def _selftest_exiftool(png: bytes) -> dict:
@@ -272,8 +298,10 @@ def main(argv: list[str] | None = None) -> int:
         args = _parser().parse_args(argv)
         core_guard.check()
         if args.command_name == "version":
-            _print(dict(orchestrate.tools(), python=platform.python_version(), platform=platform.platform(),
-                        protocol=1, triage_schema=1, **_exiftool_versions(), **_libreoffice_versions()))
+            value = dict(orchestrate.tools(), python=platform.python_version(), platform=platform.platform(),
+                         protocol=1, triage_schema=1)
+            value.update(_optional_tool_versions())
+            _print(value)
             return 0
         try:
             _check_core()

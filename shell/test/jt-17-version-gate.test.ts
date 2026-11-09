@@ -11,6 +11,7 @@ import {
   probeVersion,
   RELEASE_LOCK,
   releaseSegment,
+  VERSION_PROBE_BACKOFF_MS,
   VERSION_PROBE_TIMEOUT_MS,
   VERSION_REQUIRED_FIELDS,
   type VersionGate,
@@ -170,12 +171,12 @@ it(R('JT-17 version syntax matches both steps of the package gate (test_pt_relea
   }
 });
 
-async function probe(script: ScriptedChild, advanceMs = 0): Promise<{ gate: VersionGate; spawner: FakeSpawner; clock: FakeClock }> {
+async function probe(script: ScriptedChild, ...advanceSteps: number[]): Promise<{ gate: VersionGate; spawner: FakeSpawner; clock: FakeClock }> {
   const spawner = new FakeSpawner(() => script);
   const clock = new FakeClock();
   const pending = probeVersion(ENGINE_PYTHON, { spawner, clock, hostEnv: HOST_ENV, cwd: PLUGIN_DIR, policy: RELEASE_LOCK });
   await flush();
-  if (advanceMs > 0) await clock.advance(advanceMs);
+  for (const ms of advanceSteps) await clock.advance(ms);
   const gate = await pending;
   return { gate, spawner, clock };
 }
@@ -188,9 +189,11 @@ it(R('JT-17 the version probe spawns exactly `-I -X utf8 -m mdflow version`, dec
   expect(good.spawner.requests[0].shell).toBe(false);
   expect(good.gate.enabled).toBe(true);
   expect(VERSION_PROBE_TIMEOUT_MS).toBe(5000);
-  const hung = await probe({ blocked: true, exit: { code: 0, signal: null }, cooperative: 'ignore' }, VERSION_PROBE_TIMEOUT_MS);
+  // M6-01: a timeout is retried once after a backoff; both attempts are terminated at five seconds.
+  const hung = await probe({ blocked: true, exit: { code: 0, signal: null }, cooperative: 'ignore' }, VERSION_PROBE_TIMEOUT_MS, VERSION_PROBE_BACKOFF_MS, VERSION_PROBE_TIMEOUT_MS);
   expect(blocked(hung.gate).reason).toBe('timeout');
-  expect(hung.spawner.children[0].terminated).toBe(true);
+  expect(hung.spawner.requests).toHaveLength(2);
+  expect(hung.spawner.children.every((child) => child.terminated)).toBe(true);
   const failed = await probe({ stdout: [], exit: { code: 1, signal: null } });
   expect(blocked(failed.gate).reason).toBe('exit');
   const absent = await probe({ spawnError: new Error('ENOENT'), exit: { code: null, signal: null } });
