@@ -77,3 +77,41 @@ Release-bundle/human-evidence skips are retained as skips, never release passes.
 
 `shell/**` was not edited. No git command, CI run, release publication or real
 cross-platform installation was performed by this task.
+
+## M2 engine follow-up — SPEC DRAFT-3.4
+
+See [M2_ENGINE_FIXES.md](review/M2_ENGINE_FIXES.md) for all ten reopened findings,
+six new defects, individual red-log mappings, and the final local results. The
+R27/R28 results above are historical; they are not the M2 verification receipt.
+
+The wheel now explicitly declares its direct renderer/Pillow imports:
+`pypdfium2>=5,<6` and `Pillow>=11,<14`, alongside the unchanged Core range.
+These match the shell admission ranges. Core constraints can tighten them;
+pip check and selftest still apply. The reference compiler resolves the declared
+runtime constraints with exact Core0.3.5. Python3.15 remains experimental-only.
+
+Required behavior CI disables source injection, checks the selected installed
+package identity and preserves six endpoint import/execution receipts plus all
+nine intermediate smoke receipts. Release ordering is compatibility checks,
+immutable-subject freeze, attestation, actual release tests with named inputs
+on six targets, then final acceptance/publication. Release-mode skips cannot
+substitute for `junit-release-<os>-py<ver>.xml`; PT-02 still requires its separate
+reference receipt. PT-17 validates independent identity/prerequisites without
+depending on its own computed final score. No success is synthesized for absent
+target/reference or human evidence.
+
+Local M2 verification uses an isolated workspace interpreter/dependency snapshot
+with the newly built wheel installed offline, not a fresh public-index resolver
+environment. No source or global dependency fallback is allowed in that run.
+The final module-byte comparison, pip check, full pytest and trace receipts are
+linked in the fix report. Public reference resolution, six required advertised
+targets, nine smokes and named desktop/provenance reviews remain pending until
+their real CI/manual evidence is supplied.
+
+Final M2 local result: full installed-wheel pytest with `--runxfail` gives
+**498 passed, 12 skipped, 1 deselected, zero failures/errors/xfails**. The skips
+are absent release/human inputs, never release passes. Final V1/contract controls:
+116 passed; Plan/class controls: 12 passed; schema-marker controls: 3 passed.
+Trace check: all five error counters zero. XML:
+`build/trace/junit-m2-installed-draft34.xml`; full log:
+`build/trace/redgreen/m2-installed-draft34.green.log`.

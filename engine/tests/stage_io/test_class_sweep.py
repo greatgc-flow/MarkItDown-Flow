@@ -72,8 +72,6 @@ CASES = {
     "K05": dict(fx=("FX-09",), files=lambda g, c: {"a.png": g.png_noise(seed=5)}, exit=0,
                 expect={"a.png": native("FULL", "S", "convert_and_ocr", total=1, eligible=1, outputs=["a.png.md"])}),
     "K06": dict(fx=("FX-12",), files=lambda g, c: {"a.gif": c.generate("FX-12", c.scratch).read_bytes()}, exit=0,
-                gap="Core converts only png/jpeg: a clean multi-frame GIF/TIFF is OCR'd and published but the file "
-                    "is reported E_CONVERT_FAIL and the run exits 2 (REQ-CNV-03 converts non-PDF once, REQ-RPT-03)",
                 expect={"a.gif": native("FULL", "S", "convert_and_ocr", total=2, eligible=2, outputs=["a.gif.md"])}),
     "K07": dict(fx=("FX-16",), files=lambda g, c: {"a.docx": c.generate("FX-16", c.scratch).read_bytes()}, exit=0,
                 expect={"a.docx": native("PARTIAL", "M", "convert_and_ocr", total=2, eligible=2,

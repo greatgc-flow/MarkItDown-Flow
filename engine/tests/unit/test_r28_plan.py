@@ -7,8 +7,8 @@ import pytest
 
 @pytest.mark.req('REQ-PLN-01', 'REQ-PLN-02', 'REQ-PLN-04')
 @pytest.mark.cov('S8', 'FM0')
-@pytest.mark.fx('FX-01', 'FX-07', 'FX-11', 'FX-23', 'FX-24', 'FX-28', 'FX-30', 'FX-38', 'FX-42', 'FX-41')
-@pytest.mark.parametrize('fx', ['FX-01', 'FX-07', 'FX-11', 'FX-23', 'FX-24', 'FX-28', 'FX-30', 'FX-38', 'FX-42', 'FX-41'])
+@pytest.mark.fx('FX-01', 'FX-03', 'FX-07', 'FX-11', 'FX-23', 'FX-24', 'FX-28', 'FX-30', 'FX-38', 'FX-42', 'FX-41')
+@pytest.mark.parametrize('fx', ['FX-01', 'FX-03', 'FX-07', 'FX-11', 'FX-23', 'FX-24', 'FX-28', 'FX-30', 'FX-38', 'FX-42', 'FX-41'])
 def test_T_PLN_55_r28_class_specific_plan_identity_counts_and_cache_status(core_api, core_data, core_fx, repo_root, fx):
     source = core_fx.path(fx)
     payload = source.read_bytes()

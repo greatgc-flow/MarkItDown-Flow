@@ -1,12 +1,10 @@
 """Content-addressed transcription identity and atomic ledger storage."""
-from itertools import count
 from datetime import datetime
 import json
 import os
 from pathlib import Path
 from .hashing import canonical_json, key_id
-
-_SEQUENCE = count(1)
+from . import write
 
 
 def provider_fingerprint(provider: dict, prompt_version: str) -> str:
@@ -18,11 +16,6 @@ def provider_fingerprint(provider: dict, prompt_version: str) -> str:
 def make_key(unit: dict, provider: dict, prompt_version: str) -> dict:
     return dict(raster_sha256=unit["raster_sha256"],
                 provider_fingerprint=provider_fingerprint(provider, prompt_version), dpi=unit["dpi"])
-
-
-def key_id(key: dict) -> str:
-    from .hashing import key_id as hash_key
-    return hash_key(key)
 
 
 def validate_entry(entry: object, requested_key: dict, stem: str) -> bool:
@@ -76,8 +69,6 @@ class Ledger:
 
     def write(self, entry: dict) -> list[dict]:
         """Publish atomically; return issues without discarding caller's result."""
-        temporary = None
-        owns_temporary = False
         try:
             key = entry["key"]
             target = self._path(key)
@@ -88,33 +79,7 @@ class Ledger:
                 directory.mkdir(mode=0o700 if os.name == "posix" else 0o777, parents=True, exist_ok=True)
                 if os.name == "posix":
                     directory.chmod(0o700)
-            # O_EXCL also protects concurrent writers and leftovers from older runs.
-            while True:
-                temporary = target.with_name(target.name + f".tmp-{os.getpid()}-{next(_SEQUENCE)}")
-                try:
-                    descriptor = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
-                    owns_temporary = True
-                    break
-                except FileExistsError:
-                    continue
-            with os.fdopen(descriptor, "wb") as stream:
-                stream.write(data)
-                stream.flush()
-                os.fsync(stream.fileno())
-            try:
-                identical = target.read_bytes() == data
-            except FileNotFoundError:
-                identical = False
-            if identical:
-                temporary.unlink()
-            else:
-                os.replace(temporary, target)
+            write.atomic_write(target, data, dir_mode=0o700)
             return []
         except (OSError, ValueError, TypeError, KeyError):
             return [dict(code="E_CACHE_IO", message="Ledger entry could not be published.")]
-        finally:
-            if owns_temporary:
-                try:
-                    temporary.unlink(missing_ok=True)
-                except OSError:
-                    pass

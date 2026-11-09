@@ -52,12 +52,14 @@ def reference(output: Path, evidence: Path):
     requirements = output / REFERENCE
     if requirements.exists():
         raise ValueError('refusing to replace frozen reference requirements')
-    # Core is the wheel's sole dependency. Keep its baseline separate from the
-    # local wheel input so pip-compile cannot embed a runner-specific file URL.
+    # Resolve the declared runtime constraints plus the exact reference Core.
+    # Keep the local wheel out of compiler input to avoid runner-specific URLs.
     with tempfile.TemporaryDirectory(prefix='mdflow-reference-') as temp:
         scratch = Path(temp)
         source = scratch / 'reference.in'
-        source.write_text('markitdown-gc==0.3.5\n', encoding='utf-8')
+        import tomllib
+        runtime = tomllib.loads((ROOT / 'engine/pyproject.toml').read_text(encoding='utf-8'))['project']['dependencies']
+        source.write_text('\n'.join([*runtime, 'markitdown-gc==0.3.5']) + '\n', encoding='utf-8')
         subprocess.run([sys.executable, '-m', 'piptools', 'compile', '--generate-hashes', '--allow-unsafe',
                         '--no-header', '--no-annotate', '--no-emit-index-url', '--no-emit-trusted-host',
                         '--index-url=https://pypi.org/simple', '--pip-args=--only-binary=:all:',

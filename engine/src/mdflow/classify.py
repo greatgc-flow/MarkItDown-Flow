@@ -16,6 +16,14 @@ def _well_typed(report: dict, fmt: str) -> bool:
         return False
     if not isinstance(report.get("rules_version"), str):
         return False
+    if type(report['options'].get('samples')) is not bool:
+        return False
+    summary = report['summary']
+    for name in ('candidates_high', 'candidates_low', 'image_occurrences', 'nonspace_chars', 'pages_with_text'):
+        if type(summary.get(name)) is not int:
+            return False
+    if not isinstance(summary.get('scope'), str) or 'media_small' in summary and type(summary['media_small']) is not int:
+        return False
     for name in ('pages', 'rasters'):
         if any(not isinstance(item, dict) for item in report[name]):
             return False
@@ -34,6 +42,23 @@ def _well_typed(report: dict, fmt: str) -> bool:
             return False
         if 'text_sample' in page and not isinstance(page['text_sample'], str):
             return False
+        for image in page['images']:
+            if not all(k in image for k in ('name', 'bbox_pt', 'px', 'bits', 'colorspace', 'filter', 'dpi_xy', 'imagemask', 'area_ratio')):
+                return False
+            if not isinstance(image['name'], str) or not vector(image['bbox_pt'], 4) or not vector(image['px'], 2):
+                return False
+            if image['bits'] is not None and type(image['bits']) is not int:
+                return False
+            if image['dpi_xy'] is not None and not vector(image['dpi_xy'], 2):
+                return False
+            if type(image['imagemask']) is not bool or not number(image['area_ratio']):
+                return False
+            if not isinstance(image['colorspace'], list) or not all(isinstance(v, str) for v in image['colorspace']):
+                return False
+            if image['filter'] is not None and not isinstance(image['filter'], (str, list)):
+                return False
+            if isinstance(image['filter'], list) and any(not isinstance(v, str) for v in image['filter']):
+                return False
     for raster in report['rasters']:
         if not isinstance(raster.get('id'), str) or not {'frame', 'px', 'mode', 'dpi_tag', 'exif_orientation', 'bytes'} <= raster.keys():
             return False
@@ -42,6 +67,8 @@ def _well_typed(report: dict, fmt: str) -> bool:
         if raster['px'] is not None and not vector(raster['px'], 2):
             return False
         if raster['mode'] is not None and not isinstance(raster['mode'], str):
+            return False
+        if raster['dpi_tag'] is not None and not vector(raster['dpi_tag'], 2):
             return False
     if fmt in OFFICE:
         media = report.get('media')
@@ -54,9 +81,19 @@ def _well_typed(report: dict, fmt: str) -> bool:
                 return False
             if any(not isinstance(ref, dict) for ref in m['references']):
                 return False
+            if m['where'] is not None and (not isinstance(m['where'], dict) or
+                    any(k != 'slide' or type(v) is not int for k, v in m['where'].items())):
+                return False
+            if any(not isinstance(ref.get('part'), str) or not isinstance(ref.get('id'), str) for ref in m['references']):
+                return False
             if m['bytes'] is not None and type(m['bytes']) is not int:
                 return False
             if m['px'] is not None and not vector(m['px'], 2):
+                return False
+            if fmt == 'hwp' and (not {'stored_bytes', 'stored_sha256'} <= m.keys() or
+                    m['stored_bytes'] is not None and type(m['stored_bytes']) is not int or
+                    m['stored_sha256'] is not None and (not isinstance(m['stored_sha256'], str) or
+                        not re.fullmatch('[0-9a-f]{64}', m['stored_sha256']))):
                 return False
         if fmt == 'hwp' and any(
             not isinstance(m.get('payload_sha256'), str) or
@@ -64,6 +101,8 @@ def _well_typed(report: dict, fmt: str) -> bool:
             m.get('payload_kind') not in {'parser_image_payload', 'stored_ole_stream'} for m in media):
             return False
     cov, file = report["coverage"], report["file"]
+    if 'reason' in cov and not isinstance(cov['reason'], str):
+        return False
     if not {"pages_total", "pages_inspected"} <= cov.keys() or not {"sha256", "bytes", "format"} <= file.keys():
         return False
     if not isinstance(cov.get("state"), str) and not ("state" not in cov and fmt in G2A | G2B):
@@ -82,6 +121,8 @@ def _well_typed(report: dict, fmt: str) -> bool:
         if "page" not in c or c["page"] is not None and type(c["page"]) is not int:
             return False
         if not isinstance(c.get("reasons"), list) or not all(isinstance(r, str) for r in c["reasons"]):
+            return False
+        if 'decor' in c and type(c['decor']) is not bool:
             return False
     return all(isinstance(i, dict) and isinstance(i.get("code"), str) and isinstance(i.get("detail"), str)
                for i in report["issues"])

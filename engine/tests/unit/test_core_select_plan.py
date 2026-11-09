@@ -97,26 +97,99 @@ def test_T_PLN_01_exact_schema_and_all_equations(core_build_plan, core_data, fmt
 
 @pytest.mark.req("REQ-PLN-02")
 @pytest.mark.cov("S8", "FM12")
-@pytest.mark.fx("FX-03")
-def test_T_PLN_02_approved_hash_and_cache_independence(core_build_plan, core_data):
-    baseline = core_build_plan()
-    warm = core_build_plan(hits=("p2", "p4"))
-    assert baseline["approved"] == warm["approved"]
-    assert baseline["plan_hash"] == warm["plan_hash"]
-    assert baseline["status"] != warm["status"]
-    for field, value in baseline["approved"].items():
-        mutated = deepcopy(baseline["approved"])
-        mutated[field] = {"different": True} if isinstance(value, dict) else ["changed"] if isinstance(value, list) else "changed"
-        assert core_data.digest(core_data.canonical(mutated)) != baseline["plan_hash"], field
-    for field in baseline["status"]:
-        changed = deepcopy(baseline)
-        changed["status"][field] = "unhashed change"
-        assert core_data.digest(core_data.canonical(changed["approved"])) == baseline["plan_hash"]
-    opts = core_data.options()
-    opts["file"]["sha256"] = "b" * 64
-    assert core_build_plan(opts=opts)["plan_hash"] != baseline["plan_hash"]
-    cached_units = [core_data.unit("p2", status="cached"), core_data.unit("p4", status="cached")]
-    assert core_build_plan(cached_units, hits=("p2", "p4"))["approved"] == baseline["approved"]
+@pytest.mark.fx("FX-60")
+@pytest.mark.scope("schema")
+def test_T_PLN_02_approved_hash_and_cache_independence(core_api, core_data):
+    options = core_data.options()
+    options['file'].update(path='sample.docx', format='docx')
+    units = [dict(core_data.unit('word/media/a.png', media=True), kind='media', page=None, also=[],
+                  media_file='media/aaaaaaaaaaaa.png')]
+    inputs = dict(selected=dict(units=units, oversize=False), rendered=dict(frames_total=None, uninspected_pages=0),
+                  lookup={}, provider=core_data.provider(), options=options)
+    def build(value):
+        return core_api.plan.plan(value['selected'], value['rendered'], value['lookup'], value['provider'], value['options'])
+    baseline = build(inputs)
+    def field(value, path):
+        for key in path: value = value[key]
+        return value
+    # Each row changes actual input, executes production Plan, and checks the
+    # corresponding approved field plus an independent canonical digest.
+    mutations = [
+        (('options','file','path'), 'other.docx', ('file','path')),
+        (('options','file','sha256'), 'b'*64, ('file','sha256')),
+        (('options','file','bytes'), 777, ('file','bytes')),
+        (('options','file','format'), 'hwpx', ('file','format')),
+        (('options','dpi'), 300, ('dpi',)),
+        (('options','proxy'), 'http://localhost:9000', ('provider','proxy')),
+        (('options','prompt_version'), 'p2', ('prompt_version',)),
+        (('options','approve_threshold'), 0, ('approve_threshold',)),
+        (('options','sensitive'), ['*.docx'], ('sensitive_hits',)),
+        (('provider','name'), 'command', ('provider','name')),
+        (('provider','model'), 'other-model', ('provider','model')),
+        (('provider','destination'), 'https://other.example/v1/chat/completions', ('provider','destination')),
+        (('provider','egress'), False, ('provider','egress')),
+        (('provider','cost_hint'), '0.10', ('provider','cost_hint')),
+        (('provider','max_batch'), 2, ('provider','max_batch')),
+        (('provider','retries'), 0, ('provider','retries')),
+        (('provider','command_env_names'), ['PUBLIC_NAME'], ('provider','command_env_names')),
+        (('selected','units',0,'source_id'), 'word/media/b.png', ('units',0,'source_id')),
+        (('selected','units',0,'also'), ['word/media/c.png'], ('units',0,'also')),
+        (('selected','units',0,'media_file'), 'media/bbbbbbbbbbbb.png', ('units',0,'media_file')),
+        (('selected','units',0,'raster_sha256'), 'c'*64, ('units',0,'raster_sha256')),
+        (('selected','units',0,'mime'), 'image/jpeg', ('units',0,'mime')),
+        (('selected','units',0,'bytes'), 99, ('units',0,'bytes')),
+    ]
+    for path, replacement, expected_path in mutations:
+        changed = deepcopy(inputs)
+        field(changed, path[:-1])[path[-1]] = replacement
+        result = build(changed)
+        assert field(result['approved'], expected_path) == replacement, path
+        assert result['approved'] != baseline['approved'] and result['plan_hash'] != baseline['plan_hash'], path
+        assert result['plan_hash'] == core_data.digest(core_data.canonical(result['approved'])), path
+    for signature in [
+        ('PROTECTED','UNKNOWN','P','report_only','not_run','not_run'),
+        ('UNSUPPORTED','UNKNOWN','X','report_only','not_run','not_run'),
+        ('NATIVE','NONE','T','convert_only','no_candidates','complete'),
+        ('NATIVE','UNKNOWN','U','convert_only','unknown','partial'),
+        ('NATIVE','PARTIAL','M','convert_and_ocr','review','complete'),
+    ]:
+        changed = deepcopy(inputs)
+        expected = dict(zip(('route','need','label','action','decision','coverage_state'), signature))
+        changed['options']['classification'] = expected
+        if expected['action'] != 'convert_and_ocr': changed['selected']['units'] = []
+        else: changed['selected']['units'][0].update(priority='low', priority_core='low')
+        result = build(changed)
+        assert result['approved']['classification'] == expected
+        assert result['plan_hash'] != baseline['plan_hash']
+    page = deepcopy(inputs)
+    page['options']['file'].update(path='sample.pdf', format='pdf')
+    page['selected']['units'] = [core_data.unit('p1')]
+    page_base = build(page)
+    page['selected']['units'][0] = core_data.unit('p2', dpi=300)
+    page_changed = build(page)
+    assert page_changed['approved']['units'][0]['page'] == 2
+    assert page_changed['approved']['units'][0]['dpi'] == 300
+    assert page_changed['plan_hash'] != page_base['plan_hash']
+    for status in ('render_failed','oversize','skipped_low_priority','unsupported_media_format'):
+        changed = deepcopy(inputs)
+        changed['selected']['units'][0]['status'] = status
+        changed['selected']['oversize'] = status == 'oversize'
+        result = build(changed)
+        assert result['approved']['units'][0]['status'] == status
+        assert result['plan_hash'] != baseline['plan_hash'] and result['approved']['keys_unique'] == 0
+    more = deepcopy(inputs)
+    more['selected']['units'].append(dict(units[0], source_id='word/media/b.png', raster_sha256='d'*64))
+    doubled = build(more)
+    assert doubled['approved']['units_total'] == doubled['approved']['keys_unique'] == 2
+    assert doubled['plan_hash'] != baseline['plan_hash']
+    for changed in (dict(deepcopy(inputs), lookup={'word/media/a.png':'hit'}),
+                    dict(deepcopy(inputs), rendered=dict(frames_total=None, uninspected_pages=7))):
+        result = build(changed)
+        assert result['approved'] == baseline['approved'] and result['plan_hash'] == baseline['plan_hash']
+        assert result['status'] != baseline['status']
+    other_file = deepcopy(inputs)
+    other_file['options']['other_files'] = [{'path':'unrelated.pdf','status':'failed'}]
+    assert build(other_file) == baseline
 
 
 @pytest.mark.req("REQ-PLN-03")

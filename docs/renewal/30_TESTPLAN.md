@@ -33,9 +33,9 @@ engine/
     golden/GOLDEN.lock      # sha256 of every golden + Core version
     matrix.toml             # applicability declaration (section 5)
 shell/test/*.test.ts        # JT-*; fixtures FX-70/71
-tools/trace.py              # check | report | score | attest | classacc | accounting
+tools/trace.py              # check | report | score | attest
 tools/golden.py             # gen|verify goldens from installed Core
-tools/mutate.py             # FX-60 triage mutations
+engine/tests/unit/test_core_classify.py # FX-60 golden mutations
 attest/                     # MAN-01..04
 build/trace/                # CI output: junit-*.xml, registry.json, trace.json, TRACE.md, MATRIX_*.md, SCORE.json
 ```
@@ -101,7 +101,7 @@ Rules (R22): candidate ids, counts, decisions and states come from the **pinned 
 | FX-53 unreadable_file | K16 | `E_SNIFF_IO` r0 | chmod 000 / exclusive handle (Windows) |
 | FX-54 zip_lying_size | K14/K07 | `E_ZIP_BOMB` via REQ-SNF-09 | central directory declares 1 KiB, member inflates to 50 MiB (header patch) |
 | FX-55 concurrent_runs | - | - | two `mdflow run` subprocesses on one cache dir |
-| FX-60 triage_mutations | all | target row only | `tools/mutate.py` on a golden: M01 `schema_version=2`; M02 priority `medium`; M03 state `bogus`; M04 id out of range; M05 `no_candidates`+candidates; M06 `ocr_recommended` no high; M07 `review` with high; M08 `file.format` mismatch; M09 `unknown`+candidates; M10 `unknown` empty; M11 `ocr_recommended` empty; M12 `partial`; M13 `none`; M14.. each of 14 Core issue codes injected; M15 unknown issue code; M16 unknown candidate reason; M17 `pN` with `page != N` |
+| FX-60 triage_mutations | all | target row only | the golden-mutation tests in `engine/tests/unit/test_core_classify.py` on a golden: M01 `schema_version=2`; M02 priority `medium`; M03 state `bogus`; M04 id out of range; M05 `no_candidates`+candidates; M06 `ocr_recommended` no high; M07 `review` with high; M08 `file.format` mismatch; M09 `unknown`+candidates; M10 `unknown` empty; M11 `ocr_recommended` empty; M12 `partial`; M13 `none`; M14.. each of 14 Core issue codes injected; M15 unknown issue code; M16 unknown candidate reason; M17 `pN` with `page != N` |
 | FX-61 mock_provider | - | - | in-process `Provider.transcribe(unit, raster, prompt)`; scripted ok/fail/raise/hostile text (`<!-- /mdflow:ocr -->`, fences, CRLF, 250k chars, model `a"b--c`); call counter |
 | FX-62 mock_http | - | - | `http.server` 127.0.0.1:0; scripted 200/500x3/429/302/hang/empty/oversize; header recorder |
 | FX-63 command_child | - | - | `python -c` child: echo/exit n/sleep/env dump |
@@ -399,7 +399,7 @@ R27/R28 added registrations (existing REQs; precise fixture assertions replace b
 | JT-12 | REQ-SHL-12 (argv array, `shell:false`; replay snapshot identical: args, cwd, output, cache; nested `inputs/sub/a.pdf` keeps logical `sub/a.pdf`) | FX-71 |
 | JT-13 | REQ-SHL-13 (UTF-8 split/CRLF, 64 KiB limit, unknown events, summary events only, full Plan from `plan` stdout, raw triage `corrupt` retained, report spool removed) | FX-71 |
 | JT-14 | REQ-SHL-14 (50 files -> one modal; per-file fields = Plans; no run/token/interruption fields; Keep pending default; HTML literal) | FX-71 |
-| JT-15 | REQ-SHL-15 (`plan` then same-roots `run` with repeated `--yes <file-hash>` + `--approved-by plugin:modal`; cache warming keeps hash; changed bytes -> no egress; no per-file replay) | FX-71 |
+| JT-15 | REQ-SHL-15 (`plan` then same-roots `run` with one plugin-owned `--yes-file` of the displayed hashes + `--approved-by plugin:modal`; consent only for `requests_to_send > 0`; cache warming keeps hash; changed bytes -> no egress; no per-file replay; yes-file deleted after the run) | FX-71 |
 | JT-16 | REQ-SHL-16 (real OS process: cancel before launch / in modal / during blocked mock request / unload; cooperative POSIX -> exit 130; forced POSIX + Windows -> native status, interrupted, restart recovers, no owned live process) | FX-63 |
 | JT-17 | REQ-SHL-17 (complete `version` response; protocol 2, schema 2, wrong Pillow/renderer, each missing field -> blocked) | FX-71 |
 | JT-18 | REQ-SHL-18 | - |
@@ -438,6 +438,32 @@ R27/R28 added registrations (existing REQs; precise fixture assertions replace b
 
 Every REQ id defined in `10_SPEC.md` (incl. new REQ-SNF-09), `20_SHELL.md` (SHL-01..21) and `25_PACKAGING.md` (PKG-01..21) appears in 4.1-4.4 at least once; no REQ id in this file is undefined (checked by grep and by `trace.py check`). **Unmappable: none.** Removed with cut features: tests for `run_plan_hash`, `inflight`/`E_PROVIDER_INTERRUPTED`/`units_interrupted`, `W_STALE_TEMP`, ledger `seen`, `est_cost`, csv/tsv/json media-free shortcut and UTF-8 validation (old T-CNV-06), "130 within 5 s", `--yes <run hash>`.
 
+
+### M2 engine regression catalog
+
+| ID | REQ | Oracle |
+|---|---|---|
+| T-TRX-80 | REQ-GEN-09, REQ-SEC-04 | M2 regression: inherited_stdout_cannot_block_timeout_or_leave_reader. |
+| T-RND-80 | REQ-RND-05, REQ-WRT-02 | M2 regression: render_setup_failure_is_per_unit_and_sibling_continues. |
+| T-RND-81 | REQ-MAP-05, REQ-RND-03, REQ-TRX-01, REQ-ASM-06 | M2 regression: hwp_equal_payloads_keep_stored_refusal_through_pipeline. |
+| T-RND-82 | REQ-MAP-05, REQ-CNV-03, REQ-RND-03 | M2 regression: real_hwp_extraction_renders_parser_payload_only. |
+| T-LKP-80 | REQ-LKP-03, REQ-GEN-05 | M2 regression: ledger_reuses_atomic_writer_and_hash_identity. |
+| T-CLS-80 | REQ-CLS-01 | M2 regression: v1_checks_all_promised_nested_types. |
+| T-SNF-80 | REQ-SNF-03, REQ-GEN-04 | M2 regression: io_uses_the_same_pure_format_decisions. |
+| T-META-80 | REQ-PLN-02, REQ-PKG-10 | M2 regression: v30_oracle_calls_plan_instead_of_hashing_detached_expected. |
+| T-META-81 | REQ-PKG-10 | M2 regression: matrix_comments_match_r28_expansion. |
+| T-GEN-80 | REQ-PKG-01 | M2 regression: installed_import_accepts_repo_local_venv_and_rejects_sources. |
+| T-GEN-81 | REQ-PKG-06, REQ-GEN-03 | M2 regression: package_runtime_policy_rejects_experimental_and_renderer_mismatches. |
+| T-GEN-82 | REQ-PKG-17, REQ-PKG-13, REQ-PKG-08, REQ-GEN-03 | M2 regression: release_attests_then_verifies_then_scores_and_installed_suite_is_real. |
+| T-GEN-83 | REQ-PKG-08, REQ-GEN-03 | M2 regression: all_fixture_launchers_honor_installed_mode. |
+| T-GEN-84 | REQ-PKG-10, REQ-PLN-08, REQ-RPT-01 | M2 regression: fable_s14_s15_duplicate_provider_and_report_boundaries_removed. |
+| T-GEN-85 | REQ-GEN-07, REQ-GEN-08, REQ-LKP-01, REQ-APR-02, REQ-WRT-01 | M2-H class sweep (`stage_io/test_class_sweep.py`, one parametrized case per class K01..K20): real isolated CLI + loopback mock provider, `plan` -> unconsented run (no egress, pending markers) -> `--yes-file` run -> rerun; per class the stages and report fields SPEC prescribes: output classes reach S12 Write, unit-bearing classes S7 Lookup (miss then cached, 0 provider calls) / S9 Approve (consent == plan_hash) / S10 Transcribe, report-only classes publish nothing and never reach Assemble/Write. Registers its extra class x stage cells with `@pytest.mark.cells` (literal list, asserted equal to the sweep's per-class table). Known engine gaps are `xfail(strict=True, raises=KnownEngineGap, reason="M2-H: ...")`. |
+
+| T-RND-83 | REQ-CLS-05, REQ-RND-03, REQ-ASM-06 | M2 Core unsupported-media fact reaches actual HWPX preparation/Render: decodable disguised bytes remain pending, no requests, retained placement. |
+| T-GEN-86 | REQ-PKG-08, REQ-GEN-03, REQ-PKG-17 | Missing/failed/skipped/wrong-commit installed runtime and nine smoke receipts block final release acceptance; synthetic positive/negative controls only. |
+
+| T-CNV-80 | REQ-CNV-03, REQ-RPT-03 | Real GIF/TIFF Core unsupported base conversion is empty text; Render/OCR remain authoritative, actual conversion faults still fail. |
+
 ## 5. Generated MECE matrices
 
 `trace.py report` writes `build/trace/matrices.json` (stage_failure, class_stage, common_schema_assertions, class_execution_registrations); **never hand-edited**. Inputs: markers, FX `class`, `engine/tests/matrix.toml` (applicability only).
@@ -452,7 +478,7 @@ File classes: `K01` pdf_text, `K02` pdf_scan, `K03` pdf_mixed, `K04` pdf_capped,
 
 | Step | Build | Tests first |
 |---|---|---|
-| 0 | `tools/trace.py`, marker plugin, `golden.py`, `mutate.py`, fixture generators, CI skeleton | T-META-01..04, PT-10, PT-07 |
+| 0 | `tools/trace.py`, marker plugin, `golden.py`, in-test FX-60 mutations, fixture generators, CI skeleton | T-META-01..04, PT-10, PT-07 |
 | 1 | Contract pins (installed Core only) + goldens | CT-01..CT-14, T-META-03 |
 | 2 | PURE: `canonical_json`/hashes, `detect_format`, `classify` | T-SNF-11/12 (pure parts of T-SNF-04/07), T-CLS-01..13, T-GEN-04 |
 | 3 | PURE: `select`, `plan` (approved/status, hash, budget, cost), ledger **key** + entry validation, `approve` | T-SEL-*, T-PLN-*, T-MAP-07/08, T-LKP-04, T-APR-01/02/05/07/08 |

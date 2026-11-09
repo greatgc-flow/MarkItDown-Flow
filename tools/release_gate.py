@@ -6,7 +6,7 @@ from pathlib import Path
 import shutil
 import subprocess
 from build_release import verify, versions, SUBJECTS
-from trace import ROOT, score
+from trace import ROOT, score, required_executions
 
 def main():
     p = argparse.ArgumentParser(description=__doc__)
@@ -24,6 +24,9 @@ def main():
                                       '--jq', '.sha'], text=True).strip()
     if tagged != candidate['commit']:
         raise ValueError('remote version tag no longer points to the tested source commit')
+    problems = required_executions(a.evidence, candidate['commit'])
+    if problems:
+        raise ValueError('\n'.join(problems))
     # Independent command-oracle receipts are evidence, not automatic PASS labels.
     shutil.copyfile(a.manual / 'oracles.json', a.evidence / 'oracles.json')
     result = score(ROOT, a.evidence, a.manual, candidate['commit'])

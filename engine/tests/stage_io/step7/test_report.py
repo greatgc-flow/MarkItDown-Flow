@@ -10,7 +10,7 @@ import stat
 
 import pytest
 
-from mdflow import report
+from mdflow import report, write
 
 
 @pytest.mark.req("REQ-RPT-01", "REQ-SEC-02", "REQ-GEN-05")
@@ -63,7 +63,8 @@ def test_T_RPT_01_one_full_report_and_bounded_redacted_progress(tmp_path, monkey
             observed.append(True)
         return real_replace(source, destination)
     monkeypatch.setattr(os, "replace", replace)
-    report.publish(value, stdout=stdout, report_path=path)
+    write.atomic_write(path, (report._json(value) + "\n").encode("utf-8"))
+    report.publish(value, stdout=stdout)
     assert json.loads(stdout.getvalue()) == value
     assert len(stdout.getvalue().encode("utf-8")) > 65536, "report has no progress-line limit"
     assert json.loads(path.read_text(encoding="utf-8")) == value

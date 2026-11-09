@@ -11,11 +11,14 @@ from ..contracts import ProviderMeta, UnitResult
 class NoneProvider:
     meta: ProviderMeta
 
+    DEFAULT_META = {
+        "name": "none", "model": "", "egress": False, "cost_hint": "0", "max_batch": 1, "retries": 0,
+        "destination": None, "command_env_names": [], "accepts": ["image/png", "image/jpeg"],
+    }
+
     def __init__(self) -> None:
-        self.meta = {
-            "name": "none", "model": "", "egress": False, "cost_hint": "0", "max_batch": 1, "retries": 0,
-            "destination": None, "command_env_names": [], "accepts": ["image/png", "image/jpeg"],
-        }
+        from copy import deepcopy
+        self.meta = deepcopy(self.DEFAULT_META)
 
     def transcribe(self, unit, raster, prompt) -> UnitResult:
         # Defensive: the pipeline never sends anything to this provider.

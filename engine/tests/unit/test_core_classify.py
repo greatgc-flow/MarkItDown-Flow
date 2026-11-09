@@ -188,15 +188,8 @@ def test_T_CLS_06_partial_never_full_or_partial(core_api, core_fx, state):
 @pytest.mark.req("REQ-CLS-05")
 @pytest.mark.cov("S3", "FM10")
 @pytest.mark.fx("FX-60")
-@pytest.mark.parametrize("code,warning", [
-    ("corrupt", "W_TRIAGE_UNKNOWN"), ("encrypted", "E_ENCRYPTED"),
-    ("external_media", "W_EXTERNAL_MEDIA"), ("frame_cap", "W_TRIAGE_PARTIAL"),
-    ("image_probe_failed", "W_IMAGE_PROBE"), ("media_not_inspected", "W_MEDIA_NOT_INSPECTED"),
-    ("missing_dependency", "W_CORE_DEPENDENCY"), ("page_cap", "W_TRIAGE_PARTIAL"),
-    ("too_large", "W_TRIAGE_UNKNOWN"), ("unresolved_embed", "W_UNRESOLVED_EMBED"),
-    ("unsupported_compression", "W_TRIAGE_PARTIAL"), ("unsupported_format", "W_TRIAGE_UNSUPPORTED"),
-    ("unsupported_media", None), ("zip_limit", "W_TRIAGE_PARTIAL")])
-def test_T_CLS_07_every_core_issue_policy(core_api, core_fx, code, warning):
+@pytest.mark.parametrize("code", "corrupt encrypted external_media frame_cap image_probe_failed media_not_inspected missing_dependency page_cap too_large unresolved_embed unsupported_compression unsupported_format unsupported_media zip_limit".split())
+def test_T_CLS_07_every_core_issue_policy(core_api, core_fx, code):
     report = deepcopy(core_fx.report("FX-03"))
     sniff = core_fx.sniff()
     report["issues"] = [dict(code=code, detail="fixture mutation")]
@@ -213,14 +206,26 @@ def test_T_CLS_07_every_core_issue_policy(core_api, core_fx, code, warning):
         report["decision"] = "unknown"
     result = core_api.classify.classify(sniff, report)
     assert "core:" + code in result["reasons"]
-    if warning is not None:
-        assert warning in issue_codes(result)
-    if code == "encrypted":
-        assert signature(result) == ("PROTECTED", "UNKNOWN", "P", "report_only")
-    elif code == "media_not_inspected":
-        assert signature(result) == ("NATIVE", "UNKNOWN", "U", "convert_only")
-    elif report["candidates"]:
-        assert result["action"] == "convert_and_ocr"
+    expected = {
+        'corrupt': (('NATIVE','UNKNOWN','U','convert_and_ocr'), {'W_TRIAGE_UNKNOWN'}),
+        'encrypted': (('PROTECTED','UNKNOWN','P','report_only'), {'E_ENCRYPTED'}),
+        'external_media': (('NATIVE','UNKNOWN','U','convert_and_ocr'), {'W_EXTERNAL_MEDIA','W_TRIAGE_PARTIAL'}),
+        'frame_cap': (('NATIVE','UNKNOWN','U','convert_and_ocr'), {'W_TRIAGE_PARTIAL'}),
+        'image_probe_failed': (('NATIVE','PARTIAL','M','convert_and_ocr'), {'W_IMAGE_PROBE'}),
+        'media_not_inspected': (('NATIVE','UNKNOWN','U','convert_only'), {'W_MEDIA_NOT_INSPECTED'}),
+        'missing_dependency': (('NATIVE','UNKNOWN','U','convert_and_ocr'), {'W_CORE_DEPENDENCY','W_TRIAGE_UNKNOWN'}),
+        'page_cap': (('NATIVE','UNKNOWN','U','convert_and_ocr'), {'W_TRIAGE_PARTIAL'}),
+        'too_large': (('NATIVE','UNKNOWN','U','convert_only'), {'W_TRIAGE_UNKNOWN'}),
+        'unresolved_embed': (('NATIVE','UNKNOWN','U','convert_and_ocr'), {'W_UNRESOLVED_EMBED','W_TRIAGE_PARTIAL'}),
+        'unsupported_compression': (('NATIVE','UNKNOWN','U','convert_and_ocr'), {'W_TRIAGE_PARTIAL'}),
+        'unsupported_format': (('NATIVE','UNKNOWN','U','convert_only'), {'W_TRIAGE_UNKNOWN','W_TRIAGE_UNSUPPORTED'}),
+        'unsupported_media': (('NATIVE','PARTIAL','M','convert_and_ocr'), set()),
+        'zip_limit': (('NATIVE','UNKNOWN','U','convert_and_ocr'), {'W_TRIAGE_PARTIAL'}),
+    }
+    expected_signature, expected_codes = expected[code]
+    assert signature(result) == expected_signature
+    assert issue_codes(result) == expected_codes
+    assert [c['id'] for c in result['candidates_unique']] == ([] if code == 'encrypted' else [c['id'] for c in report['candidates']])
     # Positive/fallback rows complement the error and validation row tables.
     for fx, fmt, expected in (("FX-01", "pdf", ("NATIVE", "NONE", "T", "convert_only")),
         ("FX-02", "pdf", ("NATIVE", "FULL", "S", "convert_and_ocr")),

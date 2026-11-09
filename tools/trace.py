@@ -53,13 +53,15 @@ def discover_tests(root: Path) -> list[dict]:
         def visit(node: ast.AST, inherited: dict, scope: str) -> None:
             markers = {key: list(value) for key, value in inherited.items()}
             for decorator in getattr(node, "decorator_list", []):
+                if isinstance(decorator, ast.Attribute) and ast.unparse(decorator) == 'pytest.mark.release':
+                    markers['release'] = [[]]
                 if not isinstance(decorator, ast.Call):
                     continue
                 name = ast.unparse(decorator.func)
                 if not name.startswith("pytest.mark."):
                     continue
                 key = name.removeprefix("pytest.mark.")
-                if key in {"req", "cov", "fx", "plat", 'scope'}:
+                if key in {"req", "cov", "fx", "plat", 'scope', 'cells'}:
                     markers.setdefault(key, []).append([ast.literal_eval(arg) for arg in decorator.args])
             if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
                 if node.name.startswith("test_"):
@@ -93,6 +95,23 @@ def test_classes(test: dict, classes: dict, *, include_schema=False) -> set[str]
     if 'all' in fixtures and stages <= {'S0', 'S1', 'S2', 'S3', 'S13'} and stages:
         return set(MATRIX_CLASSES)
     return set().union(*(classes.get(f, set()) for f in fixtures if f != 'all'))
+
+
+def extra_cells(test: dict, *, include_schema=False) -> set[tuple[str, str]]:
+    """(class, stage) cells registered by `@pytest.mark.cells("K02:S7", ...)` (M2-H class sweep).
+
+    A class sweep drives every class through the real pipeline in one parametrized test, so it reaches several
+    stages per class while the one primary `cov` cell stays unique. The marker is the explicit, literal list of
+    those additional cells; the sweep test asserts that its per-class table and this marker agree.
+    """
+    if not include_schema and 'schema' in marker_values(test, 'scope'):
+        return set()
+    cells = set()
+    for value in marker_values(test, 'cells'):
+        match = re.fullmatch(r"(K\d{2}):(S(?:[0-9]|1[0-3]))", str(value))
+        if match:
+            cells.add((match[1], match[2]))
+    return cells
 
 
 def coverage_problems(requirements: dict, tests: list[dict]) -> dict[str, list[str]]:
@@ -143,6 +162,9 @@ def registration_problems(root: Path, tests: list[dict]) -> list[str]:
         plats = marker_values(test, "plat")
         if plats and (len(plats) != 1 or plats[0] not in {"posix", "windows"}):
             problems.append(f"Invalid platform: {tid}")
+        for cell in marker_values(test, "cells"):
+            if not re.fullmatch(r"K(?:0[1-9]|1[0-9]|20):S(?:[0-9]|1[0-3])", str(cell)):
+                problems.append(f"Invalid class cell: {tid}: {cell}")
     requirements = requirement_registry(root)
     planned_reqs = set().union(*planned.values())
     for req in sorted(requirements.keys() ^ planned_reqs):
@@ -213,7 +235,7 @@ def matrix_problems(root: Path, tests: list[dict]) -> list[str]:
         stage, mode = cov[0]
         covered_fm.add((stage, mode))
         klasses = test_classes(test, classes_of, include_schema=True)
-        covered_class |= {(k, stage) for k in klasses}
+        covered_class |= {(k, stage) for k in klasses} | extra_cells(test, include_schema=True)
     na_fm, na_class = {}, {}
 
     def reason_owner(entry, label):
@@ -348,6 +370,10 @@ def report(root: Path, destination: Path) -> dict:
             ks.setdefault(f"{klass}:{stage}", []).append(test["nodeid"])
         for klass in test_classes(test, classes):
             execution.setdefault(f'{klass}:{stage}', []).append(test['nodeid'])
+        for klass, extra_stage in sorted(extra_cells(test, include_schema=True)):
+            ks.setdefault(f"{klass}:{extra_stage}", []).append(test["nodeid"])
+        for klass, extra_stage in sorted(extra_cells(test)):
+            execution.setdefault(f'{klass}:{extra_stage}', []).append(test['nodeid'])
     def grid(keys, covered, kind, axes):
         result = {}
         for key in keys:
@@ -368,6 +394,31 @@ def report(root: Path, destination: Path) -> dict:
     destination.parent.mkdir(parents=True, exist_ok=True)
     destination.write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
     return result
+
+
+def required_executions(evidence: Path, expected_commit: str) -> list[str]:
+    """Release prerequisite receipts: real installed endpoints and all nine smokes."""
+    problems = []
+    for runner in ('windows-2022', 'ubuntu-24.04', 'macos-15-intel'):
+        for py in ('3.10', '3.14'):
+            path = evidence / f'junit-engine-{runner}-py{py}.xml'
+            try:
+                cases = list(ET.parse(path).iter('testcase'))
+                if not cases or any(c.find(k) is not None for c in cases for k in ('failure','error','skipped')):
+                    raise ValueError('empty, failed or skipped engine receipt')
+                runtime = json.loads((evidence / f'runtime-{runner}-py{py}.json').read_text(encoding='utf-8'))
+                if runtime.get('commit') != expected_commit or runtime.get('installed') is not True:
+                    raise ValueError('installed import/commit receipt differs')
+            except (OSError, ValueError, ET.ParseError) as error:
+                problems.append(f'{runner}/py{py}: {error}')
+        for py in ('3.11', '3.12', '3.13'):
+            try:
+                smoke = json.loads((evidence / f'smoke-{runner}-py{py}.json').read_text(encoding='utf-8'))
+                if smoke.get('commit') != expected_commit or smoke.get('exit') != 0:
+                    raise ValueError('missing successful candidate-bound smoke')
+            except (OSError, ValueError) as error:
+                problems.append(f'{runner}/py{py}: {error}')
+    return problems
 
 
 def score(root: Path, evidence: Path, reviews: Path, expected_commit: str) -> dict:
@@ -407,6 +458,12 @@ def score(root: Path, evidence: Path, reviews: Path, expected_commit: str) -> di
                     continue
                 filename = f"junit-shell-{runner}.xml" if shell else f"junit-engine-{runner}-py{py}.xml"
                 packaged = f"junit-pkg-{runner}-py{py}.xml"
+                release = f'junit-release-{runner}-py{py}.xml'
+                if any('release' in row['markers'] for row in rows):
+                    values = results.get((release, tid), [])
+                    if len(values) < len(expected) or not all(values):
+                        return False
+                    continue
                 # Source-suite release-mode skips are superseded by actual packaged execution.
                 values = results.get((packaged, tid), []) if tid.startswith("PT-") else []
                 values = values or results.get((filename, tid), [])

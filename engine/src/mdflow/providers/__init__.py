@@ -101,3 +101,12 @@ def build_provider(
             command=command, egress=command_egress, env_names=names, model=model,
             timeout_s=_timeout(settings), cost_hint=cost_hint)
     raise ProviderConfigError(f"unknown provider (expected one of {', '.join(NAMES)})")
+
+
+def describe() -> list[dict]:
+    """Public defaults share the implementation metadata; no config/key access."""
+    from copy import deepcopy
+    from .none import NoneProvider
+    from .command import CommandProvider
+    from .openai_compat import OpenAICompatProvider
+    return [deepcopy(provider.DEFAULT_META) for provider in (NoneProvider, OpenAICompatProvider, CommandProvider)]

@@ -17,32 +17,48 @@ def _route(fmt: str) -> str:
     return "LEGACY" if fmt in LEGACY else "UNSUPPORTED"
 
 
+def expected_exts(fmt: str) -> frozenset[str]:
+    return {'jpeg': frozenset({'jpg','jpeg'}), 'tiff': frozenset({'tif','tiff'})}.get(fmt, frozenset({fmt}))
+
+
+def by_extension(ext: str) -> tuple[str, str, list[str]]:
+    if ext in G2A | (G2B - {'epub', 'msg', 'xls'}):
+        return ext, 'NATIVE', []
+    if ext in {'pages', 'key', 'numbers'}:
+        return ext, 'LEGACY', []
+    return ext or 'unknown', 'UNSUPPORTED', ['media_out_of_scope' if ext in MEDIA else 'unsupported_format']
+
+
+def magic_format(header: bytes) -> str | None:
+    signatures = ((b'%PDF-', 'pdf'), (b'PK\x03\x04', 'zip'),
+        (b'\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1', 'cfb'), (b'\x89PNG\r\n\x1a\n', 'png'),
+        (b'\xff\xd8\xff', 'jpeg'), (b'GIF87a', 'gif'), (b'GIF89a', 'gif'), (b'BM', 'bmp'),
+        (b'II*\0', 'tiff'), (b'MM\0*', 'tiff'), (b'II+\0', 'tiff'), (b'MM\0+', 'tiff'), (b'{\\rtf', 'rtf'))
+    for signature, fmt in signatures:
+        if header.startswith(signature): return fmt
+    return 'webp' if header.startswith(b'RIFF') and header[8:12] == b'WEBP' else None
+
+
+def zip_format(names: set[str], ext: str) -> str:
+    for marker, fmt in (('word/document.xml', 'docx'), ('ppt/presentation.xml', 'pptx'),
+                        ('xl/workbook.xml', 'xlsx'), ('Contents/content.hpf', 'hwpx')):
+        if marker in names: return fmt
+    if 'META-INF/container.xml' in names and ext == 'epub': return 'epub'
+    if 'META-INF/manifest.xml' in names and ext in {'odt', 'odp', 'ods'}: return ext
+    return 'zip'
+
+
+def zip_route(fmt: str) -> str:
+    return 'LEGACY' if fmt in {'odt', 'odp', 'ods'} else 'CONTAINER' if fmt == 'zip' else 'NATIVE'
+
+
 def detect_format(header: bytes, ext: str, *, members: tuple = (),
                   streams: tuple = (), encrypted: bool = False) -> dict:
     ext = ext.lower().lstrip(".")
-    normalized = {"jpg": "jpeg", "jpe": "jpeg", "tif": "tiff"}.get(ext, ext)
-    magic, fmt = "unknown", normalized
-    signatures = ((b"%PDF-", "pdf"), (b"\x89PNG\r\n\x1a\n", "png"),
-        (b"\xff\xd8\xff", "jpeg"), (b"GIF87a", "gif"), (b"GIF89a", "gif"),
-        (b"BM", "bmp"), (b"II*\0", "tiff"), (b"MM\0*", "tiff"),
-        (b"II+\0", "tiff"), (b"MM\0+", "tiff"), (b"{\\rtf", "rtf"),
-        (b"PK\x03\x04", "zip"), (b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1", "cfb"))
-    for signature, name in signatures:
-        if header.startswith(signature):
-            magic = fmt = name
-            break
-    if header.startswith(b"RIFF") and header[8:12] == b"WEBP":
-        magic = fmt = "webp"
-    if magic == "zip":
-        for marker, name in (("word/document.xml", "docx"), ("ppt/presentation.xml", "pptx"),
-                             ("xl/workbook.xml", "xlsx"), ("Contents/content.hpf", "hwpx")):
-            if marker in members:
-                fmt = name
-                break
-        if fmt == "zip" and "META-INF/container.xml" in members and ext == "epub":
-            fmt = "epub"
-        if fmt == "zip" and "META-INF/manifest.xml" in members and ext in {"odt", "odp", "ods"}:
-            fmt = ext
+    magic = magic_format(header) or 'unknown'
+    fmt = magic if magic != 'unknown' else by_extension(ext)[0]
+    if magic == 'zip':
+        fmt = zip_format(set(members), ext)
     if magic == "cfb":
         if {"EncryptionInfo", "EncryptedPackage"} <= set(streams):
             encrypted = True
@@ -51,13 +67,13 @@ def detect_format(header: bytes, ext: str, *, members: tuple = (),
             fmt = "hwp"
         elif ext in {"xls", "msg", "doc", "ppt"}:
             fmt = ext
-    route = "PROTECTED" if encrypted else _route(fmt)
+    route = 'PROTECTED' if encrypted else by_extension(ext)[1] if magic == 'unknown' else _route(fmt)
     reasons, issues = [], []
     if route == "UNSUPPORTED":
         reasons.append("media_out_of_scope" if ext in MEDIA else "unsupported_format")
     if encrypted:
         reasons.append("encrypted")
-    if magic != "unknown" and fmt != normalized:
+    if magic != "unknown" and ext and ext not in expected_exts(fmt):
         issues.append(dict(code="W_EXT_MISMATCH", message="File signature differs from its extension."))
     if not header:
         issues.append(dict(code="E_CORRUPT", message="Empty input."))

@@ -153,6 +153,8 @@ def _render_media(
     from PIL import Image, ImageOps
 
     media_file = unit.get("media_file")
+    if unit.get('_unsupported_media'):
+        raise _Failure('Core identified an unsupported media encoding', unsupported=True)
     if format == 'hwp' and (unit.get('_payload_kind', unit.get('payload_kind')) == 'stored_ole_stream' or not media_file):
         raise _Failure('HWP5 media is an unsupported stored stream or was not extracted', unsupported=True)
     try:
@@ -217,10 +219,16 @@ def render_units(
     total_remaining: int | None = None,
 ) -> RenderResult:
     temp = Path(run_temp)
-    temp.mkdir(parents=True, exist_ok=True)
     fmt = sniff["format"]
     remaining = [sniff_io.DEFAULT_ZIP_TOTAL_BYTES if total_remaining is None else total_remaining]
     result: RenderResult = {"units": [], "rasters": {}, "frames_total": None, "issues": []}
+    try:
+        temp.mkdir(parents=True, exist_ok=True)
+    except OSError:
+        for unit in units:
+            result['units'].append(dict(unit, status='render_failed', raster_sha256=None, mime=None, bytes=None))
+            result['issues'].append(dict(code='E_RENDER_FAIL', unit=unit['source_id'], message='Raster directory could not be prepared.'))
+        return result
     if fmt in _RASTER_FORMATS:
         result["frames_total"] = _frame_count(data)
     document = None

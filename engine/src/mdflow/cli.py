@@ -195,16 +195,6 @@ def _selftest() -> int:
     return 0 if matched else 2
 
 
-def _provider_list() -> list[dict]:
-    result = []
-    for name in providers.NAMES:
-        result.append(dict(name=name, model="", egress=name != "none", cost_hint="0" if name == "none" else None,
-                           max_batch=1, retries=2 if name == "openai-compatible" else 0,
-                           destination="https://api.openai.com/v1/chat/completions" if name == "openai-compatible" else None,
-                           command_env_names=[], accepts=["image/png", "image/jpeg"]))
-    return result
-
-
 def main(argv: list[str] | None = None) -> int:
     for stream in (sys.stdout, sys.stderr):
         if hasattr(stream, "reconfigure"):
@@ -220,7 +210,7 @@ def main(argv: list[str] | None = None) -> int:
                         protocol=1, triage_schema=1))
             return 0
         if args.command_name == "providers":
-            _print(_provider_list())
+            _print(providers.describe())
             return 0
         if args.command_name == "selftest":
             return _selftest()

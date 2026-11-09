@@ -9,8 +9,6 @@ bounded pipe capture. The child env is exactly ``ALLOWED_ENV`` plus the
 from __future__ import annotations
 
 import json
-import queue
-import threading
 from pathlib import Path
 import os
 import shlex
@@ -29,6 +27,33 @@ MAX_OUTPUT_BYTES = 4 * 1024 * 1024
 _SUFFIXES = {"image/png": ".png", "image/jpeg": ".jpg"}
 
 
+def _read_ready(pipe) -> bytes | None:
+    """One unbuffered read only when ready; None means poll again, b'' is EOF.
+
+    There is one owner and no reader thread/locked buffered close. Windows
+    anonymous pipes are not selectable; PeekNamedPipe also supports Python 3.10.
+    Microsoft Learn: PeekNamedPipe (Win32 anonymous pipes).
+    """
+    if os.name == 'nt':
+        import ctypes
+        from ctypes import wintypes
+        import msvcrt
+        kernel = ctypes.WinDLL('kernel32', use_last_error=True)
+        peek = kernel.PeekNamedPipe
+        peek.argtypes = (wintypes.HANDLE, wintypes.LPVOID, wintypes.DWORD,
+                         wintypes.LPVOID, ctypes.POINTER(wintypes.DWORD), wintypes.LPVOID)
+        peek.restype = wintypes.BOOL
+        available = wintypes.DWORD()
+        if not peek(msvcrt.get_osfhandle(pipe.fileno()), None, 0, None, ctypes.byref(available), None):
+            error = ctypes.get_last_error()
+            if error == 109:  # ERROR_BROKEN_PIPE: every writer closed
+                return b''
+            raise ctypes.WinError(error)
+        return os.read(pipe.fileno(), min(65536, available.value)) if available.value else None
+    import select
+    return os.read(pipe.fileno(), 65536) if select.select([pipe], [], [], 0)[0] else None
+
+
 def canonical_destination(argv_template: Sequence[str]) -> str:
     return "command:" + json.dumps(list(argv_template), sort_keys=True, separators=(",", ":"), ensure_ascii=False)
 
@@ -42,6 +67,8 @@ def _failed(code: str, message: str, started: float, exit_status: int | None = N
 
 class CommandProvider:
     meta: ProviderMeta
+    DEFAULT_META = dict(name='command', model='', egress=True, cost_hint=None, max_batch=1,
+                        retries=0, destination=None, command_env_names=[], accepts=['image/png', 'image/jpeg'])
 
     def __init__(self, *, command: str, egress: bool, env_names=(), model: str, timeout_s: float = 120.0,
                  cost_hint: str | None = None) -> None:
@@ -54,11 +81,9 @@ class CommandProvider:
         self._template = template
         self._env_names = sorted(set(env_names))
         self._timeout_s = timeout_s
-        self.meta = {
-            "name": "command", "model": model, "egress": bool(egress), "cost_hint": cost_hint, "max_batch": 1,
-            "retries": 0, "destination": canonical_destination(template),
-            "command_env_names": list(self._env_names), "accepts": ["image/png", "image/jpeg"],
-        }
+        from copy import deepcopy
+        self.meta = dict(deepcopy(self.DEFAULT_META), model=model, egress=bool(egress), cost_hint=cost_hint,
+                         destination=canonical_destination(template), command_env_names=list(self._env_names))
 
     def __repr__(self) -> str:
         return f"CommandProvider(model={self.meta['model']!r}, egress={self.meta['egress']!r})"
@@ -84,39 +109,18 @@ class CommandProvider:
 
     def _capture(self, argv, started) -> UnitResult:
         child = None
-        reader = None
-        stopped = threading.Event()
-        chunks = queue.Queue(maxsize=2)
         deadline = started + self._timeout_s
         try:
             child = subprocess.Popen(argv, shell=False, env=self._child_env(), stdin=subprocess.DEVNULL,
-                                     stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
-            def drain():
-                try:
-                    while not stopped.is_set():
-                        chunk = child.stdout.read1(65536)
-                        while not stopped.is_set():
-                            try:
-                                chunks.put(chunk, timeout=.05)
-                                break
-                            except queue.Full:
-                                pass
-                        if not chunk:
-                            return
-                except (OSError, ValueError):
-                    pass
-            reader = threading.Thread(target=drain, daemon=True, name='mdflow-command-output')
-            reader.start()
+                                     stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, bufsize=0)
             payload = bytearray()
             while True:
                 remaining = deadline - time.monotonic()
                 if remaining <= 0:
                     return _failed('E_PROVIDER_TIMEOUT', 'command exceeded the time limit', started)
-                try:
-                    chunk = chunks.get(timeout=min(.05, remaining))
-                except queue.Empty:
-                    if not reader.is_alive():
-                        return _failed('E_PROVIDER_OUTPUT', 'command output could not be read', started)
+                chunk = _read_ready(child.stdout)
+                if chunk is None:
+                    time.sleep(min(.01, remaining))
                     continue
                 if not chunk:
                     break
@@ -136,11 +140,8 @@ class CommandProvider:
         except OSError as exc:
             return _failed('E_PROVIDER_CONFIG', f'command could not be started ({type(exc).__name__})', started)
         finally:
-            stopped.set()
             if child is not None:
                 if child.poll() is None:
                     child.kill()
                 child.wait()
                 child.stdout.close()
-            if reader is not None:
-                reader.join(timeout=1)

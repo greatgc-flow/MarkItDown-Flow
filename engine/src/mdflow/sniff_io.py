@@ -35,6 +35,8 @@ from pathlib import Path, PurePosixPath
 from typing import BinaryIO, Sequence, TypedDict
 
 from .contracts import Issue, SniffResult
+from .sniff_pure import (by_extension as _by_extension, magic_format as _magic_format,
+                         zip_format as _zip_format, zip_route as _zip_route, expected_exts as _expected_exts)
 
 DEFAULT_MAX_BYTES = 209715200
 DEFAULT_ZIP_DEPTH = 3
@@ -43,16 +45,9 @@ DEFAULT_ZIP_TOTAL_BYTES = 1073741824
 
 _CHUNK = 65536
 _MIB = 1048576
-_PDF_TAIL = 65536
 _CFB_SIGNATURE = bytes.fromhex("D0CF11E0A1B11AE1")
-_PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
-_TIFF_MAGICS = (b"II*\x00", b"MM\x00*", b"II+\x00", b"MM\x00+")
 _ZIP_FAMILY_NATIVE = frozenset({"docx", "pptx", "xlsx", "hwpx", "epub"})
 _ZIP_FAMILY_LEGACY = frozenset({"odt", "odp", "ods"})
-_TEXT_G2A = frozenset({"txt", "log"})
-_TEXT_G2B = frozenset({"csv", "tsv", "json", "md", "markdown", "xml", "html", "htm", "ipynb"})
-_LEGACY_EXTS = frozenset({"pages", "key", "numbers"})
-_MEDIA_EXTS = frozenset({"mp3", "wav", "m4a", "flac", "ogg", "mp4", "mov", "mkv", "avi", "webm"})
 _ENCRYPTED_OFFICE_EXTS = frozenset({"docx", "xlsx", "pptx"})
 _WINDOWS_DRIVE = re.compile(r"^[A-Za-z]:")
 
@@ -331,69 +326,6 @@ class _Cfb:
 
 def _ext_of(name: str) -> str:
     return PurePosixPath(name.replace("\\", "/")).suffix.lstrip(".").lower()
-
-
-def _expected_exts(fmt: str) -> frozenset[str]:
-    return {"jpeg": frozenset({"jpg", "jpeg"}), "tiff": frozenset({"tif", "tiff"})}.get(fmt, frozenset({fmt}))
-
-
-def _by_extension(ext: str) -> tuple[str, str, list[str]]:
-    """Table 3.1B: (format, route, reasons)."""
-    if ext in _TEXT_G2A or ext in _TEXT_G2B:
-        return ext, "NATIVE", []
-    if ext in _LEGACY_EXTS:
-        return ext, "LEGACY", []
-    if ext in _MEDIA_EXTS:
-        return ext, "UNSUPPORTED", ["media_out_of_scope"]
-    return ext or "unknown", "UNSUPPORTED", ["unsupported_format"]
-
-
-def _magic_format(head: bytes) -> str | None:
-    if head.startswith(b"%PDF-"):
-        return "pdf"
-    if head.startswith(b"PK\x03\x04"):
-        return "zip"
-    if head.startswith(_CFB_SIGNATURE):
-        return "cfb"
-    if head.startswith(_PNG_SIGNATURE):
-        return "png"
-    if head.startswith(b"\xff\xd8\xff"):
-        return "jpeg"
-    if head[:6] in (b"GIF87a", b"GIF89a"):
-        return "gif"
-    if head.startswith(b"BM"):
-        return "bmp"
-    if head[:4] in _TIFF_MAGICS:
-        return "tiff"
-    if head[:4] == b"RIFF" and head[8:12] == b"WEBP":
-        return "webp"
-    if head.startswith(b"{\\rtf"):
-        return "rtf"
-    return None
-
-
-def _zip_route(fmt: str) -> str:
-    if fmt in _ZIP_FAMILY_NATIVE:
-        return "NATIVE"
-    if fmt in _ZIP_FAMILY_LEGACY:
-        return "LEGACY"
-    return "CONTAINER"
-
-
-def _zip_format(names: set[str], ext: str) -> str:
-    if "word/document.xml" in names:
-        return "docx"
-    if "ppt/presentation.xml" in names:
-        return "pptx"
-    if "xl/workbook.xml" in names:
-        return "xlsx"
-    if "Contents/content.hpf" in names:
-        return "hwpx"
-    if "META-INF/container.xml" in names and ext == "epub":
-        return "epub"
-    if "META-INF/manifest.xml" in names and ext in _ZIP_FAMILY_LEGACY:
-        return ext
-    return "zip"
 
 
 def _zip_preflight(infos: Sequence[zipfile.ZipInfo], zip_entries: int, zip_total_bytes: int) -> list[Issue]:

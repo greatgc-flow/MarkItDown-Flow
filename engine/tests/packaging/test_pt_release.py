@@ -150,7 +150,7 @@ def test_PT_01_direct_wheel_inventory_wheel_metadata_and_run_outside_the_source_
         wheel_meta = inner.read(next(n for n in names if n.endswith(".dist-info/WHEEL"))).decode("utf-8")
     requires = {re.match(r"Requires-Dist:\s*([A-Za-z0-9_.\-]+)", line)[1].lower()
                 for line in metadata.splitlines() if line.startswith("Requires-Dist:")}
-    assert requires == {"markitdown-gc"}, f"mdflow must require only markitdown-gc, got {requires}"
+    assert requires == {"markitdown-gc", "pypdfium2", "pillow"}, f"runtime dependency policy differs: {requires}"
     assert re.search(r"^Version: 2\.0\.0$", metadata, re.M) and re.search(r"^Name: mdflow$", metadata, re.M | re.I)
     assert "Root-Is-Purelib: true" in wheel_meta and "Tag: py3-none-any" in wheel_meta
     # Import and run from the fresh compatibility environment, cwd outside the source tree.
@@ -159,7 +159,8 @@ def test_PT_01_direct_wheel_inventory_wheel_metadata_and_run_outside_the_source_
                            text=True, encoding="utf-8", timeout=120)
     assert probe.returncode == 0, probe.stderr
     location = Path(probe.stdout.strip()).resolve()
-    assert str(packaged_venv.venv.resolve()) in str(location) and not location.is_relative_to(REPO.resolve())
+    from _support import installed_import
+    assert installed_import(location, packaged_venv.venv, REPO), location
 
 
 @pytest.mark.release
@@ -294,11 +295,15 @@ def gate(response: dict) -> list[str]:
         problems.append("engine range")
     if not (0, 3, 5) <= version_tuple(response["markitdown-gc"]) < (0, 4):
         problems.append("Core range")
-    if not (3, 10) <= version_tuple(response["python"])[:2] < (3, 16):
+    if not (3, 10) <= version_tuple(response["python"])[:2] < (3, 15):
         problems.append("Python range")
     for key in ("pillow", "pypdfium2"):
         if not re.fullmatch(r"[0-9]+(?:\.[0-9]+)+(?:[A-Za-z0-9.+-]*)", response[key]):
             problems.append(f"{key} version is malformed")
+        else:
+            low, high = ((11, 0), (14, 0)) if key == 'pillow' else ((5, 0), (6, 0))
+            if not low <= version_tuple(response[key]) < high:
+                problems.append(f'{key} range')
     return problems
 
 
@@ -319,7 +324,7 @@ def test_PT_06_packaged_version_and_selftest_follow_declared_compatibility_polic
     for name in record.VERSION_VARIANTS:
         variant = json.loads(record.version_variant(name, real_bytes))
         problems = gate(variant)
-        assert bool(problems) == (name not in {"unknown-optional-field", "wrong-pillow", "wrong-renderer"}), f"{name}: gate verdict {problems}"
+        assert bool(problems) == (name not in {"unknown-optional-field"}), f"{name}: gate verdict {problems}"
     fx71 = REPO / "shell/test/fixtures/fx71"
     assert (fx71 / "manifest.json").is_file(), "FX-71 not recorded: run python tools/record_protocol.py"
     assert record.verify(fx71) == 0, "FX-71 fixtures were edited or no longer match their parents"
@@ -327,7 +332,7 @@ def test_PT_06_packaged_version_and_selftest_follow_declared_compatibility_polic
     for path in sorted(fx71.glob("version.*.json")):
         name = path.name[len("version."):-len(".json")]
         verdict = gate(json.loads(path.read_text(encoding="utf-8")))
-        assert bool(verdict) == (name not in {"unknown-optional-field", "wrong-pillow", "wrong-renderer"}), f"{path.name}: {verdict}"
+        assert bool(verdict) == (name not in {"unknown-optional-field"}), f"{path.name}: {verdict}"
 
 
 @pytest.mark.release
@@ -534,18 +539,15 @@ def test_PT_15_checklist_machine_rows_and_human_evidence_rows(release_bundle, ca
 @pytest.mark.req("REQ-PKG-17")
 @pytest.mark.cov("S0", "FM10")
 @pytest.mark.fx("FX-72")
-def test_PT_17_candidate_manifest_binds_commit_lock_required_runs_and_binary_acceptance(release_bundle, candidate):
+def test_PT_17_candidate_manifest_binds_commit_lock_required_runs_and_binary_acceptance(release_bundle, candidate, trace_module):
     assert SHA40.fullmatch(candidate["commit"]) and candidate["tag"] == "2.0.0"
     assert candidate["reference_sha256"] == sha((release_bundle / "reference-requirements.txt").read_bytes())
-    required = {(j["os"], j["python"]) for j in candidate["required_jobs"] if j["result"] == "success"}
-    assert required == {(o, p) for o in PLATFORMS for p in ("3.10", "3.14")}, "six required engine runs must all succeed"
-    assert {j["os"] for j in candidate["shell_jobs"] if j["result"] == "success"} == set(PLATFORMS)
-    assert not any("3.15" in json.dumps(j) for j in candidate["required_jobs"]), "3.15 is never evidence"
-    gates = candidate["acceptance"]["gates"]
-    assert gates and all(g["result"] == "PASS" for g in gates), "binary acceptance results must all PASS"
-    assert candidate["acceptance"]["score"] == "SCORE 100/100 (automated 93/93, manual 7/7)"
-    assert candidate["blockers"] == [], "unresolved blockers prevent release creation"
-    assert candidate["rollback"] == {"tag": "1.0.8", "artifacts_retained": True}
+    # A test contributing to acceptance must not demand its own final score.
+    evidence = Path(os.environ.get('MDFLOW_EXECUTION_EVIDENCE', REPO / 'build/trace'))
+    assert trace_module.required_executions(evidence, candidate['commit']) == []
+    if os.environ.get('GITHUB_SHA'):
+        assert candidate['commit'] == os.environ['GITHUB_SHA']
+    assert candidate['rollback']['tag'] == '1.0.8'
     draft = {a["name"]: a["sha256"] for a in candidate["draft_release"]["assets"]}
     for name in LOCKED_ASSETS:
         assert draft.get(name) == sha((release_bundle / name).read_bytes()), f"draft release differs for {name}"

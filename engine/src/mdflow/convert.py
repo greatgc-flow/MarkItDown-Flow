@@ -52,7 +52,16 @@ def core_convert(
         options["extract_media"] = extract_media
     if media_base_dir is not None:
         options["media_base_dir"] = media_base_dir
-    result = converter.convert_stream(io.BytesIO(data), file_extension=ext, **options)
+    try:
+        result = converter.convert_stream(io.BytesIO(data), file_extension=ext, **options)
+    except Exception as exc:
+        # Core has no base converter for several supported OCR raster formats.
+        # Only its explicit format refusal is a clean empty base; real conversion
+        # faults still propagate to E_CONVERT_FAIL, and Render validates the bytes.
+        if ext in {'.gif', '.tiff', '.bmp', '.webp'} and isinstance(
+                exc, getattr(markitdown, 'UnsupportedFormatException', ())):
+            return ''
+        raise
     text = getattr(result, "markdown", None)
     if text is None:
         text = getattr(result, "text_content", "")

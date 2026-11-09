@@ -10,6 +10,20 @@ import sys
 
 import pytest
 
+# Installed-wheel CI has no source injection, including child launchers.
+INSTALLED_MODE = os.environ.get('MDFLOW_TEST_INSTALLED') == '1'
+if not INSTALLED_MODE:
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'src'))
+
+
+def assert_installed_import():
+    import mdflow
+    location = Path(mdflow.__file__).resolve()
+    source = Path(__file__).resolve().parents[1] / 'src'
+    assert location.is_relative_to(Path(sys.prefix).resolve()) and 'site-packages' in location.parts
+    assert not location.is_relative_to(source), location
+
+
 
 def _sandbox_temp_prelude():
     """Explicit test-only bridge for Python 3.15's restricted-token Windows DACL.
@@ -32,6 +46,14 @@ if os.name == 'nt' and os.environ.get('M1_WINDOWS_TEST_TEMP') == '1':
 
 
 def pytest_sessionstart(session):
+    if INSTALLED_MODE:
+        assert_installed_import()
+        target = os.environ.get('MDFLOW_CI_TARGET')
+        if target:
+            destination = REPO_ROOT / 'build/trace' / f'runtime-{target}-py{sys.version_info.major}.{sys.version_info.minor}.json'
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            destination.write_text(json.dumps(dict(installed=True, commit=os.environ.get('GITHUB_SHA'),
+                                                  python=sys.version, prefix=sys.prefix)), encoding='utf-8')
     if os.environ.get('M1_WINDOWS_TEST_TEMP') == '1':
         exec(_sandbox_temp_prelude(), {})
 
@@ -48,6 +70,7 @@ def pytest_configure(config):
         "fx": "fixture IDs or all",
         "plat": "posix or windows; absent on other platforms",
         "scope": "schema for common contracts; execution for actual fixture consumption",
+        "cells": "extra class x stage cells (\"K02:S7\") a class sweep executes besides its one primary cov cell (M2-H)",
     }.items():
         config.addinivalue_line("markers", f"{name}(*args): {description}")
 
@@ -58,13 +81,14 @@ def pytest_collection_modifyitems(config, items):
     for item in items:
         markers = {
             name: [list(marker.args) for marker in item.iter_markers(name)]
-            for name in ("req", "cov", "fx", "plat", "scope")
+            for name in ("req", "cov", "fx", "plat", "scope", "cells")
         }
         tid = trace.test_id(item.originalname or item.name)
         # Direct properties also work with JUnit xunit2 (no record_property warning).
         item.user_properties.extend([
             ("tid", tid),
-            *[(name, json.dumps(groups, separators=(",", ":"))) for name, groups in markers.items()],
+            *[(name, json.dumps(groups, separators=(",", ":"))) for name, groups in markers.items()
+              if name != "cells" or groups],
         ])
         records.append({"nodeid": item.nodeid, "tid": tid, "markers": markers})
         platforms = [value for group in markers["plat"] for value in group]
@@ -175,7 +199,9 @@ def cli_command():
     src = str(REPO_ROOT / "engine" / "src")
 
     def command(*args, code=None, prelude=""):
-        bootstrap = f"import sys; sys.path.insert(0, {src!r});\n" + _sandbox_temp_prelude()
+        bootstrap = _sandbox_temp_prelude()
+        if not INSTALLED_MODE:
+            bootstrap = f"import sys; sys.path.insert(0, {src!r});\n" + bootstrap
         entry = code if code is not None else (
             "import runpy; runpy.run_module('mdflow', run_name='__main__')"
         )

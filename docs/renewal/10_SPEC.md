@@ -1,6 +1,6 @@
 # MarkItDown-Flow v2 - Engine Specification (`mdflow`)
 
-Status: SPEC DRAFT-3.3 (authoritative for TDD). Binding inputs: `00_BRIEF.md`, `01_DECISIONS.md` R1-R25. Pinned Core: `ref/markitdown-gc_GUIDE_0.3.5.md`, `ref/ocr_triage_0.3.5.py.txt` (line refs below are into that file). Scope: Python engine only. The Obsidian shell (`20_SHELL.md`) consumes only section 7 (JSON contracts), section 8.4 (consent) and section 10 (CLI) - the only engine/shell protocol (R19).
+Status: SPEC DRAFT-3.4 (authoritative for TDD). Binding inputs: `00_BRIEF.md`, `01_DECISIONS.md` R1-R25. Pinned Core: `ref/markitdown-gc_GUIDE_0.3.5.md`, `ref/ocr_triage_0.3.5.py.txt` (line refs below are into that file). Scope: Python engine only. The Obsidian shell (`20_SHELL.md`) consumes only section 7 (JSON contracts), section 8.4 (consent) and section 10 (CLI) - the only engine/shell protocol (R19).
 
 Conventions: MUST/SHOULD per RFC 2119. Every normative rule has a stable ID `REQ-<AREA>-<NN>`; draft-1 ids `MAP-nn`, `ASM-Pn`, `SEC-nn` are aliases of `REQ-MAP-nn`, `REQ-ASM-Pn`, `REQ-SEC-nn`. Deleted rules keep their id with `(deleted draft-N, see changelog)`; nothing is renumbered. Values in `code` are literal.
 
@@ -42,7 +42,7 @@ Design rule applied in draft-3 (VerySimpleGuide): where a review found a contrad
 ## 2. Requirements by stage
 
 ### 2.0 General
-- REQ-GEN-01 MUST: `mdflow` source is pure Python; runtime deps = stdlib + `markitdown-gc` (whose transitive deps may be native wheels). No other mandatory dependency. HWP5/HWPX need no extra (R25, GUIDE "install"); CT-10 pins that HWP5 triage does not return `missing_dependency`.
+- REQ-GEN-01 MUST: `mdflow` source is pure Python; direct runtime dependencies are `markitdown-gc>=0.3.5,<0.4`, `pypdfium2>=5,<6`, and `Pillow>=11,<14`, plus stdlib. Core and renderer dependencies may contain native wheels. The explicit renderer/Pillow ranges match the released shell admission policy; Core can impose tighter constraints, checked by pip check and selftest. HWP5/HWPX need no extra (R25, GUIDE "install"); CT-10 pins that HWP5 triage does not return `missing_dependency`.
 - REQ-GEN-02 MUST: Supported Core range `>=0.3.5,<0.4` and `triage.rules_version == "1"`. On startup, a version outside the range -> exit 1 `E_CORE_VERSION` before any file is read (CT-13).
 - REQ-GEN-03 MUST: Python 3.10-3.14 supported; 3.15 allowed-failure (R12). Runtime support requires executed CI evidence: six endpoint full-suite cells and nine intermediate interpreter smokes under 25_PACKAGING. In particular, source syntax checks alone do not establish runtime compatibility. Missing target logs remain unverified, not a local PASS.
 - REQ-GEN-04 MUST: Every stage is a function with typed input/output. Stages marked PURE in section 4 perform no IO and no clock/random access; time is passed in as `now`.
@@ -95,7 +95,7 @@ Design rule applied in draft-3 (VerySimpleGuide): where a review found a contrad
 ### 2.5 Convert
 - REQ-CNV-01 MUST: Convert runs for actions `convert_only` and `convert_and_ocr`. Core is called in-process. Any exception -> `E_CONVERT_FAIL`, base body = empty string, processing continues (units still run). A source with `E_CONVERT_FAIL` and zero units still gets its output file (empty body) and the run exits 2.
 - REQ-CNV-02 MUST: PDF is converted per page: for page `N` (1-based, `N <= pages_total` from pypdfium2) a one-page PDF is produced with pypdfium2 (`PdfDocument.new()` + `import_pages([N-1])`, saved to bytes) and converted by Core from bytes (CT-05). Base body = pages joined per 6.1.
-- REQ-CNV-03 MUST: Non-PDF formats are converted once. For `docx|pptx|xlsx|hwp|hwpx` Core's `extract_media` option is used with directory `<run temp>/media` and `media_base_dir = <run temp>` so links read `media/<sha256[:12]>.<ext>` (F3, GUIDE "formats", CT-08). After conversion every file under `<run temp>/media` is published to `<output parent>/media/` (REQ-GEN-05: identical bytes are not rewritten) before the `.md`. Media is published when Need is NONE too.
+- REQ-CNV-03 MUST: Non-PDF formats are converted once. Core's explicit UnsupportedFormatException for a supported OCR raster (`gif|tiff|bmp|webp`) means no extractable base text: use a clean empty base and continue Render/OCR; Render still validates the raster, and other conversion exceptions remain E_CONVERT_FAIL. For `docx|pptx|xlsx|hwp|hwpx` Core's `extract_media` option is used with directory `<run temp>/media` and `media_base_dir = <run temp>` so links read `media/<sha256[:12]>.<ext>` (F3, GUIDE "formats", CT-08). After conversion every file under `<run temp>/media` is published to `<output parent>/media/` (REQ-GEN-05: identical bytes are not rewritten) before the `.md`. Media is published when Need is NONE too.
 - REQ-CNV-04 SHOULD: Base body and media are cached at `<cache>/base/<sha256>-<core_version>.md` and `.media/` and reused (no Core call) on rerun.
 - REQ-CNV-05 MUST: Convert never performs egress. Enforced, not inferred: (a) Core is constructed with plugins disabled, no LLM client, no Document Intelligence endpoint (CT-11); (b) input is passed as a bytes stream with the Sniff format as extension hint, never as a path string or URI (GUIDE: `convert()` fetches `http(s)://`, `file://`, `data:`); (c) the lock excludes `[audio-transcription]`, `[youtube-transcription]` and Azure extras; (d) test T-CNV-05 runs Convert over renamed audio and URI-like inputs with all sockets forbidden.
 
@@ -218,7 +218,7 @@ Groups: G1 (Core inspects media) = `pdf png jpeg gif bmp tiff webp docx pptx xls
 
 ### 3.2 Decision table (total; ordered first-match)
 
-Validation, evaluated for every NATIVE source after rows 10/11 and before rows 9+: V1 required fields present with the types of 3.0; V2 enums: `decision`, `coverage.state`, `candidates[].kind`, `candidates[].priority`, `issues[].code` within 3.0; V3 candidate ids match the format (`pN` with `1 <= N <= pages_total` **and** `candidate.page == N` for PDF; `image`|`fN` with `1 <= N <= len(rasters)` and `page == null` for rasters; non-empty string and `page == null` for office) and `kind` matches (`page` iff PDF); V4 consistency: `no_candidates` ⇒ `candidates == []` and `state in {complete, not_applicable}`; `ocr_recommended` ⇒ some `high`; `review` ⇒ no `high` and some `low`; `file.format` agrees with Sniff (`image` ⇔ is_raster; `unknown` allowed for G2; else equal names). V1/V2 failure -> row 11a; V3/V4 failure -> row 11b.
+Validation, evaluated for every NATIVE source after rows 10/11 and before rows 9+: V1 required fields present with the types of 3.0, including nullable raster dpi_tag pairs, page-image record fields, media where/references, and HWP stored-byte/hash facts; V2 enums: `decision`, `coverage.state`, `candidates[].kind`, `candidates[].priority`, `issues[].code` within 3.0; V3 candidate ids match the format (`pN` with `1 <= N <= pages_total` **and** `candidate.page == N` for PDF; `image`|`fN` with `1 <= N <= len(rasters)` and `page == null` for rasters; non-empty string and `page == null` for office) and `kind` matches (`page` iff PDF); V4 consistency: `no_candidates` ⇒ `candidates == []` and `state in {complete, not_applicable}`; `ocr_recommended` ⇒ some `high`; `review` ⇒ no `high` and some `low`; `file.format` agrees with Sniff (`image` ⇔ is_raster; `unknown` allowed for G2; else equal names). V1/V2 failure -> row 11a; V3/V4 failure -> row 11b.
 
 | # | Condition | Route | Need | Label | Action | Issue |
 |---|---|---|---|---|---|---|
@@ -326,6 +326,8 @@ Order within a file: 1..12, files sequentially; 13 once per run. Because `plan_h
 - REQ-MAP-08 Repeated Core candidate ids (one per reference) collapse into one unit; `refs` (REQ-CLS-02) is informational and never drives placement. Placements come from the body only (REQ-ASM-06).
 
 ---
+
+HWP refusal-policy exception (M2): equal payload bytes with different rendering policies do not merge into one Unit. Stored OLE streams and Core-identified unsupported encodings retain unsupported units and placements; supported parser payloads group only with supported payloads. Representative selection must not change payload policy. Core unsupported_media has no per-unit identifier: apply its known encoding rules to HWP stored streams and WMF/EMF/WMZ/EMZ media, while retaining other candidates for normal probing.
 
 ## 6. Assembly rules
 
@@ -466,6 +468,8 @@ Equations: `units_total == len(approved.units)`; in `approved.units` every `stat
 {"v":1,"ev":"file_end","ts":"…","file":"reports/q3.pdf","outputs":["reports/q3.pdf.md"],"units":{"total":5,"done":4,"pending":1,"failed":0}}
 {"v":1,"ev":"run_end","ts":"…","exit":0,"files_ok":11,"files_failed":1,"provider_calls":4}
 ```
+For warning/error events, `file` is a logical string or `null` for a run-level issue.
+
 `stage` values: `sniff triage classify select convert render lookup plan approve transcribe assemble write`. Every line, including its newline, is at most 64 KiB; nested informational strings/lists such as file_end.outputs are bounded too without changing the full report or approved Plan. The `message` fields are capped at 500 chars and `sensitive_hits` at 20 entries; the `approve_required` event never carries the unit list. Unknown `ev` values must be ignored by consumers.
 
 ### 7.4 Run report (stdout at run_end)
@@ -784,6 +788,20 @@ R3-01 pinned contract 3.0/3.4, rows 13/14 deleted · R3-02 `is_raster` · R3-03/
 Clarified section 6.1 to omit the base-text line on empty anchored pages, and section 6.4 to require bare flow-mapping keys, JSON-quoted string values, and the example's mapping key order and spacing.
 
 ---
+
+### 12.6 DRAFT-3.4: M2 engine fix round 2
+
+| Finding | Binding clarification / repair |
+|---|---|
+| M2-V01 / M1-V14 | Command stdout has one unbuffered polling owner, a 4 MiB live cap and per-call deadline; inherited descendant handles cannot block pipe close. The engine kills/reaps its direct command child; trusted commands own their descendants. Scratch remains under the owned run directory. |
+| M2-V02 / V04 / M1-V31/34 | Installed package identity is selected-venv site-packages, even when the venv is under the workspace; all source/fixture/child-launcher injection is disabled in installed CI. Actual six endpoint and nine smoke receipts are required; missing receipts remain a release failure. |
+| M2-V03 | Runtime Python 3.10–3.14; 3.15 is experimental CI only. Declare direct renderer/Pillow imports as pypdfium2>=5,<6 and Pillow>=11,<14 alongside the Core range. Core may impose tighter lower bounds; pip check and selftest remain required. Package and shell admission use these same ranges, rather than reference exact pins. |
+| M2-V05 | Render directory setup IO fails each selected unit with E_RENDER_FAIL; pending output and siblings continue. This boundary has its own S6:FM5 oracle. |
+| M2-V06 / M1-V19 | Partition equal HWP payloads by rendering/refusal policy before deduplication; retain unsupported placements and zero egress for refused payloads. Private preparation facts are excluded from public approved Unit schemas. |
+| M1-V04/05/22/30/33/36 | Real HWP preparation-to-render integration; R28-only expansion comments; complete nested type checks; production-input Plan mutation table and exact Core issue signatures; shared atomic/hash/format helpers. |
+| Fable S-14/15 | Provider descriptions derive from provider defaults; report-copy ownership lives only in CLI, with a single stdout-only report publisher. |
+| Release ordering | Freeze immutable bytes after compatibility checks, attest those bytes, execute release artifact/manual-input tests, then score and approve publication. PT-17 checks independent identity/receipts, never its own final acceptance score. |
+| Concurrent K06 sweep | Core's explicit unsupported base-converter result for supported OCR rasters yields empty base text, with Render/OCR still authoritative. Other conversion faults remain errors. Real GIF/TIFF regression precedes the repair. |
 
 ### 12.5 DRAFT-3.3: M1 engine fix round 1
 

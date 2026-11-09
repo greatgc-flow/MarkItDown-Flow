@@ -33,10 +33,14 @@ def _imports(tree):
 
 @pytest.mark.req("REQ-GEN-01")
 @pytest.mark.cov("S0", "FM0")
-def test_T_GEN_01_pure_python_with_markitdown_gc_as_only_dependency():
-    requires = metadata.requires("mdflow") or []
+def test_T_GEN_01_pure_python_with_declared_runtime_dependencies():
+    try:
+        import tomllib
+    except ImportError:
+        import tomli as tomllib
+    requires = tomllib.loads((ENGINE_SRC.parents[1] / 'pyproject.toml').read_text(encoding='utf-8'))['project']['dependencies']
     names = {re.match(r"[A-Za-z0-9_.\-]+", r)[0].lower().replace("_", "-") for r in requires if "extra ==" not in r}
-    assert names == {"markitdown-gc"}, f"mdflow must require only markitdown-gc, got {requires}"
+    assert names == {"markitdown-gc", "pypdfium2", "pillow"}, f"runtime policy differs: {requires}"
     native = sorted(p.relative_to(ENGINE_SRC).as_posix() for p in ENGINE_SRC.rglob("*")
                     if p.is_file() and p.suffix.lower() in NATIVE_SUFFIXES)
     assert not native, f"native or compiled sources in the mdflow package: {native}"

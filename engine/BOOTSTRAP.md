@@ -45,7 +45,7 @@ Set `enginePython` to the resulting absolute `Scripts/python.exe` or `bin/python
 path. Activation is unnecessary. Keep the venv at its creation location; recreate
 it after moving it or removing its base interpreter. Create another venv for an
 upgrade and retain the previous one for rollback. Do not use global fallback
-packages. The mdflow wheel is pure Python; dependencies can contain native code.
+packages. The mdflow wheel is pure Python; dependencies can contain native code. Its metadata declares Core >=0.3.5,<0.4, pypdfium2 >=5,<6 and Pillow >=11,<14, matching the released shell gate. Core may impose tighter constraints; pip check and selftest verify the resolved environment.
 
 ## Optional remote OCR
 

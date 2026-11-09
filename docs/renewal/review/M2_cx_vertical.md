@@ -1,5 +1,7 @@
 # M2 recursive MECE audit — cx vertical and oracles
 
+Fix-round follow-up: [M2_ENGINE_FIXES.md](M2_ENGINE_FIXES.md) records the DRAFT-3.4 repairs, per-finding red logs and final verification. Findings and scores below are the original pre-fix audit snapshot; actual cross-platform/reference release evidence remains a separate gate.
+
 Date: 2026-11-09. Authority: current SPEC DRAFT-3.3, amended packaging requirements, TESTPLAN, and M1-V01–V37 in `M1_cx_vertical.md`. Scope: engine stages S0–S13, every current `stage_fm` declaration, fix-round oracles, class-closure/R28 tests, and R27 packaging integration. The M1 document also contains V38; it is checked separately below so that it is not silently lost.
 
 **Verdict: substantial repair, incomplete closure; release remains blocked.** Of V01–V37, **27 CLOSED / 10 OPEN**. There are now **85 stage/FM N/A cells**, rather than 108; **84 accepted as bounded equivalences / 1 invalid boundary claim**. Registration has no matrix errors, but does not establish executed behavior. Newly identified problems include command-capture timeout cleanup, an impossible packaged-import assertion, incompatible package/shell admission rules, a circular release-evidence pipeline, and HWP payload-policy loss during deduplication.

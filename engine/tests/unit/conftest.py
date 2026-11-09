@@ -1,6 +1,7 @@
 """Core RED fixtures; load the worktree package without changing sys.path."""
 import importlib
 import importlib.util
+import os
 from pathlib import Path
 import sys
 from types import SimpleNamespace
@@ -34,6 +35,9 @@ def core_fx(core_data, tmp_path_factory):
 
 @pytest.fixture(scope="session")
 def core_api():
+    if os.environ.get('MDFLOW_TEST_INSTALLED') == '1':
+        names = "hashing sniff_pure classify select plan ledger approve assemble redact contracts".split()
+        return SimpleNamespace(**{name: importlib.import_module('mdflow.' + name) for name in names})
     src = Path(__file__).resolve().parents[2] / "src/mdflow"
     spec = importlib.util.spec_from_file_location("mdflow", src / "__init__.py",
                                                 submodule_search_locations=[str(src)])

@@ -45,21 +45,8 @@ jobs:
         with:
           name: acceptance-evidence
           path: build/trace/
-      - name: Retrieve independently supplied release evidence
-        if: ${{ inputs.evidence-run != '' }}
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
-        with:
-          name: named-release-evidence
-          path: build/manual/
-          run-id: ${{ inputs.evidence-run }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-      - name: Freeze only after actual automated and manual gates
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          python -m pip install --only-binary=:all: -r engine/requirements-build.txt
-          python tools/build_release.py --verify --tag "$GITHUB_REF_NAME"
-          python tools/release_gate.py --candidate build/candidate --evidence build/trace --manual build/manual
+      - name: Freeze tested immutable subjects before attestation
+        run: python tools/build_release.py --verify --tag "$GITHUB_REF_NAME"
       - id: subjects
         name: Read the shared release subject list
         run: python -c "import sys,json; sys.path.insert(0,'tools'); from build_engine import SUBJECTS; print('value='+json.dumps(SUBJECTS))" >> "$GITHUB_OUTPUT"
@@ -117,8 +104,107 @@ jobs:
           path: build/verifier/
           if-no-files-found: error
 
-  publish:
+  verify-release:
     needs: [ci, freeze, attest]
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-2022, ubuntu-24.04, macos-15-intel]
+        python: ['3.10', '3.14']
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: ${{ matrix.python }}
+          architecture: x64
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: frozen-candidate
+          path: build/candidate/
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: acceptance-evidence
+          path: build/trace/
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          pattern: bundle-*
+          path: build/candidate/
+          merge-multiple: true
+      - name: Retrieve independently supplied release evidence
+        if: ${{ inputs.evidence-run != '' }}
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: named-release-evidence
+          path: build/manual/
+          run-id: ${{ inputs.evidence-run }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Verify attested artifacts and independent reviews on every required target
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          MDFLOW_RELEASE_BUNDLE: ${{ github.workspace }}/build/candidate
+          MDFLOW_ATTEST_DIR: ${{ github.workspace }}/build/manual
+          MDFLOW_EXECUTION_EVIDENCE: ${{ github.workspace }}/build/trace
+          MDFLOW_TEST_INSTALLED: '1'
+        run: |
+          python -m pip install --only-binary=:all: -r engine/requirements-test.txt -r engine/requirements-build.txt
+          python tools/packaged_check.py install-current --bundle build/candidate
+          python -I -m pytest engine/tests/packaging -m release -k "not PT_02" -q --junitxml=build/trace/junit-release-${{ matrix.os }}-py${{ matrix.python }}.xml
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: ${{ always() }}
+        with:
+          name: release-verified-${{ matrix.os }}-py${{ matrix.python }}
+          path: build/trace/junit-release-*.xml
+          if-no-files-found: error
+
+  accept-release:
+    needs: [ci, freeze, attest, verify-release]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: '3.14'
+          architecture: x64
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: frozen-candidate
+          path: build/candidate/
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: acceptance-evidence
+          path: build/trace/
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          pattern: release-verified-*
+          path: build/trace/
+          merge-multiple: true
+      - name: Retrieve independently supplied release evidence
+        if: ${{ inputs.evidence-run != '' }}
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: named-release-evidence
+          path: build/manual/
+          run-id: ${{ inputs.evidence-run }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Score actual post-attestation results and seal acceptance
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python -m pip install --only-binary=:all: -r engine/requirements-build.txt
+          python tools/release_gate.py --candidate build/candidate --evidence build/trace --manual build/manual
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: approved-candidate
+          path: build/candidate/
+          if-no-files-found: error
+
+  publish:
+    needs: [ci, freeze, attest, accept-release]
     runs-on: ubuntu-24.04
     permissions:
       contents: write
@@ -128,7 +214,7 @@ jobs:
           persist-credentials: false
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
-          name: frozen-candidate
+          name: approved-candidate
           path: build/candidate/
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:

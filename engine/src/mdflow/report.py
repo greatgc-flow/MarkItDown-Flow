@@ -6,7 +6,7 @@ import os
 from pathlib import Path
 from typing import Mapping, TextIO
 
-from . import redact, write
+from . import redact
 
 
 def diagnostics(value: object, *, env: Mapping[str, str] | None = None,
@@ -74,9 +74,7 @@ def emit_progress(event: dict, stream: TextIO, *,
     stream.flush()
 
 
-def publish(value: dict, *, stdout: TextIO, report_path: Path | None = None) -> None:
+def publish(value: dict, *, stdout: TextIO) -> None:
     text = _json(value) + "\n"
-    if report_path is not None:
-        write.atomic_write(report_path, text.encode("utf-8"))
     stdout.write(text)
     stdout.flush()

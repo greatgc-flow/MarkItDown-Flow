@@ -11,9 +11,9 @@
 #   owner   stage_fm: the "S<n>:FM<m>" cell that tests the condition instead
 #           class_stage: "S<n>:K<nn>" (explicit cell) or "S<n>" (the SAME class at stage S<n>)
 #
-# `fx("all")` in a test marker expands to every fixture of the manifest, i.e. every class. Stages with an
-# "all" test (S0 T-META-*, S1 T-SNF-07, S2 T-TRI-05, S3 T-CLS-05, S8 T-PLN-01, S11 T-ASM-06, S13 T-RPT-01/02,
-# T-GEN-07/10) therefore register common equivalences for all 20 classes, without claiming runtime class execution.
+# R28: fx("all") expands only at S0-S3/S13. Later stages require explicit consumed fixture IDs.
+# scope("schema") assertions contribute only common equivalences to the registration view;
+# class execution registrations exclude them, and passing execution still requires JUnit evidence.
 #
 # FLOOR (30_TESTPLAN section 5) is never declared here: all S3 x FM0/1/2/3/4/10/11/12; S1:FM1/2/3/9; S2:FM1/10;
 # S6:FM1/3; S7:FM1/5; S9:FM8; S10:FM6/7; S12:FM5/9; S0:FM7/10/12; every class x S3, S13, and (except the
@@ -200,12 +200,6 @@ stages = ["S6"]
 fms = ["FM2"]
 reason = "Protected sources produce no units to render."
 owner = "S3:FM2"
-
-[[stage_fm]]
-stages = ["S6"]
-fms = ["FM5"]
-reason = "Rasters live only in the run temp directory; a temp IO failure surfaces as E_RENDER_FAIL, the same unit-failure path as FM1."
-owner = "S6:FM1"
 
 [[stage_fm]]
 stages = ["S6"]
@@ -499,49 +493,30 @@ stages = ["S6"]
 reason = "A directory tree renders per discovered file."
 owner = "S1:K20"
 
-# ---- S7 Lookup: covered K02
+# M2-H (MECE round 2, horizontal): the class sweep (T-GEN-85, stage_io/test_class_sweep.py) executes every
+# unit-bearing class (K02..K09, K14/K20 through their members) at S7/S9/S10 and every output-producing class
+# (K01..K11 with output, K14, K18, K20) at S12 through the real CLI, so those cells are no longer listed here.
+# Only the cells that genuinely cannot occur remain.
+
+# ---- S7 Lookup: covered K02..K09 K14 K20
 [[class_stage]]
 classes = ["K01", "K10", "K11", "K12", "K13", "K15", "K16", "K17", "K18", "K19"]
 stages = ["S7"]
 reason = "Without eligible units there is no Key to look up."
 owner = "S3"
 
-[[class_stage]]
-classes = ["K03", "K04", "K05", "K06", "K07", "K08", "K09"]
-stages = ["S7"]
-reason = "The Key is {raster_sha256, provider_fingerprint, dpi} (REQ-LKP-01) and does not depend on the source class; asserted on K02."
-owner = "S7:K02"
-
-[[class_stage]]
-classes = ["K14", "K20"]
-stages = ["S7"]
-reason = "Container members and directory entries look up as their own classes."
-owner = "S1:K14"
-
-# ---- S9 Approve: covered K01 K02 K03
-[[class_stage]]
-classes = ["K04", "K05", "K06", "K07", "K08", "K09"]
-stages = ["S9"]
-reason = "Consent is a per-file plan_hash over the Plan (REQ-APR-01..07) and does not depend on the source class; asserted on K02 and K03."
-owner = "S9:K02"
-
+# ---- S9 Approve: covered K01 K02..K09 K14 K20
 [[class_stage]]
 classes = ["K10", "K11", "K12", "K13", "K15", "K16", "K17", "K18", "K19"]
 stages = ["S9"]
 reason = "No egress without eligible units, so no consent is requested (REQ-APR-01)."
 owner = "S9:K01"
 
+# ---- S10 Transcribe: covered K02..K09 K14 K20
 [[class_stage]]
-classes = ["K14", "K20"]
-stages = ["S9"]
-reason = "Consent is requested per file; members and directory entries are covered through their own classes."
-owner = "S9:K02"
-
-# ---- S10 Transcribe: covered K02 K03 K07
-[[class_stage]]
-classes = ["K01", "K04", "K05", "K06", "K08", "K09"]
+classes = ["K01"]
 stages = ["S10"]
-reason = "Transcribe receives one Unit raster at a time (REQ-TRX-01) and is independent of the source class; asserted on K02, K03 and K07."
+reason = "A native text PDF is convert_only: it has no OCR units, so nothing is transcribed (asserted by the class sweep: 0 requests, no socket)."
 owner = "S10:K03"
 
 [[class_stage]]
@@ -550,19 +525,7 @@ stages = ["S10"]
 reason = "No eligible units, so nothing is transcribed."
 owner = "S3"
 
-[[class_stage]]
-classes = ["K14", "K20"]
-stages = ["S10"]
-reason = "Container members and directory entries are transcribed as their own classes."
-owner = "S10:K03"
-
-# ---- S12 Write: covered K01 K02 K07 K14 K20
-[[class_stage]]
-classes = ["K03", "K04", "K05", "K06", "K08", "K09", "K10", "K11", "K18"]
-stages = ["S12"]
-reason = "Write takes (relative path, bytes) from Assemble and has no class-specific logic; atomicity, byte-compare and containment are asserted on K01, K02, K07, K14 and K20."
-owner = "S12:K02"
-
+# ---- S12 Write: covered K01 K02 K03 K04 K05 K06 K07 K08 K09 K10 K11 K14 K18 K20
 [[class_stage]]
 classes = ["K12", "K13", "K15", "K16", "K17", "K19"]
 stages = ["S12"]

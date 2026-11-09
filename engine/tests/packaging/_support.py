@@ -40,6 +40,13 @@ def sha256_file(path: Path) -> str:
     return hashlib.sha256(Path(path).read_bytes()).hexdigest()
 
 
+def installed_import(location: Path, venv: Path, repo: Path) -> bool:
+    """A repo-local venv is valid; the source package is never installed evidence."""
+    location, venv, repo = location.resolve(), venv.resolve(), repo.resolve()
+    return (location.is_relative_to(venv) and 'site-packages' in location.parts and
+            not location.is_relative_to(repo / 'engine/src'))
+
+
 def tree_digest(root: Path) -> dict[str, str]:
     """Relative path -> sha256 for every file under ``root`` (symlinks not followed)."""
     root = Path(root)

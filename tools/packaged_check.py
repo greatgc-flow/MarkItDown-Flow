@@ -2,6 +2,7 @@
 from __future__ import annotations
 import argparse
 import os
+import json
 from pathlib import Path
 import subprocess
 import sys
@@ -43,6 +44,11 @@ def main():
             source = cwd / 'local sample.txt'
             source.write_text('Local classification smoke.\n' * 40, encoding='utf-8')
             subprocess.run([str(python), '-I', '-m', 'mdflow', 'classify', str(source)], cwd=cwd, check=True)
+            target = os.environ.get('MDFLOW_CI_TARGET')
+            if target:
+                receipt = a.bundle.resolve().parent / 'trace' / f'smoke-{target}-py{sys.version_info.major}.{sys.version_info.minor}.json'
+                receipt.parent.mkdir(parents=True, exist_ok=True)
+                receipt.write_text(json.dumps(dict(commit=os.environ.get('GITHUB_SHA'), exit=0)), encoding='utf-8')
 
 if __name__ == '__main__':
     main()

@@ -85,6 +85,9 @@ def _is_timeout(exc: BaseException) -> bool:
 
 class OpenAICompatProvider:
     meta: ProviderMeta
+    DEFAULT_META = dict(name='openai-compatible', model='', egress=True, cost_hint=None, max_batch=1,
+                        retries=2, destination=canonical_destination(DEFAULT_BASE_URL), command_env_names=[],
+                        accepts=['image/png', 'image/jpeg'])
 
     def __init__(self, *, api_key: str, base_url: str, model: str, timeout_s: float = 120.0,
                  cost_hint: str | None = None, proxy: str | None = None) -> None:
@@ -104,10 +107,8 @@ class OpenAICompatProvider:
         self.proxy = proxy
         self.requests_sent = 0
         self._opener = _NoRedirectOpener.build(proxy)
-        self.meta = {
-            "name": "openai-compatible", "model": model, "egress": True, "cost_hint": cost_hint, "max_batch": 1,
-            "retries": 2, "destination": destination, "command_env_names": [], "accepts": ["image/png", "image/jpeg"],
-        }
+        from copy import deepcopy
+        self.meta = dict(deepcopy(self.DEFAULT_META), model=model, cost_hint=cost_hint, destination=destination)
 
     def __repr__(self) -> str:
         return f"OpenAICompatProvider(model={self.meta['model']!r}, destination={self.meta['destination']!r})"

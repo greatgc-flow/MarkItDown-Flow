@@ -8,6 +8,12 @@ def select(classification: dict, options: dict) -> dict:
         return dict(units=[], oversize=False)
     for c in classification.get("candidates_unique", []):
         identity = c["id"]
+        fmt = options.get('file', {}).get('format', '')
+        evidence = next((m for m in options.get('triage_media', []) if m['id'] == identity), {})
+        payload_kind = evidence.get('payload_kind') if fmt == 'hwp' else None
+        unsupported = payload_kind == 'stored_ole_stream' or (
+            'core:unsupported_media' in classification.get('reasons', []) and
+            evidence.get('ext', '').lower() in {'wmf', 'emf', 'wmz', 'emz'})
         page_unit = c["kind"] == "page" or identity == "image" or bool(re.fullmatch(r"f[1-9]\d*", identity))
         if page_unit:
             page = c["page"] if c["kind"] == "page" else 1 if identity == "image" else int(identity[1:])
@@ -16,7 +22,8 @@ def select(classification: dict, options: dict) -> dict:
             page = None
             digest = media_digest(identity, options.get("file", {}).get("format", ""),
                                  options.get("media_hashes", {}), options.get("triage_media", []))
-            group = ("media", digest or identity)
+            # Equal content does not erase a different rendering/refusal policy.
+            group = ("media", digest or identity, unsupported)
         if group in groups:
             u = groups[group]
             if not page_unit and identity != u["source_id"]:
@@ -30,9 +37,10 @@ def select(classification: dict, options: dict) -> dict:
                  mime=None, bytes=None, priority=c["priority"], priority_core=c["priority_core"])
         if not page_unit:
             u.update(also=[], media_file=None)
-            if options.get('file', {}).get('format') == 'hwp':
-                evidence = next((m for m in options.get('triage_media', []) if m['id'] == identity), {})
-                u['_payload_kind'] = evidence.get('payload_kind')
+            if fmt == 'hwp':
+                u['_payload_kind'] = payload_kind
+            if unsupported:
+                u['_unsupported_media'] = True
         groups[group] = u
         units.append(u)
     units.sort(key=lambda u: (0, u["page"], u["source_id"]) if u["kind"] == "page" else (1, u["source_id"]))
