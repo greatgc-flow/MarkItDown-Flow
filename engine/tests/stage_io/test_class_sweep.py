@@ -20,6 +20,7 @@ import importlib.util
 import json
 import os
 from pathlib import Path
+import re
 import subprocess
 
 import pytest
@@ -45,9 +46,10 @@ NEVER = {"report_only": {"render", "assemble", "write"}, "convert_only": set(), 
          "recurse": {"render", "assemble"}}
 
 
-def F(route, need, label, action, *, total=0, eligible=0, outputs=(), codes=(), media=0):
+def F(route, need, label, action, *, total=0, eligible=0, outputs=(), codes=(), media=0, select=None):
+    """``select``: the ordered Select result as (source_id|None, kind, page, status) per unit (None = any id)."""
     return dict(route=route, need=need, label=label, action=action, total=total, eligible=eligible,
-                outputs=list(outputs), codes=set(codes), media=media)
+                outputs=list(outputs), codes=set(codes), media=media, select=select)
 
 
 def native(need, label, action, **kw):
@@ -67,21 +69,29 @@ CASES = {
                 expect={"a.pdf": native("PARTIAL", "M", "convert_and_ocr", total=2, eligible=2, outputs=["a.pdf.md"])}),
     "K04": dict(fx=("FX-07",), files=lambda g, c: {"a.pdf": c.generate("FX-07", c.scratch).read_bytes()}, exit=0,
                 args=("--max-units", "1000"),  # default 200 is E_PLAN_OVERSIZE: all pending, no egress (REQ-PLN)
+                # S4/S6: Core inspects 1000 of 1001 pages, so Select yields p1..p1000 (never p1001) and, within
+                # --max-units, Render rasterises exactly those pages; the default 200 bound is checked below.
+                renders=True,
                 expect={"a.pdf": native("UNKNOWN", "U", "convert_and_ocr", total=1000, eligible=1000,
-                                        outputs=["a.pdf.md"], codes=("W_TRIAGE_PARTIAL",))}),
+                                        outputs=["a.pdf.md"], codes=("W_TRIAGE_PARTIAL",),
+                                        select=[(f"p{n}", "page", n, "eligible") for n in range(1, 1001)])}),
     "K05": dict(fx=("FX-09",), files=lambda g, c: {"a.png": g.png_noise(seed=5)}, exit=0,
-                expect={"a.png": native("FULL", "S", "convert_and_ocr", total=1, eligible=1, outputs=["a.png.md"])}),
+                expect={"a.png": native("FULL", "S", "convert_and_ocr", total=1, eligible=1, outputs=["a.png.md"],
+                                        select=[("image", "page", 1, "eligible")])}),
     "K06": dict(fx=("FX-12",), files=lambda g, c: {"a.gif": c.generate("FX-12", c.scratch).read_bytes()}, exit=0,
-                expect={"a.gif": native("FULL", "S", "convert_and_ocr", total=2, eligible=2, outputs=["a.gif.md"])}),
+                expect={"a.gif": native("FULL", "S", "convert_and_ocr", total=2, eligible=2, outputs=["a.gif.md"],
+                                        select=[("f1", "page", 1, "eligible"), ("f2", "page", 2, "eligible")])}),
     "K07": dict(fx=("FX-16",), files=lambda g, c: {"a.docx": c.generate("FX-16", c.scratch).read_bytes()}, exit=0,
                 expect={"a.docx": native("PARTIAL", "M", "convert_and_ocr", total=2, eligible=2,
                                          outputs=["a.docx.md"], codes=("W_REVIEW_PRIORITY",), media=2)}),
     "K08": dict(fx=("FX-23",), files=lambda g, c: {"a.hwpx": c.generate("FX-23", c.scratch).read_bytes()}, exit=0,
                 expect={"a.hwpx": native("PARTIAL", "M", "convert_and_ocr", total=1, eligible=1,
-                                         outputs=["a.hwpx.md"], media=1)}),
+                                         outputs=["a.hwpx.md"], media=1,
+                                         select=[(None, "media", None, "eligible")])}),
     "K09": dict(fx=("FX-24",), files=lambda g, c: {"a.hwp": (FIXTURES / "FX-24.hwp").read_bytes()}, exit=0,
                 expect={"a.hwp": native("PARTIAL", "M", "convert_and_ocr", total=2, eligible=1, outputs=["a.hwp.md"],
-                                        codes=("W_REVIEW_PRIORITY", "W_MEDIA_FORMAT", "W_MEDIA_UNMAPPED"), media=1)}),
+                                        codes=("W_REVIEW_PRIORITY", "W_MEDIA_FORMAT", "W_MEDIA_UNMAPPED"), media=1,
+                                        select=[(None, "media", None, None), (None, "media", None, None)])}),
     "K10": dict(fx=("FX-28",), files=lambda g, c: {"a.txt": g.txt_utf8()}, exit=0,
                 expect={"a.txt": native("NONE", "T", "convert_only", outputs=["a.txt.md"])}),
     "K11": dict(fx=("FX-30",), files=lambda g, c: {"a.csv": b"name,value\na,1\n"}, exit=0,
@@ -93,11 +103,14 @@ CASES = {
                 expect=report_only("a.mp3", "UNSUPPORTED", "X", "E_MEDIA_OUT_OF_SCOPE")),
     "K14": dict(fx=("FX-43",), files=lambda g, c: {"a.zip": c.generate("FX-43", c.scratch).read_bytes()}, exit=0,
                 expect={"a.zip": F("CONTAINER", "NONE", "C", "recurse", outputs=["a.zip.md"]),
-                        "a.zip/text.pdf": native("NONE", "T", "convert_only", outputs=["a.zip/text.pdf.md"]),
-                        "a.zip/text.txt": native("NONE", "T", "convert_only", outputs=["a.zip/text.txt.md"]),
+                        "a.zip/text.pdf": native("NONE", "T", "convert_only", outputs=["a.zip/text.pdf.md"],
+                                                 select=[]),
+                        "a.zip/text.txt": native("NONE", "T", "convert_only", outputs=["a.zip/text.txt.md"],
+                                                 select=[]),
+                        # S4: the member's own candidates (two distinct media), in Select's media order
                         "a.zip/mixed.docx": native("PARTIAL", "M", "convert_and_ocr", total=2, eligible=2,
                                                    outputs=["a.zip/mixed.docx.md"], codes=("W_REVIEW_PRIORITY",),
-                                                   media=2)}),
+                                                   media=2, select=[(None, "media", None, "eligible")] * 2)}),
     "K15": dict(fx=("FX-05",), files=lambda g, c: {"a.pdf": g.pdf_encrypted()}, exit=2,
                 expect=report_only("a.pdf", "PROTECTED", "P", "E_ENCRYPTED")),
     "K16": dict(fx=("FX-06",), files=lambda g, c: {"a.pdf": g.pdf_corrupt()}, exit=2,
@@ -117,9 +130,14 @@ CASES = {
 
 
 def reached(klass):
-    """class x stage cells this case executes, derived from its expectations (S12 output, S7/S9/S10 units)."""
+    """class x stage cells this case executes, derived from its expectations (S12 output, S7/S9/S10 units,
+    S4 where the ordered Select result is asserted, S6 where Render's rasters are)."""
     files = CASES[klass]["expect"].values()
     cells = set()
+    if any(f["select"] for f in files):
+        cells.add((klass, "S4"))
+    if CASES[klass].get("renders"):
+        cells.add((klass, "S6"))
     if any(f["outputs"] for f in files):
         cells.add((klass, "S12"))
     if any(f["eligible"] for f in files):
@@ -226,7 +244,9 @@ def _stages_by_file(events):
     # S7 Lookup / S9 Approve / S10 Transcribe: every unit-bearing class (K14, K20 through their members)
     "K02:S7", "K03:S7", "K04:S7", "K05:S7", "K06:S7", "K07:S7", "K08:S7", "K09:S7", "K14:S7", "K20:S7",
     "K02:S9", "K03:S9", "K04:S9", "K05:S9", "K06:S9", "K07:S9", "K08:S9", "K09:S9", "K14:S9", "K20:S9",
-    "K02:S10", "K03:S10", "K04:S10", "K05:S10", "K06:S10", "K07:S10", "K08:S10", "K09:S10", "K14:S10", "K20:S10")
+    "K02:S10", "K03:S10", "K04:S10", "K05:S10", "K06:S10", "K07:S10", "K08:S10", "K09:S10", "K14:S10", "K20:S10",
+    # S4 Select (ordered unit ids) for the classes whose candidates were delegated to K02; S6 Render of capped K04
+    "K04:S4", "K05:S4", "K06:S4", "K08:S4", "K09:S4", "K14:S4", "K04:S6")
 @pytest.mark.parametrize("klass", [
     pytest.param(k, marks=pytest.mark.xfail(strict=True, raises=KnownEngineGap, reason="M2-H: " + CASES[k]["gap"]))
     if "gap" in CASES[k] else k for k in CASES])
@@ -271,6 +291,28 @@ def test_T_GEN_85_class_sweep_reaches_exactly_the_stages_the_spec_prescribes(
         assert len(approved["units"]) == f["total"], path
         assert (plans[path]["status"]["requests_to_send"] > 0) is (path in egress), path
         assert approved["keys_unique"] == plans[path]["status"]["requests_to_send"]
+        units = approved["units"]
+        order = [(0, u["page"], u["source_id"]) if u["kind"] == "page" else (1, 0, u["source_id"]) for u in units]
+        assert order == sorted(order), f"{path}: S4 Select order is pages by number, then media by id"
+        assert len({u["source_id"] for u in units}) == len(units), f"{path}: one unit per candidate group"
+        if f["select"] is not None:
+            assert len(units) == len(f["select"]), f"{path}: S4 selected units"
+            for unit, (ident, kind, page, status) in zip(units, f["select"]):
+                assert (unit["kind"], unit["page"]) == (kind, page), path
+                assert ident is None or unit["source_id"] == ident, path
+                assert status is None or unit["status"] == status, path
+        for unit in units:  # S6 Render: exactly the eligible units carry a raster (hash, mime, size)
+            rendered = unit["status"] == "eligible"
+            assert bool(re.fullmatch("[0-9a-f]{64}", unit["raster_sha256"] or "")) is rendered, (path, unit)
+            assert bool(unit["mime"] is not None and unit["bytes"]) is rendered, (path, unit)
+    if case.get("renders"):  # K04: Core inspected pages 1..1000 of 1001; the unit bound decides what renders
+        bounded = sweep.run("plan", root, "--cache", cache, *provider)
+        capped, = _objects(bounded.stdout)
+        pages = [u["page"] for u in capped["approved"]["units"]]
+        assert pages == list(range(1, 1001)), "p1001 was never inspected, so it is never a candidate"
+        assert {u["status"] for u in capped["approved"]["units"]} == {"oversize"}, "default --max-units 200 renders nothing"
+        assert capped["status"]["requests_to_send"] == 0 and capped["approved"]["keys_unique"] == 0
+        assert all(u["raster_sha256"] is None for u in capped["approved"]["units"])
     assert not out.exists() and mock_http.requests == [] and sweep.attempts() == [], "plan: no output, no egress"
     yes_file = tmp_path / "approved.txt"
     yes_file.write_text("# class sweep\n" + "\n".join(p["plan_hash"] for p in plans.values()) + "\n", encoding="utf-8")
