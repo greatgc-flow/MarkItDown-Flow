@@ -185,9 +185,18 @@ def validate_extra(filename: str, data, expected_commit: str, *, root: Path, exe
                 metadata, download = item.get('metadata', {}), item.get('download_info', {})
                 if (not metadata.get('name') or not metadata.get('version') or
                         not str(download.get('url', '')).startswith(('https://', 'file://')) or
-                        not re.fullmatch('[0-9a-f]{64}', str(download.get('archive_info', {}).get('hashes', {}).get('sha256', '')))):
+                        not re.fullmatch('[0-9a-f]{64}', archive_sha256(download))):
                     problems.append('resolved distribution metadata/URL/hash required')
     return problems
+
+
+def archive_sha256(download_info) -> str:
+    """sha256 of a pip report download_info; pip < 23 only writes archive_info.hash ('sha256=<hex>')."""
+    archive = download_info.get('archive_info', {}) if isinstance(download_info, dict) else {}
+    digest = archive.get('hashes', {}).get('sha256', '')
+    if not digest and str(archive.get('hash', '')).startswith('sha256='):
+        digest = archive['hash'].split('=', 1)[1]
+    return str(digest) if re.fullmatch('[0-9a-f]{64}', str(digest)) else ''
 
 
 def gh_json(endpoint):

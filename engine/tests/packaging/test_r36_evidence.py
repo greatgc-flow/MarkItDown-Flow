@@ -230,3 +230,15 @@ def test_PT_32_r36_ci_generation_precedes_release_and_keeps_endpoint_dedup(tmp_p
     dedup.write_text(json.dumps(dict(version='0.3.6', deduplicated_with='contract-min')))
     with pytest.raises(ValueError):
         tool.generate_oracles(tmp_path, executions, COMMIT, {})
+
+
+@pytest.mark.req("REQ-PKG-04")
+@pytest.mark.cov("S0", "FM10")
+def test_PT_35_install_report_accepts_legacy_pip_archive_hash_form():
+    """pip < 23 writes archive_info.hash ('sha256=<hex>') without the hashes{} dict (py3.10 CI cells)."""
+    module = load_py(REPO / "tools/release_evidence.py", "legacy_hash")
+    digest = "a" * 64
+    assert module.archive_sha256({"archive_info": {"hash": f"sha256={digest}"}}) == digest
+    assert module.archive_sha256({"archive_info": {"hashes": {"sha256": digest}}}) == digest
+    assert module.archive_sha256({"archive_info": {"hash": "md5=abc"}}) == ""
+    assert module.archive_sha256({}) == ""
