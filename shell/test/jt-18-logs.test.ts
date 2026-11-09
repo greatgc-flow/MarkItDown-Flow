@@ -100,7 +100,7 @@ it(R('JT-18 rotation never exceeds five files or one MiB per file; the oldest co
 it(R('JT-18 diagnostics copy carries redacted versions/probe results and codes only; paths are vault-relative or home-redacted'), () => {
   const text = diagnosticsCopy(
     {
-      version: { enabled: true, info: { mdflow: '2.0.0.dev0', 'markitdown-gc': '0.3.5', pypdfium2: '5.15.1', pillow: '13.0.0', python: '3.14.2', platform: 'Windows-11', protocol: 1, triage_schema: 1 } },
+      version: { enabled: true, info: { mdflow: '2.0.0.dev0', 'markitdown-gc': '0.3.7', pypdfium2: '5.15.1', pillow: '13.0.0', python: '3.14.2', platform: 'Windows-11', protocol: 1, triage_schema: 1 } },
       probes: [{ command: 'python3', args: ['--version'], result: 'ok', version: '3.14.2' }],
       codes: ['E_CORRUPT', 'W_SKIPPED_HIDDEN', OCR_TEXT, EXCEPTION, 'E_BOGUS_CODE'],
       paths: [`${VAULT_ROOT}/notes/out`, `${HOME}/venv/bin/python`, `${HOME}/x ${SECRET}`],
@@ -108,7 +108,7 @@ it(R('JT-18 diagnostics copy carries redacted versions/probe results and codes o
     REDACT,
   );
   expect(text).toContain('2.0.0.dev0');
-  expect(text).toContain('0.3.5');
+  expect(text).toContain('0.3.7');
   expect(text).toContain('python3');
   expect(text).toContain('E_CORRUPT');
   expect(text).toContain('W_SKIPPED_HIDDEN');

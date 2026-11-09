@@ -35,7 +35,7 @@ import { abs, ENGINE_PYTHON, HOST_ENV, KEY_VALUE, OPENAI_PROVIDER, PLUGIN_DIR, s
 
 const R = req('REQ-SHL-12');
 
-/** The job working directory is the engine venv root, never the vault (M3 N-02). */
+/** The job working directory is the engine venv root of the selected interpreter (M3 N-02); this fixture's venv lies outside the vault. */
 const CWD = engineWorkingDirectory(process.platform === 'win32' ? 'win32' : 'posix', ENGINE_PYTHON);
 const INPUT_ROOT = abs(VAULT_ROOT, 'inbox');
 const PLATFORM = process.platform === 'win32' ? 'win32' : 'posix';
@@ -188,7 +188,7 @@ it(R('JT-12 directories are passed as roots so nested inputs/sub/a.pdf keeps log
   expect(replay.cwd).toBe(request.cwd);
 });
 
-it(R('JT-12 every engine spawn starts with -I -X utf8 -m mdflow (isolated interpreter: the working directory is never sys.path[0]) and its cwd is outside the vault (M3 N-02)'), async () => {
+it(R('JT-12 every engine spawn starts with -I -X utf8 -m mdflow (isolated interpreter: the working directory is never sys.path[0]) and its cwd is the engine venv root (M3 N-02)'), async () => {
   const snap = snapshot({ ...OPENAI_PROVIDER });
   expectIsolatedArgv(buildSpawnRequest(snap, 'plan', HOST_ENV), 'plan');
   expectIsolatedArgv(buildSpawnRequest(snap, 'run', HOST_ENV, { yesFile: YES_FILE, approvedBy: APPROVED_BY_MODAL }), 'run');
@@ -196,7 +196,7 @@ it(R('JT-12 every engine spawn starts with -I -X utf8 -m mdflow (isolated interp
   expectIsolatedArgv(buildUtilityRequest(ENGINE_PYTHON, 'selftest', HOST_ENV, CWD), 'selftest');
   expect(ENGINE_ARGV_PREFIX).toEqual(['-I', '-X', 'utf8', '-m', 'mdflow']);
   expect(SUBCOMMAND_INDEX).toBe(5);
-  // The fixed job cwd is the venv root of the selected interpreter: it exists, is user-owned and is not vault content.
+  // The fixed job cwd is the venv root of the selected interpreter; in this fixture it is outside the vault.
   expect(CWD).toBe(process.platform === 'win32' ? 'C:\\mdflow-venvs\\2.0.0' : '/home/alice/mdflow-venvs/2.0.0');
   expect(insideVault(CWD)).toBe(false);
   expect(engineWorkingDirectory('posix', '/usr/bin/python3')).toBe('/usr');
@@ -209,7 +209,7 @@ it(R('JT-12 every engine spawn starts with -I -X utf8 -m mdflow (isolated interp
   }
 });
 
-it(R('JT-12 the coordinator, the version probe, the selftest command and the setup diagnostics all spawn with the isolated prefix and a cwd outside the vault (M3 N-02)'), async () => {
+it(R('JT-12 the coordinator, the version probe, the selftest command and the setup diagnostics all spawn with the isolated prefix and the engine venv root as cwd (M3 N-02)'), async () => {
   const fs = new FakeFs({ directories: [VAULT_ROOT, OUT_DIR, INPUT_ROOT, PLUGIN_DIR, CACHE_DIR] });
   const spawner = new FakeSpawner(() => ({ blocked: true, exit: { code: 0, signal: null } }));
   const deps: CoordinatorDeps = {
@@ -222,7 +222,7 @@ it(R('JT-12 the coordinator, the version probe, the selftest command and the set
     vaultRoot: VAULT_ROOT,
     pluginDir: PLUGIN_DIR,
     settings: () => settingsV2({ provider: { ...OPENAI_PROVIDER } }),
-    gate: () => ({ enabled: true, info: { mdflow: '2.0.0', 'markitdown-gc': '0.3.5', pypdfium2: '5.15.1', pillow: '13.0.0', python: '3.14.0', platform: 'test', protocol: 1, triage_schema: 1 } }),
+    gate: () => ({ enabled: true, info: { mdflow: '2.0.0', 'markitdown-gc': '0.3.7', pypdfium2: '5.15.1', pillow: '13.0.0', python: '3.14.0', platform: 'test', protocol: 1, triage_schema: 1 } }),
     consent: async () => ({ approved: false }),
     notify: () => undefined,
     recordHistory: async () => undefined,

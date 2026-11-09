@@ -105,7 +105,12 @@ export class SetupModal extends Modal {
     this.keyValue(contentEl, this.t('shell.setup.interpreter'), this.deps.enginePython ?? '-', 'mdflow-setup-interpreter');
     if (!this.deps.enginePython) contentEl.createEl('p', { cls: 'mdflow-setup-warning', text: this.t('shell.setup.unconfigured') });
     if (d?.gate) {
-      const status = d.gate.enabled ? this.t('shell.setup.probeOk') : this.t('shell.setup.probeBlocked', { reason: `${d.gate.reason}${d.gate.field ? ` ${d.gate.field}` : ''}` });
+      // M6-01: "no answer in time" is not a compatibility verdict; say so and point at Refresh.
+      const status = d.gate.enabled
+        ? this.t('shell.setup.probeOk')
+        : d.gate.reason === 'timeout'
+          ? this.t('shell.setup.probeTimeout')
+          : this.t('shell.setup.probeBlocked', { reason: `${d.gate.reason}${d.gate.field ? ` ${d.gate.field}` : ''}` });
       this.keyValue(contentEl, this.t('shell.setup.probe'), status, d.gate.enabled ? 'mdflow-setup-ok' : 'mdflow-setup-blocked');
       if (d.conflictFix !== null) {
         // R33c co-install guard: the upstream `markitdown` distribution must leave the venv; show the exact command.

@@ -57,7 +57,9 @@ beforeEach(() => {
 });
 
 function versionResponse(extra: Record<string, unknown>, omit: string[] = []): string {
-  const base = { ...fx71Json<Record<string, unknown>>('version.json'), ...extra };
+  const base = { ...fx71Json<Record<string, unknown>>('version.json') };
+  for (const key of ['exiftool', 'exiftool_status', 'exiftool_source', 'libreoffice', 'libreoffice_status', 'libreoffice_source']) delete base[key];
+  Object.assign(base, extra);
   for (const key of omit) delete base[key];
   return JSON.stringify(base);
 }
@@ -347,7 +349,7 @@ type RawIssue = { code: string; message: string; tool?: unknown; version?: unkno
 
 it(R9('JT-09 a pre-converted file (W_PRECONVERTED with tool/version, SPEC REQ-CNV-07) is marked derived with the tool and version in the result list; native files are not marked (R33)'), () => {
   const raw = fx71Json<RawReport>('run-mixed.stdout.json');
-  // The engine's exact issue shape (preconvert.prepare): tool and version beside code/message.
+  // The engine's exact issue shape (markitdown-gc 0.3.7 convert.py): tool and version beside code/message.
   (raw.files[0].issues as RawIssue[]).unshift({ code: 'W_PRECONVERTED', message: 'Converted locally with LibreOffice; fidelity is DERIVED.', tool: 'LibreOffice', version: '24.8.2' });
   const decoded = decodeReport(JSON.stringify(raw));
   if (!decoded.ok) throw new Error(decoded.reason);

@@ -114,7 +114,7 @@ def assemble(base_body: str, units: list, ledger_entries: dict,
     for name in ("source", "sha256", "bytes", "format", "route", "need", "label", "triage_decision", "coverage_state"):
         header[name] = meta[name]
     if meta.get('fidelity') == 'DERIVED':
-        for name in ('fidelity', 'original_sha256', 'derived_sha256'):
+        for name in ('fidelity', 'original_sha256', 'derived_sha256', 'derived_format'):
             header[name] = meta[name]
     header["units"] = counts
     if units:

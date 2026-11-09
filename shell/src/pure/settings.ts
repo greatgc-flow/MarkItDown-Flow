@@ -44,7 +44,7 @@ export interface SettingsV2 {
   enableDragDrop: boolean;
   /**
    * R33: pre-convert LEGACY formats (.doc/.ppt/.rtf/HWP<5.0) through a user-installed LibreOffice
-   * (`SOFFICE_PATH`/PATH) before Core. Off by default; passed to the engine as `--legacy-preconvert`.
+   * (`SOFFICE_PATH`/PATH) before Core. Off by default; passed to the engine as `--preconvert-legacy`.
    */
   enableLegacyPreconvert: boolean;
   conversionHistory: HistoryEntry[];

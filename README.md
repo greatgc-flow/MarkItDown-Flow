@@ -2,7 +2,7 @@
 
 MarkItDown Flow converts local documents to Markdown and plans selective OCR for
 pages and images. The engine (`mdflow`, a Python CLI) uses `markitdown-gc`
-0.3.6. The desktop Obsidian shell drives an engine installed separately in a
+0.3.7 (published on PyPI). The desktop Obsidian shell drives an engine installed separately in a
 virtual environment. Release verification is still pending; see
 [packaging verification](docs/renewal/PACKAGING_VERIFICATION.md).
 
@@ -58,6 +58,17 @@ classify/convert them, creates temporary rasters for selected units under the
 OS temporary directory, and reads the venv to execute dependencies. Output
 selected through the shell stays inside the vault. Sources and outputs are
 preserved during upgrades and cleanup.
+
+Two optional programs on your machine can also be started by the engine. If
+`exiftool` is found (on PATH or via `EXIFTOOL_PATH`), the engine runs it on
+standalone `png`, `jpg` and `jpeg` sources and writes the metadata lines it
+reports (for example `GPSPosition`, `Author` or `Artist`) into the converted
+note, so a note can contain location or author data the image carried. Only if
+you turn on "Legacy formats (LibreOffice)", the engine runs your own LibreOffice
+(`soffice` on PATH or `SOFFICE_PATH`) in a private profile with macros and link
+updates disabled to convert legacy `.doc`, `.ppt`, `.rtf` and HWP sources; it
+reads the source and writes a temporary converted copy that is not kept. The
+plugin itself never runs either program.
 
 The CLI cache defaults to `~/.mdflow/cache`. The plugin keeps its cache,
 transient report spool, one-run consent files and redacted logs inside the
@@ -134,8 +145,8 @@ Legacy `.doc`, `.ppt`, `.rtf` and pre-5.0 HWP files are reported, not
 converted, unless you turn on "Legacy formats (LibreOffice)" in the Conversion
 section (off by default). The plugin then passes `--preconvert-legacy` to the
 engine, which converts each such file with your own LibreOffice (`soffice` on
-PATH or `SOFFICE_PATH`; the plugin never installs it) in an isolated profile
-without network access, and marks the result as derived from the converted
+PATH or `SOFFICE_PATH`; the plugin never installs it) in a private profile with
+macros and link updates disabled, and marks the result as derived from the converted
 copy: the result list shows "derived · LibreOffice <version>", the note's
 frontmatter carries `fidelity: DERIVED` with the original and derived SHA-256
 values, and the report carries `W_PRECONVERTED`. The setting's description and
@@ -176,9 +187,9 @@ Legacy `.doc`, `.ppt`, `.rtf` and pre-5.0 HWP conversion is opt-in: add
 `preconvert_legacy=True`). Install LibreOffice yourself and put `soffice` on
 PATH or set `SOFFICE_PATH` to its executable. Each conversion uses a private
 profile with macros and link updates disabled; the default 60-second deadline
-(`--preconvert-timeout-s`) kills the entire child tree. Derived files are
-re-inspected and deleted after hashing. Markdown retains original and derived
-SHA-256 values and `fidelity: DERIVED`; the report includes `W_PRECONVERTED`
+(`--preconvert-timeout-s`) kills the entire child tree. Core owns conversion, process cleanup and intermediate files. mdflow inspects
+the returned Markdown and extracted media. Markdown retains original and returned-Markdown
+SHA-256 values (`derived_format: markdown`) and `fidelity: DERIVED`; the report includes `W_PRECONVERTED`
 with the LibreOffice version. Failed conversions leave no Markdown and siblings
 continue. Other legacy formats still require manual conversion. In the plugin
 the same option is the "Legacy formats (LibreOffice)" toggle (see "Migration

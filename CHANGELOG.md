@@ -3,7 +3,7 @@
 ## 2.0.0 — Zero-base renewal (release candidate)
 
 Major version: a clean-room Obsidian shell (`shell/`) over a new Python engine
-(`mdflow`, `engine/`) built on `markitdown-gc` 0.3.6. Settings migrate from
+(`mdflow`, `engine/`) built on `markitdown-gc` 0.3.7. Settings migrate from
 1.0.8 automatically (schema 2); see the README "Migration and operation"
 section for the rollback snapshot `data.v1.json` and the removals below.
 
@@ -52,6 +52,12 @@ section for the rollback snapshot `data.v1.json` and the removals below.
   failure, cancelled).
 - Settings written by a newer plugin version, or an unmigratable file, are
   read-only; nothing is written back.
+- The engine version check retries once after a short pause when it does not
+  answer within five seconds, a "no answer" result is never remembered (the next
+  conversion checks again), and the setup window says "no answer in time" instead
+  of "blocked" for it. The copyable setup commands quote a migrated interpreter
+  path with spaces and use POSIX quoting for macOS/Linux; the README now discloses
+  the optional exiftool and LibreOffice programs.
 
 ### Removed
 

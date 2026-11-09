@@ -83,7 +83,7 @@ function harness(
     vaultRoot: VAULT_ROOT,
     pluginDir: PLUGIN_DIR,
     settings: () => settings,
-    gate: () => ({ enabled: true, info: { mdflow: '2.0.0', 'markitdown-gc': '0.3.5', pypdfium2: '5.15.1', pillow: '13.0.0', python: '3.14.0', platform: 'test', protocol: 1, triage_schema: 1 } }),
+    gate: () => ({ enabled: true, info: { mdflow: '2.0.0', 'markitdown-gc': '0.3.7', pypdfium2: '5.15.1', pillow: '13.0.0', python: '3.14.0', platform: 'test', protocol: 1, triage_schema: 1 } }),
     consent: async (view) => {
       consentCalls.push(view);
       return decide(view);

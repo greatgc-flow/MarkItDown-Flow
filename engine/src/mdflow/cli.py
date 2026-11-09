@@ -2,6 +2,7 @@
 
 import argparse
 from decimal import Decimal, InvalidOperation
+from functools import lru_cache
 from importlib import metadata
 import json
 import os
@@ -13,7 +14,7 @@ import sys
 import tempfile
 import zlib
 
-from . import approve, assemble, classify, convert, core_guard, exiftool, orchestrate, preconvert, providers, report, sniff_io, transcribe, triage, write
+from . import approve, assemble, classify, convert, core_guard, exiftool, orchestrate, providers, report, runtime_temp, sniff_io, transcribe, triage, write
 
 _DISCLOSURE = ("Duplicate remote charges are possible if a run dies between a response and its ledger write. "
                "A trusted command runs with your privileges on every OCR unit.")
@@ -88,9 +89,9 @@ def _check_core() -> None:
     except metadata.PackageNotFoundError:
         raise RuntimeError("markitdown-gc is not installed") from None
     match = re.fullmatch(r"0\.3\.(\d+)(.*)", version)
-    if not match or int(match[1]) < 5 or (int(match[1]) == 5 and match[2] and
+    if not match or int(match[1]) < 7 or (int(match[1]) == 7 and match[2] and
                                         not match[2].startswith((".post", "+"))):
-        raise RuntimeError("markitdown-gc must be >=0.3.5,<0.4")
+        raise RuntimeError("markitdown-gc must be >=0.3.7,<0.4")
 
 
 def _print(value: object, *, pretty: bool = False) -> None:
@@ -141,21 +142,20 @@ def _classification(path: Path, *, logical: str | None = None, preconvert_legacy
                     preconvert_timeout_s: float = 60) -> dict:
     core_guard.check()
     sniff = sniff_io.sniff(path, logical=logical or path.name)
-    if preconvert_legacy and sniff['route'] == 'LEGACY' and sniff['format'] in preconvert.TARGETS and not any(
-            i['code'].startswith('E_') for i in sniff['issues']):
+    if convert.legacy_enabled(sniff, preconvert_legacy):
         try:
-            prepared = preconvert.prepare(orchestrate._source_bytes(path, sniff, 268435456), sniff,
-                                          timeout_s=preconvert_timeout_s)
+            raw = orchestrate._source_bytes(path, sniff, 268435456)
+            with runtime_temp.run_directory() as work:
+                prepared = convert.convert_legacy(raw, sniff, run_temp=work, timeout_s=preconvert_timeout_s)
         except OSError:
             sniff['issues'].append(dict(code='E_SNIFF_IO', message='Legacy source changed after Sniff.'))
         else:
             if prepared['provenance']:
-                with tempfile.TemporaryDirectory(prefix='mdflow-classify-') as work:
-                    snapshot = Path(work) / ('source.' + prepared['sniff']['format'])
-                    snapshot.write_bytes(prepared['data'])
-                    value = _classification(snapshot, logical=sniff['path'])
-                value['sniff'] = sniff
-                value['preconversion'] = prepared['provenance']
+                value = dict(sniff=sniff, triage=dict(prepared['outcome']['report']) if prepared['outcome']['report'] is not None else None,
+                             classification=prepared['classification'], preconversion=prepared['provenance'])
+                if value['triage'] is not None:
+                    value['triage']['derived_media'] = [dict(id=a['id'], report=a['outcome']['report'])
+                                                        for a in prepared['outcome']['derived_media']]
                 value['classification']['issues'].extend(prepared['issues'])
                 return value
             sniff['issues'].extend(prepared['issues'])
@@ -207,9 +207,53 @@ def _exiftool_versions() -> dict:
 
 
 def _libreoffice_versions() -> dict:
-    found = preconvert.detect()
-    return dict(libreoffice=found['version'] or 'unavailable',
-                libreoffice_status=found['status'], libreoffice_source=found['source'])
+    """Informational probe using Core's resolver and contained execution helper."""
+    explicit = os.environ.get('SOFFICE_PATH', '').strip()
+    return dict(_probe_libreoffice(explicit, os.environ.get('PATH', '')))
+
+
+@lru_cache(maxsize=16)
+def _probe_libreoffice(explicit: str, search_path: str) -> dict:
+    # Cache successes and failures per process/environment, as exiftool does.
+    found = dict(libreoffice='unavailable', libreoffice_status='not_found', libreoffice_source=None)
+    try:
+        with core_guard.quiet_output():
+            from markitdown import _libreoffice as lo
+        executable = lo._resolve(explicit or 'soffice')
+        found.update(libreoffice_status='unusable' if explicit or executable else 'not_found',
+                     libreoffice_source='SOFFICE_PATH' if explicit else 'PATH' if executable else None)
+        if executable:
+            with runtime_temp.run_directory() as work:
+                profile = work / 'profile'
+                lo._write_profile(profile)
+                text = lo._execute([executable, '-env:UserInstallation=' + profile.as_uri(),
+                                    '--headless', '--norestore', '--nofirststartwizard', '--version'],
+                                   cwd=work, timeout_s=0.5, output=work / 'version.log')
+                match = re.search(r'LibreOffice\s+(\d+(?:\.\d+)+)', text)
+                if match:
+                    found.update(libreoffice=match[1], libreoffice_status='ok')
+    except Exception:
+        found.update(libreoffice_status='unusable')
+    return found
+
+
+def _optional_tool_versions() -> dict:
+    """Optional diagnostics cannot turn a valid gate response into a CLI error."""
+    result = {}
+    for name, env, probe in (('exiftool', 'EXIFTOOL_PATH', _exiftool_versions),
+                             ('libreoffice', 'SOFFICE_PATH', _libreoffice_versions)):
+        try:
+            result.update(probe())
+        except Exception:
+            result.update({name: 'unavailable', name + '_status': 'unusable',
+                           name + '_source': env if os.environ.get(env, '').strip() else None})
+    return result
+
+
+def reset_optional_tool_probes() -> None:
+    """Forget both tool caches after environment/tool changes in long-lived hosts."""
+    exiftool.reset()
+    _probe_libreoffice.cache_clear()
 
 
 def _selftest_exiftool(png: bytes) -> dict:
@@ -254,8 +298,10 @@ def main(argv: list[str] | None = None) -> int:
         args = _parser().parse_args(argv)
         core_guard.check()
         if args.command_name == "version":
-            _print(dict(orchestrate.tools(), python=platform.python_version(), platform=platform.platform(),
-                        protocol=1, triage_schema=1, **_exiftool_versions(), **_libreoffice_versions()))
+            value = dict(orchestrate.tools(), python=platform.python_version(), platform=platform.platform(),
+                         protocol=1, triage_schema=1)
+            value.update(_optional_tool_versions())
+            _print(value)
             return 0
         try:
             _check_core()

@@ -36,7 +36,7 @@ export interface BootstrapPaths {
 /** Release wheel attached to the GitHub release (R27). */
 export const ENGINE_WHEEL = 'mdflow-2.0.0-py3-none-any.whl';
 /** Declared Core policy, visible in the example even though the wheel metadata already declares it. */
-export const CORE_REQUIREMENT = 'markitdown-gc>=0.3.5,<0.4';
+export const CORE_REQUIREMENT = 'markitdown-gc>=0.3.7,<0.4';
 
 export interface SetupDiagnostics {
   enginePython: string | null;
@@ -64,7 +64,7 @@ export interface SetupDeps {
   clock: Clock;
   hostEnv: Env;
   platform: HostPlatform;
-  /** Probe working directory: an existing user-owned directory that is not vault content (M3 N-02). */
+  /** Probe working directory: an existing user-owned directory (the engine venv root, or home when unconfigured; M3 N-02). */
   cwd: string;
   enginePython: string | null;
   bootstrapPythonHint?: string;
@@ -80,30 +80,50 @@ const DEFAULT_PATHS: Record<HostPlatform, BootstrapPaths> = {
   posix: { downloadDir: '/path/to/mdflow-2.0.0', venvDir: '/path/to/mdflow-venvs/2.0.0', bootstrapPython: 'python3.14' },
 };
 
+/** PowerShell single-quoted literal: a single quote is doubled. */
 function quote(value: string): string {
   return `'${value.replace(/'/g, "''")}'`;
+}
+
+/** POSIX `sh` single-quoted literal: a single quote closes, escapes and reopens the quote (M6-03). */
+function shQuote(value: string): string {
+  return `'${value.replace(/'/g, "'\\''")}'`;
+}
+
+/** A bare command with optional plain flags (`python3.14`, `py -3.14`): rendered as typed. Anything else is a path. */
+const PLAIN_COMMAND = /^[A-Za-z][A-Za-z0-9._+-]*(?: -[A-Za-z0-9.]+)*$/;
+
+/**
+ * The bootstrap interpreter as terminal text (M6-02): probe candidates and the defaults are commands plus flags and
+ * stay unquoted; a migrated `pythonPath` hint (any printable text, often a path with spaces) is rendered as a quoted
+ * executable so it never splits or runs as shell text. PowerShell needs the call operator for a quoted path.
+ */
+function bootstrapCommand(hint: string, platform: HostPlatform): string {
+  if (PLAIN_COMMAND.test(hint)) return hint;
+  return platform === 'win32' ? `& ${quote(hint)}` : shQuote(hint);
 }
 
 /**
  * Render the R27 user-terminal recipe (25_PACKAGING section 2): verify the release wheel,
  * create a venv, wheel-only install from the download directory (Core from PyPI), check, probe.
+ * The Windows block is PowerShell text and the POSIX block `sh` text; each uses its own quoting.
  */
 export function renderBootstrapInstructions(paths: BootstrapPaths): { windows: string; posix: string } {
   const venv = paths.venvDir.replace(/[\\/]+$/, '');
   const winPython = `& ${quote(`${venv}\\Scripts\\python.exe`)}`;
   const windows = [
     `Set-Location -LiteralPath ${quote(paths.downloadDir)}`,
-    `${paths.bootstrapPython} -m venv ${quote(paths.venvDir)}`,
+    `${bootstrapCommand(paths.bootstrapPython, 'win32')} -m venv ${quote(paths.venvDir)}`,
     `${winPython} -m pip install --only-binary=:all: ${quote(`.\\${ENGINE_WHEEL}`)} ${quote(CORE_REQUIREMENT)}`,
     `${winPython} -m pip check`,
     `${winPython} -I -m mdflow version`,
     `${winPython} -I -m mdflow selftest`,
   ].join('\n');
-  const posixPython = quote(`${venv}/bin/python`);
+  const posixPython = shQuote(`${venv}/bin/python`);
   const posix = [
-    `cd ${quote(paths.downloadDir)}`,
-    `${paths.bootstrapPython} -m venv ${quote(paths.venvDir)}`,
-    `${posixPython} -m pip install --only-binary=:all: ${quote(`./${ENGINE_WHEEL}`)} ${quote(CORE_REQUIREMENT)}`,
+    `cd ${shQuote(paths.downloadDir)}`,
+    `${bootstrapCommand(paths.bootstrapPython, 'posix')} -m venv ${shQuote(paths.venvDir)}`,
+    `${posixPython} -m pip install --only-binary=:all: ${shQuote(`./${ENGINE_WHEEL}`)} ${shQuote(CORE_REQUIREMENT)}`,
     `${posixPython} -m pip check`,
     `${posixPython} -I -m mdflow version`,
     `${posixPython} -I -m mdflow selftest`,
@@ -116,7 +136,7 @@ export function renderBootstrapInstructions(paths: BootstrapPaths): { windows: s
  * selected interpreter's venv (`markitdown-gc` stays). Rendered for the user's own terminal, never executed.
  */
 export function renderUpstreamUninstall(enginePython: string, platform: HostPlatform): string {
-  const python = platform === 'win32' ? `& ${quote(enginePython)}` : quote(enginePython);
+  const python = platform === 'win32' ? `& ${quote(enginePython)}` : shQuote(enginePython);
   return `${python} -m pip uninstall -y markitdown`;
 }
 

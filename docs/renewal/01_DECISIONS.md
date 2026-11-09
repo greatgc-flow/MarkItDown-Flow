@@ -63,7 +63,7 @@ Votes: cx APPROVE-TDD (88/100, 8 fix-during-TDD items, review/R7_cx_ratify.md); 
 | R27 (pending Fable vote) | Packaging simplification: drop hand-built 15-cell universal lock + wheel/license catalog; ship pure-Python wheel on the release, declared `markitdown-gc>=0.3.5,<0.4` from PyPI (0.3.5 published, orchestrator-verified), ONE CI-generated hashed reference requirements file (Core0.3.6 release baseline per M3), matrix install checks. Votes: cx (proposer) APPROVE, ag APPROVE, orchestrator APPROVE. | M1-V34/V35 |
 | R28 | `fx("all")` credits class_stage cells only for tests that genuinely iterate every class (S0-S3, S13); not S8/S11. trace.py must enforce; resulting gaps get dedicated tests. | ag M1 horizontal, cc proposal |
 
-Core baseline amendment (orchestrator instruction, 2026-11-09): release/reference Core is **0.3.6**. Runtime compatibility remains `>=0.3.5,<0.4`; 0.3.5 is still the minimum endpoint. R18's archived 0.3.5 guide/source retain their stable line references; see [the reference note](ref/README.md). Earlier publication/verification statements are historical evidence, not a current 0.3.5 release pin.
+Core baseline amendment (R34 publication follow-up, orchestrator instruction, 2026-11-09): release/reference Core is **0.3.7**, now published on PyPI. Runtime compatibility is `>=0.3.7,<0.4`; 0.3.7 is the minimum endpoint. The orchestrator regenerated GOLDEN.lock with Core 0.3.7; triage bytes are unchanged. R18's archived 0.3.5 guide/source retain their stable line references; see [the reference note](ref/README.md). Earlier publication/verification statements are historical evidence, not a current 0.3.5 release pin.
 
 ## Owner directives (2026-11-09, user)
 | ID | Resolution |

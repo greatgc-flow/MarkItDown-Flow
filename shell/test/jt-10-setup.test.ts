@@ -9,7 +9,7 @@
 import { req } from './req';
 import { createApp, mockState } from './__mocks__/obsidian';
 import { BOOTSTRAP_PROBE_CANDIDATES, collectSetupDiagnostics, CORE_REQUIREMENT, ENGINE_WHEEL, renderBootstrapInstructions, type SetupDeps } from '../src/process/setup';
-import { RELEASE_LOCK, VERSION_PROBE_TIMEOUT_MS } from '../src/process/version-gate';
+import { RELEASE_LOCK, VERSION_PROBE_BACKOFF_MS, VERSION_PROBE_TIMEOUT_MS } from '../src/process/version-gate';
 import type { SpawnRequest } from '../src/process/types';
 import { SetupModal } from '../src/ui/setup-modal';
 import { HistoryModal } from '../src/ui/history-modal';
@@ -84,17 +84,19 @@ it(R('JT-10 unconfigured interpreter: only `--version` bootstrap probes run, the
   for (const probe of diagnostics.bootstrapProbes) expect(BOOTSTRAP_PROBE_CANDIDATES.map((c) => c.command)).toContain(probe.command);
 });
 
-it(R('JT-10 the version probe is bounded by five seconds; a hung interpreter blocks jobs and is terminated'), async () => {
+it(R('JT-10 each version attempt is bounded by five seconds; a hung interpreter is terminated, retried once after a backoff (M6-01) and then blocks jobs'), async () => {
   const spawner = new FakeSpawner(() => ({ blocked: true, cooperative: 'ignore', exit: { code: 0, signal: null } }));
   const clock = new FakeClock();
   const pending = collectSetupDiagnostics(deps(spawner, clock, ENGINE_PYTHON));
   await flush();
   await clock.advance(VERSION_PROBE_TIMEOUT_MS);
+  await clock.advance(VERSION_PROBE_BACKOFF_MS);
+  await clock.advance(VERSION_PROBE_TIMEOUT_MS);
   const diagnostics = await pending;
   expect(diagnostics.gate).toMatchObject({ enabled: false, reason: 'timeout' });
   expect(diagnostics.jobsEnabled).toBe(false);
-  expect(spawner.requests).toHaveLength(1);
-  expect(spawner.children[0].terminated).toBe(true);
+  expect(spawner.requests).toHaveLength(2);
+  expect(spawner.children.every((child) => child.terminated)).toBe(true);
 });
 
 it(R('JT-10 bootstrap instructions are the R27 25_PACKAGING section 2 commands with substituted paths: venv, wheel-only install of the release wheel plus Core from PyPI, check, probe; no plugin-side execution'), () => {
@@ -114,7 +116,7 @@ it(R('JT-10 bootstrap instructions are the R27 25_PACKAGING section 2 commands w
   expect(posix.posix).toContain("'/path/to/mdflow-venvs/2.0.0/bin/python' -I -m mdflow version");
   expect(posix.posix).toContain("'/path/to/mdflow-venvs/2.0.0/bin/python' -I -m mdflow selftest");
   expect(ENGINE_WHEEL).toMatch(/^mdflow-2\.0\.0-py3-none-any\.whl$/);
-  expect(CORE_REQUIREMENT).toBe('markitdown-gc>=0.3.5,<0.4');
+  expect(CORE_REQUIREMENT).toBe('markitdown-gc>=0.3.7,<0.4');
   for (const block of [text.windows, text.posix, posix.windows, posix.posix]) {
     // Every install is wheel-only; no source builds, no upgrades, no extras, no lock files or hash manifests remain (R27).
     expect(block).not.toMatch(/pip install(?! --only-binary=:all:)/);
@@ -148,7 +150,7 @@ it(R('JT-10 SetupModal open and refresh spawn only version probes; nothing is in
   const rendered = (setup.contentEl as unknown as { textContent: string }).textContent;
   expect(rendered).toContain(ENGINE_PYTHON);
   expect(rendered).toContain(fx71Manifest().engine.mdflow);
-  expect(rendered).toContain('0.3.5');
+  expect(rendered).toContain('0.3.7');
   expect(rendered).not.toContain(KEY_VALUE);
   setup.close();
 });

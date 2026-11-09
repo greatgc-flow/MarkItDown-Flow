@@ -2,6 +2,36 @@
 import re
 from .sniff_pure import RASTERS, OFFICE, G2A, G2B
 
+
+def classify_derived(sniff: dict, outcome: dict) -> dict:
+    """Classify Core's derived Markdown and independently inspected extracted media.
+
+    Core does not expose the intermediate Office container. Candidate ids name
+    extracted assets rather than inventing original Office member identities.
+    """
+    result = classify(dict(sniff, issues=[*sniff['issues'], *outcome['issues']]), outcome['report'])
+    if outcome['derived_media']:
+        result['coverage_state'] = 'complete'  # scope is the extracted media, not private Office layout
+    for asset in outcome['derived_media']:
+        evidence = asset['outcome']
+        decision = classify(dict(asset['sniff'], issues=[*asset['sniff']['issues'], *evidence['issues']]), evidence['report'])
+        if decision['action'] == 'report_only':
+            result['issues'].append(dict(code='W_MEDIA_FORMAT', message='Extracted media could not be inspected.'))
+        else:
+            result['issues'].extend(decision['issues'])
+        if decision['candidates_unique'] or decision['action'] == 'report_only':
+            result['candidates_unique'].append(dict(id=asset['id'], kind='image', page=None,
+                                                    priority='low', priority_core='low', refs=1))
+        if decision['need'] == 'UNKNOWN' or decision['action'] == 'report_only':
+            result['coverage_state'] = 'partial'
+    if result['candidates_unique']:
+        result.update(need='UNKNOWN' if result['coverage_state'] == 'partial' else 'PARTIAL',
+                      label='U' if result['coverage_state'] == 'partial' else 'M',
+                      action='convert_and_ocr', decision='review')
+    elif result['coverage_state'] == 'partial':
+        result.update(need='UNKNOWN', label='U')
+    return result
+
 CORE_CODES = frozenset("corrupt encrypted external_media frame_cap image_probe_failed media_not_inspected missing_dependency page_cap too_large unresolved_embed unsupported_compression unsupported_format unsupported_media zip_limit".split())
 CORE_REASONS = frozenset("scan_like suspect_text_layer low_text_nonblank image_with_text_layer standalone_image embedded_image decor_media".split())
 DECISIONS = frozenset(("ocr_recommended", "review", "no_candidates", "unknown"))

@@ -259,11 +259,11 @@ def test_CT_12_text_html_csv_verdicts(installed_core, contract_fx):
 def test_CT_13_installed_version_and_startup_range_gate(repo_root):
     from packaging.version import Version
     installed = Version(importlib.metadata.version("markitdown-gc"))
-    assert Version("0.3.5") <= installed < Version("0.4")
+    assert Version("0.3.7") <= installed < Version("0.4")
     spec = importlib.util.spec_from_file_location("core_version_red", repo_root / "engine/src/mdflow/hashing.py")
     hashing = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(hashing)
-    for value, expected in (("0.3.4", False), ("0.3.5", True), ("0.3.99", True), ("0.4.0", False), ("1.0.0", False)):
+    for value, expected in (("0.3.4", False), ("0.3.5", False), ("0.3.6", False), ("0.3.7", True), ("0.3.99", True), ("0.4.0", False), ("1.0.0", False)):
         assert hashing.core_version_supported(value) is expected
 
 

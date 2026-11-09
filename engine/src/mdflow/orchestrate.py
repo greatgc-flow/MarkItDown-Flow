@@ -20,7 +20,7 @@ from typing import Sequence
 
 from . import __version__, approve, assemble, classify, convert, ledger, plan, providers
 from . import render, report, select, sniff_io, transcribe, triage, write
-from . import core_guard, preconvert, runtime_temp
+from . import core_guard, runtime_temp
 
 DEFAULTS = dict(provider="none", model=None, dpi=200, min_priority="low", max_units=200,
                 approve_threshold=20, force=False, prompt_version="p1", max_bytes=209715200,
@@ -226,15 +226,14 @@ class _Pipeline:
 
     def process(self, source: dict, entry: dict, directory: Path) -> None:
         sn, logical = source["sniff"], source["sniff"]["path"]
-        original_sniff, provenance = sn, None
+        original_sniff, provenance, prepared = sn, None, None
         self.emit("stage", file=logical, stage="sniff", state="end", ms=0)
         path = source.get("runtime")
-        if self.options['preconvert_legacy'] and sn['route'] == 'LEGACY' and sn['format'] in preconvert.TARGETS and not any(
-                i['code'].startswith('E_') for i in sn['issues']):
+        if convert.legacy_enabled(sn, self.options['preconvert_legacy']):
             try:
                 raw = source['data'] if 'data' in source else _source_bytes(path, sn, self.options['max_bytes'])
-                prepared = self.stage(logical, 'preconvert', preconvert.prepare, raw, sn,
-                    timeout_s=self.options['preconvert_timeout_s'], **{k: self.options[k] for k in
+                prepared = self.stage(logical, 'convert', convert.convert_legacy, raw, sn,
+                    run_temp=directory, timeout_s=self.options['preconvert_timeout_s'], **{k: self.options[k] for k in
                     ('max_bytes', 'zip_entries', 'zip_total_bytes')})
                 self.issues(entry, prepared['issues'])
                 provenance = prepared['provenance']
@@ -260,10 +259,13 @@ class _Pipeline:
             # Core gets an opaque owned filename, never an archive member name.
             path = directory / ("source." + sn["format"])
             path.write_bytes(source["data"])
-        outcome = self.stage(logical, "triage", triage.run_triage, path, sn)
+        outcome = prepared['outcome'] if provenance else self.stage(logical, "triage", triage.run_triage, path, sn)
         entry["triage"] = deepcopy(outcome["report"])
+        if provenance and entry['triage'] is not None:
+            entry['triage']['derived_media'] = [dict(id=a['id'], report=a['outcome']['report'])
+                                                for a in outcome['derived_media']]
         classification_sniff = dict(sn, issues=[*sn["issues"], *outcome["issues"]])
-        c = self.stage(logical, "classify", classify.classify, classification_sniff, outcome["report"])
+        c = prepared['classification'] if provenance else self.stage(logical, "classify", classify.classify, classification_sniff, outcome["report"])
         entry.update({key: c[key] for key in _CLASS_FIELDS})
         self.issues(entry, [*outcome["issues"], *c["issues"]])
         self.emit("classified", file=logical, **{k: c[k] for k in ("route", "need", "label", "action")})
@@ -276,7 +278,7 @@ class _Pipeline:
                 entry["action"] = c["action"] = "report_only"
         triage_media = (outcome['report'] or {}).get('media', [])
         try:
-            media_hashes = self._media_hashes(data, sn, c, triage_media)
+            media_hashes = prepared['media_hashes'] if provenance else self._media_hashes(data, sn, c, triage_media)
         except sniff_io.ZipReadError as exc:
             sn['issues'].append(_issue(exc.code, 'Media preparation exceeded a source bound or collided.'))
             c = classify.classify(dict(sn, issues=[*sn['issues'], *outcome['issues']]), outcome['report'])
@@ -287,12 +289,18 @@ class _Pipeline:
                     classification=c, triage_media=triage_media, media_hashes=media_hashes)
         if provenance:
             opts['preconversion'] = provenance
+            # Derived assets have content ids; HWP5's stored-stream rules do not apply.
+            opts['triage_media'] = [dict(id=identity, payload_sha256=digest)
+                                   for identity, digest in media_hashes.items()]
         selected = self.stage(logical, "select", select.select, c, opts)
         self.summarize(entry, selected["units"], {}, {})
         if selected["oversize"]:
             self.issues(entry, [_issue("E_PLAN_OVERSIZE", "Source exceeds the unit bound.")])
-        converted = self.stage(logical, "convert", convert.convert_source, data, sniff=sn,
+        converted = prepared['converted'] if provenance else self.stage(logical, "convert", convert.convert_source, data, sniff=sn,
             action=c["action"], run_temp=directory, cache_dir=None if self.plan_only else self.cache)
+        if provenance:
+            for name in ('triage', 'classify', 'convert'):
+                self.emit('stage', file=logical, stage=name, state='end', ms=0)
         self.issues(entry, converted["issues"])
         for unit in selected["units"]:
             if unit["kind"] == "media":

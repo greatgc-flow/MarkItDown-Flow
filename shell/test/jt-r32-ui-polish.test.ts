@@ -319,7 +319,9 @@ it(R7('JT-07 the history modal renders one row per entry with time, outcome, inp
 // ----------------------------------------------------------------------------- JT-10 / JT-17 exiftool status (R31)
 
 function versionResponse(extra: Record<string, unknown>, omit: string[] = []): string {
-  const base = { ...fx71Json<Record<string, unknown>>('version.json'), ...extra };
+  const base = { ...fx71Json<Record<string, unknown>>('version.json') };
+  for (const key of ['exiftool', 'exiftool_status', 'exiftool_source', 'libreoffice', 'libreoffice_status', 'libreoffice_source']) delete base[key];
+  Object.assign(base, extra);
   for (const key of omit) delete base[key];
   return JSON.stringify(base);
 }
@@ -335,7 +337,9 @@ it(R17('JT-17 an optional `exiftool` field of the version response is admitted a
   expect(absent.enabled).toBe(true);
   if (absent.enabled) {
     expect(absent.info).not.toHaveProperty('exiftool');
-    expect(absent.info).toEqual(fx71Manifest().engine);
+    const expected: Record<string, unknown> = { ...fx71Manifest().engine };
+    for (const key of ['exiftool', 'exiftool_status', 'exiftool_source', 'libreoffice', 'libreoffice_status', 'libreoffice_source']) delete expected[key];
+    expect(absent.info).toEqual(expected);
   }
   const odd = evaluateVersionResponse(versionResponse({ exiftool: 12 }));
   expect(odd.enabled).toBe(true);

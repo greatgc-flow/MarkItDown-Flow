@@ -2,7 +2,7 @@
 
 All fixtures are generated at test time by `gen_core.py` / `gen_io.py` from own deterministic recipes, except the binaries listed below.
 
-PNG recipes write RGB scanlines with filter 0 and explicit uncompressed DEFLATE blocks, using only integer CRC-32 and Adler-32 checksums. No Pillow encoder or native compression library chooses the bytes. ZIP recipes store members with fixed metadata, avoiding zlib-version differences in Office/archive source hashes. Goldens are regenerated with reference Core 0.3.6 and retain full report equality in CT-03. FX-46 remains a frozen compressed archive so its compression-ratio rejection is exercised.
+PNG recipes write RGB scanlines with filter 0 and explicit uncompressed DEFLATE blocks, using only integer CRC-32 and Adler-32 checksums. No Pillow encoder or native compression library chooses the bytes. ZIP recipes store members with fixed metadata, avoiding zlib-version differences in Office/archive source hashes. Goldens are regenerated with reference Core 0.3.7 and retain full report equality in CT-03. FX-46 remains a frozen compressed archive so its compression-ratio rejection is exercised.
 
 `.gitattributes` disables newline conversion for sealed goldens, binary inputs and FX-71 replay files. Their hashes cover the exact committed bytes even on Windows checkouts.
 

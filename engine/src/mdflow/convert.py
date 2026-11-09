@@ -3,9 +3,11 @@
 ``core_convert`` is the ONLY function that touches Core; tests replace ``mdflow.convert.core_convert``
 (always called through the module attribute) or, for REQ-CNV-05, install a fake ``markitdown`` package.
 
-* ``core_convert(data, ext, *, extract_media=None, media_base_dir=None, exiftool_path="") -> str`` builds a
+* ``core_convert(data, ext, *, extract_media=None, media_base_dir=None, exiftool_path="", libreoffice_path=None,
+  libreoffice_timeout=60) -> str`` builds a
   ``MarkItDown`` with plugins disabled and no LLM / Document Intelligence settings of any kind (R29;
-  ``MarkItDown(enable_plugins=False, exiftool_path=...)`` is the complete argument set; ``markitdown`` is resolved at
+  ``MarkItDown(enable_plugins=False, exiftool_path=...)`` plus the explicit legacy opt-in when requested;
+  ``markitdown`` is resolved at
   call time, no module-level singleton). ``exiftool_path`` is the empty string unless ``mdflow.exiftool`` found a usable
   tool for a standalone image (R31, REQ-CNV-06); a tool that fails falls back to a plain conversion. It passes ``data`` as a bytes stream
   with ``ext`` (``".pdf"``-style hint; never a path or URI) to ``convert_stream`` and returns Markdown text.
@@ -21,6 +23,7 @@
 from __future__ import annotations
 
 import io
+from hashlib import sha256
 import json
 import os
 import re
@@ -28,12 +31,14 @@ import shutil
 from pathlib import Path
 from typing import TypedDict
 
-from . import core_guard, exiftool, write
+from . import classify, core_guard, exiftool, sniff_io, triage, write
 from .contracts import Issue, SniffResult
 
 _MEDIA_FORMATS = frozenset({"docx", "pptx", "xlsx", "hwp", "hwpx"})
 _PAGE_JOIN = "\n\n"
 _SAFE_VERSION = re.compile(r"[^0-9A-Za-z._+-]")
+LEGACY_FORMATS = frozenset({'doc', 'ppt', 'rtf', 'hwp'})
+_DERIVED = re.compile(r'\A<!-- converted via LibreOffice (\d+(?:\.\d+)+) from (\.[a-z]+); fidelity=DERIVED -->\n')
 
 
 class _ConvertBase(TypedDict):
@@ -51,12 +56,16 @@ class ConvertResult(_ConvertBase, total=False):
 def core_convert(
     data: bytes, ext: str, *, extract_media: str | None = None, media_base_dir: str | None = None,
     exiftool_path: str = "",
+    libreoffice_path: str | None = None, libreoffice_timeout: float = 60,
 ) -> str:
     core_guard.check()
     import markitdown
 
-    # R29: the only Core options are plugins off and the exiftool path ("" = none; it also stops Core's own probing).
-    converter = markitdown.MarkItDown(enable_plugins=False, exiftool_path=exiftool_path)
+    # R29/R34: only local tool settings; no Core LLM or remote-document options.
+    init = dict(enable_plugins=False, exiftool_path=exiftool_path)
+    if libreoffice_path is not None:
+        init.update(libreoffice_path=libreoffice_path, libreoffice_timeout=libreoffice_timeout)
+    converter = markitdown.MarkItDown(**init)
     options: dict[str, str] = {}
     if extract_media is not None:
         options["extract_media"] = extract_media
@@ -76,6 +85,56 @@ def core_convert(
     if text is None:
         text = getattr(result, "text_content", "")
     return text or ""
+
+
+def legacy_enabled(sniff: dict, enabled: bool) -> bool:
+    return bool(enabled and sniff['route'] == 'LEGACY' and sniff['format'] in LEGACY_FORMATS
+                and not any(i['code'].startswith('E_') for i in sniff['issues']))
+
+
+def convert_legacy(data: bytes, sniff: dict, *, run_temp: Path, timeout_s: float = 60,
+                   max_bytes: int = sniff_io.DEFAULT_MAX_BYTES,
+                   zip_entries: int = sniff_io.DEFAULT_ZIP_ENTRIES,
+                   zip_total_bytes: int = sniff_io.DEFAULT_ZIP_TOTAL_BYTES) -> dict:
+    """Adapt Core's documented Markdown/media output; Core owns all format conversion.
+
+    The intermediate Office file is private to Core. `derived_sha256` therefore
+    identifies the returned UTF-8 Markdown, explicitly tagged `derived_format`.
+    Extracted media are triaged by Core individually and use the normal OCR pipeline.
+    """
+    core_guard.check()
+    try:
+        body = core_convert(data, _hint(sniff['format']), extract_media=str(run_temp / 'media'),
+                            media_base_dir=str(run_temp),
+                            libreoffice_path=os.environ.get('SOFFICE_PATH', '').strip() or 'soffice',
+                            libreoffice_timeout=timeout_s)
+        marker = _DERIVED.match(body)
+        if marker is None or marker[2] != _hint(sniff['format']):
+            raise ValueError('Core did not return the documented DERIVED marker')
+        payload = body.encode('utf-8')
+        if len(payload) > max_bytes:
+            raise ValueError('Derived Markdown exceeds byte bound')
+        media = _collect_media(run_temp / 'media')
+        if len(media) > zip_entries or sum(Path(p).stat().st_size for p in media.values()) > zip_total_bytes:
+            raise ValueError('Derived media exceeds bounds')
+        if any(Path(p).stat().st_size > max_bytes for p in media.values()):
+            raise ValueError('Derived media exceeds byte bound')
+        snapshot = run_temp / 'derived.md'
+        snapshot.write_bytes(payload)
+        derived_sniff = sniff_io.sniff(snapshot, logical=sniff['path'], root=sniff['root'],
+                                      max_bytes=max_bytes)
+        provenance = dict(original_sha256=sniff['sha256'], derived_sha256=sha256(payload).hexdigest(),
+                          derived_format='markdown', fidelity='DERIVED', tool='LibreOffice', version=marker[1])
+        warning = dict(code='W_PRECONVERTED', message='Converted via LibreOffice.', tool='LibreOffice', version=marker[1])
+        outcome = triage.run_derived_media(snapshot, derived_sniff, media)
+        decision = classify.classify_derived(derived_sniff, outcome)
+        return dict(data=payload, sniff=derived_sniff, provenance=provenance, outcome=outcome,
+                    classification=decision, media_hashes={
+                        'media/' + name: sha256(Path(path).read_bytes()).hexdigest() for name, path in media.items()},
+                    converted=dict(body=body, pages=None, media=media, issues=[]), issues=[warning])
+    except Exception as exc:
+        return dict(provenance=None, issues=[dict(code='E_PRECONVERT',
+                    message=f'Core legacy conversion failed ({type(exc).__name__}). Check SOFFICE_PATH and input.')])
 
 
 def _core_version() -> str:

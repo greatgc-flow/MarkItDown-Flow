@@ -18,7 +18,7 @@ import { loadNodeApis, type NodeApis } from './process/node-apis';
 import { systemClock } from './process/node-spawner';
 import { runSelftest } from './process/selftest';
 import { DirectorySpoolFs } from './process/spool-fs';
-import { probeVersion, type VersionGate } from './process/version-gate';
+import { isTransientGate, probeVersion, type VersionGate } from './process/version-gate';
 import { registerCommands } from './ui/commands';
 import { ConsentModal } from './ui/consent-modal';
 import { type Selection, ShellCoordinator, SPOOL_DIR_NAME } from './ui/coordinator';
@@ -238,18 +238,22 @@ export default class MarkItDownFlowPlugin extends Plugin {
 
   /**
    * Working directory for probes and the selftest: the engine venv root, or the
-   * user's home directory when no interpreter is configured yet. Never the vault
-   * or the plugin folder inside it (M3 N-02).
+   * user's home directory when no interpreter is configured yet. Both are user-chosen
+   * locations; the cwd is inside the vault only when the user put the venv there (M3 N-02).
    */
   private probeCwd(): string {
     if (!this.apis) return '';
     return this.settings.enginePython ? engineWorkingDirectory(this.apis.platform, this.settings.enginePython) : this.apis.homeDir();
   }
 
-  /** The gate for the next job: the finished probe, or the in-flight one (started at load or after an interpreter change). */
+  /**
+   * The gate for the next job: the finished probe, or the in-flight one (started at load or after an interpreter change).
+   * A verdict that only says "no answer" (timeout, spawn failure) is not a compatibility verdict and is never reused:
+   * the next job probes again (M6-01).
+   */
   private currentGate(): Promise<VersionGate | null> {
     if (this.jobsBlocked) return Promise.resolve(null);
-    if (this.gate) return Promise.resolve(this.gate);
+    if (this.gate && !isTransientGate(this.gate)) return Promise.resolve(this.gate);
     return this.refreshGate();
   }
 
