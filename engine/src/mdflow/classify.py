@@ -131,9 +131,11 @@ def _well_typed(report: dict, fmt: str) -> bool:
 
 def _consistent(report: dict, fmt: str) -> bool:
     candidates, coverage = report["candidates"], report["coverage"]
-    def index(text):
+    def index(text, maximum):
         # V3 rejects invalid identities, including Python's bounded decimal conversion.
         try:
+            if maximum < 1 or len(text) > len(str(maximum)):
+                return 0
             return int(text)
         except ValueError:
             return 0
@@ -142,7 +144,7 @@ def _consistent(report: dict, fmt: str) -> bool:
             match = re.fullmatch(r"p([1-9]\d*)", c["id"])
             if not match or c["kind"] != "page" or type(coverage["pages_total"]) is not int:
                 return False
-            number = index(match[1])
+            number = index(match[1], coverage['pages_total'])
             if not 1 <= number <= coverage["pages_total"] or c["page"] != number:
                 return False
         else:
@@ -152,7 +154,7 @@ def _consistent(report: dict, fmt: str) -> bool:
                 match = re.fullmatch(r"f([1-9]\d*)", c["id"])
                 if c["id"] != "image" and not match:
                     return False
-                if not 1 <= (index(match[1]) if match else 1) <= len(report["rasters"]):
+                if not 1 <= (index(match[1], len(report['rasters'])) if match else 1) <= len(report["rasters"]):
                     return False
     priorities = {c["priority"] for c in candidates}
     if report["decision"] == "no_candidates" and (candidates or coverage.get("state") not in {"complete", "not_applicable"}):

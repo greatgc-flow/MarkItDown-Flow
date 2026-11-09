@@ -486,6 +486,7 @@ Every REQ id defined in `10_SPEC.md` (incl. new REQ-SNF-09), `20_SHELL.md` (SHL-
 | T-GEN-95 | REQ-GEN-09, REQ-RND-05 | M4: temp recovery never follows links or bad owner records. |
 | T-META-95 | REQ-PKG-05, REQ-PKG-17 | M4: all bootstrap engine probes are isolated and evidence is explicit. |
 | T-META-96 | REQ-PKG-10, REQ-PKG-17 | M4: a restricted collection cannot define the complete inventory. |
+| T-GEN-96 | REQ-PKG-06 | M4: all five package version fields require full syntax; malformed tails/leading whitespace refuse, documented prerelease/post/local controls admit. |
 
 ## 5. Generated MECE matrices
 
