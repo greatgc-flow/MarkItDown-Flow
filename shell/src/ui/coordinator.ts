@@ -6,7 +6,7 @@
  */
 import { type Env, providerAvailability } from '../pure/env';
 import { type HistoryEntry, type HistoryOutcome } from '../pure/history';
-import { joinPath } from '../pure/paths';
+import { isAbsolutePath, joinPath } from '../pure/paths';
 import type { Plan, RunReport } from '../pure/protocol';
 import { defaultSettings, type SettingsV2 } from '../pure/settings';
 import type { SpoolFs } from '../pure/spool';
@@ -38,7 +38,7 @@ export interface CoordinatorRequest {
 
 export type SubmitResult =
   | { accepted: true; snapshot: JobSnapshot }
-  | { accepted: false; diagnostic: 'shell.BUSY' | 'shell.DESTINATION' | 'shell.RUNTIME' | 'shell.SETTINGS' };
+  | { accepted: false; diagnostic: 'shell.BUSY' | 'shell.CANCELLED' | 'shell.DESTINATION' | 'shell.RUNTIME' | 'shell.SETTINGS' };
 
 export interface CoordinatorDeps {
   spawner: Spawner;
@@ -95,6 +95,8 @@ export class ShellCoordinator {
   private isActive = false;
   /** Synchronous admission reservation held across the awaits of `submit` (REQ-SHL-09; M3 N-01). */
   private reserved = false;
+  /** Set by `cancel()`/`dispose()`; a pending admission re-checks it after each await and never launches (M4-V01). */
+  private admissionCancelled = false;
   private cancelled = false;
   private disposed = false;
   private engine: EngineRun<'plan'> | EngineRun<'report'> | null = null;
@@ -134,10 +136,13 @@ export class ShellCoordinator {
    * Busy check, version gate, destination validation, snapshot; then starts the job (not awaited).
    * Admission is atomic: the reservation is taken synchronously before the first await and
    * released on every refusal path, so two overlapping submissions never both pass (M3 N-01).
+   * A Cancel or unload that arrives while the admission awaits the gate, the destination or a
+   * folder listing refuses the launch instead of being overwritten by it (M4-V01).
    */
   async submit(selection: Selection, entry: EntryPoint): Promise<SubmitResult> {
     if (this.isActive || this.reserved) return this.refuse('shell.BUSY');
     this.reserved = true;
+    this.admissionCancelled = false;
     try {
       return await this.admit(selection, entry);
     } finally {
@@ -145,16 +150,29 @@ export class ShellCoordinator {
     }
   }
 
+  /** After each await of `admit`: unload refuses with `shell.RUNTIME`, Cancel with `shell.CANCELLED`; null continues. */
+  private admissionInterrupted(): SubmitResult | null {
+    if (this.disposed) return this.refuse('shell.RUNTIME');
+    if (this.admissionCancelled) return this.refuse('shell.CANCELLED');
+    return null;
+  }
+
   private async admit(selection: Selection, entry: EntryPoint): Promise<SubmitResult> {
     if (this.disposed) return this.refuse('shell.RUNTIME');
     const settings = this.deps.settings();
-    if (!settings.enginePython) return this.refuse('shell.RUNTIME');
+    // REQ-SHL-04/12: only a committed absolute interpreter is ever spawned; a relative value that reached the
+    // settings (hand-edited or synced data.json) is a runtime configuration problem, not a destination one (M4 P-04).
+    if (!settings.enginePython || !isAbsolutePath(settings.enginePython)) return this.refuse('shell.RUNTIME');
     if (selection.paths.length === 0) return this.refuse('shell.DESTINATION');
     const gate = await this.deps.gate();
+    const afterGate = this.admissionInterrupted();
+    if (afterGate) return afterGate;
     if (!gate || !gate.enabled) return this.refuse('shell.RUNTIME');
 
     const { fs, platform } = this.deps;
     const outDir = await this.validateDestination(settings.outputPath);
+    const afterDestination = this.admissionInterrupted();
+    if (afterDestination) return afterDestination;
     if (outDir === null) return this.refuse('shell.DESTINATION');
 
     const request = this.buildRequest(selection);
@@ -172,6 +190,8 @@ export class ShellCoordinator {
         }
         inputs.push(...selectImmediateFiles(folder, entries, { outDir: request.outDir, cacheDir: request.cacheDir }, platform));
       }
+      const afterListing = this.admissionInterrupted();
+      if (afterListing) return afterListing;
       if (inputs.length === 0) return this.refuse('shell.DESTINATION');
     }
 
@@ -209,9 +229,10 @@ export class ShellCoordinator {
     return this.isActive;
   }
 
-  /** Cancel: dismiss consent, prevent launches, cooperative-then-forced stop of the owned engine. */
+  /** Cancel: dismiss consent, prevent launches (including a pending admission), cooperative-then-forced stop of the owned engine. */
   cancel(): void {
     this.cancelled = true;
+    this.admissionCancelled = true;
     this.engine?.cancel();
     for (const waiter of this.cancelWaiters.splice(0)) waiter();
   }

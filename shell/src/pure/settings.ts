@@ -6,6 +6,7 @@
  */
 import { type HistoryEntry, normalizeHistory } from './history';
 import { formatMessage, type UiLocale } from './i18n';
+import { isAbsolutePath } from './paths';
 
 export const SCHEMA_VERSION = 2 as const;
 
@@ -144,13 +145,38 @@ export function isSafeVaultRelativePath(value: string): boolean {
   return true;
 }
 
-/** Hosts for which the engine accepts plain `http` (openai_compat.canonical_destination `_LOCAL_HOSTS`). */
+/**
+ * Hosts for which the engine accepts plain `http` (openai_compat.canonical_destination
+ * `_LOCAL_HOSTS`), spelled exactly as the raw host token must appear (lower-cased).
+ */
 const LOOPBACK_HOSTS: ReadonlySet<string> = new Set(['localhost', '127.0.0.1', '[::1]']);
+
+/** The raw authority of a URL text as `urllib.parse.urlsplit` sees it: between `scheme://` and the first `/`, `?` or `#`. */
+function rawAuthority(value: string): string | null {
+  const match = /^[A-Za-z][A-Za-z0-9+.-]*:\/\/([^/?#]*)/.exec(value);
+  return match ? match[1] : null;
+}
+
+/** The literal host token of a raw authority without its port (`[::1]:8080` -> `[::1]`, `Host:8080` -> `Host`). */
+function rawHost(authority: string): string {
+  if (authority.startsWith('[')) {
+    const end = authority.indexOf(']');
+    return end < 0 ? authority : authority.slice(0, end + 1);
+  }
+  const colon = authority.lastIndexOf(':');
+  return colon < 0 ? authority : authority.slice(0, colon);
+}
 
 /**
  * The engine's Base URL rule, applied before persisting (M3 N-07): `https`, or
  * `http` for loopback hosts only; no credentials, query or fragment. A value the
  * engine would refuse at startup (`E_PROVIDER_CONFIG`) is never saved.
+ *
+ * The engine (`canonical_destination`) checks the raw text, not a WHATWG-normalised
+ * URL: any `@` in the authority is refused (an empty userinfo included) and the
+ * loopback rule compares the literal host token, so `127.1`, `2130706433`,
+ * `0x7f000001` or `127.0.0.1.` are refused here as well instead of failing only
+ * at job time (M4 P-06 / M4-V03).
  */
 export function isAcceptableBaseUrl(value: string): boolean {
   if (value.trim() !== value || value.length === 0 || /[\u0000- \u007f]/.test(value)) return false;
@@ -162,8 +188,10 @@ export function isAcceptableBaseUrl(value: string): boolean {
   }
   if (url.username || url.password || url.search || url.hash || value.includes('?') || value.includes('#')) return false;
   if (url.hostname.length === 0) return false;
+  const authority = rawAuthority(value);
+  if (authority === null || authority.includes('@')) return false;
   if (url.protocol === 'https:') return true;
-  return url.protocol === 'http:' && LOOPBACK_HOSTS.has(url.hostname.toLowerCase());
+  return url.protocol === 'http:' && LOOPBACK_HOSTS.has(rawHost(authority).toLowerCase());
 }
 
 function isHttpUrl(value: unknown): value is string {
@@ -281,7 +309,9 @@ function migrateV1(raw: Raw): MigrationResult {
 function validateV2(raw: Raw): MigrationResult {
   const items = new ItemCollector();
   const settings = defaultSettings();
-  if (typeof raw.enginePython === 'string' && isPathString(raw.enginePython)) settings.enginePython = raw.enginePython;
+  // REQ-SHL-04: only an absolute interpreter is ever executed. A relative value from a hand-edited or synced
+  // data.json is reset exactly like the settings tab refuses it; the notice item never carries the value (M4 P-04).
+  if (typeof raw.enginePython === 'string' && isPathString(raw.enginePython) && isAbsolutePath(raw.enginePython)) settings.enginePython = raw.enginePython;
   else if (!isMissing(raw.enginePython)) items.add('enginePython', 'reset');
   if (isPathString(raw.bootstrapPythonHint)) settings.bootstrapPythonHint = raw.bootstrapPythonHint;
   else if (!isMissing(raw.bootstrapPythonHint)) items.add('bootstrapPythonHint', 'reset');

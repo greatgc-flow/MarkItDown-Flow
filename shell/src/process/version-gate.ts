@@ -96,9 +96,16 @@ function blocked(reason: VersionGateReason, field?: VersionField): VersionGate {
   return field === undefined ? { enabled: false, diagnostic: 'shell.RUNTIME', reason } : { enabled: false, diagnostic: 'shell.RUNTIME', reason, field };
 }
 
-/** Release segment `major.minor[.patch]`; pre-release/dev suffixes are ignored. Null when unparsable. */
+/**
+ * Release segment `major.minor[.patch]` of a version string whose whole text has
+ * the package gate's syntax (`test_pt_release.py`: `[0-9]+(?:\.[0-9]+)+(?:[A-Za-z0-9.+-]*)`,
+ * full match): PEP 440-style suffixes (`rc1`, `.post1`, `.dev0`, `+local`) are
+ * admitted and ignored; garbage suffixes, leading/trailing whitespace or a bare
+ * major are null, so the shell and the package gate agree on every spelling
+ * (M4 P-02 / M3-V04).
+ */
 export function releaseSegment(version: string): Semver | null {
-  const match = /^\s*(\d+)\.(\d+)(?:\.(\d+))?/.exec(version);
+  const match = /^(\d+)\.(\d+)(?:\.(\d+))?[A-Za-z0-9.+-]*$/.exec(version);
   if (!match) return null;
   return [Number(match[1]), Number(match[2]), match[3] === undefined ? 0 : Number(match[3])];
 }

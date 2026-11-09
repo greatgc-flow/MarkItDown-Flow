@@ -390,20 +390,20 @@ R27/R28 added registrations (existing REQs; precise fixture assertions replace b
 | JT-01 | REQ-SHL-01 (machine check only: build inputs/imports reject retired v1 `src/`, `styles.css`, tests; **no** attestation-presence assertion) | - |
 | JT-02 | REQ-SHL-02 (six ids; single `Platform.isDesktop` guard: simulated mobile registers/spawns nothing, no Node API; URL command 0 spawn/network; history/log without Python) | - |
 | JT-03 | REQ-SHL-03 | FX-70 |
-| JT-04 | REQ-SHL-04 | FX-70 |
+| JT-04 | REQ-SHL-04 (all migration rows; Base URL raw-text rule incl. loopback aliases/empty userinfo refused; relative `enginePython` from disk reset without echoing the value; refused text commits -> one `shell.settings.rejected` notice + field revert, stored values unchanged) | FX-70 |
 | JT-05 | REQ-SHL-05 (atomic; idempotent; sanitized snapshot; write-denied leaves original bytes, blocks jobs, shows unsanitized-disk warning) | FX-70 |
 | JT-06 | REQ-SHL-06 (key presence only; absent key keeps `none` usable; env scrub; inherited-env smoke without printing values; no secrets persisted) | FX-70 |
 | JT-07 | REQ-SHL-07 | FX-70 |
 | JT-08 | REQ-SHL-08 | - |
-| JT-09 | REQ-SHL-09 | - |
+| JT-09 | REQ-SHL-09 (destination/symlink/case rules; atomic BUSY admission; progress summary resets on `run_start` and the incremental reducer equals the whole-stream summary; relative interpreter -> `shell.RUNTIME` before any spawn) | FX-71 |
 | JT-10 | REQ-SHL-10 | - |
 | JT-11 | REQ-SHL-11 (replay engine-produced streams; invented command/option fails) | FX-71 |
 | JT-12 | REQ-SHL-12 (argv array, `shell:false`; replay snapshot identical: args, cwd, output, cache; nested `inputs/sub/a.pdf` keeps logical `sub/a.pdf`) | FX-71 |
 | JT-13 | REQ-SHL-13 (UTF-8 split/CRLF, 64 KiB limit, unknown events, summary events only, full Plan from `plan` stdout, raw triage `corrupt` retained, report spool removed) | FX-71 |
 | JT-14 | REQ-SHL-14 (50 files -> one modal; per-file fields = Plans; no run/token/interruption fields; Keep pending default; HTML literal) | FX-71 |
 | JT-15 | REQ-SHL-15 (`plan` then same-roots `run` with one plugin-owned `--yes-file` of the displayed hashes + `--approved-by plugin:modal`; consent only for `requests_to_send > 0`; cache warming keeps hash; changed bytes -> no egress; no per-file replay; yes-file deleted after the run) | FX-71 |
-| JT-16 | REQ-SHL-16 (real OS process: cancel before launch / in modal / during blocked mock request / unload; cooperative POSIX -> exit 130; forced POSIX + Windows -> native status, interrupted, restart recovers, no owned live process) | FX-63 |
-| JT-17 | REQ-SHL-17 (complete `version` response; protocol 2, schema 2, wrong Pillow/renderer, each missing field -> blocked) | FX-71 |
+| JT-16 | REQ-SHL-16 (cancel before launch / in modal / during blocked mock request / unload; cancel or dispose while the admission awaits the version gate -> zero spawns, `shell.CANCELLED`/`shell.RUNTIME`, later job admitted; status bar shows Run-only counts after Plan->consent->Run. Real OS process half: cooperative POSIX -> exit 130; forced POSIX + Windows -> native status, interrupted, restart recovers, no owned live process = 90_ACCEPTANCE E-03) | FX-63, FX-71 |
+| JT-17 | REQ-SHL-17 (complete `version` response recorded on a supported host against the release policy itself; protocol 2, schema 2, wrong Pillow/renderer, each missing field -> blocked; version syntax = package gate: `5.15.1???`/leading whitespace blocked, rc/post/dev/local admitted) | FX-71 |
 | JT-18 | REQ-SHL-18 | - |
 | JT-SHL-19-01 | REQ-SHL-19 (parses active Code-column cells of SPEC 7.5; set-equality with table rows and en/ko engine keys, excl. `UNKNOWN`; non-empty; interpolation safe) | - |
 | JT-20 | REQ-SHL-20 (spawns only `version`/`selftest`; 0 sockets; no shell-created raster) | - |

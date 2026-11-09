@@ -200,6 +200,7 @@ export default class MarkItDownFlowPlugin extends Plugin {
         openSetup: () => this.openSetup(),
         locale: () => this.locale,
         readOnly: () => this.settingsReadOnly,
+        notify: (key) => this.notify(key),
       }),
     );
 

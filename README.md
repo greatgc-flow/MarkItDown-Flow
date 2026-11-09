@@ -37,8 +37,10 @@ setting wins over a value in the launch environment) with the model from the
 Other endpoints must actually implement this protocol. Native Azure OpenAI,
 Gemini and Anthropic APIs are not configured automatically; using a compatible
 proxy or Ollama (for example `http://127.0.0.1:11434/v1`; plain `http` is
-accepted for `localhost`, `127.0.0.1` and `[::1]` only, and the settings tab
-refuses other `http` values, credentials, query strings and fragments up front)
+accepted for `localhost`, `127.0.0.1` and `[::1]` spelled exactly that way,
+and the settings tab refuses other `http` values, loopback aliases such as
+`127.1` or `0x7f000001`, credentials, query strings and fragments up front,
+the same rule the engine applies)
 requires validating its protocol, destination and model before approval. No compatibility test for those services
 is claimed here. Provider privacy and retention follow the configured service's
 policies; consult
@@ -122,7 +124,11 @@ attached to the note, after a confirmation that lists the files. The
 context-menu, drop and language settings take effect after the plugin is
 reloaded. Run options (render DPI, minimum OCR priority, maximum units per
 file, approval threshold, sensitive path globs) are editable in the settings
-tab.
+tab. A value a text field refuses (a relative interpreter path, an output path
+outside the vault, a Base URL the engine would reject, a non-integer bound) is
+not saved: a notice says so and the field shows the saved value again. A
+relative interpreter path found in a hand-edited or synced settings file is
+likewise reset and never launched.
 
 Migration drops removed settings and credentials and keeps a sanitized rollback
 snapshot `data.v1.json` next to `data.json`. Old external backups can retain

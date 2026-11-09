@@ -5,7 +5,7 @@
  * verbatim for `plan` and the authorized `run` replay.
  */
 import { type Env, scrubEngineEnv } from '../pure/env';
-import { parentPath } from '../pure/paths';
+import { isAbsolutePath, parentPath } from '../pure/paths';
 import type { ProviderSettings, RunOptions, SettingsV2 } from '../pure/settings';
 import type { HostPlatform, SpawnRequest } from './types';
 
@@ -72,11 +72,6 @@ export interface SnapshotParams {
 export interface Authorization {
   yesFile: string;
   approvedBy: typeof APPROVED_BY_MODAL;
-}
-
-/** Absolute on either platform: POSIX root, drive letter or UNC. */
-export function isAbsolutePath(value: string): boolean {
-  return /^(?:\/|\\\\|[A-Za-z]:[\\/])/.test(value);
 }
 
 function freezeDeep<T>(value: T): T {

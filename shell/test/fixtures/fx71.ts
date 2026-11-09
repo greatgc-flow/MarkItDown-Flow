@@ -57,13 +57,13 @@ export function fx71Json<T = unknown>(name: string): T {
   return JSON.parse(fx71Text(name)) as T;
 }
 
-/** Recorded argv of a stream (after `python -m mdflow`). */
+/** Recorded argv of a stream (after `python -I -m mdflow`; the recorder runs the isolated interpreter, T-GEN-92/97). */
 export function fx71Args(name: string): string[] {
   const entry = fx71Manifest().files[name];
   if (!entry?.argv) throw new Error(`FX-71 ${name}: no recorded argv`);
   const argv = entry.argv;
-  if (argv[0] !== 'python' || argv[1] !== '-m' || argv[2] !== 'mdflow') throw new Error(`FX-71 ${name}: unexpected argv prefix`);
-  return argv.slice(3);
+  if (argv[0] !== 'python' || argv[1] !== '-I' || argv[2] !== '-m' || argv[3] !== 'mdflow') throw new Error(`FX-71 ${name}: unexpected argv prefix`);
+  return argv.slice(4);
 }
 
 export function fx71Exit(name: string): number {

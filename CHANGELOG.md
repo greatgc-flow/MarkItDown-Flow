@@ -28,7 +28,10 @@ section for the rollback snapshot `data.v1.json` and the removals below.
   Korean and English UI.
 - Drop confirmation modal; file/folder pickers through the standard file
   input; editable run options (DPI, minimum priority, max units, approval
-  threshold, sensitive globs).
+  threshold, sensitive globs). Refused settings values are announced and the
+  field reverts to the saved value; the Base URL check applies the engine's
+  own raw-text rule (exact loopback spellings, no `@` in the authority) and a
+  relative interpreter path is never launched, whether typed or read from disk.
 
 ### Changed
 

@@ -32,6 +32,11 @@ export function parentPath(platform: HostPlatform, path: string): string {
   return /^[A-Za-z]:$/.test(parent) ? parent + separatorFor(platform) : parent;
 }
 
+/** Absolute on either platform: POSIX root, drive letter or UNC (REQ-SHL-04/12; the only interpreter form ever executed). */
+export function isAbsolutePath(value: string): boolean {
+  return /^(?:\/|\\\\|[A-Za-z]:[\\/])/.test(value);
+}
+
 /** Comparable form of a real path: forward slashes, no trailing slash, case-folded on Windows. */
 export function comparablePath(platform: HostPlatform, path: string): string {
   const slashed = path.replace(/\\/g, '/').replace(/\/+$/, '');

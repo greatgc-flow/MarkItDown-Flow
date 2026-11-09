@@ -1,6 +1,6 @@
 {
   "mdflow": "2.0.0",
-  "markitdown-gc": "0.3.5",
+  "markitdown-gc": "0.3.6",
   "pypdfium2": "5.15.1",
   "pillow": "13.0.0",
   "python": "3.15.2",

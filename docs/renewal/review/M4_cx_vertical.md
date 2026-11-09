@@ -1,6 +1,6 @@
 # M4 recursive MECE audit — vertical, oracles, docs ↔ code, simplicity
 
-Repair follow-up: [M4_ENGINE_FIXES.md](M4_ENGINE_FIXES.md) records engine repairs, red-first evidence, excluded shell/horizontal handoffs and the external-evidence acceptance inventory. Findings and scores below retain the original audit snapshot.
+Repair follow-up: [M4_ENGINE_FIXES.md](M4_ENGINE_FIXES.md) records engine repairs, red-first evidence, excluded shell/horizontal handoffs and the external-evidence acceptance inventory; [M4_SHELL_FIXES.md](M4_SHELL_FIXES.md) records the shell repairs (M4-V01, M3-V03, M3-V04, M4-V03, X-11 publication). Findings and scores below retain the original audit snapshot.
 
 Date: 2026-11-09. Workspace: repository. Authority: current SPEC DRAFT-3.5 and SHELL/PACKAGING/TESTPLAN/ACCEPTANCE. Inputs: all three M3 reviews, `M3_ENGINE_FIXES.md`, current implementation, test assertions and local receipts. Historical reviews retain their historical verdicts.
 

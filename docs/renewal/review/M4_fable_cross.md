@@ -1,6 +1,6 @@
 # M4 cross-cutting MECE audit (Fable)
 
-Engine repair follow-up: [M4_ENGINE_FIXES.md](M4_ENGINE_FIXES.md) records the engine/package/documentation dispositions and external evidence obligations; this review's findings and scores retain their original snapshot. Protected shell work remains with its owner.
+Engine repair follow-up: [M4_ENGINE_FIXES.md](M4_ENGINE_FIXES.md) records the engine/package/documentation dispositions and external evidence obligations; this review's findings and scores retain their original snapshot. Shell repair follow-up: [M4_SHELL_FIXES.md](M4_SHELL_FIXES.md) records the P-01..P-06 / D-01..D-03 shell dispositions and receipts.
 
 Reviewer: cc.fable. Date: 2026-11-09. Workspace = repo at `cadfe1f` (clean tree). Read-only: file reads, greps and one independent `npx jest --json` run from `shell/` (25 suites, **266/266 passed**, 0 failed). Engine 536 pass, `tsc --noEmit` clean and `npm run build` OK are taken from the orchestrator and `M3_ENGINE_FIXES.md`; tsc/build were not re-run here (sandbox). No code edits, no git.
 
