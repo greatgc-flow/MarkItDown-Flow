@@ -212,7 +212,7 @@ def test_T_CLS_07_every_core_issue_policy(core_api, core_fx, code):
         'external_media': (('NATIVE','UNKNOWN','U','convert_and_ocr'), {'W_EXTERNAL_MEDIA','W_TRIAGE_PARTIAL'}),
         'frame_cap': (('NATIVE','UNKNOWN','U','convert_and_ocr'), {'W_TRIAGE_PARTIAL'}),
         'image_probe_failed': (('NATIVE','PARTIAL','M','convert_and_ocr'), {'W_IMAGE_PROBE'}),
-        'media_not_inspected': (('NATIVE','UNKNOWN','U','convert_only'), {'W_MEDIA_NOT_INSPECTED'}),
+        'media_not_inspected': (('NATIVE','NONE','T','convert_only'), {'W_MEDIA_NOT_INSPECTED'}),  # R33 html
         'missing_dependency': (('NATIVE','UNKNOWN','U','convert_and_ocr'), {'W_CORE_DEPENDENCY','W_TRIAGE_UNKNOWN'}),
         'page_cap': (('NATIVE','UNKNOWN','U','convert_and_ocr'), {'W_TRIAGE_PARTIAL'}),
         'too_large': (('NATIVE','UNKNOWN','U','convert_only'), {'W_TRIAGE_UNKNOWN'}),
@@ -312,8 +312,8 @@ def test_T_CLS_08_v1_v4_precede_positive_rows(core_api, core_fx, mutation, warni
 @pytest.mark.parametrize("fx,fmt,route,expected", [
     ("FX-28", "txt", "NATIVE", ("NATIVE", "NONE", "T", "convert_only")),
     ("FX-29", "txt", "NATIVE", ("NATIVE", "NONE", "T", "convert_only")),
-    ("FX-30", "csv", "NATIVE", ("NATIVE", "UNKNOWN", "U", "convert_only")),
-    ("FX-31", "html", "NATIVE", ("NATIVE", "UNKNOWN", "U", "convert_only")),
+    ("FX-30", "csv", "NATIVE", ("NATIVE", "NONE", "T", "convert_only")),
+    ("FX-31", "html", "NATIVE", ("NATIVE", "NONE", "T", "convert_only")),
     ("FX-35", "doc", "LEGACY", ("LEGACY", "UNKNOWN", "L", "report_only")),
     ("FX-36", "rtf", "LEGACY", ("LEGACY", "UNKNOWN", "L", "report_only")),
     ("FX-37", "odt", "LEGACY", ("LEGACY", "UNKNOWN", "L", "report_only")),
@@ -325,7 +325,7 @@ def test_T_CLS_09_non_g1_rows(core_api, core_fx, fx, fmt, route, expected):
         sniff["reasons"] = ["media_out_of_scope"]
     result = core_api.classify.classify(sniff, core_fx.report(fx) if route == "NATIVE" else None)
     assert signature(result) == expected
-    if fmt in {"html", "csv"}:
+    if fmt == "html":
         assert "W_MEDIA_NOT_INSPECTED" in issue_codes(result)
     if fmt == "mp3":
         assert "E_MEDIA_OUT_OF_SCOPE" in issue_codes(result)

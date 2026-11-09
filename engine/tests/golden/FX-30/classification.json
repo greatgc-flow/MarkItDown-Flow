@@ -3,14 +3,9 @@
  "candidates_unique": [],
  "coverage_state": "none",
  "decision": "unknown",
- "issues": [
-  {
-   "code": "W_MEDIA_NOT_INSPECTED",
-   "message": "W media not inspected."
-  }
- ],
- "label": "U",
- "need": "UNKNOWN",
+ "issues": [],
+ "label": "T",
+ "need": "NONE",
  "reasons": [
   "core:unsupported_format"
  ],

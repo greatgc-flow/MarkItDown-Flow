@@ -332,6 +332,17 @@
   color: var(--text-error);
 }
 
+/* R33c co-install guard: the conflict text is an error; its fix command keeps the shared command styling. */
+.mdflow-setup-conflict > p:first-child {
+  color: var(--text-error);
+}
+
+/* R33: a pre-converted (derived) file is flagged beside its class label. */
+.mdflow-badge-derived {
+  color: var(--text-muted);
+  margin-left: var(--size-4-1);
+}
+
 .mdflow-setup-commands {
   margin: var(--size-4-2) 0;
   padding: var(--size-4-2) var(--size-4-3);

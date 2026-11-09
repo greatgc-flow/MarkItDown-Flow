@@ -32,6 +32,15 @@ section for the rollback snapshot `data.v1.json` and the removals below.
   field reverts to the saved value; the Base URL check applies the engine's
   own raw-text rule (exact loopback spellings, no `@` in the authority) and a
   relative interpreter path is never launched, whether typed or read from disk.
+- Optional "Legacy formats (LibreOffice)" toggle (off by default) that passes
+  `--preconvert-legacy` to the engine so `.doc`, `.ppt`, `.rtf` and pre-5.0 HWP
+  files are converted through your own LibreOffice; such results are shown as
+  "derived · LibreOffice <version>" (`W_PRECONVERTED`). The setting and the
+  setup diagnostics show the detected LibreOffice and exiftool status;
+  `EXIFTOOL_PATH`/`SOFFICE_PATH` are forwarded to the engine; a venv that also
+  holds the upstream `markitdown` package is refused (`E_CORE_CONFLICT`) with
+  the exact uninstall command shown. The version gate applies the package
+  gate's PEP 440 step as well (`3.14garbage` is refused).
 
 ### Changed
 

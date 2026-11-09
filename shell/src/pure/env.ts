@@ -30,6 +30,13 @@ export const BASELINE_ENV_VARS: readonly string[] = [
   'LC_ALL',
 ];
 
+/**
+ * Optional tool locations the engine detects (R31 `EXIFTOOL_PATH`, R33 `SOFFICE_PATH`): nonsecret
+ * executable paths, forwarded for every provider so a tool installed outside PATH is found from
+ * the plugin exactly as from a terminal. Displayed by presence only.
+ */
+export const TOOL_PATH_ENV_VARS: readonly string[] = ['EXIFTOOL_PATH', 'SOFFICE_PATH'];
+
 export const API_KEY_MISSING_KEY = 'shell.setup.apiKeyMissing';
 
 export type Presence = 'present' | 'absent';
@@ -63,7 +70,7 @@ export function providerAvailability(settings: SettingsV2, env: Env): ProviderAv
   return { effectiveProvider: 'none', remoteBlocked: true, guidanceKey: API_KEY_MISSING_KEY };
 }
 
-/** SPEC baseline allowlist + UTF-8 settings + provider variables for the selected provider. */
+/** SPEC baseline allowlist + tool locations + UTF-8 settings + provider variables for the selected provider. */
 export function scrubEngineEnv(env: Env, provider: ProviderName): Record<string, string> {
   const out: Record<string, string> = {};
   const copy = (name: string): void => {
@@ -71,6 +78,7 @@ export function scrubEngineEnv(env: Env, provider: ProviderName): Record<string,
     if (typeof value === 'string') out[name] = value;
   };
   for (const name of BASELINE_ENV_VARS) copy(name);
+  for (const name of TOOL_PATH_ENV_VARS) copy(name);
   out.PYTHONUTF8 = '1';
   out.PYTHONIOENCODING = 'utf-8';
   if (provider === 'openai-compatible') {
@@ -83,5 +91,12 @@ export function scrubEngineEnv(env: Env, provider: ProviderName): Record<string,
 export function environmentDiagnostics(env: Env): Record<string, Presence> {
   const out: Record<string, Presence> = {};
   for (const name of PROVIDER_ENV_VARS) out[name] = present(env, name) ? 'present' : 'absent';
+  return out;
+}
+
+/** Presence (never the path) of the optional tool location variables. */
+export function toolEnvironmentDiagnostics(env: Env): Record<string, Presence> {
+  const out: Record<string, Presence> = {};
+  for (const name of TOOL_PATH_ENV_VARS) out[name] = present(env, name) ? 'present' : 'absent';
   return out;
 }

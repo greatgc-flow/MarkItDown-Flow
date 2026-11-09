@@ -4,7 +4,7 @@
  * for the user's own terminal. Nothing is installed, downloaded or executed as
  * a fallback interpreter.
  */
-import { type Env, environmentDiagnostics, keyPresence, type Presence, scrubEngineEnv } from '../pure/env';
+import { type Env, environmentDiagnostics, keyPresence, type Presence, scrubEngineEnv, toolEnvironmentDiagnostics } from '../pure/env';
 import { diagnosticsCopy } from './log';
 import type { Clock, HostPlatform, Spawner, SpawnRequest } from './types';
 import { captureProbe, probeVersion, RELEASE_LOCK, VERSION_PROBE_TIMEOUT_MS, type VersionGate, type VersionPolicy } from './version-gate';
@@ -47,7 +47,14 @@ export interface SetupDiagnostics {
   apiKey: Presence;
   /** Presence (never values) of every SPEC 10.2 provider variable in the Obsidian process. */
   providerEnv: Record<string, Presence>;
+  /** Presence (never the path) of the optional tool location variables `EXIFTOOL_PATH`/`SOFFICE_PATH` (R31/R33). */
+  toolEnv: Record<string, Presence>;
   jobsEnabled: boolean;
+  /**
+   * R33c: the terminal command that removes a co-installed upstream `markitdown` from the selected
+   * interpreter's venv, when the gate is blocked by `core_conflict`; null otherwise. Rendered text only.
+   */
+  conflictFix: string | null;
   /** Redacted, code-only summary for the diagnostics copy button. */
   summary: string;
 }
@@ -104,6 +111,15 @@ export function renderBootstrapInstructions(paths: BootstrapPaths): { windows: s
   return { windows, posix };
 }
 
+/**
+ * R33c fix command for the co-install guard: uninstall the upstream `markitdown` distribution from the
+ * selected interpreter's venv (`markitdown-gc` stays). Rendered for the user's own terminal, never executed.
+ */
+export function renderUpstreamUninstall(enginePython: string, platform: HostPlatform): string {
+  const python = platform === 'win32' ? `& ${quote(enginePython)}` : quote(enginePython);
+  return `${python} -m pip uninstall -y markitdown`;
+}
+
 function parsePythonVersion(text: string): string | null {
   const match = /Python\s+(\d+\.\d+(?:\.\d+)?)/.exec(text);
   return match ? match[1] : null;
@@ -158,6 +174,7 @@ export async function collectSetupDiagnostics(deps: SetupDeps): Promise<SetupDia
     { version: gate, probes, codes: [], paths: deps.enginePython ? [deps.enginePython] : [] },
     redact,
   );
+  const conflict = gate !== null && !gate.enabled && gate.reason === 'core_conflict' && deps.enginePython;
   return {
     enginePython: deps.enginePython,
     gate,
@@ -165,7 +182,9 @@ export async function collectSetupDiagnostics(deps: SetupDeps): Promise<SetupDia
     instructions,
     apiKey: keyPresence(deps.hostEnv),
     providerEnv: environmentDiagnostics(deps.hostEnv),
+    toolEnv: toolEnvironmentDiagnostics(deps.hostEnv),
     jobsEnabled: gate?.enabled === true,
+    conflictFix: conflict ? renderUpstreamUninstall(deps.enginePython as string, deps.platform) : null,
     summary,
   };
 }

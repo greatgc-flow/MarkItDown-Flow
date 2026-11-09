@@ -97,7 +97,7 @@ it(R4('JT-04 the settings tab groups every control under five headings (Engine, 
   };
   const expected: Record<string, number> = {
     enginePython: 0, openSetup: 0,
-    outputPath: 1, enableRecursiveConversion: 1, enableContextMenu: 1, enableDragDrop: 1, enableBatchProgress: 1, locale: 1,
+    outputPath: 1, enableRecursiveConversion: 1, enableLegacyPreconvert: 1, enableContextMenu: 1, enableDragDrop: 1, enableBatchProgress: 1, locale: 1,
     provider: 2, model: 2, baseUrl: 2,
     approveThreshold: 3, sensitive: 3,
     dpi: 4, minPriority: 4, maxUnits: 4,

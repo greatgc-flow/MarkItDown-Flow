@@ -10,6 +10,8 @@ import hashlib
 import os
 import subprocess
 import sys
+import shutil
+import uuid
 import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -190,7 +192,7 @@ def golden_problems(root: Path) -> list[str]:
 MATRIX_STAGES = [f"S{n}" for n in range(14)]
 MATRIX_FMS = [f"FM{n}" for n in range(13)]
 MATRIX_CLASSES = [f"K{n:02d}" for n in range(1, 21)]
-REPORT_ONLY = {"K12", "K13", "K15", "K16", "K17", "K19"}
+REPORT_ONLY = {"K13", "K15", "K16", "K17", "K19"}  # K12 reaches execution with R33 enabled
 FLOOR_STAGE_FM = {("S3", f"FM{n}") for n in (0, 1, 2, 3, 4, 10, 11, 12)} | {
     ("S1", "FM1"), ("S1", "FM2"), ("S1", "FM3"), ("S1", "FM9"), ("S2", "FM1"), ("S2", "FM10"),
     ("S6", "FM1"), ("S6", "FM3"), ("S7", "FM1"), ("S7", "FM5"), ("S9", "FM8"), ("S10", "FM6"),
@@ -332,6 +334,64 @@ def write_collection(path: Path, tests: list[dict], commit: str, *, root: Path =
         suite_sha256=suite_digest(root), tests=tests), ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
 
 
+def shell_suite_digest(root: Path) -> str:
+    digest = hashlib.sha256()
+    paths = [p for folder in ('src', 'test') for p in (root / 'shell' / folder).rglob('*')
+             if p.is_file() and p.suffix in {'.ts', '.js', '.json'}]
+    paths += [p for p in (root / 'shell').glob('*') if p.is_file() and p.suffix in {'.ts', '.js', '.json'}]
+    paths += [root / 'tools/trace.py']
+    paths += [root / 'docs/renewal' / name for name in ('10_SPEC.md', '20_SHELL.md', '30_TESTPLAN.md')]
+    for path in sorted(p for p in paths if p.is_file()):
+        digest.update(path.relative_to(root).as_posix().encode() + b'\0')
+        digest.update(path.read_bytes().replace(b'\r\n', b'\n') + b'\0')
+    return digest.hexdigest()
+
+
+def write_shell_collection(path: Path, tests: list[dict], commit: str, *, root: Path = ROOT) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(dict(v=1, scope='shell/test', commit=commit,
+        suite_sha256=shell_suite_digest(root), tests=tests), ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+    # Seal the independently collected universe, never regenerate it from JUnit.
+    junit = 'junit-' + path.name.removeprefix('collection-').removesuffix('.json') + '.xml'
+    write_execution_registry(path.parent, junit, tests, commit)
+
+
+def collect_shell(destination: Path, commit: str, *, root: Path = ROOT) -> None:
+    scratch = destination.parent / ('jest-collection-' + uuid.uuid4().hex)
+    scratch.mkdir(parents=True)
+    environment = dict(os.environ)
+    for name in ('JEST_JUNIT_OUTPUT_NAME', 'JEST_JUNIT_OUTPUT_DIR', 'NODE_OPTIONS'):
+        environment.pop(name, None)
+    try:
+        raw = scratch / 'expanded.json'
+        done = subprocess.run(['node', str(root / 'shell/node_modules/jest/bin/jest.js'),
+            '--runInBand', '--collectTests', '--json', '--outputFile=' + str(raw.resolve())], cwd=root / 'shell', env=environment,
+            capture_output=True, text=True, encoding='utf-8', timeout=120)
+        if done.returncode:
+            raise ValueError('independent Jest collection failed: ' + done.stdout[-1000:] + done.stderr[-3000:])
+        collected = json.loads(raw.read_text(encoding='utf-8'))
+        records = []
+        for suite in collected['testResults']:
+            source = Path(suite['name']).relative_to(root).as_posix()
+            tests = []
+            for case in suite['assertionResults']:
+                title = case['title']
+                tid = (re.match(r'(JT-(?:\d{2}|SHL-19-01))\b', title) or [''])[0]
+                if not tid or case.get('invocations') != 0 or case.get('wouldRun') is not True:
+                    raise ValueError('unregistered/skipped/executed Jest collection case')
+                tests.append(dict(tid=tid, nodeid=source + '::' + title, markers={}, selected=True))
+            records.append(dict(source=source, tests=tests))
+        expected_files = {p.relative_to(root).as_posix() for p in (root / 'shell/test').glob('*.test.ts')}
+        if {r['source'] for r in records} != expected_files:
+            raise ValueError('Jest collection omitted a source file')
+        tests = sorted((t for r in records for t in r['tests']), key=lambda t: t['nodeid'])
+        if not tests or len({t['nodeid'] for t in tests}) != len(tests) or not all(t['selected'] for t in tests):
+            raise ValueError('empty, skipped or duplicate Jest collection identity')
+        write_shell_collection(destination, tests, commit, root=root)
+    finally:
+        shutil.rmtree(scratch)
+
+
 def collect_complete(destination: Path, commit: str, *, root: Path = ROOT) -> None:
     """Collect the entire suite independently of the caller's files/nodeids/-k/-m.
 
@@ -373,8 +433,11 @@ def execution_receipt(evidence: Path, junit_name: str, expected_commit: str, *, 
     if manifest.get('collection_sha256') != hashlib.sha256(canonical_bytes).hexdigest():
         raise ValueError('independent collection digest differs')
     canonical = json.loads(canonical_bytes)
-    if (not isinstance(canonical, dict) or canonical.get('v') != 1 or canonical.get('scope') != 'engine/tests'
-            or canonical.get('commit') != expected_commit or canonical.get('suite_sha256') != suite_digest(root)):
+    shell = junit_name.startswith('junit-shell-')
+    scope = 'shell/test' if shell else 'engine/tests'
+    digest = shell_suite_digest(root) if shell else suite_digest(root)
+    if (not isinstance(canonical, dict) or canonical.get('v') != 1 or canonical.get('scope') != scope
+            or canonical.get('commit') != expected_commit or canonical.get('suite_sha256') != digest):
         raise ValueError('independent collection source/commit differs')
     complete = canonical.get('tests')
     if not isinstance(complete, list) or not complete or any(
@@ -400,8 +463,15 @@ def execution_receipt(evidence: Path, junit_name: str, expected_commit: str, *, 
     actual = {}
     for case in ET.parse(evidence / junit_name).iter('testcase'):
         props = {p.get('name'): p.get('value', '') for p in case.findall('./properties/property')}
-        nodeid = props.get('nodeid')
-        if not nodeid or nodeid in actual or selected.get(nodeid) != props.get('tid'):
+        if shell:
+            source = (case.get('file') or case.get('classname', '')).replace('\\', '/')
+            source = 'shell/' + source[source.rfind('test/'):] if 'test/' in source else source
+            title = case.get('name', '')
+            nodeid = source + '::' + title
+            tid = (re.match(r'(JT-(?:\d{2}|SHL-19-01))\b', title) or [''])[0]
+        else:
+            nodeid, tid = props.get('nodeid'), props.get('tid')
+        if not nodeid or nodeid in actual or selected.get(nodeid) != tid:
             raise ValueError('missing, duplicate, unexpected or mistagged JUnit identity')
         actual[nodeid] = not any(case.find(k) is not None for k in ('failure', 'error', 'skipped'))
     if not actual or set(actual) != set(selected):
@@ -422,6 +492,20 @@ def rows_passed(rows: list[dict], receipt: tuple[list[dict], dict]) -> bool:
     return bool(rows)
 
 
+def shell_rows_passed(rows: list[dict], receipt: tuple[list[dict], dict]) -> bool:
+    tests, actual = receipt
+    for row in rows:
+        source, raw = row['nodeid'].split('::', 1)
+        description = raw.split(' ', 1)[1]
+        pattern = re.escape(description)
+        pattern = re.sub(r'%[sdifjpo#]', '.+?', pattern)
+        expected = [t for t in tests if t['tid'] == row['tid'] and t['nodeid'].startswith(source + '::')
+                    and re.fullmatch(pattern, t['nodeid'].split(': ', 1)[-1])]
+        if not expected or not all(t['selected'] and actual.get(t['nodeid']) is True for t in expected):
+            return False
+    return bool(rows)
+
+
 def discover_shell_tests(root: Path) -> list[dict]:
     """Read real req() registrations; JUnit, separately, proves execution."""
     records = []
@@ -429,11 +513,21 @@ def discover_shell_tests(root: Path) -> list[dict]:
         source = path.read_text(encoding="utf-8")
         bindings = {m[1]: REQ_PATTERN.findall(m[2]) for m in re.finditer(
             r"(?:const|let)\s+(\w+)\s*=\s*req\(([^;]+)\);", source)}
-        for match in re.finditer(r"\b(?:it|test)(?:\.each\([\s\S]*?\))?\s*\(\s*(\w+)\(\s*['\"`](JT-[^'\"`]+)['\"`]", source):
-            title = match[2]
+        platform_blocks = []
+        for name, platform, operator in (('POSIX', 'posix', '!=='), ('WINDOWS', 'windows', '===')):
+            if re.search(rf"const\s+{name}\s*=\s*process\.platform\s*{operator}\s*['\"]win32['\"]", source):
+                platform_blocks.extend((m.start(), m.end(), platform) for m in re.finditer(
+                    rf'^if \({name}\) \{{[\s\S]*?^\}}', source, re.M))
+        pattern = r"\b(?:it|test)(?:\.each\([\s\S]*?\))?\s*\(\s*(\w+)\(\s*(?P<quote>['\"`])(?P<title>JT-(?:\\.|(?!(?P=quote))[\s\S])*?)(?P=quote)"
+        for match in re.finditer(pattern, source):
+            title = re.sub(r"\\(['\"`\\])", r'\1', match['title'])
             tid = title.split()[0]
+            markers = {"req": [bindings.get(match[1], [])]}
+            platform = next((p for start, end, p in platform_blocks if start <= match.start() < end), None)
+            if platform:
+                markers['plat'] = [[platform]]
             records.append({"tid": tid, "nodeid": f"{path.relative_to(root).as_posix()}::{title}",
-                            "markers": {"req": [bindings.get(match[1], [])]}})
+                            "markers": markers})
     return records
 
 
@@ -555,29 +649,19 @@ def score(root: Path, evidence: Path, reviews: Path, expected_commit: str) -> di
     """Score only complete per-cell executions plus separate command-oracle evidence."""
     registry = discover_tests(root) + discover_shell_tests(root)
     planned = planned_tests(root)
-    results = {}
-    for path in evidence.glob("junit-*.xml"):
-        if "py3.15" in path.name:
-            continue
-        for case in ET.parse(path).iter("testcase"):
-            props = {p.get("name"): p.get("value", "") for p in case.findall("./properties/property")}
-            tid = props.get("tid") or (re.search(r"\b(JT-(?:\d{2}|SHL-19-01))\b", case.get("name", "")) or [""])[0]
-            if not tid:
-                continue
-            good = not any(case.find(k) is not None for k in ("failure", "error", "skipped"))
-            results.setdefault((path.name, tid), []).append(good)
     try:
         oracles = json.loads((evidence / "oracles.json").read_text(encoding="utf-8"))
     except (OSError, ValueError):
         oracles = {}
     receipts = {}
-    def engine_passed(filename, rows):
+    def engine_passed(filename, rows, *, shell=False):
         if filename not in receipts:
             try:
                 receipts[filename] = execution_receipt(evidence, filename, expected_commit, root=root)
             except (OSError, ValueError, KeyError, TypeError, ET.ParseError):
                 receipts[filename] = None
-        return receipts[filename] is not None and rows_passed(rows, receipts[filename])
+        checker = shell_rows_passed if shell else rows_passed
+        return receipts[filename] is not None and checker(rows, receipts[filename])
 
     def passed(tid):
         rows = [t for t in registry if t["tid"] == tid]
@@ -600,10 +684,7 @@ def score(root: Path, evidence: Path, reviews: Path, expected_commit: str) -> di
                     if not engine_passed(release if any('release' in row['markers'] for row in rows) else filename, expected):
                         return False
                     continue
-                # Jest retains its own title/registration projection; Python
-                # receipts above always require collected parameter identities.
-                values = results.get((filename, tid), [])
-                if len(values) < len(expected) or not all(values):
+                if not engine_passed(filename, expected, shell=True):
                     return False
         return True
     gates = []
@@ -638,6 +719,9 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest="command", required=True)
     commands.add_parser("check")
+    collect = commands.add_parser('collect-shell', help='independent expanded Jest registration inventory')
+    collect.add_argument('--output', type=Path, required=True)
+    collect.add_argument('--commit', default=os.environ.get('GITHUB_SHA', ''))
     rep = commands.add_parser("report", help="generate registration matrices; manual reviews remain separate")
     rep.add_argument("--output", type=Path, default=ROOT / "build/trace/matrices.json")
     sc = commands.add_parser("score", description="Report automated and manual acceptance results separately; missing evidence fails.")
@@ -649,6 +733,10 @@ def main(argv: list[str] | None = None) -> int:
     att.add_argument("--attest-dir", type=Path, default=ROOT / "attest")
     att.add_argument("--commit", default=os.environ.get("GITHUB_SHA", ""))
     args = parser.parse_args(argv)
+    if args.command == 'collect-shell':
+        collect_shell(args.output, args.commit)
+        print('Independent expanded Jest inventory written: ' + str(args.output))
+        return 0
     if args.command == "report":
         return int(bool(report(ROOT, args.output)["automated"]["problems"]))
     if args.command == "attest":

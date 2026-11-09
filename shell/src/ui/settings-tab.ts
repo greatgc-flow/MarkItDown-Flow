@@ -14,6 +14,16 @@ import { type App, type Plugin, PluginSettingTab, Setting } from 'obsidian';
 import { formatMessage, type UiLocale } from '../pure/i18n';
 import { isAbsolutePath } from '../pure/paths';
 import { isAcceptableBaseUrl, isSafeVaultRelativePath, type RunOptions, type SettingsV2 } from '../pure/settings';
+import type { VersionGate, VersionInfo } from '../process/version-gate';
+import { toolStatusText } from './setup-modal';
+
+/** The detected-LibreOffice phrase of the legacy toggle (R33): found with version, too old/unusable, missing, or unknown. */
+export function libreofficeSettingStatus(locale: UiLocale, info: VersionInfo | null): string {
+  if (!info || (info.libreoffice === undefined && info.libreoffice_status === undefined)) return formatMessage(locale, 'shell.settings.libreofficeUnknown');
+  if (info.libreoffice_status === 'too_old' || info.libreoffice_status === 'unusable') return toolStatusText(locale, info, 'libreoffice');
+  if (typeof info.libreoffice === 'string' && info.libreoffice.length > 0) return formatMessage(locale, 'shell.settings.libreofficeFound', { version: info.libreoffice });
+  return formatMessage(locale, 'shell.settings.libreofficeMissing');
+}
 
 export interface SettingsTabDeps {
   settings: () => SettingsV2;
@@ -24,6 +34,8 @@ export interface SettingsTabDeps {
   readOnly: () => boolean;
   /** Localized notice by key (`shell.settings.rejected` for a refused commit). */
   notify: (key: string) => void;
+  /** Last version gate, for the detected LibreOffice status next to the legacy toggle (R33); null before the probe. */
+  gate?: () => VersionGate | null;
 }
 
 /** Section order of the tab (R32); each has `shell.settings.section.<id>` and `<id>Desc` strings. */
@@ -40,7 +52,7 @@ function parseBoundedInteger(text: string, min: number): number | null {
   return Number.isSafeInteger(value) && value >= min ? value : null;
 }
 
-type ToggleKey = keyof Pick<SettingsV2, 'enableBatchProgress' | 'enableContextMenu' | 'enableRecursiveConversion' | 'enableDragDrop'>;
+type ToggleKey = keyof Pick<SettingsV2, 'enableBatchProgress' | 'enableContextMenu' | 'enableRecursiveConversion' | 'enableDragDrop' | 'enableLegacyPreconvert'>;
 
 export class ShellSettingsTab extends PluginSettingTab {
   constructor(
@@ -97,9 +109,10 @@ export class ShellSettingsTab extends PluginSettingTab {
     const section = (id: (typeof SETTINGS_SECTIONS)[number]): void => {
       new Setting(containerEl).setName(t(`shell.settings.section.${id}`)).setDesc(t(`shell.settings.section.${id}Desc`)).setHeading().setClass('mdflow-settings-heading');
     };
-    const toggle = (key: ToggleKey, descKeys: string[] = []): void => {
+    const toggle = (key: ToggleKey, descKeys: string[] = [], descText = ''): void => {
       const setting = new Setting(containerEl).setName(t(`shell.settings.${key}`));
-      if (descKeys.length > 0) setting.setDesc(descKeys.map(t).join(' '));
+      const desc = [...descKeys.map(t), descText].filter((s) => s.length > 0).join(' ');
+      if (desc.length > 0) setting.setDesc(desc);
       setting.addToggle((control) => {
         control.setValue(current[key]).onChange((value) => {
           void update({ [key]: value } as Partial<SettingsV2>);
@@ -137,6 +150,11 @@ export class ShellSettingsTab extends PluginSettingTab {
       });
     });
     toggle('enableRecursiveConversion');
+    // R33: LibreOffice pre-convert of LEGACY formats, off by default; the description states what it does and
+    // which LibreOffice the engine detected (version/source, missing, or not reported), from the last version probe.
+    const gate = this.deps.gate?.() ?? null;
+    const status = libreofficeSettingStatus(this.deps.locale(), gate?.enabled ? gate.info : null);
+    toggle('enableLegacyPreconvert', ['shell.settings.enableLegacyPreconvertNote'], formatMessage(this.deps.locale(), 'shell.settings.libreofficeStatus', { status }));
     // Registrations made once at load (context menu, drop listener, command names) apply after a reload (M3 N-09);
     // the drop toggle also states its trade-off: every local-file drop converts instead of attaching (M3 N-08).
     toggle('enableContextMenu', ['shell.settings.reloadNote']);

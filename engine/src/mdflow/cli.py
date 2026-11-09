@@ -13,7 +13,7 @@ import sys
 import tempfile
 import zlib
 
-from . import approve, assemble, classify, convert, exiftool, orchestrate, providers, report, sniff_io, transcribe, triage, write
+from . import approve, assemble, classify, convert, core_guard, exiftool, orchestrate, preconvert, providers, report, sniff_io, transcribe, triage, write
 
 _DISCLOSURE = ("Duplicate remote charges are possible if a run dies between a response and its ledger write. "
                "A trusted command runs with your privileges on every OCR unit.")
@@ -59,6 +59,8 @@ def _parser() -> argparse.ArgumentParser:
         for option in ("approve_threshold", "max_units", "max_bytes", "max_pixels", "zip_depth", "zip_entries", "zip_total_bytes"):
             cmd.add_argument("--" + option.replace("_", "-"), type=_nonnegative, default=orchestrate.DEFAULTS[option])
         cmd.add_argument("--force", action="store_true")
+        cmd.add_argument('--preconvert-legacy', action='store_true', help='Convert eligible legacy files locally with LibreOffice.')
+        cmd.add_argument('--preconvert-timeout-s', type=_nonnegative, default=60)
         cmd.add_argument("--cache", type=Path, default=Path.home() / ".mdflow/cache")
         cmd.add_argument("--progress", choices=("none", "jsonl"), default="none")
         cmd.add_argument("--report", type=Path)
@@ -70,6 +72,8 @@ def _parser() -> argparse.ArgumentParser:
         cmd.add_argument("--cost-hint")
     cmd = commands.add_parser("classify")
     cmd.add_argument("path", type=Path)
+    cmd.add_argument('--preconvert-legacy', action='store_true')
+    cmd.add_argument('--preconvert-timeout-s', type=_nonnegative, default=60)
     for name in ("version", "providers", "selftest"):
         commands.add_parser(name)
     cmd = commands.add_parser("cache")
@@ -133,8 +137,28 @@ def _options(args: argparse.Namespace) -> dict:
     return opts
 
 
-def _classification(path: Path, *, logical: str | None = None) -> dict:
+def _classification(path: Path, *, logical: str | None = None, preconvert_legacy: bool = False,
+                    preconvert_timeout_s: float = 60) -> dict:
+    core_guard.check()
     sniff = sniff_io.sniff(path, logical=logical or path.name)
+    if preconvert_legacy and sniff['route'] == 'LEGACY' and sniff['format'] in preconvert.TARGETS and not any(
+            i['code'].startswith('E_') for i in sniff['issues']):
+        try:
+            prepared = preconvert.prepare(orchestrate._source_bytes(path, sniff, 268435456), sniff,
+                                          timeout_s=preconvert_timeout_s)
+        except OSError:
+            sniff['issues'].append(dict(code='E_SNIFF_IO', message='Legacy source changed after Sniff.'))
+        else:
+            if prepared['provenance']:
+                with tempfile.TemporaryDirectory(prefix='mdflow-classify-') as work:
+                    snapshot = Path(work) / ('source.' + prepared['sniff']['format'])
+                    snapshot.write_bytes(prepared['data'])
+                    value = _classification(snapshot, logical=sniff['path'])
+                value['sniff'] = sniff
+                value['preconversion'] = prepared['provenance']
+                value['classification']['issues'].extend(prepared['issues'])
+                return value
+            sniff['issues'].extend(prepared['issues'])
     if sniff['route'] == 'NATIVE' and not any(i['code'].startswith('E_') for i in sniff['issues']):
         try:
             data = orchestrate._source_bytes(path, sniff, 268435456)
@@ -195,6 +219,7 @@ def _selftest_exiftool(png: bytes) -> dict:
 
 
 def _selftest() -> int:
+    core_guard.check()
     expected = {
         "pdf": dict(route="NATIVE", need="NONE", label="T", action="convert_only", decision="no_candidates",
                     coverage_state="complete", candidates_unique=[], uninspected_pages=0, reasons=[], issues=[]),
@@ -221,6 +246,7 @@ def main(argv: list[str] | None = None) -> int:
             stream.reconfigure(encoding="utf-8")
     try:
         args = _parser().parse_args(argv)
+        core_guard.check()
         if args.command_name == "version":
             _print(dict(orchestrate.tools(), python=platform.python_version(), platform=platform.platform(),
                         protocol=1, triage_schema=1, **_exiftool_versions()))
@@ -235,7 +261,8 @@ def main(argv: list[str] | None = None) -> int:
         if args.command_name == "selftest":
             return _selftest()
         if args.command_name == "classify":
-            value = _classification(args.path)
+            value = _classification(args.path, preconvert_legacy=args.preconvert_legacy,
+                                    preconvert_timeout_s=args.preconvert_timeout_s)
             _print(report.diagnostics(value))
             return assemble.exit_code([i["code"] for i in value["classification"]["issues"]])
         if args.command_name == "cache":
@@ -275,6 +302,8 @@ def main(argv: list[str] | None = None) -> int:
                 report.emit_progress(event, sys.stderr)
             report.publish(value, stdout=sys.stdout)
         return value["exit"]
+    except core_guard.CoreConflict as exc:
+        return _error('E_CORE_CONFLICT', str(exc))
     except UsageError as exc:
         return _error("E_USAGE", str(exc))
     except providers.ProviderConfigError as exc:

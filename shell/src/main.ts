@@ -203,6 +203,7 @@ export default class MarkItDownFlowPlugin extends Plugin {
         locale: () => this.locale,
         readOnly: () => this.settingsReadOnly,
         notify: (key) => this.notify(key),
+        gate: () => this.gate,
       }),
     );
 

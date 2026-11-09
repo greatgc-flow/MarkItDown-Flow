@@ -42,6 +42,11 @@ export interface SettingsV2 {
   enableContextMenu: boolean;
   enableRecursiveConversion: boolean;
   enableDragDrop: boolean;
+  /**
+   * R33: pre-convert LEGACY formats (.doc/.ppt/.rtf/HWP<5.0) through a user-installed LibreOffice
+   * (`SOFFICE_PATH`/PATH) before Core. Off by default; passed to the engine as `--legacy-preconvert`.
+   */
+  enableLegacyPreconvert: boolean;
   conversionHistory: HistoryEntry[];
   locale: Locale;
   provider: ProviderSettings;
@@ -94,15 +99,19 @@ const V1_KEYS: ReadonlySet<string> = new Set<string>([...V1_MAPPED, ...V1_DROPPE
 
 const V2_KEYS: ReadonlySet<string> = new Set<string>([
   'schemaVersion', 'enginePython', 'bootstrapPythonHint', 'outputPath', 'enableBatchProgress', 'enableContextMenu',
-  'enableRecursiveConversion', 'enableDragDrop', 'conversionHistory', 'locale', 'provider', 'runOptions',
+  'enableRecursiveConversion', 'enableDragDrop', 'enableLegacyPreconvert', 'conversionHistory', 'locale', 'provider', 'runOptions',
 ]);
 
-const BOOLEANS = [
+/** The four retained v1 UI booleans (20_SHELL.md section 2 table); a v1 file is migrated with these only. */
+const V1_BOOLEANS = [
   ['enableBatchProgress', true],
   ['enableContextMenu', true],
   ['enableRecursiveConversion', true],
   ['enableDragDrop', false],
 ] as const;
+
+/** Every schema-2 boolean: the retained v1 four plus `enableLegacyPreconvert` (R33, off by default). */
+const BOOLEANS = [...V1_BOOLEANS, ['enableLegacyPreconvert', false]] as const;
 
 type Raw = Record<string, unknown>;
 
@@ -122,6 +131,7 @@ export function defaultSettings(): SettingsV2 {
     enableContextMenu: true,
     enableRecursiveConversion: true,
     enableDragDrop: false,
+    enableLegacyPreconvert: false,
     conversionHistory: [],
     locale: 'auto',
     provider: { name: 'none', model: '', baseUrl: DEFAULT_BASE_URL },
@@ -300,7 +310,7 @@ function migrateV1(raw: Raw): MigrationResult {
     if (!isMissing(raw[key])) items.add(key, 'dropped');
   }
   settings.outputPath = pickOutputPath(raw.outputPath, items);
-  for (const [key, fallback] of BOOLEANS) settings[key] = pickBoolean(raw, key, fallback, items);
+  for (const [key, fallback] of V1_BOOLEANS) settings[key] = pickBoolean(raw, key, fallback, items);
   settings.conversionHistory = pickHistory(raw.conversionHistory, items);
   countUnknownKeys(raw, new Set<string>([...V1_KEYS, 'schemaVersion']), items);
   return { source: 'v1', settings, items: items.items, jobsBlocked: false };

@@ -9,7 +9,7 @@
 import { req } from './req';
 import { createApp, mockState } from './__mocks__/obsidian';
 import { BOOTSTRAP_PROBE_CANDIDATES, collectSetupDiagnostics, CORE_REQUIREMENT, ENGINE_WHEEL, renderBootstrapInstructions, type SetupDeps } from '../src/process/setup';
-import { RELEASE_LOCK, VERSION_PROBE_TIMEOUT_MS, type VersionPolicy } from '../src/process/version-gate';
+import { RELEASE_LOCK, VERSION_PROBE_TIMEOUT_MS } from '../src/process/version-gate';
 import type { SpawnRequest } from '../src/process/types';
 import { SetupModal } from '../src/ui/setup-modal';
 import { HistoryModal } from '../src/ui/history-modal';
@@ -19,8 +19,6 @@ import { fx71Bytes, fx71Manifest } from './fixtures/fx71';
 import { ENGINE_PYTHON, HOME, HOST_ENV, KEY_VALUE, PLUGIN_DIR, VAULT_ROOT } from './fixtures/shell-settings';
 
 const R = req('REQ-SHL-10');
-/** FX-71 is recorded on a supported host (Python 3.14, M4 P-03): the release policy is used unchanged. */
-const POLICY: VersionPolicy = RELEASE_LOCK;
 
 const FORBIDDEN_TOKENS = ['pip', 'venv', 'install', 'download', 'curl', 'wget', 'Invoke-WebRequest', 'selftest', 'run', 'plan'];
 
@@ -44,7 +42,8 @@ function deps(spawner: FakeSpawner, clock: FakeClock, enginePython: string | nul
     cwd: PLUGIN_DIR,
     enginePython,
     paths: { downloadDir: '/downloads/mdflow-2.0.0', venvDir: '/venvs/mdflow 2.0.0' },
-    policy: POLICY,
+    // FX-71 is recorded on a supported host (Python 3.14, M4 P-03): the release policy itself (M5 Q-04).
+    policy: RELEASE_LOCK,
     home: HOME,
     vault: VAULT_ROOT,
   };

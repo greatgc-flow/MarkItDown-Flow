@@ -28,7 +28,7 @@ import shutil
 from pathlib import Path
 from typing import TypedDict
 
-from . import exiftool, write
+from . import core_guard, exiftool, write
 from .contracts import Issue, SniffResult
 
 _MEDIA_FORMATS = frozenset({"docx", "pptx", "xlsx", "hwp", "hwpx"})
@@ -51,6 +51,7 @@ def core_convert(
     data: bytes, ext: str, *, extract_media: str | None = None, media_base_dir: str | None = None,
     exiftool_path: str = "",
 ) -> str:
+    core_guard.check()
     import markitdown
 
     # R29: the only Core options are plugins off and the exiftool path ("" = none; it also stops Core's own probing).
@@ -197,6 +198,7 @@ def convert_source(
     run_temp: str | Path,
     cache_dir: str | Path | None = None,
 ) -> ConvertResult:
+    core_guard.check()
     result: ConvertResult = {"body": "", "pages": None, "media": {}, "issues": []}
     if action not in ("convert_only", "convert_and_ocr"):
         return result

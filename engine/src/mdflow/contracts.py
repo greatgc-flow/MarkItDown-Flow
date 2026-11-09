@@ -118,7 +118,15 @@ class PlanClassification(TypedDict):
     coverage_state: str
 
 
-class ApprovedPlan(TypedDict):
+class Preconversion(TypedDict):
+    original_sha256: str
+    derived_sha256: str
+    fidelity: Literal['DERIVED']
+    tool: str
+    version: str
+
+
+class _ApprovedPlanRequired(TypedDict):
     file: FileIdentity
     classification: PlanClassification
     provider: ApprovedProvider
@@ -135,6 +143,10 @@ class ApprovedPlan(TypedDict):
     threshold_exceeded: bool
     sensitive_hits: list[str]
     oversize: bool
+
+
+class ApprovedPlan(_ApprovedPlanRequired, total=False):
+    preconversion: Preconversion
 
 
 class UnitCounts(TypedDict):
@@ -197,12 +209,12 @@ class LedgerEntry(UnitResult):
 
 # SPEC 7.5: E_PROVIDER_CONFIG contributes 4 at runtime, 1 at startup.
 EXIT_CODE_MAP = {
-    **dict.fromkeys("E_USAGE E_CORE_VERSION".split(), 1),
+    **dict.fromkeys("E_USAGE E_CORE_VERSION E_CORE_CONFLICT".split(), 1),
     **dict.fromkeys((
         "E_SNIFF_IO E_TOO_LARGE E_ENCRYPTED E_CORRUPT E_UNSUPPORTED "
         "E_MEDIA_OUT_OF_SCOPE E_LEGACY E_ZIP_PATH E_ZIP_DEPTH E_ZIP_ENTRIES "
         "E_ZIP_TOTAL E_ZIP_BOMB E_TRIAGE_FAIL E_TRIAGE_SCHEMA E_CONVERT_FAIL "
-        "E_RENDER_FAIL E_PLAN_OVERSIZE E_OUTPUT_IO E_OUTPUT_COLLISION E_CACHE_IO"
+        "E_RENDER_FAIL E_PLAN_OVERSIZE E_OUTPUT_IO E_OUTPUT_COLLISION E_CACHE_IO E_PRECONVERT"
     ).split(), 2),
     **dict.fromkeys("E_APPROVAL_REQUIRED E_APPROVAL_DENIED".split(), 3),
     **dict.fromkeys((
@@ -214,11 +226,11 @@ EXIT_CODE_MAP = {
         "W_TRIAGE_INCONSISTENT W_TRIAGE_UNKNOWN_VALUE W_TRIAGE_PARTIAL "
         "W_CORE_DEPENDENCY W_EXTERNAL_MEDIA W_UNRESOLVED_EMBED W_IMAGE_PROBE "
         "W_REVIEW_PRIORITY W_MEDIA_UNMAPPED W_MEDIA_FORMAT W_MEDIA_MULTIFRAME "
-        "W_CACHE_CORRUPT W_OUTPUT_TRUNCATED W_OUTPUT_EDITED W_APPROVAL_UNUSED"
+        "W_CACHE_CORRUPT W_OUTPUT_TRUNCATED W_OUTPUT_EDITED W_APPROVAL_UNUSED W_PRECONVERTED"
     ).split(), 0),
 }
 CODES = frozenset(EXIT_CODE_MAP)
-STARTUP_EXIT_CODE_MAP = {"E_USAGE": 1, "E_CORE_VERSION": 1, "E_PROVIDER_CONFIG": 1}
+STARTUP_EXIT_CODE_MAP = {"E_USAGE": 1, "E_CORE_VERSION": 1, "E_CORE_CONFLICT": 1, "E_PROVIDER_CONFIG": 1}
 # Highest precedence first; numerical max() would give the wrong answer.
 EXIT_PRECEDENCE = (130, 1, 2, 4, 3, 0)
 

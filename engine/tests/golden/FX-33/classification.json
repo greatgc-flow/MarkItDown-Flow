@@ -9,8 +9,8 @@
    "message": "W media not inspected."
   }
  ],
- "label": "U",
- "need": "UNKNOWN",
+ "label": "T",
+ "need": "NONE",
  "reasons": [
   "core:unsupported_format"
  ],

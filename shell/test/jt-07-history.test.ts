@@ -127,6 +127,7 @@ it(R('JT-07 clear history clears only history and does not mutate its input'), (
     enableContextMenu: true,
     enableRecursiveConversion: false,
     enableDragDrop: true,
+    enableLegacyPreconvert: true,
     conversionHistory: entries,
     locale: 'ko',
     provider: { name: 'openai-compatible', model: 'gpt-4.1-mini', baseUrl: 'https://api.openai.com/v1' },

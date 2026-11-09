@@ -8,6 +8,7 @@
 export const ENGINE_ERROR_CODES = [
   'E_USAGE',
   'E_CORE_VERSION',
+  'E_CORE_CONFLICT',
   'E_PROVIDER_CONFIG',
   'E_SNIFF_IO',
   'E_TOO_LARGE',
@@ -29,6 +30,7 @@ export const ENGINE_ERROR_CODES = [
   'E_OUTPUT_IO',
   'E_OUTPUT_COLLISION',
   'E_CACHE_IO',
+  'E_PRECONVERT',
   'E_APPROVAL_REQUIRED',
   'E_APPROVAL_DENIED',
   'E_PROVIDER_HTTP',
@@ -59,6 +61,7 @@ export const ENGINE_WARNING_CODES = [
   'W_OUTPUT_TRUNCATED',
   'W_OUTPUT_EDITED',
   'W_APPROVAL_UNUSED',
+  'W_PRECONVERTED',
 ] as const;
 
 export type EngineCode = (typeof ENGINE_ERROR_CODES)[number] | (typeof ENGINE_WARNING_CODES)[number];

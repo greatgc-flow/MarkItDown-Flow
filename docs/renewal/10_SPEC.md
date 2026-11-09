@@ -1,6 +1,6 @@
 # MarkItDown-Flow v2 - Engine Specification (`mdflow`)
 
-Status: SPEC DRAFT-3.6 (authoritative for TDD; additive over 3.5, see 12.8). Binding inputs: `01_DECISIONS.md` R1-R31 (the DRAFT-1 brief `00_BRIEF.md` was superseded and removed; it survives in git history). Release/reference Core: **0.3.6** (2026-11-09); runtime range remains `>=0.3.5,<0.4`. Archived line-reference copies (see [reference note](ref/README.md)): `ref/markitdown-gc_GUIDE_0.3.5.md`, `ref/ocr_triage_0.3.5.py.txt` (line refs below are into that file). Scope: Python engine only. The Obsidian shell (`20_SHELL.md`) consumes only section 7 (JSON contracts), section 8.4 (consent) and section 10 (CLI) - the only engine/shell protocol (R19).
+Status: SPEC DRAFT-3.7 (authoritative for TDD; additive over 3.6, see 12.9). Binding inputs: `01_DECISIONS.md` R1-R33 (the DRAFT-1 brief `00_BRIEF.md` was superseded and removed; it survives in git history). Release/reference Core: **0.3.6** (2026-11-09); runtime range remains `>=0.3.5,<0.4`. Archived line-reference copies (see [reference note](ref/README.md)): `ref/markitdown-gc_GUIDE_0.3.5.md`, `ref/ocr_triage_0.3.5.py.txt` (line refs below are into that file). Scope: Python engine only. The Obsidian shell (`20_SHELL.md`) consumes only section 7 (JSON contracts), section 8.4 (consent) and section 10 (CLI) - the only engine/shell protocol (R19).
 
 Conventions: MUST/SHOULD per RFC 2119. Every normative rule has a stable ID `REQ-<AREA>-<NN>`; draft-1 ids `MAP-nn`, `ASM-Pn`, `SEC-nn` are aliases of `REQ-MAP-nn`, `REQ-ASM-Pn`, `REQ-SEC-nn`. Deleted rules keep their id with `(deleted draft-N, see changelog)`; nothing is renumbered. Values in `code` are literal.
 
@@ -235,7 +235,7 @@ Validation, evaluated for every NATIVE source after rows 10/11 and before rows 9
 | 3b | any `E_ZIP_ENTRIES|E_ZIP_TOTAL|E_ZIP_BOMB` on a non-container zip (REQ-SNF-08) | (as sniffed) | UNKNOWN | by route | report_only | that code |
 | 4 | route == UNSUPPORTED, reason media | UNSUPPORTED | UNKNOWN | X | report_only | E_MEDIA_OUT_OF_SCOPE |
 | 5 | route == UNSUPPORTED, other | UNSUPPORTED | UNKNOWN | X | report_only | E_UNSUPPORTED |
-| 6 | route == LEGACY | LEGACY | UNKNOWN | L | report_only | E_LEGACY (hint `convert with LibreOffice to <target> and rerun`) |
+| 6 | route == LEGACY, no successful opt-in pre-conversion | LEGACY | UNKNOWN | L | report_only | E_LEGACY (manual conversion hint), or E_PRECONVERT after an attempted conversion failure |
 | 7 | route == CONTAINER, no `E_ZIP_DEPTH|ENTRIES|TOTAL|BOMB` | CONTAINER | NONE | C | recurse | - |
 | 8 | route == CONTAINER, any `E_ZIP_DEPTH|ENTRIES|TOTAL|BOMB` | CONTAINER | UNKNOWN | C | report_only | that code |
 | 10 | NATIVE (any group), `E_TRIAGE_SCHEMA` | NATIVE | UNKNOWN | U | report_only | E_TRIAGE_SCHEMA |
@@ -246,7 +246,9 @@ Validation, evaluated for every NATIVE source after rows 10/11 and before rows 9
 | 9d | NATIVE, G2a, `state != not_applicable`, Core's only issue is `unsupported_format`, Sniff reason `legacy_text` (REQ-CLS-07) | NATIVE | NONE | T | convert_only | - |
 | 9a | NATIVE, G2a, otherwise (Core `unsupported_format`/`corrupt`: not valid plain text) | UNSUPPORTED | UNKNOWN | X | report_only | E_UNSUPPORTED |
 | 9b | NATIVE, G1, Core issue `encrypted` | PROTECTED | UNKNOWN | P | report_only | E_ENCRYPTED |
-| 9c | NATIVE, G2b | NATIVE | UNKNOWN | U | convert_only | W_MEDIA_NOT_INSPECTED (`coverage_state = not_run` unless Core returned a state) |
+| 9c | NATIVE, G2b csv/tsv/json | NATIVE | NONE | T | convert_only | No warning; coverage remains Core state or not_run (R33) |
+| 9e | NATIVE, G2b md/markdown/html/htm/xml/epub | NATIVE | NONE | T | convert_only | W_MEDIA_NOT_INSPECTED; coverage remains Core state or not_run (R33) |
+| 9f | NATIVE, G2b ipynb/msg/xls | NATIVE | UNKNOWN | U | convert_only | W_MEDIA_NOT_INSPECTED (unchanged) |
 | 12 | `decision == no_candidates` | NATIVE | NONE | T | convert_only | - |
 | 13 | (deleted draft-2: issue codes are not states; X-44) | | | | | |
 | 14 | (deleted draft-2: X-44) | | | | | |
@@ -274,8 +276,8 @@ Members pass through rows 0b-23 individually with logical path `<zip path>/<memb
 | `too_large` | Only possible when `--max-bytes` was raised (REQ-SNF-02 caps at Core's limit) -> fatal, row 15. |
 | `encrypted` | Row 9b -> PROTECTED even if Sniff opened the file. |
 | `corrupt` | Recorded `core:corrupt`; verdict decides (row 9a, 15 or 24). |
-| `unsupported_format` | G2a: row 9a; G2b: row 9c (expected); G1: row 15 (+`W_TRIAGE_UNSUPPORTED`). |
-| `media_not_inspected` | Row 9c (`W_MEDIA_NOT_INSPECTED`). Never a state. |
+| `unsupported_format` | G2a: row 9a; G2b: rows 9c/9e/9f (expected); G1: row 15 (+`W_TRIAGE_UNSUPPORTED`). |
+| `media_not_inspected` | Rows 9c/9e/9f; csv/tsv/json suppress W_MEDIA_NOT_INSPECTED by R33. Never a state. |
 | `missing_dependency` | `W_CORE_DEPENDENCY` + row 15/24. CT-10 asserts it never occurs for the pinned Core. |
 | `page_cap`, `frame_cap`, `zip_limit`, `unsupported_compression` | Coverage is `partial` -> row 25/24; known units planned; remainder visible as `uninspected_pages` / `frames_total` vs unit count. |
 | `external_media` | `W_EXTERNAL_MEDIA`; never fetched; coverage partial -> row 25. |
@@ -506,11 +508,11 @@ For warning/error events, `file` is a logical string or `null` for a run-level i
 ### 7.5 Error and warning codes (closed list) with exit contribution
 | Code | Exit | Scope |
 |---|---|---|
-| `E_USAGE E_CORE_VERSION E_PROVIDER_CONFIG`(startup) | 1 | run (before processing) |
-| `E_SNIFF_IO E_TOO_LARGE E_ENCRYPTED E_CORRUPT E_UNSUPPORTED E_MEDIA_OUT_OF_SCOPE E_LEGACY E_ZIP_PATH E_ZIP_DEPTH E_ZIP_ENTRIES E_ZIP_TOTAL E_ZIP_BOMB E_TRIAGE_FAIL E_TRIAGE_SCHEMA E_CONVERT_FAIL E_RENDER_FAIL E_PLAN_OVERSIZE E_OUTPUT_IO E_OUTPUT_COLLISION E_CACHE_IO` | 2 | file / unit |
+| `E_USAGE E_CORE_VERSION E_CORE_CONFLICT E_PROVIDER_CONFIG`(startup) | 1 | run (before processing) |
+| `E_SNIFF_IO E_TOO_LARGE E_ENCRYPTED E_CORRUPT E_UNSUPPORTED E_MEDIA_OUT_OF_SCOPE E_LEGACY E_ZIP_PATH E_ZIP_DEPTH E_ZIP_ENTRIES E_ZIP_TOTAL E_ZIP_BOMB E_TRIAGE_FAIL E_TRIAGE_SCHEMA E_CONVERT_FAIL E_RENDER_FAIL E_PLAN_OVERSIZE E_OUTPUT_IO E_OUTPUT_COLLISION E_CACHE_IO E_PRECONVERT` | 2 | file / unit |
 | `E_APPROVAL_REQUIRED E_APPROVAL_DENIED` | 3 | file / Key |
 | `E_PROVIDER_HTTP E_PROVIDER_TIMEOUT E_PROVIDER_OUTPUT E_PROVIDER_CONFIG`(runtime) | 4 | Key |
-| `W_SKIPPED_HIDDEN W_SKIPPED_SYMLINK W_DUPLICATE_INPUT W_EXT_MISMATCH W_MEDIA_NOT_INSPECTED W_TRIAGE_UNSUPPORTED W_TRIAGE_UNKNOWN W_TRIAGE_INCONSISTENT W_TRIAGE_UNKNOWN_VALUE W_TRIAGE_PARTIAL W_CORE_DEPENDENCY W_EXTERNAL_MEDIA W_UNRESOLVED_EMBED W_IMAGE_PROBE W_REVIEW_PRIORITY W_MEDIA_UNMAPPED W_MEDIA_FORMAT W_MEDIA_MULTIFRAME W_CACHE_CORRUPT W_OUTPUT_TRUNCATED W_OUTPUT_EDITED W_APPROVAL_UNUSED` | 0 | never changes exit |
+| `W_SKIPPED_HIDDEN W_SKIPPED_SYMLINK W_DUPLICATE_INPUT W_EXT_MISMATCH W_MEDIA_NOT_INSPECTED W_TRIAGE_UNSUPPORTED W_TRIAGE_UNKNOWN W_TRIAGE_INCONSISTENT W_TRIAGE_UNKNOWN_VALUE W_TRIAGE_PARTIAL W_CORE_DEPENDENCY W_EXTERNAL_MEDIA W_UNRESOLVED_EMBED W_IMAGE_PROBE W_REVIEW_PRIORITY W_MEDIA_UNMAPPED W_MEDIA_FORMAT W_MEDIA_MULTIFRAME W_CACHE_CORRUPT W_OUTPUT_TRUNCATED W_OUTPUT_EDITED W_APPROVAL_UNUSED W_PRECONVERTED` | 0 | never changes exit |
 `message` is human text, English, redacted (section 9); `code` is the contract. Deleted: `W_TRIAGE_COVERAGE` (draft-2), `E_PROVIDER_INTERRUPTED`, `W_STALE_TEMP` (draft-3, 12.2).
 
 ---
@@ -586,7 +588,7 @@ mdflow version                                   # {"mdflow":…, "markitdown-gc
 mdflow selftest                                  # classify a bundled 1-page PDF and PNG with provider none; exit 0 iff both match bundled golden classifications; prints {"ok":…, "exiftool": {"status":…, "version":…, "metadata":…}}
 ```
 
-`version` always emits the complete eight-field response above (the gate fields) plus three optional exiftool fields (DRAFT-3.6, R31) and exits 0, even if Core is missing or outside the supported range. Missing distribution versions are the string `"unavailable"`; installed incompatible versions are reported verbatim. `exiftool` is the usable version or `"unavailable"`; `exiftool_status` is `ok|not_found|too_old|unusable`; `exiftool_source` is `"EXIFTOOL_PATH"`, `"PATH"` or `null` (REQ-CNV-06). Consumers ignore the three fields in their compatibility gate (an absent exiftool is a normal state). `selftest`'s `exiftool.metadata` is `true` when the detected tool produced image metadata for the bundled PNG; it never changes the exit code. `version` performs no document reads or provider calls. Consumers apply the compatibility gate before starting work; other commands retain the startup Core gate.
+`version` always emits the complete eight-field response above (the gate fields) plus three optional exiftool fields (DRAFT-3.6, R31) and exits 0, even if Core is missing or outside the supported range. R33 exception: a co-installed upstream distribution returns E_CORE_CONFLICT and exit 1 before this response. Missing distribution versions are the string `"unavailable"`; installed incompatible versions are reported verbatim. `exiftool` is the usable version or `"unavailable"`; `exiftool_status` is `ok|not_found|too_old|unusable`; `exiftool_source` is `"EXIFTOOL_PATH"`, `"PATH"` or `null` (REQ-CNV-06). Consumers ignore the three fields in their compatibility gate (an absent exiftool is a normal state). `selftest`'s `exiftool.metadata` is `true` when the detected tool produced image metadata for the bundled PNG; it never changes the exit code. `version` performs no document reads or provider calls. Consumers apply the compatibility gate before starting work; other commands retain the startup Core gate.
 
 ### 10.2 Options (unknown option or invalid value -> exit 1 `E_USAGE`)
 | Option | Default | Notes |
@@ -810,6 +812,14 @@ M4 temporary recovery (REQ-GEN-09 / REQ-RND-05): each new per-run `mdflow-*` dir
 | M3-O01 | Independent vertical publication oracles check exact unit IDs, paired OCR delimiters, pending reasons/counts, retained capped-page anchors and corrupted-member sibling continuation. The protected class sweep is not rewritten by the engine owner. |
 | Core reference | Release/reference baseline 0.3.6; retain compatibility >=0.3.5,<0.4 and the 0.3.5 minimum endpoint. The golden seal names its reference producer; each installed endpoint regenerates and compares the actual reports rather than relabelling the seal. Archived 0.3.5 source/guide retain line numbers; see ref/README.md. |
 | M3-D01 | GEN-01 hook names all three direct dependencies; current handoff links engine/shell review ownership and real validation receipts. |
+
+### 12.9 DRAFT-3.7: R33 engine amendments
+
+- REQ-CNV-07 MUST: Legacy pre-conversion is optional and OFF by default. CLI `run|plan|classify --preconvert-legacy` and programmatic setting `preconvert_legacy=True` enable only `.doc -> .docx`, `.ppt -> .pptx`, `.rtf -> .docx`, HWP before 5.0 (`HWP Document File` signature) -> `.docx`. Other LEGACY formats remain report-only. PROTECTED, corrupt and bounded-out sources never launch LibreOffice. Resolve user-installed `SOFFICE_PATH` when nonempty (no fallback if invalid), else `soffice` on PATH; never install it. On Windows the installed sibling soffice.com console launcher is used when soffice.exe was selected (the GUI launcher opens a version dialog). Use a unique private `-env:UserInstallation=file:...` profile with macros, linked-document updates and update checks disabled, headless/noninteractive local files only, no network requests by mdflow. Timeout is 60 seconds including version probing, configurable with `--preconvert-timeout-s` / `preconvert_timeout_s`. On deadline or cancellation kill the entire owned process tree (Windows Job Object established before launch resumes; POSIX private process group), wait for termination, then clean up. Capture at most 64 KiB of diagnostics. Pass only OS/runtime environment names to the child, excluding provider credentials and proxy settings. Missing tool, timeout, refused conversion, malformed/oversize derived output -> E_PRECONVERT, exit 2, no Markdown for that file; continue siblings. Re-sniff, apply archive bounds, triage and classify the derived bytes. Hash the derived snapshot and delete its temporary file immediately; remove its profile/workspace before downstream stages. Never alter the original. W_PRECONVERTED includes `tool: "LibreOffice"` and numeric `version`; warning exit contribution is 0. Frontmatter carries `fidelity: "DERIVED"` (never NATIVE), `original_sha256`, `derived_sha256`, and `tools.LibreOffice`. `source`, `sha256` and `bytes` remain original; `format` and classification describe the derived document. Report identity remains original. Plan `approved.file` remains original and optional `approved.preconversion` contains `{original_sha256, derived_sha256, fidelity, tool, version}` bound into plan_hash. This can change approval if LibreOffice produces different derived bytes on a rerun; inspect and reapprove the new Plan. No markitdown plugin support is enabled.
+- REQ-CLS-08 MUST: R33 supersedes the former G2b policy only after existing triage schema/type/vocabulary/consistency guards: csv/tsv/json -> NATIVE/NONE/T/convert_only without W_MEDIA_NOT_INSPECTED; md/markdown/html/htm/xml/epub -> the same class with W_MEDIA_NOT_INSPECTED. Core coverage and reasons are retained; T does not assert embedded media were inspected. ipynb/msg/xls retain UNKNOWN/U plus warning. Corrupt/protected/unknown-vocabulary guards retain precedence.
+- REQ-GEN-12 MUST: Detect an installed upstream distribution named `markitdown` on every CLI entry (including version/selftest), programmatic run/classification, triage and conversion entry before importing any `markitdown` module or accepting cached conversion. Raise E_CORE_CONFLICT (startup exit 1) with dedicated-venv/removal guidance. Use distribution metadata rather than the shared module name; recheck on every invocation so sys.path changes are observed. Existing missing/out-of-range fork version behavior remains unchanged.
+
+R33 reviewed oracle amendment: only FX-30..33 classification.json and classification.review.json plus GOLDEN.lock change; Core triage bytes and reference Core 0.3.6 stay sealed. FX-30 csv becomes T/NONE and loses W_MEDIA_NOT_INSPECTED; FX-31 html, FX-32 md and FX-33 epub become T/NONE retaining that warning. Prior independent reviews are retained as historical evidence; the R33 policy adjudication is explicitly attributed to the implementing reviewer, not presented as a new independent human review.
 
 ### 12.8 DRAFT-3.6: owner directives R29-R31 (additive over 3.5)
 

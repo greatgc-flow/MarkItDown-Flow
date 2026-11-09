@@ -17,7 +17,7 @@
 #
 # FLOOR (30_TESTPLAN section 5) is never declared here: all S3 x FM0/1/2/3/4/10/11/12; S1:FM1/2/3/9; S2:FM1/10;
 # S6:FM1/3; S7:FM1/5; S9:FM8; S10:FM6/7; S12:FM5/9; S0:FM7/10/12; every class x S3, S13, and (except the
-# report-only K12 K13 K15 K16 K17 K19) S11.
+# report-only K13 K15 K16 K17 K19) S11; K12 participates when R33 is enabled.
 #
 # M1: applicability and registration are distinct from executed JUnit evidence.
 # Common schema equivalences are labelled scope(schema); class execution registrations are separate.
@@ -334,7 +334,7 @@ owner = "S12:FM5"
 [[stage_fm]]
 stages = ["S11"]
 fms = ["FM2", "FM4"]
-reason = "Report-only sources are not assembled (the class-by-S11 floor excludes K12 K13 K15 K16 K17 K19)."
+reason = "Report-only sources are not assembled (the class-by-S11 floor excludes K13 K15 K16 K17 K19)."
 owner = "S3:FM2"
 
 [[stage_fm]]
@@ -411,11 +411,11 @@ fms = ["FM12"]
 reason = "Report determinism and --report timestamps are asserted by the warm-rerun test (T-GEN-06)."
 owner = "S0:FM12"
 
-# ======================================================================= file class x stage (67 cells)
+# ======================================================================= file class x stage (59 cells)
 # R28: only S0-S3 and S13 may expand fx("all"); other stages need explicit fixture assertions.
 
 [[class_stage]]
-classes = ["K12", "K13", "K17", "K19"]
+classes = ["K13", "K17", "K19"]
 stages = ["S11"]
 reason = "Legacy, media, oversize and unknown-extension sources are report_only (REQ-CLS-05): the orchestrator publishes no Markdown and does not invoke Assemble. Classification owns this exclusion; protected/corrupt no-output integration is independently asserted on K15/K16."
 owner = "S3"
@@ -427,7 +427,7 @@ owner = "S3"
 # ---- S4 Select: covered K02 K03 K04 K05 K06 K07 K08 K09 K11 K14
 # M4-H: S4:K11 is also asserted by existing tests, so it is no longer declared N/A.
 [[class_stage]]
-classes = ["K01", "K10", "K12", "K13", "K15", "K16", "K17", "K18", "K19", "K20"]
+classes = ["K01", "K10", "K13", "K15", "K16", "K17", "K18", "K19", "K20"]
 stages = ["S4"]
 reason = "Sources of these classes carry no OCR candidates (convert_only or report_only), or are directory-level; Select receives an empty list."
 owner = "S3"
@@ -438,7 +438,7 @@ owner = "S3"
 # ---- S5 Convert: covered K01 K02 K03 K04 K05 K06 K07 K08 K09 K10 K11 K13 K14 K18
 # M4-H: S5:K14 is asserted (members converted as their own classes) and no longer declared here.
 [[class_stage]]
-classes = ["K12", "K15", "K16", "K17", "K19"]
+classes = ["K15", "K16", "K17", "K19"]
 stages = ["S5"]
 reason = "report_only sources are never converted."
 owner = "S3"
@@ -458,7 +458,7 @@ reason = "No OCR candidates, so nothing is rendered."
 owner = "S3"
 
 [[class_stage]]
-classes = ["K12", "K13", "K15", "K16", "K17", "K19"]
+classes = ["K13", "K15", "K16", "K17", "K19"]
 stages = ["S6"]
 reason = "report_only sources produce no units."
 owner = "S3"
@@ -482,14 +482,14 @@ owner = "S1:K20"
 
 # ---- S7 Lookup: covered K02..K09 K14 K20
 [[class_stage]]
-classes = ["K01", "K10", "K11", "K12", "K13", "K15", "K16", "K17", "K18", "K19"]
+classes = ["K01", "K10", "K11", "K13", "K15", "K16", "K17", "K18", "K19"]
 stages = ["S7"]
 reason = "Without eligible units there is no Key to look up."
 owner = "S3"
 
 # ---- S9 Approve: covered K01 K02..K09 K14 K20
 [[class_stage]]
-classes = ["K10", "K11", "K12", "K13", "K15", "K16", "K17", "K18", "K19"]
+classes = ["K10", "K11", "K13", "K15", "K16", "K17", "K18", "K19"]
 stages = ["S9"]
 reason = "No egress without eligible units, so no consent is requested (REQ-APR-01)."
 owner = "S9:K01"
@@ -502,14 +502,17 @@ reason = "A native text PDF is convert_only: it has no OCR units, so nothing is 
 owner = "S10:K03"
 
 [[class_stage]]
-classes = ["K10", "K11", "K12", "K13", "K15", "K16", "K17", "K18", "K19"]
+classes = ["K10", "K11", "K13", "K15", "K16", "K17", "K18", "K19"]
 stages = ["S10"]
 reason = "No eligible units, so nothing is transcribed."
 owner = "S3"
 
 # ---- S12 Write: covered K01 K02 K03 K04 K05 K06 K07 K08 K09 K10 K11 K14 K18 K20
 [[class_stage]]
-classes = ["K12", "K13", "K15", "K16", "K17", "K19"]
+classes = ["K13", "K15", "K16", "K17", "K19"]
 stages = ["S12"]
 reason = "report_only sources produce no Markdown output to write."
 owner = "S3"
+
+# R33: K12 is report_only by default; enabled eligible legacy sources execute S4-S12.
+# T-CNV-91 asserts the actual pipeline and provenance; these cells are no longer N/A.

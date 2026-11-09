@@ -14,6 +14,13 @@ export type EngineCommand = 'plan' | 'run' | 'version' | 'selftest';
 export const APPROVED_BY_MODAL = 'plugin:modal';
 
 /**
+ * R33 / SPEC REQ-CNV-07: opt-in LibreOffice pre-conversion of LEGACY formats. Emitted on `plan`
+ * and `run` only when `enableLegacyPreconvert` is on, so the derived file is planned and converted
+ * alike; the engine's 60-second default deadline is kept (no `--preconvert-timeout-s`).
+ */
+export const LEGACY_PRECONVERT_OPTION = '--preconvert-legacy';
+
+/**
  * Fixed interpreter prefix of every engine spawn (REQ-SHL-12; M3 N-02):
  * `-I` isolated mode (the working directory is not `sys.path[0]`, `PYTHON*`
  * variables and the user site are ignored, so vault or plugin-folder content
@@ -54,6 +61,8 @@ export interface JobSnapshot {
   cacheDir: string;
   provider: Readonly<ProviderSettings>;
   runOptions: Readonly<RunOptions>;
+  /** R33: the `enableLegacyPreconvert` setting at submit time. */
+  legacyPreconvert: boolean;
 }
 
 export interface SnapshotParams {
@@ -103,6 +112,7 @@ export function snapshotJob(params: SnapshotParams): JobSnapshot {
     cacheDir: params.cacheDir,
     provider: { name: settings.provider.name, model: settings.provider.model, baseUrl: settings.provider.baseUrl },
     runOptions: { ...settings.runOptions, sensitive: [...settings.runOptions.sensitive] },
+    legacyPreconvert: settings.enableLegacyPreconvert === true,
   };
   return freezeDeep(snapshot);
 }
@@ -140,6 +150,7 @@ export function buildSpawnRequest(
   args.push('--max-units', String(runOptions.maxUnits));
   args.push('--approve-threshold', String(runOptions.approveThreshold));
   for (const glob of runOptions.sensitive) args.push('--sensitive', glob);
+  if (snapshot.legacyPreconvert) args.push(LEGACY_PRECONVERT_OPTION);
   args.push('--progress', 'jsonl');
   if (authorization && command === 'run') {
     args.push('--yes-file', authorization.yesFile);

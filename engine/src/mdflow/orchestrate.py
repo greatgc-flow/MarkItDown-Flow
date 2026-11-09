@@ -20,12 +20,13 @@ from typing import Sequence
 
 from . import __version__, approve, assemble, classify, convert, ledger, plan, providers
 from . import render, report, select, sniff_io, transcribe, triage, write
-from . import runtime_temp
+from . import core_guard, preconvert, runtime_temp
 
 DEFAULTS = dict(provider="none", model=None, dpi=200, min_priority="low", max_units=200,
                 approve_threshold=20, force=False, prompt_version="p1", max_bytes=209715200,
                 max_pixels=50000000, zip_depth=3, zip_entries=1000, zip_total_bytes=1073741824,
-                sensitive=(), yes=False, yes_hashes=(), approved_by=None, progress="none")
+                sensitive=(), yes=False, yes_hashes=(), approved_by=None, progress="none",
+                preconvert_legacy=False, preconvert_timeout_s=60)
 _CLASS_FIELDS = ("route", "need", "label", "action", "decision", "coverage_state")
 
 
@@ -225,8 +226,25 @@ class _Pipeline:
 
     def process(self, source: dict, entry: dict, directory: Path) -> None:
         sn, logical = source["sniff"], source["sniff"]["path"]
+        original_sniff, provenance = sn, None
         self.emit("stage", file=logical, stage="sniff", state="end", ms=0)
         path = source.get("runtime")
+        if self.options['preconvert_legacy'] and sn['route'] == 'LEGACY' and sn['format'] in preconvert.TARGETS and not any(
+                i['code'].startswith('E_') for i in sn['issues']):
+            try:
+                raw = source['data'] if 'data' in source else _source_bytes(path, sn, self.options['max_bytes'])
+                prepared = self.stage(logical, 'preconvert', preconvert.prepare, raw, sn,
+                    timeout_s=self.options['preconvert_timeout_s'], **{k: self.options[k] for k in
+                    ('max_bytes', 'zip_entries', 'zip_total_bytes')})
+                self.issues(entry, prepared['issues'])
+                provenance = prepared['provenance']
+                if provenance:
+                    sn, path = prepared['sniff'], None
+                    source = dict(sniff=sn, data=prepared['data'])
+                else:
+                    sn = dict(sn, issues=[*sn['issues'], *prepared['issues']])
+            except OSError:
+                sn = dict(sn, issues=[*sn['issues'], _issue('E_SNIFF_IO', 'Legacy source changed after Sniff.')])
         if sn['route'] == 'NATIVE' and not any(i['code'].startswith('E_') for i in sn['issues']):
             try:
                 if 'data' not in source:
@@ -265,8 +283,10 @@ class _Pipeline:
             entry.update({key: c[key] for key in _CLASS_FIELDS})
             self.issues(entry, c['issues'])
             media_hashes = {}
-        opts = dict(self.options, file={k: sn[k] for k in ("path", "sha256", "bytes", "format")},
+        opts = dict(self.options, file={k: original_sniff[k] for k in ("path", "sha256", "bytes", "format")},
                     classification=c, triage_media=triage_media, media_hashes=media_hashes)
+        if provenance:
+            opts['preconversion'] = provenance
         selected = self.stage(logical, "select", select.select, c, opts)
         self.summarize(entry, selected["units"], {}, {})
         if selected["oversize"]:
@@ -374,12 +394,14 @@ class _Pipeline:
         base = converted["body"]
         if sn["format"] == "pdf" and converted["pages"] is not None:
             base = "\n\n".join(f"<!-- mdflow:page {i} -->\n{page}" for i, page in enumerate(converted["pages"], 1))
-        meta = dict(source=logical, sha256=sn["sha256"], bytes=sn["bytes"], format=sn["format"],
+        meta = dict(source=logical, sha256=original_sniff["sha256"], bytes=original_sniff["bytes"], format=sn["format"],
                     **{k: c[k] for k in ("route", "need", "label", "coverage_state")}, triage_decision=c["decision"],
                     provider=self.provider.meta["name"], model=self.provider.meta["model"], prompt_version=opts["prompt_version"],
                     dpi=opts["dpi"], tools={**self.tools, **converted.get("tools", {})},
                     now=self.now().isoformat(timespec="seconds"),
                     frames_total=rendered["frames_total"], pending_reason="approval_denied" if denied else pending_reason)
+        if provenance:
+            meta.update(provenance)
         if sn["format"] == "pdf":
             meta["pages_total"] = len(converted["pages"]) if converted["pages"] is not None else (
                 ((outcome["report"] or {}).get("coverage") or {}).get("pages_total") or 0)
@@ -426,6 +448,7 @@ class _Pipeline:
 def run(roots: Sequence[Path], options: dict, *, provider=None,
         now: datetime | None = None) -> dict:
     """Run discovered sources; provider/now permit deterministic integration probes."""
+    core_guard.check()
     opts = dict(DEFAULTS, cache=Path.home() / ".mdflow/cache")
     opts.update(options)
     opts["cache"] = Path(opts["cache"]).expanduser().absolute()
@@ -438,6 +461,8 @@ def run(roots: Sequence[Path], options: dict, *, provider=None,
     pipeline = _Pipeline(opts, provider, now)
     started = pipeline.now().isoformat(timespec="seconds")
     public_options = {k: opts[k] for k in ("provider", "model", "dpi", "min_priority", "max_units", "approve_threshold", "force")}
+    if opts['preconvert_legacy']:
+        public_options.update(preconvert_legacy=True, preconvert_timeout_s=opts['preconvert_timeout_s'])
     for key in ("cache", "out"):
         if opts.get(key):
             path, home = str(opts[key]), str(Path.home())

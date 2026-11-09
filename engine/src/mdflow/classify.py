@@ -218,6 +218,8 @@ def classify(sniff: dict, triage: object) -> dict:
     if route == "UNSUPPORTED":
         return finish("E_MEDIA_OUT_OF_SCOPE" if "media_out_of_scope" in result["reasons"] else "E_UNSUPPORTED")
     if route == "LEGACY":
+        if 'E_PRECONVERT' in sniff_codes:
+            return finish('E_PRECONVERT')
         return finish("E_LEGACY")
     if route == "CONTAINER":
         for code in bounds:
@@ -268,6 +270,10 @@ def classify(sniff: dict, triage: object) -> dict:
     if fmt not in G2A | G2B and "encrypted" in core_codes:
         return finish("E_ENCRYPTED", new_route="PROTECTED")
     if fmt in G2B:
+        if fmt in {'csv', 'tsv', 'json'}:
+            return finish(need='NONE', action='convert_only')
+        if fmt in {'md', 'markdown', 'html', 'htm', 'xml', 'epub'}:
+            return finish('W_MEDIA_NOT_INSPECTED', need='NONE', action='convert_only')
         return finish("W_MEDIA_NOT_INSPECTED", action="convert_only")
     if result["decision"] == "no_candidates":
         return finish(need="NONE", action="convert_only")

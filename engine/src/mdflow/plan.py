@@ -59,6 +59,8 @@ def plan(selected: dict, render_meta: dict, lookup: dict,
         approve_threshold=threshold, threshold_exceeded=len(keys) > threshold,
         sensitive_hits=[p for p in options.get("sensitive", []) if fnmatchcase(source["path"].casefold(), p.casefold())],
         oversize=oversize)
+    if options.get('preconversion'):
+        approved['preconversion'] = deepcopy(options['preconversion'])
     status = dict(units=counts, requests_to_send=len(misses),
                   uninspected_pages=render_meta.get("uninspected_pages", selected.get("uninspected_pages", options["classification"].get("uninspected_pages", 0))),
                   frames_total=render_meta.get("frames_total") if source["format"] in {"png", "jpeg", "gif", "bmp", "tiff", "webp"} else None)

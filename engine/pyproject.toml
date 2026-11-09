@@ -21,6 +21,7 @@ testpaths = ["tests"]
 addopts = "--import-mode=importlib --strict-markers"
 junit_family = "xunit2"
 markers = [
+    "integration: real optional external tool; skip only when absent",
     "req(*ids): normative requirements asserted by the test",
     "cov(stage, failure_mode): exactly one primary matrix cell",
     "fx(*ids): fixture IDs, or all",

@@ -60,7 +60,7 @@ def test_T_CLS_92_row_9d_needs_both_core_unsupported_and_the_sniff_reason(core_a
     assert "legacy_text" in row_9d["reasons"]
     # the reason never rescues other groups or Core verdicts other than "unsupported_format"
     csv = core_api.classify.classify(dict(core_fx.sniff("FX-30", format="csv"), reasons=["legacy_text"]), core_fx.report("FX-30"))
-    assert csv["label"] == "U" and "W_MEDIA_NOT_INSPECTED" in [i["code"] for i in csv["issues"]]
+    assert csv["label"] == "T" and csv["need"] == "NONE" and csv["issues"] == []  # R33
     corrupt = dict(report, issues=[{"code": "corrupt", "detail": "x"}])
     assert core_api.classify.classify(legacy, corrupt)["label"] == "X"
     assert core_api.classify.classify(dict(legacy, format="pdf"), report)["label"] != "T"

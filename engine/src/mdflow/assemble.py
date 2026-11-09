@@ -113,6 +113,9 @@ def assemble(base_body: str, units: list, ledger_entries: dict,
     header = dict(mdflow=2)
     for name in ("source", "sha256", "bytes", "format", "route", "need", "label", "triage_decision", "coverage_state"):
         header[name] = meta[name]
+    if meta.get('fidelity') == 'DERIVED':
+        for name in ('fidelity', 'original_sha256', 'derived_sha256'):
+            header[name] = meta[name]
     header["units"] = counts
     if units:
         for name in ("provider", "model", "prompt_version"):
@@ -121,6 +124,8 @@ def assemble(base_body: str, units: list, ledger_entries: dict,
         header["dpi"] = meta.get("dpi", 200)
     tools = {name: meta["tools"][name] for name in ("mdflow", "markitdown-gc", "pypdfium2", "pillow", "exiftool")
              if name in meta["tools"]}
+    if meta.get('fidelity') == 'DERIVED':
+        tools['LibreOffice'] = meta['version']
     header.update(tools=tools, generated=meta["now"], content_sha256=sha256(body.encode("utf-8")))
 
     def scalar(value):

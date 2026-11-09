@@ -29,7 +29,7 @@ def test_T_META_91_m3_reference_core_and_normative_dependency_hook_are_current()
     spec = (REPO / 'docs/renewal/10_SPEC.md').read_text(encoding='utf-8')
     hook = next(line for line in spec.splitlines() if line.startswith('| GEN-01 |'))
     assert all(name in hook for name in ('markitdown-gc', 'pypdfium2', 'Pillow'))
-    assert 'Status: SPEC DRAFT-3.6' in spec
+    assert 'Status: SPEC DRAFT-3.7' in spec
 
 
 @pytest.mark.req('REQ-PKG-10', 'REQ-PLN-01')

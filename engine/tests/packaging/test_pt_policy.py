@@ -122,6 +122,9 @@ def test_PT_16_readme_has_the_five_disclosures_and_code_has_no_telemetry_or_unpl
         elif path.suffix == ".ts" and SHELL_NET.search(text):
             problems.append(f"{relative}: the shell must not open sockets (JT-20)")
         if path != REPO / "README.md":
+            # The LibreOffice profile's XML namespace is a schema identifier,
+            # not a destination; retain the network-host checks for other URLs.
+            text = text.replace('xmlns:oor="http://openoffice.org/2001/registry"', '')
             for host in re.findall(r"https?://([^/\s\"'`)<>\]:]+)", text):
                 if host.lower() not in ALLOWED_HOSTS:
                     problems.append(f"{relative}: unplanned host {host}")

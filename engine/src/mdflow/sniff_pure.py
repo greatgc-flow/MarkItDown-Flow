@@ -64,6 +64,8 @@ def by_extension(ext: str) -> tuple[str, str, list[str]]:
 
 
 def magic_format(header: bytes) -> str | None:
+    if header.startswith(b'HWP Document Fil'):
+        return 'hwp_legacy'
     signatures = ((b'%PDF-', 'pdf'), (b'PK\x03\x04', 'zip'),
         (b'\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1', 'cfb'), (b'\x89PNG\r\n\x1a\n', 'png'),
         (b'\xff\xd8\xff', 'jpeg'), (b'GIF87a', 'gif'), (b'GIF89a', 'gif'), (b'BM', 'bmp'),
@@ -91,6 +93,8 @@ def detect_format(header: bytes, ext: str, *, members: tuple = (),
     ext = ext.lower().lstrip(".")
     magic = magic_format(header) or 'unknown'
     fmt = magic if magic != 'unknown' else by_extension(ext)[0]
+    if magic == 'hwp_legacy':
+        return dict(ext=ext, magic=magic, format='hwp', route='LEGACY', reasons=['hwp_pre5'], issues=[])
     if magic == 'zip':
         fmt = zip_format(set(members), ext)
     if magic == "cfb":

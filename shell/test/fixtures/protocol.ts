@@ -20,10 +20,12 @@ export const SPEC_OPTIONS: readonly string[] = [
   '--approve-threshold', '--sensitive', '--min-priority', '--max-units', '--max-bytes', '--max-pixels',
   '--zip-depth', '--zip-entries', '--zip-total-bytes', '--force', '--cache', '--progress', '--report',
   '--command', '--command-egress', '--command-env', '--trust-command', '--cost-hint',
+  // R33 / SPEC REQ-CNV-07 (DRAFT-3.7): LibreOffice pre-convert of LEGACY formats, off unless the user opts in.
+  '--preconvert-legacy', '--preconvert-timeout-s',
 ];
 
 /** SPEC 10.2 options that take no value. */
-const FLAG_OPTIONS: ReadonlySet<string> = new Set(['--force', '--trust-command']);
+const FLAG_OPTIONS: ReadonlySet<string> = new Set(['--force', '--trust-command', '--preconvert-legacy']);
 
 /** Options removed when comparing the `plan` invocation with its `run` replay. */
 const REPLAY_VARIANT_OPTIONS: ReadonlySet<string> = new Set(['-o', '--out', '--yes', '--yes-file', '--approved-by']);

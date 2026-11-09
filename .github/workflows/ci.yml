@@ -120,6 +120,7 @@ jobs:
           npm ci
           npm run typecheck
           npm run build
+          python ../tools/trace.py collect-shell --output ../build/trace/collection-shell-${{ matrix.os }}.json
           npm test -- --ci --runInBand --json --outputFile=../build/trace/jest-${{ matrix.os }}.json
           cp ../build/trace/junit-shell.xml ../build/trace/junit-shell-${{ matrix.os }}.xml
           JEST_JUNIT_OUTPUT_NAME=junit-codes-${{ matrix.os }}.xml npm test -- --ci --runInBand -t JT-SHL-19-01

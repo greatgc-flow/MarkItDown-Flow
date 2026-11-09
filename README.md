@@ -130,6 +130,21 @@ not saved: a notice says so and the field shows the saved value again. A
 relative interpreter path found in a hand-edited or synced settings file is
 likewise reset and never launched.
 
+Legacy `.doc`, `.ppt`, `.rtf` and pre-5.0 HWP files are reported, not
+converted, unless you turn on "Legacy formats (LibreOffice)" in the Conversion
+section (off by default). The plugin then passes `--preconvert-legacy` to the
+engine, which converts each such file with your own LibreOffice (`soffice` on
+PATH or `SOFFICE_PATH`; the plugin never installs it) in an isolated profile
+without network access, and marks the result as derived from the converted
+copy: the result list shows "derived · LibreOffice <version>", the note's
+frontmatter carries `fidelity: DERIVED` with the original and derived SHA-256
+values, and the report carries `W_PRECONVERTED`. The setting's description and
+the setup diagnostics show which LibreOffice and exiftool the engine detected;
+`EXIFTOOL_PATH` and `SOFFICE_PATH` are forwarded to the engine. If the engine
+venv also contains the upstream `markitdown` package, the version check is
+blocked with `E_CORE_CONFLICT` and the setup diagnostics show the exact
+`pip uninstall -y markitdown` command for the selected interpreter.
+
 Migration drops removed settings and credentials and keeps a sanitized rollback
 snapshot `data.v1.json` next to `data.json`. Old external backups can retain
 credentials. If a migration write fails, or the settings file was written by a
@@ -155,6 +170,25 @@ python -I -m mdflow plan <PATH>... [options]          # prints one Plan JSON per
 python -I -m mdflow classify <PATH>                   # sniff/triage/classification only
 python -I -m mdflow version | selftest | providers | cache (stats|clear) [--cache DIR]
 ```
+
+Legacy `.doc`, `.ppt`, `.rtf` and pre-5.0 HWP conversion is opt-in: add
+`--preconvert-legacy` to `run`, `plan` or `classify` (programmatic setting
+`preconvert_legacy=True`). Install LibreOffice yourself and put `soffice` on
+PATH or set `SOFFICE_PATH` to its executable. Each conversion uses a private
+profile with macros and link updates disabled; the default 60-second deadline
+(`--preconvert-timeout-s`) kills the entire child tree. Derived files are
+re-inspected and deleted after hashing. Markdown retains original and derived
+SHA-256 values and `fidelity: DERIVED`; the report includes `W_PRECONVERTED`
+with the LibreOffice version. Failed conversions leave no Markdown and siblings
+continue. Other legacy formats still require manual conversion. In the plugin
+the same option is the "Legacy formats (LibreOffice)" toggle (see "Migration
+and operation").
+
+CSV/TSV/JSON classify as T. Markdown/HTML/XML/EPUB classify as T with
+`W_MEDIA_NOT_INSPECTED`; embedded media in those formats is not inspected.
+A venv containing both upstream `markitdown` and `markitdown-gc` is refused
+with `E_CORE_CONFLICT` on every entry point, including `version` and `selftest`;
+remove upstream `markitdown` or use a dedicated venv.
 
 Remote OCR needs consent per file: `run` stops with exit 3 and an
 `approve_required` event for each file, and `plan` prints the full Plan with its

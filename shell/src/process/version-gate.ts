@@ -14,6 +14,13 @@ export const VERSION_REQUIRED_FIELDS = [
 
 export type VersionField = (typeof VERSION_REQUIRED_FIELDS)[number];
 
+/** Detection states of the optional external tools (SPEC REQ-CNV-06 for exiftool; R33 LibreOffice alike). */
+export const TOOL_STATUSES = ['ok', 'not_found', 'too_old', 'unusable'] as const;
+export type ToolStatus = (typeof TOOL_STATUSES)[number];
+
+/** Where the engine found an optional tool: its `*_PATH` variable, `PATH`, or nowhere. */
+export type ToolSource = string | null;
+
 export interface VersionInfo {
   mdflow: string;
   'markitdown-gc': string;
@@ -24,11 +31,30 @@ export interface VersionInfo {
   protocol: 1;
   triage_schema: 1;
   /**
-   * Optional (R31): exiftool as the engine reports it (version text) or `null` when it is
-   * not installed. Absent when the engine does not report it. Diagnostics only; never gated.
+   * Optional (R31): exiftool version text, or `null` when the engine reports none (its
+   * `"unavailable"` spelling or JSON null). Absent when the engine does not report it.
+   * Diagnostics only; never gated.
    */
   exiftool?: string | null;
+  exiftool_status?: ToolStatus;
+  exiftool_source?: ToolSource;
+  /**
+   * Optional (R33): LibreOffice (`soffice`) as detected through `SOFFICE_PATH`/PATH, same shape as
+   * exiftool. SPEC 10.1 (DRAFT-3.7) does not report it yet; the names follow the R33 text and the
+   * exiftool precedent, and an engine that omits them shows "not reported".
+   */
+  libreoffice?: string | null;
+  libreoffice_status?: ToolStatus;
+  libreoffice_source?: ToolSource;
 }
+
+/** Optional `version` keys that describe tools, not the gated engine identity. */
+export const TOOL_INFO_KEYS: readonly (keyof VersionInfo)[] = [
+  'exiftool', 'exiftool_status', 'exiftool_source', 'libreoffice', 'libreoffice_status', 'libreoffice_source',
+];
+
+/** SPEC 7.5 startup code of the R33c co-install guard (REQ-GEN-12): `version` exits 1 with it before any response. */
+export const CORE_CONFLICT_CODE = 'E_CORE_CONFLICT';
 
 export type Semver = readonly [number, number, number];
 
@@ -91,7 +117,9 @@ export type VersionGateReason =
   | 'core'
   | 'pypdfium2'
   | 'pillow'
-  | 'platform';
+  | 'platform'
+  /** R33c: `version` exited 1 with `E_CORE_CONFLICT` (upstream `markitdown` co-installed with markitdown-gc). */
+  | 'core_conflict';
 
 export type VersionGate =
   | { enabled: true; info: VersionInfo }
@@ -102,17 +130,37 @@ function blocked(reason: VersionGateReason, field?: VersionField): VersionGate {
 }
 
 /**
- * Release segment `major.minor[.patch]` of a version string whose whole text has
- * the package gate's syntax (`test_pt_release.py`: `[0-9]+(?:\.[0-9]+)+(?:[A-Za-z0-9.+-]*)`,
- * full match): PEP 440-style suffixes (`rc1`, `.post1`, `.dev0`, `+local`) are
- * admitted and ignored; garbage suffixes, leading/trailing whitespace or a bare
- * major are null, so the shell and the package gate agree on every spelling
- * (M4 P-02 / M3-V04).
+ * Step one of the package gate (`test_pt_release.py`): the whole text is
+ * `[0-9]+(?:\.[0-9]+)+(?:[A-Za-z0-9.+-]*)`. Excludes whitespace, `v` prefixes,
+ * epochs (`1!`), `_` separators and a bare major.
+ */
+const PACKAGE_GATE_CHARSET = /^[0-9]+(?:\.[0-9]+)+[A-Za-z0-9.+-]*$/;
+
+/**
+ * Step two of the package gate: `packaging.version.Version(text)` must accept the text.
+ * This is PEP 440's public grammar as `packaging` spells it (case-insensitive), minus the
+ * parts step one already excludes (surrounding whitespace, `v`, epoch, `_` separators):
+ * release `N(.N)*`, optional pre `[-.]?(a|b|c|rc|alpha|beta|pre|preview)[-.]?N?`, optional
+ * post `-N` or `[-.]?(post|rev|r)[-.]?N?`, optional dev `[-.]?dev[-.]?N?`, optional local
+ * `+[a-z0-9]+([-.][a-z0-9]+)*`.
+ */
+const PEP440_PUBLIC = /^(\d+(?:\.\d+)*)(?:[-.]?(?:a|b|c|rc|alpha|beta|pre|preview)[-.]?\d*)?(?:-\d+|[-.]?(?:post|rev|r)[-.]?\d*)?(?:[-.]?dev[-.]?\d*)?(?:\+[a-z0-9]+(?:[-.][a-z0-9]+)*)?$/i;
+
+/**
+ * Release segment `major.minor[.patch]` of a version string that passes BOTH steps of the
+ * package gate (`test_pt_release.py` `valid()`: the character regex, then
+ * `packaging.version.Version`). PEP 440 suffixes (`rc1`, `.post1`, `-1`, `.dev0`, `+local`)
+ * are admitted and ignored on the release segment; `3.14garbage`, `5.15.1abc`, `5.15.1..1`,
+ * `5.15.1+`, `5.15.1???`, whitespace or a bare major are null, so the shell and the package
+ * gate agree on every spelling (M4 P-02 / M3-V04 / M5 Q-01).
  */
 export function releaseSegment(version: string): Semver | null {
-  const match = /^(\d+)\.(\d+)(?:\.(\d+))?[A-Za-z0-9.+-]*$/.exec(version);
+  if (!PACKAGE_GATE_CHARSET.test(version)) return null;
+  const match = PEP440_PUBLIC.exec(version);
   if (!match) return null;
-  return [Number(match[1]), Number(match[2]), match[3] === undefined ? 0 : Number(match[3])];
+  // `version_tuple` of the package gate: the leading dotted integers; parts beyond the third are ignored.
+  const parts = match[1].split('.').map(Number);
+  return [parts[0], parts[1] ?? 0, parts[2] ?? 0];
 }
 
 function compare(a: Semver, b: Semver): number {
@@ -159,8 +207,17 @@ export function evaluateVersionResponse(stdout: string, policy: VersionPolicy = 
     protocol: 1,
     triage_schema: 1,
   };
-  // Optional tool status (R31): admitted as a string or null only; any other shape is an ignored optional field.
-  if (raw.exiftool === null || typeof raw.exiftool === 'string') info.exiftool = raw.exiftool;
+  // Optional tool status (R31 exiftool, R33 LibreOffice): a version string or null (the engine's `"unavailable"`
+  // reads as null); status/source only in their closed vocabularies. Any other shape is an ignored optional field.
+  for (const tool of ['exiftool', 'libreoffice'] as const) {
+    const version = raw[tool];
+    if (version === null || version === 'unavailable') info[tool] = null;
+    else if (typeof version === 'string') info[tool] = version;
+    const status = raw[`${tool}_status`];
+    if (typeof status === 'string' && (TOOL_STATUSES as readonly string[]).includes(status)) info[`${tool}_status`] = status as ToolStatus;
+    const source = raw[`${tool}_source`];
+    if (source === null || typeof source === 'string') info[`${tool}_source`] = source;
+  }
   if (!inRange(info.python, policy.pythonMin, policy.pythonMaxExclusive)) return blocked('python', 'python');
   if (!inRange(info.mdflow, policy.engineMin, policy.engineMaxExclusive)) return blocked('engine', 'mdflow');
   if (!inRange(info['markitdown-gc'], policy.coreMin, policy.coreMaxExclusive)) return blocked('core', 'markitdown-gc');
@@ -168,6 +225,25 @@ export function evaluateVersionResponse(stdout: string, policy: VersionPolicy = 
   if (!inRange(info.pillow, policy.pillowMin, policy.pillowMaxExclusive)) return blocked('pillow', 'pillow');
   if (info.platform.trim().length === 0) return blocked('platform', 'platform');
   return { enabled: true, info };
+}
+
+/**
+ * The SPEC 7.5 code of an exit-1 startup error object (`{"error": {"code": ..., "message": ...}}`,
+ * one JSON object on stderr), or null when stderr holds anything else. The message is never read.
+ */
+export function startupErrorCode(stderr: string): string | null {
+  const text = stderr.trim();
+  if (text.length === 0 || text.includes('\n')) return null;
+  try {
+    const parsed: unknown = JSON.parse(text);
+    if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) return null;
+    const error = (parsed as Record<string, unknown>).error;
+    if (typeof error !== 'object' || error === null) return null;
+    const code = (error as Record<string, unknown>).code;
+    return typeof code === 'string' && /^E_[A-Z0-9_]+$/.test(code) ? code : null;
+  } catch {
+    return null;
+  }
 }
 
 /** REQ-SHL-10: probe the configured interpreter first with a five-second timeout. */
@@ -256,6 +332,10 @@ export async function probeVersion(enginePython: string, deps: VersionProbeDeps)
   const capture = await captureProbe(deps.spawner, request, deps.clock, deps.timeoutMs ?? VERSION_PROBE_TIMEOUT_MS);
   if (capture.error) return blocked('spawn_failed');
   if (capture.timedOut) return blocked('timeout');
-  if (capture.status?.code !== 0) return blocked('exit');
+  if (capture.status?.code !== 0) {
+    // R33c (SPEC REQ-GEN-12): the co-install guard answers `version` with exit 1 and E_CORE_CONFLICT on stderr
+    // before any response; name that state so diagnostics can show the fix. Any other exit is a plain `exit`.
+    return blocked(startupErrorCode(capture.stderr) === CORE_CONFLICT_CODE ? 'core_conflict' : 'exit');
+  }
   return evaluateVersionResponse(capture.stdout, deps.policy ?? RELEASE_LOCK);
 }

@@ -9,7 +9,7 @@
 import { type App, Modal } from 'obsidian';
 import type { HistoryOutcome } from '../pure/history';
 import { formatMessage, type UiLocale } from '../pure/i18n';
-import type { RunReport } from '../pure/protocol';
+import { DERIVED_FIDELITY, PRECONVERTED_CODE, type RunReport } from '../pure/protocol';
 import { labelLegendKey } from './consent-modal';
 
 export type ResultStatus = 'ok' | 'pending' | 'failed';
@@ -24,6 +24,10 @@ export interface ResultRow {
   issueCodes: string[];
   /** Number of published outputs (display only; never a success signal). */
   outputs: number;
+  /** R33: converted from a LibreOffice pre-converted copy (`W_PRECONVERTED`, or `fidelity: DERIVED`), never native. */
+  derived: boolean;
+  /** The pre-converting tool and version from the `W_PRECONVERTED` issue (`LibreOffice 24.8`), when reported. */
+  derivedBy: { tool: string; version: string } | null;
 }
 
 export interface ResultsViewModel {
@@ -38,6 +42,7 @@ export function buildResultsView(report: RunReport, outcome: HistoryOutcome): Re
     const issueCodes = file.issues.map((issue) => issue.code);
     const failed = issueCodes.some((code) => code.startsWith('E_')) || file.units.failed > 0;
     const status: ResultStatus = failed ? 'failed' : file.units.pending > 0 ? 'pending' : 'ok';
+    const preconverted = file.issues.find((issue) => issue.code === PRECONVERTED_CODE);
     return {
       path: file.path,
       label: file.label,
@@ -45,6 +50,8 @@ export function buildResultsView(report: RunReport, outcome: HistoryOutcome): Re
       units: { done: file.units.cached + file.units.transcribed, pending: file.units.pending, failed: file.units.failed },
       issueCodes,
       outputs: file.outputs.length,
+      derived: file.fidelity === DERIVED_FIDELITY || preconverted !== undefined,
+      derivedBy: preconverted?.tool && preconverted.version ? { tool: preconverted.tool, version: preconverted.version } : null,
     };
   });
   return { outcome, rows, skipped: report.skipped.map((s) => ({ path: s.path, code: s.code })) };
@@ -88,6 +95,12 @@ export class ResultsModal extends Modal {
         const legend = labelLegendKey(row.label);
         const labelCell = tr.createEl('td', { cls: 'mdflow-cell-label', text: row.label });
         if (legend) labelCell.setAttr('title', this.t(legend));
+        if (row.derived) {
+          // R33: a pre-converted file is shown as derived (with the tool and version when reported) next to its
+          // class; the W_PRECONVERTED code stays in Issues.
+          const text = row.derivedBy ? this.t('shell.results.derivedBy', row.derivedBy) : this.t('shell.results.derived');
+          labelCell.createSpan({ cls: 'mdflow-badge mdflow-badge-derived', text, attr: { title: this.t('shell.results.derivedHint') } });
+        }
         tr.createEl('td', { cls: `mdflow-badge mdflow-status-${row.status}`, text: this.t(`shell.results.status.${row.status}`) });
         tr.createEl('td', {
           cls: 'mdflow-cell-number',

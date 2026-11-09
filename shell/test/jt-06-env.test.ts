@@ -46,6 +46,7 @@ function baseSettings(provider: SettingsV2['provider']): SettingsV2 {
     enableContextMenu: true,
     enableRecursiveConversion: true,
     enableDragDrop: false,
+    enableLegacyPreconvert: false,
     conversionHistory: [],
     locale: 'auto',
     provider,

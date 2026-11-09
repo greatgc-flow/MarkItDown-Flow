@@ -32,6 +32,8 @@ const EXPECTED_ALL_KEYS: SettingsV2 = {
   enableContextMenu: true,
   enableRecursiveConversion: false,
   enableDragDrop: true,
+  // R33: no v1 counterpart; a migrated file starts with the default (off).
+  enableLegacyPreconvert: false,
   conversionHistory: [
     {
       inputFile: 'inbox/report.pdf',
@@ -168,7 +170,7 @@ it(R('JT-04 schema-2 persisted keys are exactly the allowlist; trust/approval/co
   const s = result.settings as SettingsV2;
   expect(Object.keys(s).sort()).toEqual(
     ['schemaVersion', 'enginePython', 'outputPath', 'enableBatchProgress', 'enableContextMenu',
-      'enableRecursiveConversion', 'enableDragDrop', 'conversionHistory', 'locale', 'provider', 'runOptions'].sort(),
+      'enableRecursiveConversion', 'enableDragDrop', 'enableLegacyPreconvert', 'conversionHistory', 'locale', 'provider', 'runOptions'].sort(),
   );
   const text = JSON.stringify(result);
   for (const gone of ['trustedCommands', 'approvedHashes', 'consent', 'commandTemplate', 'rm -rf']) {

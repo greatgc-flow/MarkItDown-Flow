@@ -22,6 +22,7 @@ from pathlib import Path
 from typing import TypedDict
 
 from .contracts import Issue, SniffResult
+from . import core_guard
 
 NOT_RUN = "not_run"
 _BLOCKING = frozenset(
@@ -42,6 +43,7 @@ def _outcome(ran: bool, report: dict | None, state: str, issues: list[Issue]) ->
 
 
 def run_triage(path: str | Path, sniff: SniffResult) -> TriageOutcome:
+    core_guard.check()
     if sniff["route"] != "NATIVE" or any(issue["code"] in _BLOCKING for issue in sniff["issues"]):
         return _outcome(False, None, NOT_RUN, [])
     try:

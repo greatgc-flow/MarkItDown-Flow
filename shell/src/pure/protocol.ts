@@ -56,7 +56,13 @@ export interface Plan {
   plan_hash: string;
 }
 
-export interface Issue { code: string; message: string }
+export interface Issue {
+  code: string;
+  message: string;
+  /** R33 `W_PRECONVERTED` only (SPEC REQ-CNV-07): the pre-converting tool and its version. */
+  tool?: string;
+  version?: string;
+}
 
 export interface ReportFile {
   path: string;
@@ -79,7 +85,16 @@ export interface ReportFile {
   consent: { plan_hash: string; approved_at: string; by: string } | null;
   /** Verbatim Core report; its vocabulary is NOT validated against SPEC 7.5. */
   triage: unknown;
+  /**
+   * R33: `NATIVE` for the source bytes themselves, `DERIVED` for a LibreOffice pre-converted copy
+   * (such files also carry `W_PRECONVERTED`). Absent from engines that predate R33.
+   */
+  fidelity?: string;
 }
+
+/** The R33 issue code that marks a file converted from a pre-converted (derived) copy. */
+export const PRECONVERTED_CODE = 'W_PRECONVERTED';
+export const DERIVED_FIDELITY = 'DERIVED';
 
 export interface RunReport {
   v: 1;
@@ -267,7 +282,11 @@ function decodeIssue(value: unknown, where: string): Issue {
   const r = need<Raw>(isRecord(value), value, `${where} must be an object`);
   const code = need<string>(isString(r.code), r.code, `${where}.code`);
   if (!isKnownEngineCode(code)) fail(`${where}.code is not a SPEC 7.5 code`);
-  return { code, message: need(isString(r.message), r.message, `${where}.message`) };
+  const issue: Issue = { code, message: need(isString(r.message), r.message, `${where}.message`) };
+  // Provenance of a pre-converted file (R33): display-only strings; a numeric version is shown as written.
+  if (isString(r.tool)) issue.tool = r.tool;
+  if (isString(r.version) || isNumber(r.version)) issue.version = String(r.version);
+  return issue;
 }
 
 function decodeFile(value: unknown, index: number): ReportFile {
@@ -285,7 +304,7 @@ function decodeFile(value: unknown, index: number): ReportFile {
     };
   }
   const issuesRaw = need<unknown[]>(Array.isArray(r.issues), r.issues, `${where}.issues`);
-  return {
+  const file: ReportFile = {
     path: str('path'),
     root: need(isNumber(r.root), r.root, `${where}.root`),
     sha256: str('sha256'),
@@ -307,6 +326,8 @@ function decodeFile(value: unknown, index: number): ReportFile {
     // Verbatim Core report (R5-N08): retained as-is, including a `corrupt` decision and Core issue codes.
     triage: r.triage === undefined ? null : r.triage,
   };
+  if (r.fidelity !== undefined) file.fidelity = str('fidelity');
+  return file;
 }
 
 /** Validate a run report; mdflow codes checked against SPEC 7.5 only in mdflow-owned fields. */

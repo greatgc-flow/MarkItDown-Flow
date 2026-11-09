@@ -405,7 +405,9 @@ def _analyze(
         return _result(logical, root, size, sha, ext, head, fmt, route, reasons, issues)
 
     fmt, route = magic, "NATIVE"
-    if magic == "pdf":
+    if magic == 'hwp_legacy':
+        fmt, route, reasons = 'hwp', 'LEGACY', ['hwp_pre5']
+    elif magic == "pdf":
         if not too_large:
             protection, corrupt = _check_pdf(fp, size)
             if corrupt:

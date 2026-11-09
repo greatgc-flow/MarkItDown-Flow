@@ -15,6 +15,7 @@ export function settingsV2(overrides: Partial<SettingsV2> = {}): SettingsV2 {
     enableContextMenu: true,
     enableRecursiveConversion: true,
     enableDragDrop: false,
+    enableLegacyPreconvert: false,
     conversionHistory: [],
     locale: 'en',
     provider: { name: 'none', model: '', baseUrl: 'https://api.openai.com/v1' },

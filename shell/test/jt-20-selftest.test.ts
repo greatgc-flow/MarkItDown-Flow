@@ -6,7 +6,7 @@
 import { req } from './req';
 import { mockState } from './__mocks__/obsidian';
 import { runSelftest, type SelftestDeps } from '../src/process/selftest';
-import { RELEASE_LOCK, type VersionPolicy } from '../src/process/version-gate';
+import { RELEASE_LOCK } from '../src/process/version-gate';
 import type { SpawnRequest } from '../src/process/types';
 import { FakeClock } from './fixtures/fake-clock';
 import { FakeSpawner, type ScriptedChild, subcommandOf } from './fixtures/fake-spawner';
@@ -14,8 +14,6 @@ import { fx71Bytes, fx71Exit } from './fixtures/fx71';
 import { ENGINE_PYTHON, HOST_ENV, KEY_VALUE, PLUGIN_DIR } from './fixtures/shell-settings';
 
 const R = req('REQ-SHL-20');
-/** FX-71 is recorded on a supported host (Python 3.14, M4 P-03): the release policy is used unchanged. */
-const POLICY: VersionPolicy = RELEASE_LOCK;
 
 function script(selftestExit = fx71Exit('selftest.json')): (request: SpawnRequest) => ScriptedChild {
   return (request) => {
@@ -26,7 +24,8 @@ function script(selftestExit = fx71Exit('selftest.json')): (request: SpawnReques
 }
 
 function deps(spawner: FakeSpawner, enginePython: string | null = ENGINE_PYTHON): SelftestDeps {
-  return { spawner, clock: new FakeClock(), hostEnv: HOST_ENV, cwd: PLUGIN_DIR, enginePython, policy: POLICY };
+  // FX-71 is recorded on a supported host (Python 3.14, M4 P-03): the release policy itself (M5 Q-04).
+  return { spawner, clock: new FakeClock(), hostEnv: HOST_ENV, cwd: PLUGIN_DIR, enginePython, policy: RELEASE_LOCK };
 }
 
 beforeEach(() => mockState.reset());

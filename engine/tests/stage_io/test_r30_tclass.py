@@ -192,14 +192,14 @@ EXPECTED = {
                     "| Region | Revenue | Growth |", "| North  | 120     | 5%     |"], [], "T"),
     "doc.hwpx": (["한글 문서 제목", "본문 첫 문단입니다.", "| 항목 | 값 |", "| 가 | 1 |"], [], "T"),
     "doc.hwp": (["Own deterministic HWP fixture"], [], "T"),
-    "data.csv": (["| name | qty | note |", "| widget | 3 | has, comma |"], [], "U"),
+    "data.csv": (["| name | qty | note |", "| widget | 3 | has, comma |"], [], "T"),
     "page.html": (["# Heading One", "**bold**", "[a link](https://example.com/x)", "* A", "| K | V |", "| a | 1 |"],
-                  ["hidden", "<script"], "U"),
-    "book.epub": (["**Title:** My Book", "**Authors:** Author A", "# Chapter One", "Epub paragraph."], [], "U"),
+                  ["hidden", "<script"], "T"),
+    "book.epub": (["**Title:** My Book", "**Authors:** Author A", "# Chapter One", "Epub paragraph."], [], "T"),
     "note.txt": (["First line", "Second line", "한국어"], [], "T"),
     "run.log": (["2026-01-01 INFO start", "2026-01-01 WARN second"], [], "T"),
-    "readme.md": (["# Title", "Some *text*.", "| a | b |"], [], "U"),
-    "conf.json": (['"name": "x"', '"nested": {'], [], "U"),
+    "readme.md": (["# Title", "Some *text*.", "| a | b |"], [], "T"),
+    "conf.json": (['"name": "x"', '"nested": {'], [], "T"),
 }
 
 
@@ -239,7 +239,7 @@ def test_T_CNV_89_born_digital_sources_convert_with_structure_media_and_clean_fr
         for link in re.findall(r"!\[[^\]]*\]\((media/[^)]+)\)", body):
             assert (out / link).is_file(), f"{name}: dangling media link {link}"
     assert (out / "report.pdf.md").read_text(encoding="utf-8").count("<!-- mdflow:page ") == 1
-    assert "W_MEDIA_NOT_INSPECTED" in [i["code"] for i in by_name["data.csv"]["issues"]], "G2b stays U by SPEC row 9c"
+    assert by_name["data.csv"]["issues"] == [], "R33 csv is T without media warning"
     assert not (out / "media").exists() or all(p.suffix in {".png", ".jpg", ".jpeg"} for p in (out / "media").iterdir())
 
 
