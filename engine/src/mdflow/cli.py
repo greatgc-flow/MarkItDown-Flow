@@ -13,7 +13,7 @@ import sys
 import tempfile
 import zlib
 
-from . import approve, assemble, classify, orchestrate, providers, report, sniff_io, transcribe, triage, write
+from . import approve, assemble, classify, convert, exiftool, orchestrate, providers, report, sniff_io, transcribe, triage, write
 
 _DISCLOSURE = ("Duplicate remote charges are possible if a run dies between a response and its ledger write. "
                "A trusted command runs with your privileges on every OCR unit.")
@@ -175,6 +175,25 @@ def _selftest_documents() -> dict[str, bytes]:
     return {"smoke.pdf": pdf, "smoke.png": png}
 
 
+def _exiftool_versions() -> dict:
+    """`version` fields for the optional exiftool helper (R31); absence is a normal state, never an error."""
+    found = exiftool.detect()
+    return dict(exiftool=found["version"] if found["available"] else "unavailable",
+                exiftool_status=found["status"], exiftool_source=found["source"])
+
+
+def _selftest_exiftool(png: bytes) -> dict:
+    """Informational only: does the detected exiftool actually yield metadata for the bundled PNG?"""
+    found = exiftool.detect()
+    metadata = False
+    if found["available"]:
+        try:
+            metadata = "ImageSize:" in convert.core_convert(png, ".png", exiftool_path=found["path"])
+        except Exception:
+            metadata = False
+    return dict(status=found["status"], version=found["version"], metadata=metadata)
+
+
 def _selftest() -> int:
     expected = {
         "pdf": dict(route="NATIVE", need="NONE", label="T", action="convert_only", decision="no_candidates",
@@ -185,13 +204,14 @@ def _selftest() -> int:
                     reasons=["cand:standalone_image"], issues=[]),
     }
     matched = True
+    documents = _selftest_documents()
     with tempfile.TemporaryDirectory(prefix="mdflow-selftest-") as folder:
-        for name, data in _selftest_documents().items():
+        for name, data in documents.items():
             path = Path(folder) / name
             path.write_bytes(data)
             value = _classification(path)
             matched = (value["classification"] == expected[path.suffix[1:]]) and matched
-    _print({"ok": matched})
+    _print({"ok": matched, "exiftool": _selftest_exiftool(documents["smoke.png"])})
     return 0 if matched else 2
 
 
@@ -203,7 +223,7 @@ def main(argv: list[str] | None = None) -> int:
         args = _parser().parse_args(argv)
         if args.command_name == "version":
             _print(dict(orchestrate.tools(), python=platform.python_version(), platform=platform.platform(),
-                        protocol=1, triage_schema=1))
+                        protocol=1, triage_schema=1, **_exiftool_versions()))
             return 0
         try:
             _check_core()

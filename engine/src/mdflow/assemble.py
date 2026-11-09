@@ -119,7 +119,7 @@ def assemble(base_body: str, units: list, ledger_entries: dict,
             header[name] = meta[name]
     if fmt == "pdf":
         header["dpi"] = meta.get("dpi", 200)
-    tools = {name: meta["tools"][name] for name in ("mdflow", "markitdown-gc", "pypdfium2", "pillow")
+    tools = {name: meta["tools"][name] for name in ("mdflow", "markitdown-gc", "pypdfium2", "pillow", "exiftool")
              if name in meta["tools"]}
     header.update(tools=tools, generated=meta["now"], content_sha256=sha256(body.encode("utf-8")))
 

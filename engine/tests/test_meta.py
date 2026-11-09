@@ -57,7 +57,10 @@ def test_T_META_04_matrix_cells_covered_or_reasoned_na(trace_module, repo_root, 
 @pytest.mark.scope("schema")
 def test_T_META_05_no_stale_class_stage_na(trace_module, repo_root, test_registry):
     """M4-H: a cell asserted by a real test must not also be declared N/A (stale registry)."""
-    import tomllib
+    try:
+        import tomllib
+    except ImportError:
+        import tomli as tomllib
     declared = tomllib.loads((repo_root / "engine/tests/matrix.toml").read_text(encoding="utf-8"))
     classes_of = trace_module.fixture_classes(repo_root)
     covered = set()
@@ -80,7 +83,10 @@ def test_T_META_05_no_stale_class_stage_na(trace_module, repo_root, test_registr
 def test_T_META_06_class_stage_header_count_matches_expanded_cells(repo_root):
     """M4-H: the '(N cells)' header of the class x stage section equals the expanded declarations."""
     import re
-    import tomllib
+    try:
+        import tomllib
+    except ImportError:
+        import tomli as tomllib
     text = (repo_root / "engine/tests/matrix.toml").read_text(encoding="utf-8")
     declared = tomllib.loads(text).get("class_stage", [])
     actual = sum(len(e["classes"]) * len(e["stages"]) for e in declared)

@@ -66,6 +66,29 @@ def digest(value):
 
 
 def image_bytes(fmt="PNG", *, frames=1, size=(200, 200), seed=7, **kwargs):
+    if fmt == "PNG":
+        # Goldens seal hashes and byte counts, including embedded Office media.
+        # Emit RGB/filter-0 PNG with explicit stored DEFLATE blocks: Pillow's
+        # filters and native zlib/zlib-ng compression vary across OS/wheels.
+        assert frames == 1 and not kwargs
+        width, height = size
+        pixels = random.Random(seed).randbytes(width * height * 3)
+        stride = width * 3
+        raw = b"".join(b"\0" + pixels[n:n + stride] for n in range(0, len(pixels), stride))
+        stream = bytearray(b"\x78\x01")  # zlib header, no compression
+        for offset in range(0, len(raw), 65535):
+            block = raw[offset:offset + 65535]
+            stream.extend(struct.pack("<BHH", int(offset + len(block) == len(raw)),
+                                      len(block), len(block) ^ 0xffff))
+            stream.extend(block)
+        stream.extend(struct.pack(">I", zlib.adler32(raw)))
+
+        def chunk(kind, payload):
+            body = kind + payload
+            return struct.pack(">I", len(payload)) + body + struct.pack(">I", zlib.crc32(body))
+
+        return (b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(">IIBBBBB", width, height, 8, 2, 0, 0, 0))
+                + chunk(b"IDAT", stream) + chunk(b"IEND", b""))
     from PIL import Image
     rng = random.Random(seed)
     images = [Image.frombytes("RGB", size, rng.randbytes(size[0] * size[1] * 3))
@@ -81,7 +104,9 @@ def zip_bytes(members):
     with zipfile.ZipFile(out, "w") as archive:
         for name, data in members:
             info = zipfile.ZipInfo(name, date_time=(1980, 1, 1, 0, 0, 0))
-            info.compress_type = zipfile.ZIP_DEFLATED
+            # Archive bytes participate in the same contract as PNG bytes.
+            # Stored members avoid platform-specific zlib output entirely.
+            info.compress_type = zipfile.ZIP_STORED
             info.create_system = 3
             info.external_attr = 0o600 << 16
             archive.writestr(info, data.encode() if isinstance(data, str) else data)
@@ -326,7 +351,10 @@ def generate(fx, directory, *, variant="a", pages=None):
         data = hwp5_bytes(encrypted=True) if number == 27 else cfb_bytes(
             {"EncryptionInfo": b"own encryption stub", "EncryptedPackage": b"own package stub"}
             if number == 25 else {"Workbook" if number == 34 else "WordDocument": b"own legacy fixture"})
-    elif number in {26, 33, 37, 43, 45, 46, 47, 48, 49}:
+    elif number == 46:
+        # Reviewed compressed bomb: storing it would erase the ratio test.
+        ext, data = "zip", (ROOT / "engine/tests/fixtures/FX-46.zip").read_bytes()
+    elif number in {26, 33, 37, 43, 45, 47, 48, 49}:
         ext = {33: "epub", 37: "odt", 48: "docx"}.get(number, "zip")
         members = [("a.txt", b"own fixture text")]
         if number == 33:
@@ -340,8 +368,6 @@ def generate(fx, directory, *, variant="a", pages=None):
             for _ in range(3):
                 nested = zip_bytes([("nested.zip", nested)])
             members = [("nested.zip", nested)]
-        elif number == 46:
-            members = [("zeros.txt", b"\0" * (11 * 1024**2))]
         elif number in {47, 48}:
             members = [(f"item{i}.txt", b"x") for i in range(1001)]
             if number == 48:

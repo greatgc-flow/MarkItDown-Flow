@@ -18,6 +18,7 @@ import type { VersionGate } from '../process/version-gate';
 import { buildConsentView, type ConsentDecision, type ConsentViewModel } from './consent-modal';
 import { type DirEntry, resolveDestination, selectImmediateFiles } from './output-path';
 import type { ProgressSink } from './progress';
+import { buildResultsView, type ResultsViewModel } from './results-modal';
 
 export type EntryPoint = 'command' | 'ribbon' | 'context-menu' | 'drop';
 
@@ -62,6 +63,8 @@ export interface CoordinatorDeps {
   nonce: () => string;
   /** Progress/Cancel presenter (REQ-SHL-09/16); null in headless tests. */
   progress?: ProgressSink | null;
+  /** Per-file result list of a run that produced a decoded report (R32); omitted in headless tests. */
+  results?: ((view: ResultsViewModel) => void) | null;
 }
 
 export interface JobReport {
@@ -357,6 +360,8 @@ export class ShellCoordinator {
     report.pendingShown = run.outcome === 'pending_consent' || run.events.some((e) => (e.ev === 'error' && APPROVAL_CODES.has(e.code)) || e.ev === 'approve_required');
     for (const key of run.diagnostics) this.deps.notify(key);
     if (run.outcome === 'complete') this.deps.notify('shell.notice.jobDone', { outcome: run.outcome });
+    // Concise per-file list from the decoded report only (R32); a forced or report-less end shows nothing invented.
+    if (run.stdout?.ok) this.deps.results?.(buildResultsView(run.stdout.value, run.outcome));
     await this.log({ stage: 'run', code: run.startupError?.code, count: run.events.filter((e) => e.ev === 'file_end').length, status: `${run.termination}:${run.outcome}` });
     await this.record(snapshot, run.outcome);
     return report;

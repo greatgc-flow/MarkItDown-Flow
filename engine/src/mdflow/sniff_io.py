@@ -10,7 +10,8 @@ Binding API (the stage_io tests pin it):
 * ``sniff(path, *, logical, root=0, max_bytes=..., zip_entries=..., zip_total_bytes=...) -> SniffResult``
   (REQ-SNF-02..08). ``ext`` is lower-case without the dot. ``reasons`` vocabulary:
   ``pdf_password``, ``pdf_encrypt_trailer``, ``zip_flag_bit``, ``cfb_encrypted_package``,
-  ``hwp5_encrypted``, ``media_out_of_scope``, ``unsupported_format``. Read failure never raises:
+  ``hwp5_encrypted``, ``media_out_of_scope``, ``unsupported_format``, ``legacy_text`` (txt/log in a legacy
+  encoding, R30 / REQ-CLS-07). Read failure never raises:
   it yields ``E_SNIFF_IO`` and route ``UNSUPPORTED``. Core is never imported or called.
 * ``read_member(zip_path, name, *, max_bytes, total_remaining=None) -> bytes`` streams a member in
   64 KiB chunks and raises ``ZipReadError(code="E_ZIP_BOMB")`` when the real decompressed size exceeds
@@ -36,7 +37,8 @@ from typing import BinaryIO, Sequence, TypedDict
 
 from .contracts import Issue, SniffResult
 from .sniff_pure import (by_extension as _by_extension, magic_format as _magic_format,
-                         zip_format as _zip_format, zip_route as _zip_route, expected_exts as _expected_exts)
+                         zip_format as _zip_format, zip_route as _zip_route, expected_exts as _expected_exts,
+                         G2A, LEGACY_TEXT_SAMPLE, is_legacy_text)
 
 DEFAULT_MAX_BYTES = 209715200
 DEFAULT_ZIP_DEPTH = 3
@@ -396,6 +398,10 @@ def _analyze(
     magic = _magic_format(head)
     if magic is None:
         fmt, route, reasons = _by_extension(ext)
+        if fmt in G2A and route == "NATIVE" and not too_large:
+            fp.seek(0)
+            if is_legacy_text(fp.read(LEGACY_TEXT_SAMPLE)):
+                reasons = [*reasons, "legacy_text"]  # R30: converted as T-class text although Core cannot validate it
         return _result(logical, root, size, sha, ext, head, fmt, route, reasons, issues)
 
     fmt, route = magic, "NATIVE"

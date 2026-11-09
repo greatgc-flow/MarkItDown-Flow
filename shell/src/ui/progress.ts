@@ -134,7 +134,11 @@ export class JobStatusBar implements ProgressSink {
     this.el.addClass('mdflow-status');
     this.textEl = this.el.createSpan({ cls: 'mdflow-status-text' });
     this.detailsEl = this.deps.showDetails() ? this.el.createSpan({ cls: 'mdflow-status-details' }) : null;
-    const cancel = this.el.createEl('button', { cls: 'mdflow-status-cancel', text: this.t('shell.progress.cancel') });
+    const cancel = this.el.createEl('button', {
+      cls: 'mdflow-status-cancel',
+      text: this.t('shell.progress.cancel'),
+      attr: { type: 'button', 'aria-label': this.t('shell.progress.cancelHint'), title: this.t('shell.progress.cancelHint') },
+    });
     cancel.addEventListener('click', () => this.deps.onCancel());
     this.render();
   }
@@ -158,16 +162,18 @@ export class JobStatusBar implements ProgressSink {
     this.detailsEl = null;
     this.el.empty();
     this.el.removeClass('mdflow-status');
+    this.el.setAttr('data-mdflow-phase', null);
   }
 
   private render(): void {
     if (this.currentPhase === null || !this.textEl) return;
     this.textEl.setText(this.t(`shell.progress.phase.${this.currentPhase}`));
+    this.el.setAttr('data-mdflow-phase', this.currentPhase);
     if (!this.detailsEl) return;
     const s = this.summary;
     this.detailsEl.setText(
       this.t('shell.progress.details', {
-        stage: s.stage ?? '-',
+        stage: s.stage ?? this.t('shell.progress.starting'),
         filesEnded: String(s.filesEnded),
         filesTotal: s.filesTotal === null ? '?' : String(s.filesTotal),
         done: String(s.unitsDone),

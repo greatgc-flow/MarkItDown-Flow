@@ -377,7 +377,8 @@ class _Pipeline:
         meta = dict(source=logical, sha256=sn["sha256"], bytes=sn["bytes"], format=sn["format"],
                     **{k: c[k] for k in ("route", "need", "label", "coverage_state")}, triage_decision=c["decision"],
                     provider=self.provider.meta["name"], model=self.provider.meta["model"], prompt_version=opts["prompt_version"],
-                    dpi=opts["dpi"], tools=self.tools, now=self.now().isoformat(timespec="seconds"),
+                    dpi=opts["dpi"], tools={**self.tools, **converted.get("tools", {})},
+                    now=self.now().isoformat(timespec="seconds"),
                     frames_total=rendered["frames_total"], pending_reason="approval_denied" if denied else pending_reason)
         if sn["format"] == "pdf":
             meta["pages_total"] = len(converted["pages"]) if converted["pages"] is not None else (

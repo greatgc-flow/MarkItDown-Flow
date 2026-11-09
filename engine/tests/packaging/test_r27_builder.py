@@ -8,6 +8,50 @@ import pytest
 from _support import REPO, ASSETS, SUBJECTS, WHEEL, REFERENCE, load_py, sha256_file
 
 
+@pytest.mark.req('REQ-PKG-14', 'REQ-PKG-17')
+@pytest.mark.cov('S0', 'FM9')
+@pytest.mark.parametrize('produces_main', (True, False))
+def test_T_GEN_55_release_assembles_fresh_root_bundle(tmp_path, monkeypatch, produces_main):
+    load_py(REPO / 'tools/build_engine.py', 'build_engine')
+    release = load_py(REPO / 'tools/build_release.py', 'mdflow_ci_release')
+    root = tmp_path / 'repo'
+    shell = root / 'shell'
+    (shell / 'dist').mkdir(parents=True)
+    (root / 'main.js').write_bytes(b'stale root bundle')
+    (shell / 'main.js').write_bytes(b'stale shell bundle')
+    (shell / 'dist/main.js').write_bytes(b'stale dist bundle')
+    (shell / 'styles.css').write_bytes(b'.production {}')
+    (shell / 'dist/styles.css').write_bytes(b'stale styles')
+    (root / 'manifest.json').write_bytes(b'{}')
+    monkeypatch.setattr(release, 'ROOT', root)
+    monkeypatch.setattr(release, 'versions', lambda tag: None)
+    commands = []
+
+    def run(command, *, cwd, check):
+        assert cwd == shell and check is True
+        commands.append(command[1:])
+        if command[1:] == ['run', 'build'] and produces_main:
+            (root / 'main.js').write_bytes(b'fresh production bundle')
+
+    monkeypatch.setattr(release.subprocess, 'run', run)
+    output = tmp_path / 'candidate'
+
+    class WheelBoundary(Exception):
+        pass
+
+    def build(folder):
+        assert folder == output
+        assert (folder / 'main.js').read_bytes() == b'fresh production bundle'
+        assert (folder / 'styles.css').read_bytes() == b'.production {}'
+        raise WheelBoundary
+
+    monkeypatch.setattr(release, 'build', build)
+    expected = WheelBoundary if produces_main else ValueError
+    with pytest.raises(expected):
+        release.assemble(output, '2.0.0', 'a' * 40, 'owner/repo')
+    assert commands == [['ci'], ['run', 'typecheck'], ['run', 'build']]
+
+
 @pytest.mark.req('REQ-PKG-01', 'REQ-PKG-02', 'REQ-PKG-14', 'REQ-PKG-17')
 @pytest.mark.cov('S0', 'FM9')
 def test_T_GEN_54_r27_wheel_reproducible_and_every_frozen_asset_rejects_tampering(tmp_path):

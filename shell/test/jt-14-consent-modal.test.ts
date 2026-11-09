@@ -35,6 +35,7 @@ it(R('JT-14 per-file fields are copied from the engine Plans: hash, provider, mo
   const docx = view.files[0];
   expect(docx).toEqual({
     path: 'b c.docx',
+    label: 'M',
     sha256: 'df0040649e78a0e8faa3326ee570ee4660399848908bd9348013f98c9df38d62',
     planHash: 'a80d66b3fa9f7d95ecc3dba770b6eaf01cd8ddd4934e5d0c66d31ea703b5efda',
     provider: 'openai-compatible',

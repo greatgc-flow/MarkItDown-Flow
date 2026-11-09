@@ -1,4 +1,6 @@
 """PURE sniff decisions; structural evidence is supplied by the IO stage."""
+import codecs
+
 from .hashing import sha256
 
 RASTERS = frozenset("png jpeg gif bmp tiff webp".split())
@@ -15,6 +17,38 @@ def _route(fmt: str) -> str:
     if fmt == "zip":
         return "CONTAINER"
     return "LEGACY" if fmt in LEGACY else "UNSUPPORTED"
+
+
+_LEGACY_MULTIBYTE = ("cp949", "cp932", "gb18030", "big5")
+_TEXT_CONTROLS = frozenset(b"\t\n\r\f")
+LEGACY_TEXT_SAMPLE = 65536
+
+
+def _decodes(sample: bytes, codec: str) -> bool:
+    try:
+        # incremental + final=False: a sample cut inside a multibyte character is still valid text
+        codecs.getincrementaldecoder(codec)("strict").decode(sample, final=False)
+    except UnicodeDecodeError:
+        return False
+    return True
+
+
+def is_legacy_text(sample: bytes) -> bool:
+    """R30 / REQ-CLS-07: control-free text in a legacy encoding (CP949, Shift-JIS, GBK, Big5, Windows-1252).
+
+    Core's plain-text validation accepts only UTF-8/UTF-16, so such files come back ``unsupported_format``. ASCII,
+    UTF-8 and BOM'd UTF-16 are Core's business (False); anything with NUL/C0 controls is binary (False).
+    """
+    if not sample or sample.startswith((b"\xff\xfe", b"\xfe\xff")):
+        return False
+    if any(byte < 32 and byte not in _TEXT_CONTROLS for byte in sample) or 0x7F in sample:
+        return False
+    if all(byte < 128 for byte in sample) or _decodes(sample, "utf-8"):
+        return False
+    if any(_decodes(sample, codec) for codec in _LEGACY_MULTIBYTE):
+        return True
+    # single-byte Western text: accented letters are a minority of the bytes, unlike binary noise
+    return _decodes(sample, "cp1252") and sum(byte >= 128 for byte in sample) * 3 <= len(sample)
 
 
 def expected_exts(fmt: str) -> frozenset[str]:

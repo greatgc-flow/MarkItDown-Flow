@@ -27,6 +27,7 @@ import { DropConfirmModal } from './ui/drop-confirm-modal';
 import { type FilePicker, registerEntryPoints } from './ui/entry-points';
 import { HistoryModal } from './ui/history-modal';
 import { JobStatusBar } from './ui/progress';
+import { ResultsModal } from './ui/results-modal';
 import { SetupModal } from './ui/setup-modal';
 import { ShellSettingsTab } from './ui/settings-tab';
 
@@ -125,6 +126,7 @@ export default class MarkItDownFlowPlugin extends Plugin {
       log,
       nonce: randomNonce,
       progress: statusBar,
+      results: (view) => new ResultsModal(this.app, view, this.locale).open(),
     });
     this.coord = coordinator;
 

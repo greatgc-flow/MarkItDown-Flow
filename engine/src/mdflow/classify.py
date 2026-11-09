@@ -260,7 +260,11 @@ def classify(sniff: dict, triage: object) -> dict:
     if result["decision"] == "review":
         issue("W_REVIEW_PRIORITY")
     if fmt in G2A:
-        return finish(need="NONE", action="convert_only") if result["coverage_state"] == "not_applicable" else finish("E_UNSUPPORTED", new_route="UNSUPPORTED")
+        if result["coverage_state"] == "not_applicable":
+            return finish(need="NONE", action="convert_only")
+        if core_codes == {"unsupported_format"} and "legacy_text" in result["reasons"]:
+            return finish(need="NONE", action="convert_only")  # row 9d (R30): legacy-encoded text Core cannot validate
+        return finish("E_UNSUPPORTED", new_route="UNSUPPORTED")
     if fmt not in G2A | G2B and "encrypted" in core_codes:
         return finish("E_ENCRYPTED", new_route="PROTECTED")
     if fmt in G2B:

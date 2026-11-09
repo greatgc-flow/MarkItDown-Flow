@@ -8,6 +8,7 @@ dist/
 engine/dist/
 *.whl
 *.zip
+!engine/tests/fixtures/FX-46.zip
 
 # Dependencies and caches
 node_modules/

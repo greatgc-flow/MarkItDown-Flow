@@ -23,8 +23,10 @@ metadata.version = installed_version
     proc = cli_probe.run('version', prelude=prelude)
     assert proc.returncode == 0 and proc.stderr == '', (proc.stdout, proc.stderr)
     value = json.loads(proc.stdout)
-    assert set(value) == {'mdflow', 'markitdown-gc', 'pypdfium2', 'pillow', 'python', 'platform', 'protocol', 'triage_schema'}
+    required = {'mdflow', 'markitdown-gc', 'pypdfium2', 'pillow', 'python', 'platform', 'protocol', 'triage_schema'}
+    assert set(value) == required | {'exiftool', 'exiftool_status', 'exiftool_source'}  # R31 additive fields
     assert value['markitdown-gc'] == ('unavailable' if core is None else core)
     assert value['protocol'] == value['triage_schema'] == 1
-    assert all(isinstance(value[k], str) and value[k] for k in value if k not in {'protocol','triage_schema'})
+    assert all(isinstance(value[k], str) and value[k] for k in required - {'protocol', 'triage_schema'})
+    assert isinstance(value['exiftool'], str) and value['exiftool_status'] in {'ok', 'not_found', 'too_old', 'unusable'}
     assert not cli_probe.attempts.exists()

@@ -2,6 +2,12 @@
  * One consent modal for the complete original selection (20_SHELL.md
  * REQ-SHL-14; SPEC 7.1/8.4 by reference). Fields are rendered as literal text;
  * the default is Keep pending; Escape/close grants nothing.
+ *
+ * Layout (R32): a compact per-file summary table (file, class, units,
+ * destination, est. max cost, status) followed by collapsible full Plan details
+ * per file, then Keep pending (primary) / Approve this selection (secondary).
+ * There is no run-level cost total or hash: every number is a per-file bound
+ * supplied by the engine.
  */
 import { type App, Modal } from 'obsidian';
 import { formatMessage, type UiLocale } from '../pure/i18n';
@@ -10,6 +16,8 @@ import type { Plan } from '../pure/protocol';
 /** Per-file display model; every value is copied from the engine Plan. */
 export interface ConsentFileView {
   path: string;
+  /** SPEC 3.2 classification label (`T`/`S`/`M`/`U`/`C`/`L`/`P`/`X`). */
+  label: string;
   sha256: string;
   planHash: string;
   provider: string;
@@ -36,6 +44,10 @@ export interface ConsentFileView {
 export interface ConsentViewModel {
   destinationDir: string;
   files: ConsentFileView[];
+  /** Files in the selection. */
+  fileCount: number;
+  /** Files whose Plan needs approval (`needsConsent`). */
+  consentCount: number;
   /** Fixed REQ-SHL-14 disclosure: interrupted/failed requests may be billed; retry can duplicate cost. */
   billingNoticeKey: 'shell.consent.billing';
   /** True when any file has threshold/sensitive/unknown-cost notices to acknowledge. */
@@ -44,6 +56,14 @@ export interface ConsentViewModel {
 
 export type ConsentDecision = { approved: false } | { approved: true; hashes: string[] };
 
+/** SPEC 3.2 labels with a legend string (`shell.label.<L>`); anything else is shown as its literal letter(s). */
+const KNOWN_LABELS: ReadonlySet<string> = new Set(['T', 'S', 'M', 'U', 'C', 'L', 'P', 'X']);
+
+/** Legend key for a classification label, or null for an unknown label. */
+export function labelLegendKey(label: string): string | null {
+  return KNOWN_LABELS.has(label) ? `shell.label.${label}` : null;
+}
+
 /** Pure projection of decoded Plans into the display model. */
 export function buildConsentView(plans: readonly Plan[], destinationDir: string): ConsentViewModel {
   const files: ConsentFileView[] = plans.map((plan) => {
@@ -51,6 +71,7 @@ export function buildConsentView(plans: readonly Plan[], destinationDir: string)
     const unknownCost = approved.est_max_cost === null || !approved.cost_known;
     return {
       path: approved.file.path,
+      label: approved.classification.label,
       sha256: approved.file.sha256,
       planHash: plan.plan_hash,
       provider: approved.provider.name,
@@ -72,6 +93,8 @@ export function buildConsentView(plans: readonly Plan[], destinationDir: string)
   return {
     destinationDir,
     files,
+    fileCount: files.length,
+    consentCount: files.filter((f) => f.needsConsent).length,
     billingNoticeKey: 'shell.consent.billing',
     requiresAcknowledgement: files.some((f) => f.needsConsent && (f.thresholdExceeded || f.sensitiveHits.length > 0 || f.unknownCost)),
   };
@@ -123,17 +146,49 @@ export class ConsentModal extends Modal {
     return formatMessage(this.locale, key, params);
   }
 
-  override onOpen(): void {
-    const { contentEl, titleEl } = this;
-    titleEl.setText(this.t('shell.consent.title'));
-    contentEl.empty();
-    contentEl.addClass('mdflow-consent');
-    contentEl.createEl('p', { text: this.t('shell.consent.destinationDir', { dir: this.view.destinationDir }) });
-    contentEl.createEl('p', { cls: 'mdflow-consent-billing', text: this.t(this.view.billingNoticeKey) });
-    if (this.view.requiresAcknowledgement) contentEl.createEl('p', { cls: 'mdflow-consent-ack', text: this.t('shell.consent.acknowledge') });
-    const list = contentEl.createDiv({ cls: 'mdflow-consent-files' });
+  private costText(file: ConsentFileView): string {
+    return file.unknownCost ? this.t('shell.consent.unknownCost') : file.estMaxCost;
+  }
+
+  private renderSummary(parent: HTMLElement): void {
+    const table = parent.createEl('table', { cls: 'mdflow-table mdflow-consent-summary' });
+    const head = table.createEl('thead').createEl('tr');
+    for (const column of ['file', 'label', 'units', 'destination', 'cost', 'status']) {
+      head.createEl('th', { text: this.t(`shell.consent.col.${column}`), attr: { scope: 'col' } });
+    }
+    const body = table.createEl('tbody');
     for (const file of this.view.files) {
-      const section = list.createDiv({ cls: 'mdflow-consent-file' });
+      const row = body.createEl('tr', { cls: file.needsConsent ? 'mdflow-consent-needed' : 'mdflow-consent-info' });
+      row.createEl('td', { cls: 'mdflow-cell-path', text: file.path });
+      const legend = labelLegendKey(file.label);
+      const labelCell = row.createEl('td', { cls: 'mdflow-cell-label', text: file.label });
+      if (legend) labelCell.setAttr('title', this.t(legend));
+      row.createEl('td', { cls: 'mdflow-cell-number', text: String(file.selectedUnits) });
+      row.createEl('td', { cls: 'mdflow-cell-path', text: file.destination ?? '-' });
+      row.createEl('td', { cls: 'mdflow-cell-number', text: this.costText(file) });
+      row.createEl('td', {
+        cls: `mdflow-badge ${file.needsConsent ? 'mdflow-badge-attention' : 'mdflow-badge-muted'}`,
+        text: this.t(file.needsConsent ? 'shell.consent.status.needsConsent' : 'shell.consent.status.informational'),
+      });
+    }
+  }
+
+  private renderLegend(parent: HTMLElement): void {
+    const keys = [...new Set(this.view.files.map((f) => labelLegendKey(f.label)))].filter((k): k is string => k !== null);
+    if (keys.length === 0) return;
+    const legend = parent.createDiv({ cls: 'mdflow-legend' });
+    legend.createSpan({ cls: 'mdflow-legend-title', text: `${this.t('shell.consent.legend')}: ` });
+    legend.createSpan({ text: keys.map((k) => this.t(k)).join(' · ') });
+  }
+
+  private renderDetails(parent: HTMLElement): void {
+    const list = parent.createDiv({ cls: 'mdflow-consent-files' });
+    for (const file of this.view.files) {
+      const section = list.createEl('details', { cls: 'mdflow-consent-file' });
+      const summary = section.createEl('summary');
+      summary.createSpan({ cls: 'mdflow-cell-label', text: file.label });
+      summary.createSpan({ text: ` ${file.path}` });
+      summary.createSpan({ cls: 'mdflow-consent-details-hint', text: ` – ${this.t('shell.consent.details')}` });
       if (!file.needsConsent) section.createDiv({ cls: 'mdflow-consent-informational', text: this.t('shell.consent.informational') });
       const row = (label: string, value: string): void => {
         const line = section.createDiv({ cls: 'mdflow-consent-row' });
@@ -150,17 +205,35 @@ export class ConsentModal extends Modal {
       row(this.t('shell.consent.pendingLowPriority'), String(file.pendingLowPriority));
       section.createDiv({ cls: 'mdflow-consent-row', text: this.t('shell.consent.cacheStatus', { cached: String(file.cached), toSend: String(file.requestsToSend) }) });
       row(this.t('shell.consent.budget'), String(file.approvedBudget));
-      row(this.t('shell.consent.estMaxCost'), file.unknownCost ? this.t('shell.consent.unknownCost') : file.estMaxCost);
+      row(this.t('shell.consent.estMaxCost'), this.costText(file));
       if (file.thresholdExceeded) section.createDiv({ cls: 'mdflow-consent-warning', text: this.t('shell.consent.thresholdExceeded') });
       if (file.sensitiveHits.length > 0) {
         section.createDiv({ cls: 'mdflow-consent-warning', text: this.t('shell.consent.sensitiveHits', { hits: file.sensitiveHits.join(', ') }) });
       }
     }
-    const buttons = contentEl.createDiv({ cls: 'mdflow-consent-buttons' });
-    const keep = buttons.createEl('button', { text: this.t('shell.consent.keepPending'), cls: 'mod-cta' });
-    keep.addEventListener('click', () => this.keepPending());
-    const approve = buttons.createEl('button', { text: this.t('shell.consent.approve') });
+  }
+
+  override onOpen(): void {
+    const { contentEl, titleEl } = this;
+    titleEl.setText(this.t('shell.consent.title'));
+    contentEl.empty();
+    contentEl.addClass('mdflow-consent');
+    contentEl.createEl('p', {
+      cls: 'mdflow-consent-scope',
+      text: this.t('shell.consent.scope', { consent: String(this.view.consentCount), count: String(this.view.fileCount) }),
+    });
+    contentEl.createEl('p', { cls: 'mdflow-muted', text: this.t('shell.consent.destinationDir', { dir: this.view.destinationDir }) });
+    this.renderSummary(contentEl);
+    this.renderLegend(contentEl);
+    contentEl.createEl('p', { cls: 'mdflow-consent-billing', text: this.t(this.view.billingNoticeKey) });
+    if (this.view.requiresAcknowledgement) contentEl.createEl('p', { cls: 'mdflow-consent-ack', text: this.t('shell.consent.acknowledge') });
+    this.renderDetails(contentEl);
+    const buttons = contentEl.createDiv({ cls: 'mdflow-buttons mdflow-consent-buttons' });
+    const approve = buttons.createEl('button', { text: this.t('shell.consent.approve'), cls: 'mdflow-consent-approve', attr: { type: 'button' } });
     approve.addEventListener('click', () => this.approve());
+    const keep = buttons.createEl('button', { text: this.t('shell.consent.keepPending'), cls: 'mod-cta mdflow-consent-keep', attr: { type: 'button' } });
+    keep.addEventListener('click', () => this.keepPending());
+    keep.focus();
   }
 
   override onClose(): void {

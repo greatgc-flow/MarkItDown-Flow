@@ -318,7 +318,10 @@ def suite_digest(root: Path) -> str:
         paths.append(config)
     for path in paths:
         digest.update(path.relative_to(root).as_posix().encode('utf-8') + b'\0')
-        digest.update(path.read_bytes() + b'\0')
+        # Git checkouts may use CRLF on Windows; evidence is consumed on Linux.
+        # Normalize text line endings while retaining every source/config byte
+        # that can change the collected tests.
+        digest.update(path.read_bytes().replace(b'\r\n', b'\n') + b'\0')
     return digest.hexdigest()
 
 

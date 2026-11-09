@@ -1,28 +1,211 @@
-/* MarkItDown Flow 2.0.0 shell styles (clean-room, 20_SHELL.md REQ-SHL-01). */
+/*
+ * MarkItDown Flow 2.0.0 shell styles (clean-room, 20_SHELL.md REQ-SHL-01; R32 polish).
+ * Obsidian CSS variables only: colours, spacing and typography follow the active theme in
+ * light and dark mode. Every selector is scoped to a plugin class (.mdflow-*).
+ */
 
-.mdflow-consent-files {
-  max-height: 50vh;
-  overflow-y: auto;
-  border: 1px solid var(--background-modifier-border);
-  padding: 0.5em;
+/* ---------------------------------------------------------------- shared primitives */
+
+.mdflow-muted {
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
 }
 
-.mdflow-consent-file {
-  padding: 0.5em 0;
+.mdflow-section-title {
+  margin: var(--size-4-4) 0 var(--size-4-2);
+  padding-bottom: var(--size-4-1);
+  border-bottom: 1px solid var(--background-modifier-border);
+  font-size: var(--font-ui-medium);
+  font-weight: var(--font-semibold);
+  color: var(--text-normal);
+}
+
+.mdflow-kv {
+  display: flex;
+  gap: var(--size-4-2);
+  align-items: baseline;
+  font-size: var(--font-ui-small);
+  line-height: var(--line-height-tight);
+  word-break: break-all;
+}
+
+.mdflow-kv-key {
+  color: var(--text-muted);
+  flex: 0 0 auto;
+}
+
+.mdflow-kv-value {
+  font-family: var(--font-monospace);
+  user-select: text;
+}
+
+.mdflow-table-scroll {
+  max-height: 50vh;
+  overflow: auto;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-m);
+}
+
+.mdflow-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-ui-small);
+}
+
+.mdflow-table th,
+.mdflow-table td {
+  padding: var(--size-4-1) var(--size-4-2);
+  text-align: left;
+  vertical-align: top;
   border-bottom: 1px solid var(--background-modifier-border);
 }
 
-.mdflow-consent-file:last-child {
+.mdflow-table th {
+  position: sticky;
+  top: 0;
+  background-color: var(--background-secondary);
+  color: var(--text-muted);
+  font-weight: var(--font-medium);
+  white-space: nowrap;
+}
+
+.mdflow-table tbody tr:last-child td {
   border-bottom: none;
 }
 
-.mdflow-consent-row {
+.mdflow-table tbody tr:hover td {
+  background-color: var(--background-modifier-hover);
+}
+
+.mdflow-cell-path {
   font-family: var(--font-monospace);
   font-size: var(--font-ui-smaller);
   word-break: break-all;
 }
 
-.mdflow-consent-label {
+.mdflow-cell-label {
+  font-family: var(--font-monospace);
+  font-weight: var(--font-semibold);
+  text-align: center;
+}
+
+.mdflow-cell-number {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.mdflow-cell-codes,
+.mdflow-cell-time {
+  font-family: var(--font-monospace);
+  font-size: var(--font-ui-smaller);
+  white-space: nowrap;
+}
+
+.mdflow-cell-codes {
+  white-space: normal;
+  word-break: break-word;
+}
+
+.mdflow-badge {
+  font-size: var(--font-ui-smaller);
+  font-weight: var(--font-medium);
+  white-space: nowrap;
+}
+
+.mdflow-badge-attention {
+  color: var(--text-warning);
+}
+
+.mdflow-badge-muted {
+  color: var(--text-muted);
+}
+
+/* Outcomes (history, results): one class per nonsecret outcome, themed by variables only. */
+.mdflow-outcome-complete,
+.mdflow-status-ok {
+  color: var(--text-success);
+}
+
+.mdflow-outcome-pending_consent,
+.mdflow-status-pending {
+  color: var(--text-warning);
+}
+
+.mdflow-outcome-partial_failure,
+.mdflow-outcome-cancelled,
+.mdflow-status-failed {
+  color: var(--text-error);
+}
+
+.mdflow-outcome-legacy {
+  color: var(--text-faint);
+}
+
+.mdflow-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--size-4-2);
+  justify-content: flex-end;
+  margin-top: var(--size-4-4);
+}
+
+.mdflow-buttons button {
+  min-width: 7em;
+}
+
+/* Keyboard focus: visible on every interactive element the plugin renders. */
+.mdflow-buttons button:focus-visible,
+.mdflow-status-cancel:focus-visible,
+.mdflow-consent-file > summary:focus-visible,
+.mdflow-settings input:focus-visible,
+.mdflow-settings textarea:focus-visible,
+.mdflow-settings select:focus-visible {
+  outline: 2px solid var(--background-modifier-border-focus);
+  outline-offset: 2px;
+  box-shadow: none;
+}
+
+.mdflow-legend {
+  margin: var(--size-4-2) 0;
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+}
+
+.mdflow-legend-title {
+  font-weight: var(--font-medium);
+}
+
+/* ---------------------------------------------------------------- settings tab */
+
+.mdflow-settings .mdflow-settings-heading {
+  margin-top: var(--size-4-6);
+}
+
+.mdflow-settings .mdflow-settings-heading:first-child {
+  margin-top: 0;
+}
+
+.mdflow-settings .mdflow-settings-heading .setting-item-description {
+  padding-top: var(--size-4-1);
+  font-weight: var(--font-normal);
+}
+
+.mdflow-settings-sensitive textarea {
+  min-height: 4em;
+  min-width: 18em;
+  font-family: var(--font-monospace);
+  font-size: var(--font-ui-smaller);
+}
+
+/* ---------------------------------------------------------------- consent modal */
+
+.mdflow-consent-scope {
+  font-weight: var(--font-medium);
+  margin-bottom: var(--size-4-1);
+}
+
+.mdflow-consent-summary .mdflow-consent-info td {
   color: var(--text-muted);
 }
 
@@ -31,54 +214,139 @@
 .mdflow-consent-warning,
 .mdflow-setup-warning {
   color: var(--text-warning);
+  font-size: var(--font-ui-small);
 }
 
-.mdflow-consent-buttons,
-.mdflow-setup-buttons {
-  display: flex;
-  gap: 0.5em;
-  justify-content: flex-end;
-  margin-top: 1em;
+.mdflow-consent-billing,
+.mdflow-consent-ack {
+  padding: var(--size-4-2) var(--size-4-3);
+  border-left: 3px solid var(--text-warning);
+  background-color: var(--background-secondary);
+  border-radius: var(--radius-s);
 }
 
-.mdflow-setup-commands {
-  white-space: pre-wrap;
-  user-select: text;
-  font-size: var(--font-ui-smaller);
-}
-
-.mdflow-history ul {
-  max-height: 50vh;
+.mdflow-consent-files {
+  max-height: 40vh;
   overflow-y: auto;
+  margin-top: var(--size-4-3);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-m);
+}
+
+.mdflow-consent-file {
+  padding: var(--size-4-1) var(--size-4-3);
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.mdflow-consent-file:last-child {
+  border-bottom: none;
+}
+
+.mdflow-consent-file > summary {
+  cursor: pointer;
+  font-size: var(--font-ui-small);
+  padding: var(--size-4-1) 0;
+  word-break: break-all;
+}
+
+.mdflow-consent-details-hint {
+  color: var(--text-faint);
+}
+
+.mdflow-consent-row {
+  font-family: var(--font-monospace);
   font-size: var(--font-ui-smaller);
+  word-break: break-all;
+  padding-left: var(--size-4-4);
+}
+
+.mdflow-consent-label {
+  color: var(--text-muted);
 }
 
 .mdflow-consent-informational {
   color: var(--text-muted);
   font-style: italic;
+  font-size: var(--font-ui-smaller);
+  padding-left: var(--size-4-4);
 }
 
-/* Status-bar job presenter (REQ-SHL-09/16): phase text, optional details, always a Cancel button. */
+/* ---------------------------------------------------------------- status bar (REQ-SHL-09/16) */
+
 .mdflow-status {
   display: inline-flex;
   align-items: center;
-  gap: 0.5em;
+  gap: var(--size-4-2);
+}
+
+.mdflow-status-text {
+  font-weight: var(--font-medium);
 }
 
 .mdflow-status-details {
   color: var(--text-muted);
   font-size: var(--font-ui-smaller);
+  font-variant-numeric: tabular-nums;
 }
 
 .mdflow-status-cancel {
+  height: auto;
+  padding: 0 var(--size-4-2);
   font-size: var(--font-ui-smaller);
-  padding: 0 0.5em;
-  line-height: 1.4;
+  line-height: var(--line-height-tight);
+  border-radius: var(--radius-s);
+}
+
+/* ---------------------------------------------------------------- results, history, setup, drop */
+
+.mdflow-results-summary {
+  display: flex;
+  gap: var(--size-4-2);
+  align-items: baseline;
+  margin-bottom: var(--size-4-2);
+}
+
+.mdflow-results-skipped ul {
+  margin: var(--size-4-1) 0 0;
+  padding-left: var(--size-4-5);
+  font-family: var(--font-monospace);
+}
+
+.mdflow-history-table .mdflow-cell-path {
+  max-width: 22em;
+}
+
+.mdflow-setup-versions,
+.mdflow-setup-env,
+.mdflow-setup-probes {
+  display: grid;
+  gap: var(--size-4-1);
+  margin: var(--size-4-1) 0 var(--size-4-2);
+}
+
+.mdflow-setup-ok .mdflow-kv-value {
+  color: var(--text-success);
+}
+
+.mdflow-setup-blocked .mdflow-kv-value {
+  color: var(--text-error);
+}
+
+.mdflow-setup-commands {
+  margin: var(--size-4-2) 0;
+  padding: var(--size-4-2) var(--size-4-3);
+  background-color: var(--background-secondary);
+  border-radius: var(--radius-m);
+  white-space: pre-wrap;
+  user-select: text;
+  font-size: var(--font-ui-smaller);
 }
 
 .mdflow-drop-files {
   max-height: 40vh;
   overflow-y: auto;
+  margin: var(--size-4-2) 0;
+  padding-left: var(--size-4-5);
   font-family: var(--font-monospace);
   font-size: var(--font-ui-smaller);
   word-break: break-all;
@@ -86,12 +354,7 @@
 
 .mdflow-drop-buttons {
   display: flex;
-  gap: 0.5em;
+  gap: var(--size-4-2);
   justify-content: flex-end;
-  margin-top: 1em;
-}
-
-.mdflow-settings-sensitive textarea {
-  min-height: 4em;
-  font-family: var(--font-monospace);
+  margin-top: var(--size-4-4);
 }

@@ -1,0 +1,5 @@
+# These files are sealed by byte hashes; checkout must preserve their exact bytes.
+/engine/tests/golden/** -text
+/engine/tests/fixtures/*.hwp -text
+/engine/tests/fixtures/*.zip -text
+/shell/test/fixtures/fx71/** -text

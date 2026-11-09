@@ -7,6 +7,9 @@
   "engines": {
     "node": ">=24.0.0"
   },
+  "allowScripts": {
+    "esbuild@0.28.2": true
+  },
   "scripts": {
     "test": "jest",
     "typecheck": "tsc --noEmit -p tsconfig.json",

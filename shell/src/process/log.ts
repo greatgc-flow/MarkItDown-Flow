@@ -109,6 +109,7 @@ export function diagnosticsCopy(input: DiagnosticsCopyInput, redact: RedactOptio
     if (version.enabled === true && isRecord(version.info)) {
       for (const [key, value] of Object.entries(version.info)) {
         if (typeof value === 'string' || typeof value === 'number') lines.push(`version.${key}: ${redactText(String(value), redact)}`);
+        else if (value === null) lines.push(`version.${key}: missing`);
       }
     } else if (version.enabled === false) {
       lines.push(`version: blocked (${String(version.reason ?? 'unknown')}${typeof version.field === 'string' ? ` ${version.field}` : ''})`);

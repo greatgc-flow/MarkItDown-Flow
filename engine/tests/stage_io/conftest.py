@@ -154,6 +154,34 @@ def core_spy(monkeypatch):
     return spy
 
 
+FAKE_EXIF_JSON = '[{"ImageSize":"32x32","Title":"Fake Title"}]'
+
+
+@pytest.fixture
+def fake_exiftool():
+    """R31 factory ``make(directory, version="13.59", *, fail_json=False) -> Path``: a tiny executable answering
+    ``-ver`` and ``-json -`` like exiftool (``.cmd`` on Windows, ``sh`` on POSIX), identical on every machine."""
+    import os
+    import stat
+
+    def make(directory, version="13.59", *, fail_json=False):
+        directory.mkdir(parents=True, exist_ok=True)
+        if os.name == "nt":
+            path = directory / "exiftool.cmd"
+            body = ["@echo off", 'if "%1"=="-ver" (', f"  echo {version}", "  exit /b 0", ")"]
+            body += ["exit /b 1"] if fail_json else ["more >nul", f"echo {FAKE_EXIF_JSON}"]
+            path.write_text("\r\n".join(body) + "\r\n", encoding="ascii")
+        else:
+            path = directory / "exiftool"
+            body = ["#!/bin/sh", 'if [ "$1" = "-ver" ]; then', f"  echo {version}", "  exit 0", "fi"]
+            body += ["exit 1"] if fail_json else ["cat >/dev/null", f"echo '{FAKE_EXIF_JSON}'"]
+            path.write_text("\n".join(body) + "\n", encoding="ascii")
+            path.chmod(path.stat().st_mode | stat.S_IXUSR)
+        return path
+
+    return make
+
+
 def chat_ok(text):
     return {"choices": [{"message": {"role": "assistant", "content": text}}]}
 

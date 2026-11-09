@@ -23,6 +23,11 @@ export interface VersionInfo {
   platform: string;
   protocol: 1;
   triage_schema: 1;
+  /**
+   * Optional (R31): exiftool as the engine reports it (version text) or `null` when it is
+   * not installed. Absent when the engine does not report it. Diagnostics only; never gated.
+   */
+  exiftool?: string | null;
 }
 
 export type Semver = readonly [number, number, number];
@@ -154,6 +159,8 @@ export function evaluateVersionResponse(stdout: string, policy: VersionPolicy = 
     protocol: 1,
     triage_schema: 1,
   };
+  // Optional tool status (R31): admitted as a string or null only; any other shape is an ignored optional field.
+  if (raw.exiftool === null || typeof raw.exiftool === 'string') info.exiftool = raw.exiftool;
   if (!inRange(info.python, policy.pythonMin, policy.pythonMaxExclusive)) return blocked('python', 'python');
   if (!inRange(info.mdflow, policy.engineMin, policy.engineMaxExclusive)) return blocked('engine', 'mdflow');
   if (!inRange(info['markitdown-gc'], policy.coreMin, policy.coreMaxExclusive)) return blocked('core', 'markitdown-gc');

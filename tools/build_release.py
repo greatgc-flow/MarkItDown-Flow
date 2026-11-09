@@ -83,12 +83,15 @@ def assemble(folder, tag, commit, repo):
     if folder.exists() and any(folder.iterdir()):
         raise ValueError('candidate directory must be empty; build once')
     folder.mkdir(parents=True, exist_ok=True)
+    # esbuild.config.mjs writes beside manifest.json. Require fresh output even
+    # when a prior community-install bundle exists in the checkout.
+    (ROOT / 'main.js').unlink(missing_ok=True)
     npm = 'npm.cmd' if os.name == 'nt' else 'npm'
     for command in ([npm, 'ci'], [npm, 'run', 'typecheck'], [npm, 'run', 'build']):
         subprocess.run(command, cwd=ROOT / 'shell', check=True)
-    for name in ('main.js', 'styles.css'):
-        source = next((p for p in (ROOT / 'shell/dist' / name, ROOT / 'shell' / name) if p.is_file()), None)
-        if not source:
+    for source in (ROOT / 'main.js', ROOT / 'shell/styles.css'):
+        name = source.name
+        if not source.is_file():
             raise ValueError(f'production shell build did not produce {name}')
         shutil.copyfile(source, folder / name)
     shutil.copyfile(ROOT / 'manifest.json', folder / 'manifest.json')

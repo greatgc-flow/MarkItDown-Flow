@@ -2,6 +2,50 @@
 import pytest
 
 
+@pytest.mark.req('REQ-GEN-03', 'REQ-PKG-10')
+@pytest.mark.cov('S0', 'FM10')
+def test_T_META_56_meta_checks_support_python310_tomli_fallback(repo_root, trace_module, test_registry, monkeypatch):
+    import importlib.util
+    import builtins
+    import sys
+    try:
+        import tomllib as parser
+    except ImportError:
+        import tomli as parser
+    spec = importlib.util.spec_from_file_location('ci_meta_compat', repo_root / 'engine/tests/test_meta.py')
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    original_import = builtins.__import__
+
+    def python310_import(name, *args, **kwargs):
+        if name == 'tomllib':
+            raise ModuleNotFoundError("No module named 'tomllib'")
+        return original_import(name, *args, **kwargs)
+
+    with monkeypatch.context() as context:
+        context.setattr(builtins, '__import__', python310_import)
+        context.setitem(sys.modules, 'tomli', parser)
+        module.test_T_META_05_no_stale_class_stage_na(trace_module, repo_root, test_registry)
+        module.test_T_META_06_class_stage_header_count_matches_expanded_cells(repo_root)
+
+
+@pytest.mark.req('REQ-PKG-10')
+@pytest.mark.cov('S0', 'FM10')
+def test_T_META_55_trace_source_digest_is_portable_and_still_detects_changes(trace_module, tmp_path):
+    tests = tmp_path / 'engine/tests'
+    tests.mkdir(parents=True)
+    source = tests / 'test_sample.py'
+    config = tmp_path / 'engine/pyproject.toml'
+    source.write_bytes(b'def test_sample():\n    assert True\n')
+    config.write_bytes(b'[project]\nname = "sample"\n')
+    expected = trace_module.suite_digest(tmp_path)
+    source.write_bytes(source.read_bytes().replace(b'\n', b'\r\n'))
+    config.write_bytes(config.read_bytes().replace(b'\n', b'\r\n'))
+    assert trace_module.suite_digest(tmp_path) == expected
+    source.write_bytes(b'def test_sample():\r\n    assert False\r\n')
+    assert trace_module.suite_digest(tmp_path) != expected
+
+
 @pytest.mark.req('REQ-PKG-10')
 @pytest.mark.cov('S0', 'FM10')
 @pytest.mark.parametrize('stage', [f'S{i}' for i in range(14)])

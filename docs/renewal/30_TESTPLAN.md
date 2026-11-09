@@ -363,6 +363,10 @@ R27/R28 added registrations (existing REQs; precise fixture assertions replace b
 | T-META-53 | REQ-PKG-10 (R28 stage-restricted all-class credit in both projections) | - | S0:FM10 |
 | T-META-54 | REQ-PKG-02, REQ-PKG-10 (R27 reference scoring requires its own execution; matrix results cannot substitute) | - | S0:FM10 |
 | T-GEN-54 | REQ-PKG-01, REQ-PKG-02, REQ-PKG-14, REQ-PKG-17 (R27 deterministic wheel and frozen subject tamper rejection) | - | S0:FM9 |
+| T-GEN-55 | REQ-PKG-14, REQ-PKG-17 (fresh repository-root shell bundle and source stylesheet; reject stale build outputs) | - | S0:FM9 |
+| T-GEN-56 | REQ-GEN-10, REQ-TRI-04 (PNG and archive bytes independent of native encoders/compressors) | FX-09, FX-16, FX-23 | S2:FM10 |
+| T-META-55 | REQ-PKG-10 (trace source digest survives CRLF checkout conversion and rejects content changes) | - | S0:FM10 |
+| T-META-56 | REQ-GEN-03, REQ-PKG-10 (meta checks use tomli on Python 3.10) | - | S0:FM10 |
 
 ### 4.2 Contract tests vs installed `markitdown-gc` (ids as cited by SPEC 3.0/11)
 
@@ -490,6 +494,30 @@ Every REQ id defined in `10_SPEC.md` (incl. new REQ-SNF-09), `20_SHELL.md` (SHL-
 | T-GEN-96 | REQ-PKG-06 | M4: all five package version fields require full syntax; malformed tails/leading whitespace refuse, documented prerelease/post/local controls admit. |
 | T-GEN-97 | REQ-PKG-09, REQ-PKG-01 | M4: recorder manifest argv label faithfully includes the actual isolated interpreter flag. |
 | T-RPT-91 | REQ-RPT-01, REQ-RPT-02, REQ-GEN-07 | M4: literal per-invocation Plan/Run progress counters, one start/end/file-end per stream, bounded JSONL; no producer-side Plan/Run accumulation. |
+
+### 4.6 Owner-directive regression catalog (DRAFT-3.6: R29, R30, R31)
+
+Red logs: `build/trace/redgreen/r29-*.red.log` (R29 is green at baseline by audit; `r29-baseline.green.log`, and `r29-guard-mutation.red.log` proves the guard fails when an `llm_client` kwarg is added), `r31-exiftool.red.log`, `r31-cli.red.log`, `r30-tclass.red.log`, `r30-log-hint.red.log`. Fixtures are generated in-test (python-docx, python-pptx, openpyxl, hand-built PDF/HWP5/HWPX/EPUB, fake exiftool executables); the "exiftool absent" paths are produced by the environment and never skip.
+
+| ID | REQ | Oracle |
+|---|---|---|
+| T-CNV-81 | REQ-CNV-05 | R29: over every conversion route the fake Core is constructed with only `enable_plugins=False` and `exiftool_path`, and `convert_stream` receives only `file_extension|extract_media|media_base_dir`; the guard helper reports `llm_client/llm_model/llm_prompt/docintel_endpoint` (mutation check). |
+| T-CNV-82 | REQ-CNV-05 | R29: the real `MarkItDown` class wrapped by a recording subclass (monkeypatched) sees the same allow-list for pdf, png, txt, docx. |
+| T-CNV-83 | REQ-CNV-05 | R29: AST scan of `engine/src` finds no `llm_*`, `docintel*`, `cu_*`, `azure*` keyword/name/attribute/string, and the CLI has no LLM flag. |
+| T-CNV-84 | REQ-CNV-06 | R31: detection order (PATH, `EXIFTOOL_PATH` wins, empty = unset), minimum 12.24 boundary, `too_old`, `unusable` (no silent PATH fallback), `not_found`. |
+| T-CNV-85 | REQ-CNV-06 | R31: png/jpeg bodies contain the metadata lines and `tools == {exiftool: version}`; pdf/txt never use exiftool. |
+| T-CNV-86 | REQ-CNV-06 | R31: Core receives an explicit `exiftool_path` (tool path for images, `""` for everything else and when absent). |
+| T-CNV-87 | REQ-CNV-06 | R31 (real Core): absent / invalid `EXIFTOOL_PATH` / too old / failing tool never yield `E_CONVERT_FAIL` and record no `tools` entry. |
+| T-CNV-88 | REQ-CNV-06, REQ-CNV-04 | R31: image base cache keyed by exiftool version; warm rerun restores `tools`; absent and new versions reconvert. |
+| T-ASM-81 | REQ-CNV-06, REQ-ASM-04 | R31: frontmatter `tools` gains `exiftool` after `pillow` only for the image that used it. |
+| T-CLI-81 | REQ-GEN-02, REQ-CNV-06 | R31: `version` adds `exiftool`, `exiftool_status`, `exiftool_source` for present/old/absent, exit 0, empty stderr, no sockets. |
+| T-CLI-82 | REQ-CNV-06, REQ-CLS-05 | R31: `selftest` reports `{status, version, metadata}` and passes without exiftool or with a failing one. |
+| T-SNF-81 | REQ-CLS-07 | R30: the pure detector accepts CP949/Windows-1252/Shift-JIS/GBK text. |
+| T-SNF-82 | REQ-CLS-07 | R30: the pure detector rejects ASCII, UTF-8, UTF-16, NUL/control binary, random bytes, ID3, empty. |
+| T-SNF-83 | REQ-CLS-07 | R30: Sniff adds `legacy_text` only for legacy `txt|log` (files and zip members), never for csv/md or UTF/binary. |
+| T-CLS-92 | REQ-CLS-07 | R30: row 9d needs Core `unsupported_format` as the only issue plus the Sniff reason; otherwise row 9a. |
+| T-CNV-89 | REQ-CNV-03, REQ-CLS-07 | R30: docx, pptx, xlsx, pdf, hwp, hwpx, csv, html, epub, txt, log, md, json through the real pipeline: headings/tables/lists preserved, media links resolve, frontmatter exact, no pending/OCR markers, exit 0. |
+| T-CNV-90 | REQ-CLS-07, REQ-CNV-03 | R30: CP949 `.txt`/`.log` convert as T with correct Korean text; renamed binary `.txt` stays `X` / `E_UNSUPPORTED`. |
 
 ## 5. Generated MECE matrices
 
