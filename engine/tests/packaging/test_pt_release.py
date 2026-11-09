@@ -154,7 +154,7 @@ def test_PT_01_direct_wheel_inventory_wheel_metadata_and_run_outside_the_source_
     assert re.search(r"^Version: 2\.0\.0$", metadata, re.M) and re.search(r"^Name: mdflow$", metadata, re.M | re.I)
     assert "Root-Is-Purelib: true" in wheel_meta and "Tag: py3-none-any" in wheel_meta
     # Import and run from the fresh compatibility environment, cwd outside the source tree.
-    probe = subprocess.run([str(packaged_venv.python), "-I", "-c",
+    probe = subprocess.run([str(packaged_venv.python), "-I", "-X", "utf8", "-c",
                             "import mdflow, sys; print(mdflow.__file__)"], cwd=tmp_path, capture_output=True,
                            text=True, encoding="utf-8", timeout=120)
     assert probe.returncode == 0, probe.stderr
@@ -271,12 +271,25 @@ def test_PT_05_bootstrap_commands_run_unchanged_after_placeholder_substitution(r
     script = re.sub(r"(?m)^(\s*)(py -3\.\d+|python3\.\d+)\b",
                     (lambda m: f"{m[1]}& '{interpreter}'") if windows else (lambda m: f"{m[1]}'{interpreter}'"), script)
     command = ["powershell", "-NoProfile", "-NonInteractive", "-Command", script] if windows else ["sh", "-e", "-c", script]
-    done = subprocess.run(command, capture_output=True, text=True, encoding="utf-8", timeout=2400)
+    done = subprocess.run(command, env=dict(os.environ, PYTHONUTF8="1"),
+                          capture_output=True, text=True, encoding="utf-8", timeout=2400)
     assert done.returncode == 0, f"{done.stdout[-1500:]}\n{done.stderr[-1500:]}"
     assert json.loads(done.stdout.strip().splitlines()[-1])["protocol"] == 1, "the last command is `mdflow version`"
-    # The plugin only diagnoses: no shell source spawns an installer.
+    # Inspect process command/argv fields, not the terminal recipes rendered by setup.ts.
+    # JT-10 also checks the actual injected spawner receives version probes only.
     for source in (REPO / "shell/src").rglob("*.ts"):
-        assert not re.search(r"pip install|['\"]pip['\"]|-m['\"],\s*['\"]venv", source.read_text(encoding="utf-8")), source
+        assert not installer_commands(source.read_text(encoding="utf-8")), source
+
+
+def installer_commands(source: str) -> list[str]:
+    """Literal process commands/argv; rendered instruction arrays are not process requests."""
+    fields = re.findall(r"\bcommand\s*:\s*(['\"`])([^\n]*?)\1", source)
+    argv = re.findall(r"\bargs\s*:\s*\[([^\]]*)\]", source, re.S)
+    argv += re.findall(r"\bspawn\s*\([^,\n]+,\s*\[([^\]]*)\]", source, re.S)
+    direct = re.findall(r"\bspawn\s*\(\s*(['\"`])([^\n]*?)\1", source)
+    candidates = [value for _, value in [*fields, *direct]] + argv
+    return [value for value in candidates if re.search(
+        r"\bpip(?:3)?\b|['\"]-m['\"]\s*,\s*['\"]venv['\"]|\b-m\s+venv\b", value)]
 
 
 def gate(response: dict) -> list[str]:
@@ -398,7 +411,18 @@ def test_PT_08_packaged_engine_batch_consent_hash_stability_and_os_cancellation(
                                "--progress", "jsonl")
     assert done.returncode == 0, (done.stdout, done.stderr)
     report = json_objects(done.stdout)[0]
-    assert all(f["consent"]["by"] == "plugin:modal" for f in report["files"] if f["path"] in needing)
+    sent_files = [f for f in report["files"] if f["requests"]["sent"] > 0]
+    assert sent_files, report
+    for entry in report["files"]:
+        if entry["requests"]["sent"] > 0:
+            assert entry["path"] in needing
+            assert isinstance(entry["consent"], dict), entry
+            assert entry["consent"] == dict(plan_hash=needing[entry["path"]]["plan_hash"],
+                                            approved_at=entry["consent"]["approved_at"], by="plugin:modal")
+        elif entry["path"] in needing:
+            # Earlier files can populate identical OCR keys during this same batch.
+            assert entry["consent"] is None and entry["requests"]["to_send"] == 0, entry
+            assert entry["units"]["cached"] > 0, entry
     assert calls.exists() and len(calls.read_text()) >= 1
 
     warm = {p["approved"]["file"]["path"]: p for p in json_objects(packaged_engine.run("plan", *roots, *flags).stdout)}

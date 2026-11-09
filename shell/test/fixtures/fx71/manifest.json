@@ -894,8 +894,8 @@
       "derived_from": "version.json",
       "transform": "version_variant:wrong-renderer",
       "description": "version response variant: wrong-renderer",
-      "bytes": 204,
-      "sha256": "e2cd48ef2e0705ecb5222943b74ede0bf884faaff4b0129d9732400048b31734"
+      "bytes": 203,
+      "sha256": "f00d65b0538b71a308733baa38e87322da9fc80a336d9088662427ba7b7e4c98"
     }
   }
 }

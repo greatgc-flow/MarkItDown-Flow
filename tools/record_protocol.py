@@ -193,11 +193,6 @@ VERSION_VARIANTS = ["protocol-2", "schema-2", "wrong-pillow", "wrong-renderer", 
                     "protocol-string", "unknown-optional-field", *[f"missing-{k}" for k in VERSION_KEYS]]
 
 
-def _bump_major(text: str) -> str:
-    major, _, rest = text.partition(".")
-    return f"{int(major) + 1}.{rest}"
-
-
 def version_variant(name: str, parent: bytes) -> bytes:
     data = json.loads(parent)
     if name == "protocol-2":
@@ -205,9 +200,10 @@ def version_variant(name: str, parent: bytes) -> bytes:
     elif name == "schema-2":
         data["triage_schema"] = 2
     elif name == "wrong-pillow":
-        data["pillow"] = _bump_major(data["pillow"])
+        # First excluded versions, independent of the resolved supported endpoint.
+        data["pillow"] = "14.0.0"
     elif name == "wrong-renderer":
-        data["pypdfium2"] = _bump_major(data["pypdfium2"])
+        data["pypdfium2"] = "6.0.0"
     elif name == "core-out-of-range":
         data["markitdown-gc"] = "0.4.0"
     elif name == "core-unavailable":

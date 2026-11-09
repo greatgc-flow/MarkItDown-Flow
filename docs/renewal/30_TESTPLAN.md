@@ -366,6 +366,8 @@ R27/R28 added registrations (existing REQs; precise fixture assertions replace b
 | T-GEN-55 | REQ-PKG-14, REQ-PKG-17 (fresh repository-root shell bundle and source stylesheet; reject stale build outputs) | - | S0:FM9 |
 | T-GEN-56 | REQ-GEN-10, REQ-TRI-04 (PNG and archive bytes independent of native encoders/compressors) | FX-09, FX-16, FX-23 | S2:FM10 |
 | T-GEN-57 | REQ-GEN-02 (HWP payloads independent of Pillow/zlib; sealed FX-24 bytes and exactly one encryption-property change for FX-27) | FX-24, FX-27 | S0:FM12 |
+| T-GEN-58 | REQ-PKG-06 (version rejection mutations cross the declared boundary for every supported Pillow major) | FX-71 | S0:FM10 |
+| T-GEN-59 | REQ-PKG-05 (installer scan checks process command/argv fields and permits rendered terminal instructions) | - | S0:FM9 |
 | T-META-55 | REQ-PKG-10 (trace source digest survives CRLF checkout conversion and rejects content changes) | - | S0:FM10 |
 | T-META-56 | REQ-GEN-03, REQ-PKG-10 (meta checks use tomli on Python 3.10) | - | S0:FM10 |
 

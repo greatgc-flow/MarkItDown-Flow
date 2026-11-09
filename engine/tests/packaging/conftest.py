@@ -114,9 +114,12 @@ def packaged_venv(bootstrap_root, pt_temps) -> SimpleNamespace:
     python = venv_python(venv)
     install = [str(python), "-m", "pip", "install", "--only-binary=:all:",
                '--index-url', 'https://pypi.org/simple', './' + _support.WHEEL, 'markitdown-gc>=0.3.5,<0.4']
-    done = subprocess.run(install, cwd=bootstrap_root, capture_output=True, text=True, timeout=1800)
+    env = dict(os.environ, PYTHONUTF8="1")
+    done = subprocess.run(install, cwd=bootstrap_root, env=env, capture_output=True,
+                          text=True, encoding="utf-8", timeout=1800)
     assert done.returncode == 0, f"compatibility install failed:\n{done.stdout[-2000:]}\n{done.stderr[-2000:]}"
-    check = subprocess.run([str(python), "-m", "pip", "check"], capture_output=True, text=True, timeout=300)
+    check = subprocess.run([str(python), "-m", "pip", "check"], env=env, capture_output=True,
+                           text=True, encoding="utf-8", timeout=300)
     assert check.returncode == 0, check.stdout + check.stderr
     return SimpleNamespace(python=python, venv=venv, root=bootstrap_root)
 
