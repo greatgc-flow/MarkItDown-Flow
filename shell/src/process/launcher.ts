@@ -1,6 +1,6 @@
 /**
- * Job snapshot and spawn-request construction (20_SHELL.md REQ-SHL-11/12/15;
- * SPEC 8.4/10 by reference). The snapshot of ordered absolute inputs, cwd,
+ * Job snapshot and spawn-request construction (20_SHELL.md REQ-SHL-06/11/12/15;
+ * SPEC 8.2/8.4/10 by reference). The snapshot of ordered absolute inputs, cwd,
  * output and cache roots and nonsecret options is taken once and reused
  * verbatim for `plan` and the authorized `run` replay.
  */
@@ -10,26 +10,7 @@ import type { SpawnRequest } from './types';
 
 export type EngineCommand = 'plan' | 'run' | 'version' | 'selftest';
 
-/** SPEC 10.1 subcommands the shell may ever invoke. */
-export const SPEC_COMMANDS: readonly EngineCommand[] = ['plan', 'run', 'version', 'selftest'];
-
-/** SPEC 10.2 option tokens; anything else is an invented option and fails REQ-SHL-11. */
-export const SPEC_OPTIONS: readonly string[] = [
-  '-o', '--out', '--provider', '--model', '--dpi', '--prompt-version', '--yes', '--yes-file', '--approved-by',
-  '--approve-threshold', '--sensitive', '--min-priority', '--max-units', '--max-bytes', '--max-pixels',
-  '--zip-depth', '--zip-entries', '--zip-total-bytes', '--force', '--cache', '--progress', '--report',
-  '--command', '--command-egress', '--command-env', '--trust-command', '--cost-hint',
-];
-
-/** SPEC 10.2 options that take no value. */
-const FLAG_OPTIONS: ReadonlySet<string> = new Set(['--force', '--trust-command']);
-
-/** Options removed when comparing the `plan` invocation with its `run` replay. */
-const REPLAY_VARIANT_OPTIONS: ReadonlySet<string> = new Set(['-o', '--out', '--yes', '--yes-file', '--approved-by']);
-
 export const APPROVED_BY_MODAL = 'plugin:modal';
-
-const HEX64 = /^[0-9a-f]{64}$/;
 
 export interface JobSnapshot {
   /** Absolute venv interpreter. */
@@ -54,12 +35,14 @@ export interface SnapshotParams {
 }
 
 /**
- * Consent for the displayed file scopes (SPEC 8.4). Either repeated
- * `--yes <hash>` tokens or a plugin-owned `--yes-file` (REQ-SHL-15).
+ * Consent for the displayed file scopes (SPEC 8.4): the plugin-owned
+ * `--yes-file` of accepted `plan_hash` lines (REQ-SHL-15). The shell never
+ * emits bare or repeated `--yes`.
  */
-export type Authorization =
-  | { yes: readonly string[]; approvedBy: typeof APPROVED_BY_MODAL }
-  | { yesFile: string; approvedBy: typeof APPROVED_BY_MODAL };
+export interface Authorization {
+  yesFile: string;
+  approvedBy: typeof APPROVED_BY_MODAL;
+}
 
 /** Absolute on either platform: POSIX root, drive letter or UNC. */
 export function isAbsolutePath(value: string): boolean {
@@ -100,6 +83,17 @@ export function snapshotJob(params: SnapshotParams): JobSnapshot {
 }
 
 /**
+ * The scrubbed child environment. For `openai-compatible` the persisted Base URL
+ * setting is the endpoint (SPEC REQ-SEC-01 allows a persisted `base_url`; REQ-SHL-06):
+ * it is passed as `MDFLOW_BASE_URL` and wins over any host value, never on argv.
+ */
+export function engineEnvFor(snapshot: Pick<JobSnapshot, 'provider'>, hostEnv: Env): Record<string, string> {
+  const env = scrubEngineEnv(hostEnv, snapshot.provider.name);
+  if (snapshot.provider.name === 'openai-compatible') env.MDFLOW_BASE_URL = snapshot.provider.baseUrl;
+  return env;
+}
+
+/**
  * `<enginePython> -m mdflow <command> <inputs...> [-o OUT] --cache CACHE ...`
  * with the SPEC-baseline scrubbed environment. `plan` and `run` differ only in
  * the subcommand, `-o`, and the authorization arguments.
@@ -123,18 +117,14 @@ export function buildSpawnRequest(
   for (const glob of runOptions.sensitive) args.push('--sensitive', glob);
   args.push('--progress', 'jsonl');
   if (authorization && command === 'run') {
-    if ('yesFile' in authorization) {
-      args.push('--yes-file', authorization.yesFile);
-    } else {
-      for (const hash of authorization.yes) args.push('--yes', hash);
-    }
+    args.push('--yes-file', authorization.yesFile);
     args.push('--approved-by', authorization.approvedBy);
   }
   return {
     command: snapshot.enginePython,
     args,
     cwd: snapshot.cwd,
-    env: scrubEngineEnv(hostEnv, provider.name),
+    env: engineEnvFor(snapshot, hostEnv),
     shell: false,
     windowsHide: true,
   };
@@ -152,76 +142,7 @@ export function buildUtilityRequest(enginePython: string, command: 'version' | '
   };
 }
 
-export interface InvocationViolation {
-  kind: 'module' | 'command' | 'option' | 'shell' | 'secret';
-  token: string;
-}
-
-/**
- * REQ-SHL-11 oracle: every shell invocation is `-m mdflow <SPEC command>` with
- * SPEC 10.2 options only. Returns the violations (empty when conformant).
- */
-export function invocationViolations(request: SpawnRequest): InvocationViolation[] {
-  const violations: InvocationViolation[] = [];
-  const { args } = request;
-  if ((request.shell as boolean) !== false) violations.push({ kind: 'shell', token: String(request.shell) });
-  if (args[0] !== '-m') violations.push({ kind: 'module', token: args[0] ?? '<missing -m>' });
-  if (args[1] !== 'mdflow') violations.push({ kind: 'module', token: args[1] ?? '<missing module>' });
-  const command = args[2];
-  if (!(SPEC_COMMANDS as readonly string[]).includes(command)) violations.push({ kind: 'command', token: command ?? '<missing command>' });
-  for (let i = 3; i < args.length; i++) {
-    const token = args[i];
-    if (!token.startsWith('-')) continue;
-    if (!SPEC_OPTIONS.includes(token)) {
-      violations.push({ kind: 'option', token });
-      continue;
-    }
-    if (!FLAG_OPTIONS.has(token) && i + 1 < args.length && !args[i + 1].startsWith('-')) i += 1;
-  }
-  return violations;
-}
-
-/** Arguments after `-m mdflow <command>` minus `-o X`, `--yes X`, `--yes-file X`, `--approved-by X`. */
-export function replayInvariantArgs(args: readonly string[]): string[] {
-  const out: string[] = [];
-  for (let i = 3; i < args.length; i++) {
-    const token = args[i];
-    if (REPLAY_VARIANT_OPTIONS.has(token)) {
-      if (i + 1 < args.length && !args[i + 1].startsWith('-')) i += 1;
-      continue;
-    }
-    out.push(token);
-  }
-  return out;
-}
-
-/** SPEC 10.2 `--yes-file`: one `plan_hash` per line; blank lines and `#` comments ignored. */
-export function parseYesFile(text: string): string[] {
-  return text
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter((line) => line.length > 0 && !line.startsWith('#'));
-}
-
-/** The approved hash list of an invocation: `--yes` values plus the `--yes-file` content when a reader is given. */
-export function approvedHashesIn(args: readonly string[], readFile?: (path: string) => string | null): string[] {
-  const hashes: string[] = [];
-  for (let i = 3; i < args.length; i++) {
-    const token = args[i];
-    const value = args[i + 1];
-    if (token === '--yes' && value !== undefined && HEX64.test(value)) {
-      hashes.push(value);
-      i += 1;
-    } else if (token === '--yes-file' && value !== undefined) {
-      const text = readFile?.(value) ?? null;
-      if (text !== null) hashes.push(...parseYesFile(text));
-      i += 1;
-    }
-  }
-  return hashes;
-}
-
-/** Render the yes-file the shell writes for one approved run. */
+/** Render the yes-file the shell writes for one approved run (SPEC 10.2: one hash per line, `#` comments). */
 export function renderYesFile(hashes: readonly string[]): string {
   return `# MarkItDown Flow approved plan hashes (REQ-SHL-15)\n${hashes.join('\n')}\n`;
 }

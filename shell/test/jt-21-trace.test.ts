@@ -1,16 +1,14 @@
 /**
- * JT-21 / REQ-SHL-21: `req()` rejects unknown/duplicate ids and unregistered
- * planned requirements; the trace export rejects unknown ids, reports
- * zero-test requirements and keeps manual sign-offs out of automated totals.
+ * JT-21 / REQ-SHL-21: `req()` rejects unknown/duplicate ids, unregistered
+ * planned requirements and manual-gate ids; registrations reach R20's
+ * generator (`tools/trace.py`) through the jest-junit export whose titles
+ * carry the REQ ids; manual sign-offs are never test registrations.
  */
-import { plannedShellTests, registrations, req, shellRequirementIds } from './req';
-import { buildTraceExport, type TestResult } from '../src/pure/trace';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
+import { plannedShellTests, registrations, req, REPO_ROOT, shellRequirementIds, TEST_ID_PATTERN } from './req';
 
 const R = req('REQ-SHL-21');
-
-function asResults(status: TestResult['status'] = 'passed'): TestResult[] {
-  return registrations().map((r) => ({ ...r, status }));
-}
 
 it(R('JT-21 req() rejects unknown requirement ids, unknown test ids and empty marker sets'), () => {
   expect(() => req('REQ-SHL-99')).toThrow(/unknown requirement/);
@@ -23,8 +21,7 @@ it(R('JT-21 req() rejects unknown requirement ids, unknown test ids and empty ma
   expect(() => req('REQ-SHL-21')('JT-21')).toThrow(/empty description/);
   // Planned registration must be a superset: JT-03 requires REQ-SHL-03.
   expect(() => req('REQ-SHL-21')('JT-03 mislabelled')).toThrow(/must register planned requirement REQ-SHL-03/);
-  const exported = buildTraceExport(asResults(), [...shellRequirementIds()], []);
-  expect(exported.automated.tests.length).toBeGreaterThan(0);
+  expect(registrations().length).toBeGreaterThan(0);
 });
 
 it(R('JT-21 req() rejects a duplicate (test id, description) registration'), () => {
@@ -35,8 +32,7 @@ it(R('JT-21 req() rejects a duplicate (test id, description) registration'), () 
   // A distinct description for the same id is allowed, and the title carries every REQ.
   const title = req('REQ-SHL-21')('JT-21 probe registration for duplicate detection');
   expect(title).toBe('JT-21 REQ-SHL-21: probe registration for duplicate detection');
-  const exported = buildTraceExport(asResults(), [...shellRequirementIds()], []);
-  expect(exported.automated.tests.some((t) => t.title === title)).toBe(true);
+  expect(registrations().some((r) => r.title === title && r.reqs.includes('REQ-SHL-21'))).toBe(true);
 });
 
 it(R('JT-21 planned catalog and 20_SHELL.md definitions agree on the 21 shell requirement ids'), () => {
@@ -44,42 +40,28 @@ it(R('JT-21 planned catalog and 20_SHELL.md definitions agree on the 21 shell re
   const planned = new Set([...plannedShellTests().values()].flatMap((s) => [...s]));
   expect([...defined].sort()).toEqual([...planned].sort());
   expect(defined.size).toBe(21);
-  const exported = buildTraceExport(asResults(), [...defined], []);
-  expect(exported.v).toBe(1);
 });
 
-it(R('JT-21 trace export rejects unknown ids and duplicate registrations'), () => {
-  const results = asResults();
-  const ids = [...shellRequirementIds()];
-  expect(() => buildTraceExport([...results, { tid: 'JT-21', title: 'JT-21 REQ-SHL-99: x', reqs: ['REQ-SHL-99'], status: 'passed' }], ids, [])).toThrow(/REQ-SHL-99/);
-  expect(() => buildTraceExport([...results, results[0]], ids, [])).toThrow(/duplicate/i);
-  expect(() => buildTraceExport([{ tid: 'JT-21', title: 'JT-21 REQ-SHL-21: x', reqs: [], status: 'passed' }], ids, [])).toThrow();
+it(R('JT-21 manual gates are never test registrations: MAN-* ids are rejected by the marker grammar'), () => {
+  expect(TEST_ID_PATTERN.test('MAN-01 attestation')).toBe(false);
+  expect(() => req('REQ-SHL-01')('MAN-01 R15 attestation present')).toThrow(/must start with a JT id/);
+  for (const registered of registrations()) {
+    expect(registered.tid).toMatch(/^(JT-\d{2}|JT-SHL-19-01)$/);
+    expect(registered.reqs.length).toBeGreaterThan(0);
+    expect(registered.title).not.toMatch(/MAN-\d{2}/);
+  }
 });
 
-it(R('JT-21 zero-test requirements are reported as uncovered; only passing tests cover a requirement'), () => {
-  const ids = ['REQ-SHL-03', 'REQ-SHL-07', 'REQ-SHL-21'];
-  const results: TestResult[] = [
-    { tid: 'JT-03', title: 'JT-03 REQ-SHL-03: a', reqs: ['REQ-SHL-03'], status: 'passed' },
-    { tid: 'JT-07', title: 'JT-07 REQ-SHL-07: a', reqs: ['REQ-SHL-07'], status: 'passed' },
-    { tid: 'JT-07', title: 'JT-07 REQ-SHL-07: b', reqs: ['REQ-SHL-07'], status: 'failed' },
-  ];
-  const exported = buildTraceExport(results, ids, []);
-  expect(exported.automated.covered).toEqual(['REQ-SHL-03']);
-  expect(exported.automated.uncovered).toEqual(['REQ-SHL-21']);
-  const skipped = buildTraceExport([{ ...results[0], status: 'skipped' }], ['REQ-SHL-03'], []);
-  expect(skipped.automated.covered).toEqual([]);
-});
-
-it(R('JT-21 manual sign-offs are passed through separately and never counted as automated coverage'), () => {
-  const ids = ['REQ-SHL-01', 'REQ-SHL-19', 'REQ-SHL-21'];
-  const results: TestResult[] = [{ tid: 'JT-21', title: 'JT-21 REQ-SHL-21: a', reqs: ['REQ-SHL-21'], status: 'passed' }];
-  const exported = buildTraceExport(results, ids, ['MAN-01', 'MAN-03']);
-  expect(exported.manual).toEqual(['MAN-01', 'MAN-03']);
-  expect(exported.automated.tests).toHaveLength(1);
-  expect(exported.automated.covered).toEqual(['REQ-SHL-21']);
-  expect(exported.automated.uncovered).toEqual(['REQ-SHL-01', 'REQ-SHL-19']);
-  const text = JSON.stringify(exported.automated);
-  expect(text).not.toContain('MAN-');
-  // A manual id smuggled in as a test registration is rejected.
-  expect(() => buildTraceExport([{ tid: 'MAN-01', title: 'MAN-01 REQ-SHL-01: attest', reqs: ['REQ-SHL-01'], status: 'passed' }], ids, [])).toThrow();
+it(R('JT-21 registrations reach the R20 generator through the jest-junit export with REQ-bearing titles'), () => {
+  const config = fs.readFileSync(path.join(REPO_ROOT, 'shell', 'jest.config.js'), 'utf8');
+  expect(config).toContain('jest-junit');
+  expect(config).toContain("outputName: 'junit-shell.xml'");
+  expect(config).toContain("titleTemplate: '{title}'");
+  // Every registered title starts with its JT id and names each REQ so `trace.py` can parse it from the XML.
+  for (const registered of registrations()) {
+    expect(registered.title.startsWith(`${registered.tid} `)).toBe(true);
+    for (const id of registered.reqs) expect(registered.title).toContain(id);
+  }
+  const trace = fs.readFileSync(path.join(REPO_ROOT, 'tools', 'trace.py'), 'utf8');
+  expect(trace).toContain('junit-shell');
 });

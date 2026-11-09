@@ -1,6 +1,6 @@
-# MarkItDown-Flow v2 - Zero-base Renewal Brief (DRAFT for peer deliberation)
+# MarkItDown-Flow v2 - Zero-base Renewal Brief (historical)
 
-Status: DRAFT-1 (orchestrator: cc). Not approved. Goal: analysis/design to TDD-ready, then TDD, cross-MECE audit, 100/100, release.
+Status: SUPERSEDED (2026-11-09). This DRAFT-1 brief (orchestrator: cc) was the deliberation input; the binding decisions are [01_DECISIONS R1-R28](01_DECISIONS.md) and the authoritative texts are [10_SPEC](10_SPEC.md), [20_SHELL](20_SHELL.md) and [25_PACKAGING](25_PACKAGING.md). Kept for provenance only; where this file and those documents disagree, they win.
 
 ## 1. Facts (verified 2026-11-09)
 - v1.0.8: Obsidian plugin (TS ~3.7k LOC) + Python engine `markitdown_wrapper.py` (1141 LOC, 4 phases: offline -> AI vision -> Azure DocIntel -> Azure CU). Tags 1.0.0-1.0.8. No issues/PRs.

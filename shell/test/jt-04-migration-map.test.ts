@@ -5,7 +5,8 @@
  */
 import { req } from './req';
 import { migrateSettings, type SettingsV2 } from '../src/pure/settings';
-import { engineArgv } from '../src/pure/argv';
+import { buildSpawnRequest, snapshotJob } from '../src/process/launcher';
+import { ENGINE_PYTHON, HOST_ENV } from './fixtures/shell-settings';
 import {
   ALL_SENTINELS,
   DROPPED_V1_KEYS,
@@ -222,12 +223,15 @@ const SPEC_10_2_SHELL_OPTIONS = new Set([
 
 it(R('JT-04 argv snapshot contains no template, tag, media-toggle or OCR-language flags and only SPEC 10.2 options'), () => {
   const s = settings(v1AllKeys());
-  const argv = engineArgv(s, {
-    command: 'run',
+  // The migrated candidate has no interpreter yet; the user selects one before any job (REQ-SHL-10).
+  const snapshot = snapshotJob({
+    settings: { ...s, enginePython: ENGINE_PYTHON },
     inputs: ['D:\\vault\\inbox\\보고서 3분기.pdf', '/home/a/dir with spaces/x$(rm).docx'],
+    cwd: 'D:\\vault',
     outDir: 'D:\\vault\\notes\\converted',
     cacheDir: 'D:\\vault\\.obsidian\\plugins\\markitdown-flow\\cache',
   });
+  const argv = buildSpawnRequest(snapshot, 'run', HOST_ENV).args;
   expect(argv.slice(0, 3)).toEqual(['-m', 'mdflow', 'run']);
   expect(argv).toContain('D:\\vault\\inbox\\보고서 3분기.pdf');
   expect(argv).toContain('/home/a/dir with spaces/x$(rm).docx');

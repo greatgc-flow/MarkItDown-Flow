@@ -8,16 +8,9 @@
 import { req } from './req';
 import { scrubEngineEnv } from '../src/pure/env';
 import { decodeReport, type RunReport } from '../src/pure/protocol';
-import {
-  APPROVED_BY_MODAL,
-  approvedHashesIn,
-  buildSpawnRequest,
-  buildUtilityRequest,
-  type JobSnapshot,
-  replayInvariantArgs,
-  snapshotJob,
-} from '../src/process/launcher';
-import { fx71Lines, fx71Text, FX71_ROOTS } from './fixtures/fx71';
+import { APPROVED_BY_MODAL, buildSpawnRequest, buildUtilityRequest, type JobSnapshot, renderYesFile, snapshotJob } from '../src/process/launcher';
+import { fx71Lines, fx71PlanObjects, fx71Text, FX71_ROOTS } from './fixtures/fx71';
+import { approvedHashesIn, replayInvariantArgs } from './fixtures/protocol';
 import { abs, ENGINE_PYTHON, HOST_ENV, KEY_VALUE, OPENAI_PROVIDER, PLUGIN_DIR, settingsV2, VAULT_ROOT } from './fixtures/shell-settings';
 
 const R = req('REQ-SHL-12');
@@ -27,6 +20,10 @@ const OUT_DIR = abs(VAULT_ROOT, 'markitdown-output');
 const CACHE_DIR = abs(PLUGIN_DIR, 'cache');
 const HASH_A = 'a80d66b3fa9f7d95ecc3dba770b6eaf01cd8ddd4934e5d0c66d31ea703b5efda';
 const HASH_B = 'f918a5c781905fce7e7eca0c08f41192e0e2d475f2867c9ad1f1e1514eb14e84';
+const YES_FILE = abs(PLUGIN_DIR, 'consent', 'yes-0123456789abcdef-1.txt');
+/** The shell writes this file before the replay; the oracle reads it back. */
+const yesFiles: Record<string, string> = { [YES_FILE]: renderYesFile([HASH_A, HASH_B]) };
+const readYes = (path: string): string | null => yesFiles[path] ?? null;
 
 const INPUTS = [
   abs(CWD, '보고서', '3분기 결산.pdf'),
@@ -102,22 +99,23 @@ it(R('JT-12 -o is the validated vault destination and --cache is <plugin-dir>/ca
 it(R('JT-12 original plan and authorized run replay share inputs, cwd, env, output and cache; only subcommand and authorization differ'), () => {
   const snap = snapshot({ ...OPENAI_PROVIDER });
   const plan = buildSpawnRequest(snap, 'plan', HOST_ENV);
-  const run = buildSpawnRequest(snap, 'run', HOST_ENV, { yes: [HASH_A, HASH_B], approvedBy: APPROVED_BY_MODAL });
+  const run = buildSpawnRequest(snap, 'run', HOST_ENV, { yesFile: YES_FILE, approvedBy: APPROVED_BY_MODAL });
   expect(run.command).toBe(plan.command);
   expect(run.cwd).toBe(plan.cwd);
   expect(run.env).toEqual(plan.env);
   expect(plan.args[2]).toBe('plan');
   expect(run.args[2]).toBe('run');
   expect(replayInvariantArgs(run.args)).toEqual(replayInvariantArgs(plan.args));
-  expect(approvedHashesIn(run.args)).toEqual([HASH_A, HASH_B]);
-  expect(approvedHashesIn(plan.args)).toEqual([]);
+  expect(approvedHashesIn(run.args, readYes)).toEqual([HASH_A, HASH_B]);
+  expect(run.args).not.toContain('--yes');
+  expect(approvedHashesIn(plan.args, readYes)).toEqual([]);
   expect(run.args[run.args.indexOf('--approved-by') + 1]).toBe('plugin:modal');
   expect(plan.args).not.toContain('--approved-by');
   // Inputs stay in original order in both and directly follow the subcommand.
   expect(run.args.slice(3, 3 + INPUTS.length)).toEqual(INPUTS);
   expect(plan.args.slice(3, 3 + INPUTS.length)).toEqual(INPUTS);
   // A second build from the same snapshot is byte-identical (snapshot taken once).
-  expect(buildSpawnRequest(snap, 'run', HOST_ENV, { yes: [HASH_A, HASH_B], approvedBy: APPROVED_BY_MODAL })).toEqual(run);
+  expect(buildSpawnRequest(snap, 'run', HOST_ENV, { yesFile: YES_FILE, approvedBy: APPROVED_BY_MODAL })).toEqual(run);
 });
 
 it(R('JT-12 directories are passed as roots so nested inputs/sub/a.pdf keeps logical sub/a.pdf and the same output path (FX-71)'), () => {
@@ -140,9 +138,27 @@ it(R('JT-12 directories are passed as roots so nested inputs/sub/a.pdf keeps log
   const request = buildSpawnRequest(snap, 'run', HOST_ENV);
   expect(request.args.slice(3, 5)).toEqual(roots);
   for (const nested of FX71_ROOTS.inputs) expect(request.args.some((t) => t.endsWith(nested))).toBe(false);
-  const replay = buildSpawnRequest(snap, 'run', HOST_ENV, { yes: [HASH_B], approvedBy: APPROVED_BY_MODAL });
+  const replay = buildSpawnRequest(snap, 'run', HOST_ENV, { yesFile: YES_FILE, approvedBy: APPROVED_BY_MODAL });
   expect(replay.args.slice(3, 5)).toEqual(roots);
   expect(replay.cwd).toBe(request.cwd);
+});
+
+it(R('JT-12 the configured Base URL reaches the engine as MDFLOW_BASE_URL for openai-compatible (settings win over the host value); provider none forwards none; never on argv'), () => {
+  const host = { ...HOST_ENV, MDFLOW_BASE_URL: 'https://host-proxy.example/v1' };
+  const configured = 'http://127.0.0.1:11434/v1';
+  const remote = buildSpawnRequest(snapshot({ ...OPENAI_PROVIDER, baseUrl: configured }), 'plan', host);
+  expect(remote.env.MDFLOW_BASE_URL).toBe(configured);
+  expect(remote.args).not.toContain(configured);
+  expect(buildSpawnRequest(snapshot({ ...OPENAI_PROVIDER, baseUrl: configured }), 'run', host).env.MDFLOW_BASE_URL).toBe(configured);
+  // Without a host value the setting is still forwarded.
+  expect(buildSpawnRequest(snapshot({ ...OPENAI_PROVIDER }), 'plan', HOST_ENV).env.MDFLOW_BASE_URL).toBe(OPENAI_PROVIDER.baseUrl);
+  const none = buildSpawnRequest(snapshot(), 'run', host);
+  expect(none.env).not.toHaveProperty('MDFLOW_BASE_URL');
+  expect(none.env).not.toHaveProperty('MDFLOW_API_KEY');
+  // FX-71: the engine's displayed destination is the canonical endpoint under the configured base URL.
+  const plans = fx71PlanObjects('plan-mixed.stdout.json') as { approved: { provider: { destination: string | null } } }[];
+  expect(plans.length).toBeGreaterThan(0);
+  for (const plan of plans) expect(plan.approved.provider.destination).toBe(`${OPENAI_PROVIDER.baseUrl}/chat/completions`);
 });
 
 it(R('JT-12 version and selftest utility requests use the module entry point with no other arguments'), () => {

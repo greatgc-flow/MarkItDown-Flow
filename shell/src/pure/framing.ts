@@ -45,8 +45,9 @@ export interface ApproveRequiredEvent extends EventBase {
 export interface UnitEvent extends EventBase {
   ev: 'unit'; file: string; unit: string; state: 'ok' | 'failed' | 'cached' | 'pending'; code: string | null;
 }
-export interface WarningEvent extends EventBase { ev: 'warning'; file: string; code: string; message: string }
-export interface ErrorEvent extends EventBase { ev: 'error'; file: string; code: string; message: string }
+/** `file` is null for run-level issues (engine `orchestrate.py`/`cli.py` emit `file: None`). */
+export interface WarningEvent extends EventBase { ev: 'warning'; file: string | null; code: string; message: string }
+export interface ErrorEvent extends EventBase { ev: 'error'; file: string | null; code: string; message: string }
 export interface FileEndEvent extends EventBase {
   ev: 'file_end'; file: string; outputs: string[];
   units: { total: number; done: number; pending: number; failed: number };
@@ -132,7 +133,8 @@ function decodeKnown(ev: string, r: Raw, base: EventBase): ProgressEvent | null 
     }
     case 'warning':
     case 'error': {
-      if (!isString(file) || !isString(r.code) || !isString(r.message)) return null;
+      // Run-level issues carry `file: null`; file-scoped ones a string. Anything else is a schema violation.
+      if (!(isString(file) || file === null) || !isString(r.code) || !isString(r.message)) return null;
       if (!isKnownEngineCode(r.code)) return 'code';
       return { ...base, ev, file, code: r.code, message: r.message };
     }

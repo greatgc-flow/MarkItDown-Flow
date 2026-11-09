@@ -103,15 +103,17 @@ it(R('JT-07 insertion keeps newest first and re-applies the cap of 100'), () => 
 });
 
 it(R('JT-07 outcomes distinguish complete, pending consent, partial failure and cancelled; success is never inferred from created files'), () => {
-  const base = { cancelled: false, filesOk: 1, filesFailed: 0, unitsPending: 0, outputsCreated: 1 };
+  const base = { cancelled: false, filesOk: 1, filesFailed: 0, unitsPending: 0 };
   expect(outcomeFor({ ...base, exit: 0 })).toEqual({ outcome: 'complete', success: true });
   expect(outcomeFor({ ...base, exit: 3, unitsPending: 2 })).toEqual({ outcome: 'pending_consent', success: false });
   expect(outcomeFor({ ...base, exit: 2, filesFailed: 1 })).toEqual({ outcome: 'partial_failure', success: false });
   expect(outcomeFor({ ...base, exit: 4, filesFailed: 1 })).toEqual({ outcome: 'partial_failure', success: false });
   expect(outcomeFor({ ...base, exit: 130, cancelled: true })).toEqual({ outcome: 'cancelled', success: false });
-  // Forced termination: no exit code, outputs on disk, still not success.
-  expect(outcomeFor({ ...base, exit: null, cancelled: true, outputsCreated: 3 })).toEqual({ outcome: 'cancelled', success: false });
-  expect(outcomeFor({ ...base, exit: 0, outputsCreated: 0 }).success).toBe(true);
+  // Forced termination: no exit code, whatever is on disk, still not success.
+  expect(outcomeFor({ ...base, exit: null, cancelled: true })).toEqual({ outcome: 'cancelled', success: false });
+  // Created files are not an input at all: the facts carry no output count that could be mistaken for success.
+  expect(Object.keys({ ...base, exit: 0 })).not.toContain('outputsCreated');
+  expect(outcomeFor({ ...base, exit: 0, filesOk: 0 }).success).toBe(true);
 });
 
 it(R('JT-07 clear history clears only history and does not mutate its input'), () => {

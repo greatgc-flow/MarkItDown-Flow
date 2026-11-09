@@ -130,6 +130,15 @@ it(R('JT-13 known events with missing or mistyped required fields are invalid, n
   }
 });
 
+it(R('JT-13 run-level warning and error events carry file null and decode; file-scoped events still require a string file'), () => {
+  expect(decodeEvent({ ...events.warning('W_SKIPPED_HIDDEN'), file: null })).toMatchObject({ kind: 'event', event: { ev: 'warning', file: null, code: 'W_SKIPPED_HIDDEN' } });
+  expect(decodeEvent({ ...events.error('E_OUTPUT_IO'), file: null })).toMatchObject({ kind: 'event', event: { ev: 'error', file: null, code: 'E_OUTPUT_IO' } });
+  expect(decodeEvent({ ...events.warning(), file: 42 })).toMatchObject({ kind: 'invalid', reason: 'schema' });
+  expect(decodeEvent({ ...events.fileStart(), file: null })).toMatchObject({ kind: 'invalid', reason: 'schema' });
+  expect(decodeEvent({ ...events.unit(), file: null })).toMatchObject({ kind: 'invalid', reason: 'schema' });
+  expect(decodeEvent({ ...events.fileEnd(), file: null })).toMatchObject({ kind: 'invalid', reason: 'schema' });
+});
+
 it(R('JT-13 mdflow codes in progress events are validated against SPEC 7.5; Core and deleted codes are rejected there'), () => {
   expect(decodeEvent(events.warning('W_MEDIA_UNMAPPED')).kind).toBe('event');
   expect(decodeEvent(events.error('E_CONVERT_FAIL')).kind).toBe('event');

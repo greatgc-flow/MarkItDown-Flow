@@ -595,13 +595,14 @@ export class Component {
   private cleanups: (() => unknown)[] = [];
   private loaded = false;
 
-  load(): void {
+  /** Marks the component loaded, then runs `onload`; the (possibly async) result is returned so tests can await it. */
+  load(): void | Promise<void> {
     if (this.loaded) return;
     this.loaded = true;
-    this.onload();
+    return this.onload();
   }
 
-  onload(): void {}
+  onload(): void | Promise<void> {}
 
   unload(): void {
     if (!this.loaded) return;
@@ -935,6 +936,8 @@ export class TextComponent extends ValueComponent<string> {
   constructor() {
     super();
     this.value = '';
+    // Like the real component: typing (an `input` DOM event) fires `onChange` with the element value.
+    asFake(this.inputEl).addEventListener('input', () => this.simulateChange(asFake(this.inputEl).value));
   }
 
   setPlaceholder(placeholder: string): this {
@@ -969,6 +972,8 @@ export class DropdownComponent extends ValueComponent<string> {
   constructor() {
     super();
     this.value = '';
+    // Like the real component: a `change` DOM event fires `onChange` with the element value.
+    asFake(this.selectEl).addEventListener('change', () => this.simulateChange(asFake(this.selectEl).value));
   }
 
   addOption(value: string, display: string): this {

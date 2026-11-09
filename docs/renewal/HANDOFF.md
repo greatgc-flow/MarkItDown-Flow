@@ -1,18 +1,14 @@
-# HANDOFF (2026-11-09, orchestrator cc/opus, usage limit reached)
+# HANDOFF (2026-11-09, MECE round 2 in progress)
 
-Branch `renewal/v2-zero-base` (LOCAL ONLY - push was denied by auto-mode classifier; user must allow or run `git push -u origin renewal/v2-zero-base`).
-Last WIP commit = this file's commit. Worktrees ../mdf-wt-{core,io,shell} are merged and can be removed (`git worktree remove`).
+Branch `renewal/v2-zero-base` (local; pushing needs the user's permission: `git push -u origin renewal/v2-zero-base`).
 
 ## State
-- Design ratified (01_DECISIONS R1-R28; R27 packaging simplification unanimous incl. Fable amendment: compatible ranges for pypdfium2/Pillow in PKG-06 gate, SetupModal/BOOTSTRAP + JT-10/17 fixtures -> wheel+pip).
-- Engine steps 1-7 + packaging step 11 GREEN (321 pass before MECE fixes). Shell steps 8-10: jest 227/229, build OK (repo-root main.js), tsc 7 errors left.
-- MECE round 1 scores: vertical 60, oracles 77, docs<->code 70, simplicity 42 (cx, review/M1_cx_vertical.md); horizontal 68 (ag, review/M1_ag_horizontal.md). Horizontal fixes: 20 tests added (test_class_closure.py, pass); matrix.toml/30_TESTPLAN edits in WIP commit.
-- IN FLIGHT at handoff: cx engine fix round (stream mdf-mece-cx, request mdf-fix1-cx) fixing M1-V01..V33,V37 with red logs in build/trace/redgreen/m1-*. Its edits may land AFTER the WIP commit -> run `git status` first.
-- Fable stream mdf-wt-shell-fable is ask_uncertain -> use a NEW stream for shell work.
+- Design ratified (01_DECISIONS R1-R28). Engine suite green at `f9d3d14` (446 passed); cx engine round 2 (M2_cx_vertical) in flight in the same tree.
+- Shell: MECE round-2 fixes applied (Fable M2 X-01..X-20, S-01..S-13; see `docs/renewal/review/M2_fable_cross.md` and the disposition rows at the end of `20_SHELL.md` section 7). Jest 255/255 (`build/trace/redgreen/m2-shell.red.log` -> `m2-shell.green.json`). `tsc --noEmit` and `npm run build` are verified by the orchestrator after each round.
+- Open engine/tools items from the shell round: X-11 re-record FX-71 on Python 3.14 from the 2.0.0 wheel; X-14 `version` must not fail when Core is missing; SPEC 7.3 `file: string|null` for run-level events; SPEC 8.2 `docs/providers/*.md` reference (absent); S-14/S-15 (`_provider_list` meta, `report.publish(report_path)`).
 
 ## Next steps
-1. `git status`; run `python -I -m pytest engine/tests -q` and `cd shell && npx jest && npx tsc --noEmit -p . && npm run build`; commit cx results.
-2. Shell: fix remaining tsc errors (obsidian 1.14 `Plugin.settings` clash) + 2 jest failures, new Fable stream.
-3. Implement R27 (engine/tools side: drop lock_engine 15-cell merge, wheel + one CI hashed requirements) and R28 (trace.py fx("all") credit rule).
-4. MECE round 2 (cx vertical, ag horizontal inline <=20 KB per ask - peerhub#309, Fable docs<->code); repeat until orchestrator-runnable gates (90_ACCEPTANCE G-*) PASS.
-5. Push (needs user permission), 3-OS CI, manual MAN-01..04 (named human), release 2.0.0, cleanup worktrees/temp.
+1. `git status`; run `python -I -m pytest engine/tests -q` and `cd shell && npx jest && npx tsc --noEmit -p . && npm run build`; commit the round-2 results.
+2. Re-run the R16 README review (MAN-02) against the corrected README; MAN-04 rehearsal must include the file picker, drop confirmation and status-bar Cancel in the real app.
+3. MECE round 3 if any BLOCKER/MAJOR remains; otherwise run the orchestrator-runnable gates (90_ACCEPTANCE G-*).
+4. Push (needs user permission), 3-OS CI, manual MAN-01..04 (named human), release 2.0.0, cleanup worktrees/temp.

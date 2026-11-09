@@ -29,6 +29,8 @@ export interface ConsentFileView {
   thresholdExceeded: boolean;
   sensitiveHits: string[];
   unknownCost: boolean;
+  /** SPEC 8.4: consent is required only when the provider has egress and requests remain to send; otherwise informational. */
+  needsConsent: boolean;
 }
 
 export interface ConsentViewModel {
@@ -64,13 +66,14 @@ export function buildConsentView(plans: readonly Plan[], destinationDir: string)
       thresholdExceeded: approved.threshold_exceeded,
       sensitiveHits: [...approved.sensitive_hits],
       unknownCost,
+      needsConsent: approved.provider.egress && status.requests_to_send > 0,
     };
   });
   return {
     destinationDir,
     files,
     billingNoticeKey: 'shell.consent.billing',
-    requiresAcknowledgement: files.some((f) => f.thresholdExceeded || f.sensitiveHits.length > 0 || f.unknownCost),
+    requiresAcknowledgement: files.some((f) => f.needsConsent && (f.thresholdExceeded || f.sensitiveHits.length > 0 || f.unknownCost)),
   };
 }
 
@@ -131,6 +134,7 @@ export class ConsentModal extends Modal {
     const list = contentEl.createDiv({ cls: 'mdflow-consent-files' });
     for (const file of this.view.files) {
       const section = list.createDiv({ cls: 'mdflow-consent-file' });
+      if (!file.needsConsent) section.createDiv({ cls: 'mdflow-consent-informational', text: this.t('shell.consent.informational') });
       const row = (label: string, value: string): void => {
         const line = section.createDiv({ cls: 'mdflow-consent-row' });
         line.createSpan({ cls: 'mdflow-consent-label', text: `${label}: ` });

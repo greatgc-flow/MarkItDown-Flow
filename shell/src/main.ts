@@ -1,11 +1,13 @@
 /**
- * Plugin entry (20_SHELL.md REQ-SHL-02/08). A single desktop guard precedes
- * every lifecycle registration and all Node API access; mobile returns without
- * registrations or engine work.
+ * Plugin entry (20_SHELL.md REQ-SHL-02/08/09/16). A single desktop guard
+ * precedes every lifecycle registration and all Node API access; mobile
+ * returns without registrations or engine work. The version probe runs in the
+ * background and is awaited lazily by the first job, never by `onload`.
  */
 import { FileSystemAdapter, Notice, Platform, Plugin } from 'obsidian';
 import { clearHistory, insertHistory, type HistoryEntry } from './pure/history';
 import { formatMessage, resolveLocale, type UiLocale } from './pure/i18n';
+import { joinPath } from './pure/paths';
 import { persistMigration, type SettingsStore } from './pure/persist';
 import { defaultSettings, formatMigrationNotice, type SettingsV2 } from './pure/settings';
 import type { SpoolFs } from './pure/spool';
@@ -18,11 +20,12 @@ import type { FileSystemOps, HostPlatform } from './process/types';
 import { probeVersion, type VersionGate } from './process/version-gate';
 import { registerCommands } from './ui/commands';
 import { ConsentModal } from './ui/consent-modal';
-import { ShellCoordinator, SPOOL_DIR_NAME } from './ui/coordinator';
+import { type Selection, ShellCoordinator, SPOOL_DIR_NAME } from './ui/coordinator';
 import { VaultDataStore } from './ui/data-store';
-import { registerEntryPoints } from './ui/entry-points';
+import { DropConfirmModal } from './ui/drop-confirm-modal';
+import { type FilePicker, registerEntryPoints } from './ui/entry-points';
 import { HistoryModal } from './ui/history-modal';
-import { joinPath } from './ui/output-path';
+import { JobStatusBar } from './ui/progress';
 import { SetupModal } from './ui/setup-modal';
 import { ShellSettingsTab } from './ui/settings-tab';
 
@@ -76,7 +79,11 @@ export default class MarkItDownFlowPlugin extends Plugin {
   private store: SettingsStore | null = null;
   private apis: NodeApis | null = null;
   private gate: VersionGate | null = null;
+  /** In-flight version probe; jobs await it instead of `onload` (REQ-SHL-10/17). */
+  private gateProbe: Promise<VersionGate | null> | null = null;
   private jobsBlocked = false;
+  /** REQ-SHL-03/05: a newer schema or a failed migration leaves the disk file untouched by every later save. */
+  private settingsReadOnly = false;
   private locale: UiLocale = 'en';
   private pluginDir = '';
   private vaultRoot = '';
@@ -108,6 +115,7 @@ export default class MarkItDownFlowPlugin extends Plugin {
     const outcome = await persistMigration(store);
     this.settings = outcome.result?.settings ?? defaultSettings();
     this.jobsBlocked = outcome.jobsBlocked;
+    this.settingsReadOnly = outcome.jobsBlocked || outcome.result === null;
     this.locale = resolveLocale(this.settings.locale, hostLanguage());
     for (const key of outcome.noticeKeys) this.notify(key);
     if (outcome.result) {
@@ -115,10 +123,17 @@ export default class MarkItDownFlowPlugin extends Plugin {
       if (text) new Notice(text, 0);
     }
 
-    const log = new RotatingLog(apis.fs, joinPath(platform, this.pluginDir, LOG_DIR_NAME), { home: apis.homeDir(), vault: this.vaultRoot });
+    const log = new RotatingLog(apis.fs, joinPath(platform, this.pluginDir, LOG_DIR_NAME), { home: apis.homeDir(), vault: this.vaultRoot }, platform);
     const spoolFs = new DirectorySpoolFs(apis.fs, joinPath(platform, this.pluginDir, SPOOL_DIR_NAME), platform);
     void recoverStaleSpools(spoolFs);
-    await this.refreshGate();
+    // Background probe: never awaited here (X-15); the first job awaits it through `currentGate`.
+    void this.refreshGate();
+
+    const statusBar = new JobStatusBar(this.addStatusBarItem(), {
+      locale: () => this.locale,
+      showDetails: () => this.settings.enableBatchProgress,
+      onCancel: () => this.coord?.cancel(),
+    });
 
     const coordinator = new ShellCoordinator({
       spawner: apis.spawner,
@@ -131,7 +146,7 @@ export default class MarkItDownFlowPlugin extends Plugin {
       pluginDir: this.pluginDir,
       locale: this.locale,
       settings: () => this.settings,
-      gate: () => (this.jobsBlocked ? null : this.gate),
+      gate: () => this.currentGate(),
       consent: (view) => {
         const modal = new ConsentModal(this.app, view, this.locale);
         modal.open();
@@ -141,18 +156,42 @@ export default class MarkItDownFlowPlugin extends Plugin {
       recordHistory: (entry) => this.recordHistory(entry),
       log,
       nonce: randomNonce,
+      progress: statusBar,
     });
     this.coord = coordinator;
+
+    const picker: FilePicker = {
+      pickFiles: async () => {
+        if (!apis.pickerAvailable) {
+          this.notify('shell.notice.pickerUnavailable');
+          return null;
+        }
+        return apis.pickFiles();
+      },
+      pickFolder: async () => {
+        if (!apis.pickerAvailable) {
+          this.notify('shell.notice.pickerUnavailable');
+          return null;
+        }
+        return apis.pickFolder();
+      },
+      confirmSelection: (selection: Selection) => {
+        const modal = new DropConfirmModal(this.app, selection, this.locale);
+        modal.open();
+        return modal.decision;
+      },
+      pathOf: (file) => apis.filePath(file),
+    };
 
     registerCommands(
       this,
       {
         'convert-file': async () => {
-          const files = await apis.pickFiles();
+          const files = await picker.pickFiles();
           if (files && files.length > 0) await coordinator.submit({ kind: 'files', paths: files }, 'command');
         },
         'convert-folder': async () => {
-          const folder = await apis.pickFolder();
+          const folder = await picker.pickFolder();
           if (folder) await coordinator.submit({ kind: 'folder', paths: [folder] }, 'command');
         },
         'convert-url': () => coordinator.legacyUrlNotice(),
@@ -164,6 +203,8 @@ export default class MarkItDownFlowPlugin extends Plugin {
           await apis.openFolder(log.directory);
         },
         'run-image-pipeline-selftest': async () => {
+          // REQ-SHL-02 inventory row: explain the router retirement, then run SPEC's offline selftest.
+          this.notify('shell.notice.selftestRouter');
           const result = await runSelftest({ spawner: apis.spawner, clock: systemClock, hostEnv: process.env, cwd: this.pluginDir, enginePython: this.settings.enginePython });
           if (result.ok) this.notify('shell.notice.selftestOk');
           for (const key of result.diagnostics) this.notify(key);
@@ -172,21 +213,7 @@ export default class MarkItDownFlowPlugin extends Plugin {
       this.locale,
     );
 
-    registerEntryPoints(
-      this,
-      coordinator,
-      this.settings,
-      {
-        pickFiles: () => apis.pickFiles(),
-        pickFolder: () => apis.pickFolder(),
-        confirmSelection: async (selection) => {
-          // Drops are confirmed through the same consent-free selection notice; the engine Plan modal follows.
-          this.notify('shell.drop.confirm', { count: String(selection.paths.length) });
-          return true;
-        },
-      },
-      this.locale,
-    );
+    registerEntryPoints(this, coordinator, this.settings, picker, this.locale);
 
     this.addSettingTab(
       new ShellSettingsTab(this.app, this, {
@@ -194,17 +221,19 @@ export default class MarkItDownFlowPlugin extends Plugin {
         save: async (next) => {
           const interpreterChanged = next.enginePython !== this.settings.enginePython;
           await this.saveSettings(next);
-          if (interpreterChanged) await this.refreshGate();
+          if (interpreterChanged && !this.settingsReadOnly) {
+            this.gate = null;
+            this.gateProbe = null;
+            await this.refreshGate();
+          }
         },
         openSetup: () => this.openSetup(),
         locale: () => this.locale,
+        readOnly: () => this.settingsReadOnly,
       }),
     );
 
     this.active = true;
-    // Under the host, `load()` already marked this component loaded (no-op here). When `onload()`
-    // is invoked directly, this records the loaded state so every `register*` cleanup runs on `unload()`.
-    this.load();
   }
 
   override onunload(): void {
@@ -217,12 +246,33 @@ export default class MarkItDownFlowPlugin extends Plugin {
     new Notice(formatMessage(this.locale, key, params));
   }
 
-  private async refreshGate(): Promise<void> {
+  /** The gate for the next job: the finished probe, or the in-flight one (started at load or after an interpreter change). */
+  private currentGate(): Promise<VersionGate | null> {
+    if (this.jobsBlocked) return Promise.resolve(null);
+    if (this.gate) return Promise.resolve(this.gate);
+    return this.refreshGate();
+  }
+
+  /** Probe `<enginePython> -m mdflow version` once; concurrent callers share the in-flight probe. */
+  private refreshGate(): Promise<VersionGate | null> {
+    if (this.gateProbe) return this.gateProbe;
     if (!this.apis || !this.settings.enginePython) {
       this.gate = null;
-      return;
+      return Promise.resolve(null);
     }
-    this.gate = await probeVersion(this.settings.enginePython, { spawner: this.apis.spawner, clock: systemClock, hostEnv: process.env, cwd: this.pluginDir });
+    const apis = this.apis;
+    const enginePython = this.settings.enginePython;
+    const probe = probeVersion(enginePython, { spawner: apis.spawner, clock: systemClock, hostEnv: process.env, cwd: this.pluginDir })
+      .then((gate) => {
+        // A later interpreter change supersedes this probe's result.
+        if (this.settings.enginePython === enginePython) this.gate = gate;
+        return this.settings.enginePython === enginePython ? gate : null;
+      })
+      .finally(() => {
+        if (this.gateProbe === probe) this.gateProbe = null;
+      });
+    this.gateProbe = probe;
+    return probe;
   }
 
   private openSetup(): void {
@@ -247,6 +297,11 @@ export default class MarkItDownFlowPlugin extends Plugin {
   }
 
   private async saveSettings(next: SettingsV2): Promise<void> {
+    if (this.settingsReadOnly) {
+      // REQ-SHL-03/05: never overwrite a newer schema or an unmigrated original.
+      this.notify('shell.SETTINGS');
+      return;
+    }
     this.settings = next;
     this.locale = resolveLocale(next.locale, hostLanguage());
     if (!this.store) return;

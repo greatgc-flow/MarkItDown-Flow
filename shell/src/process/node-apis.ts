@@ -2,7 +2,12 @@
  * Lazy Node/Electron API access (20_SHELL.md REQ-SHL-02): nothing here is
  * loaded before the single `Platform.isDesktop` guard in main.ts passes.
  * Tests mock this module to prove the mobile path loads no Node API.
+ *
+ * File selection uses the public DOM file input (dom-picker.ts) rather than
+ * the removed `electron.remote` dialog; absolute paths come from Electron's
+ * `webUtils.getPathForFile` with the legacy `File.path` as fallback.
  */
+import { pickWithDomInput, type PickerDocument } from './dom-picker';
 import { NodeSpawner } from './node-spawner';
 import type { FileSystemOps, Spawner } from './types';
 
@@ -13,9 +18,13 @@ export interface NodeApis {
   openFolder(path: string): Promise<void>;
   /** Clipboard text write for SetupModal copy buttons. */
   writeClipboard(text: string): Promise<void>;
-  /** Native open dialogs (Electron); null when the user cancels. */
+  /** False when the host offers no file input at all; callers must notify instead of silently doing nothing. */
+  pickerAvailable: boolean;
+  /** Native-looking open dialogs through the DOM file input; null when the user cancels. */
   pickFiles(): Promise<string[] | null>;
   pickFolder(): Promise<string | null>;
+  /** Absolute path of a `File` (drops/pickers); null when the host cannot provide one. */
+  filePath(file: unknown): string | null;
   homeDir(): string;
   platform: 'win32' | 'posix';
 }
@@ -26,12 +35,7 @@ type OsModule = typeof import('node:os');
 interface ElectronLike {
   shell?: { openPath(path: string): Promise<string> };
   clipboard?: { writeText(text: string): void };
-  remote?: { dialog?: ElectronDialog };
-  dialog?: ElectronDialog;
-}
-
-interface ElectronDialog {
-  showOpenDialog(options: { properties: string[] }): Promise<{ canceled: boolean; filePaths: string[] }>;
+  webUtils?: { getPathForFile(file: unknown): string };
 }
 
 function optionalRequire<T>(name: string): T | null {
@@ -117,19 +121,23 @@ class NodeFs implements FileSystemOps {
 
 let cached: NodeApis | null = null;
 
-/** Loads `node:child_process`, `node:fs`, `node:os` and the Electron shell on first call. */
+/** Loads `node:child_process`, `node:fs`, `node:os` and the Electron renderer module on first call. */
 export function loadNodeApis(): NodeApis {
   if (cached) return cached;
   const fsp = require('node:fs/promises') as FsPromises;
   const os = require('node:os') as OsModule;
   const electron = optionalRequire<ElectronLike>('electron');
-  const remote = electron?.remote ?? optionalRequire<{ dialog?: ElectronDialog }>('@electron/remote');
-  const dialog = remote?.dialog ?? electron?.dialog ?? null;
-  const pick = async (properties: string[]): Promise<string[] | null> => {
-    if (!dialog) return null;
-    const result = await dialog.showOpenDialog({ properties });
-    return result.canceled || result.filePaths.length === 0 ? null : result.filePaths;
+  const filePath = (file: unknown): string | null => {
+    try {
+      const resolved = electron?.webUtils?.getPathForFile(file);
+      if (typeof resolved === 'string' && resolved.length > 0) return resolved;
+    } catch {
+      // Fall through to the legacy field.
+    }
+    const legacy = (file as { path?: unknown }).path;
+    return typeof legacy === 'string' && legacy.length > 0 ? legacy : null;
   };
+  const doc: PickerDocument | null = typeof document !== 'undefined' ? (document as unknown as PickerDocument) : null;
   cached = {
     spawner: new NodeSpawner(),
     fs: new NodeFs(fsp),
@@ -140,8 +148,10 @@ export function loadNodeApis(): NodeApis {
       if (electron?.clipboard) electron.clipboard.writeText(text);
       else if (typeof navigator !== 'undefined' && navigator.clipboard) await navigator.clipboard.writeText(text);
     },
-    pickFiles: () => pick(['openFile', 'multiSelections']),
-    pickFolder: async () => (await pick(['openDirectory']))?.[0] ?? null,
+    pickerAvailable: doc !== null,
+    pickFiles: () => (doc ? pickWithDomInput(doc, 'files', filePath) : Promise.resolve(null)),
+    pickFolder: async () => (doc ? (await pickWithDomInput(doc, 'folder', filePath))?.[0] ?? null : null),
+    filePath,
     homeDir: () => os.homedir(),
     platform: process.platform === 'win32' ? 'win32' : 'posix',
   };

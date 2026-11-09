@@ -1,5 +1,50 @@
 # Changelog
 
+## 2.0.0 — Zero-base renewal (release candidate)
+
+Major version: a clean-room Obsidian shell (`shell/`) over a new Python engine
+(`mdflow`, `engine/`) built on `markitdown-gc` 0.3.5. Settings migrate from
+1.0.8 automatically (schema 2); see the README "Migration and operation"
+section for the rollback snapshot `data.v1.json` and the removals below.
+
+### Added
+
+- Engine CLI `mdflow run|plan|classify|version|selftest|providers|cache` with
+  deterministic classification (T/S/M), per-file OCR Plans and per-file
+  consent (`--yes HASH` / `--yes-file FILE`), progress JSON lines and a run
+  report; provider `none` (default, offline) and `openai-compatible`
+  (`MDFLOW_API_KEY` from the environment, Base URL from the plugin setting);
+  CLI-only `command` provider.
+- Plugin: one approval modal per selection showing the engine Plan per file
+  (destination, model, units, request budget, estimated maximum cost or
+  unknown, threshold/sensitive notices); files with nothing left to send are
+  informational. A status-bar item shows the job phase, optional progress
+  details and an always-visible Cancel (cooperative stop, forced after 5 s).
+- Diagnostics-only setup modal (version probe, provider variable presence,
+  copyable terminal bootstrap instructions); redacted plugin-local logs;
+  Korean and English UI.
+- Drop confirmation modal; file/folder pickers through the standard file
+  input; editable run options (DPI, minimum priority, max units, approval
+  threshold, sensitive globs).
+
+### Changed
+
+- Credentials are environment-only (`MDFLOW_API_KEY`); nothing secret is
+  persisted. The engine is a separately installed venv chosen by absolute
+  interpreter path; the plugin never installs or updates anything.
+- Outputs use the fixed `<name>.<ext>.md` naming with media beside them;
+  conversion history records outcomes (complete, pending consent, partial
+  failure, cancelled).
+- Settings written by a newer plugin version, or an unmigratable file, are
+  read-only; nothing is written back.
+
+### Removed
+
+- Audio/YouTube and URL conversion (the `convert-url` command shows guidance),
+  Azure Document Intelligence / Content Understanding routing, the image
+  pipeline router and its tuning, output/media name templates, auto tags and
+  frontmatter options, bundled Python wrapper, in-plugin credential fields.
+
 ## 0.1.0 — Initial fork
 
 First release of **MarkItDown Flow**, an Obsidian plugin that exposes the full

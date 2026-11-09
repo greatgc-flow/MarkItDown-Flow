@@ -6,6 +6,92 @@
  * against FX-71 in step 9. No golden is hand-written here: these are inputs.
  */
 import type { Plan, PlanUnit, RunReport } from '../../src/pure/protocol';
+import type { SpawnRequest } from '../../src/process/types';
+
+// ---------------------------------------------------------------------------- SPEC 10 invocation oracles (tests only)
+
+/** SPEC 10.1 subcommands the shell may ever invoke. */
+export const SPEC_COMMANDS: readonly string[] = ['plan', 'run', 'version', 'selftest'];
+
+/** SPEC 10.2 option tokens; anything else is an invented option and fails REQ-SHL-11. */
+export const SPEC_OPTIONS: readonly string[] = [
+  '-o', '--out', '--provider', '--model', '--dpi', '--prompt-version', '--yes', '--yes-file', '--approved-by',
+  '--approve-threshold', '--sensitive', '--min-priority', '--max-units', '--max-bytes', '--max-pixels',
+  '--zip-depth', '--zip-entries', '--zip-total-bytes', '--force', '--cache', '--progress', '--report',
+  '--command', '--command-egress', '--command-env', '--trust-command', '--cost-hint',
+];
+
+/** SPEC 10.2 options that take no value. */
+const FLAG_OPTIONS: ReadonlySet<string> = new Set(['--force', '--trust-command']);
+
+/** Options removed when comparing the `plan` invocation with its `run` replay. */
+const REPLAY_VARIANT_OPTIONS: ReadonlySet<string> = new Set(['-o', '--out', '--yes', '--yes-file', '--approved-by']);
+
+export interface InvocationViolation {
+  kind: 'module' | 'command' | 'option' | 'shell' | 'secret';
+  token: string;
+}
+
+/** REQ-SHL-11 oracle: every shell invocation is `-m mdflow <SPEC command>` with SPEC 10.2 options only. */
+export function invocationViolations(request: SpawnRequest): InvocationViolation[] {
+  const violations: InvocationViolation[] = [];
+  const { args } = request;
+  if ((request.shell as boolean) !== false) violations.push({ kind: 'shell', token: String(request.shell) });
+  if (args[0] !== '-m') violations.push({ kind: 'module', token: args[0] ?? '<missing -m>' });
+  if (args[1] !== 'mdflow') violations.push({ kind: 'module', token: args[1] ?? '<missing module>' });
+  const command = args[2];
+  if (!SPEC_COMMANDS.includes(command)) violations.push({ kind: 'command', token: command ?? '<missing command>' });
+  for (let i = 3; i < args.length; i++) {
+    const token = args[i];
+    if (!token.startsWith('-')) continue;
+    if (!SPEC_OPTIONS.includes(token)) {
+      violations.push({ kind: 'option', token });
+      continue;
+    }
+    if (!FLAG_OPTIONS.has(token) && i + 1 < args.length && !args[i + 1].startsWith('-')) i += 1;
+  }
+  return violations;
+}
+
+/** Arguments after `-m mdflow <command>` minus `-o X`, `--yes X`, `--yes-file X`, `--approved-by X`. */
+export function replayInvariantArgs(args: readonly string[]): string[] {
+  const out: string[] = [];
+  for (let i = 3; i < args.length; i++) {
+    const token = args[i];
+    if (REPLAY_VARIANT_OPTIONS.has(token)) {
+      if (i + 1 < args.length && !args[i + 1].startsWith('-')) i += 1;
+      continue;
+    }
+    out.push(token);
+  }
+  return out;
+}
+
+/** SPEC 10.2 `--yes-file` (approve.parse_yes_lines): one `plan_hash` per line; blank lines and `#` comments ignored. */
+export function parseYesFile(text: string): string[] {
+  return text
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0 && !line.startsWith('#'));
+}
+
+/** The approved hash list of an invocation: `--yes` values plus the `--yes-file` content when a reader is given. */
+export function approvedHashesIn(args: readonly string[], readFile?: (path: string) => string | null): string[] {
+  const hashes: string[] = [];
+  for (let i = 3; i < args.length; i++) {
+    const token = args[i];
+    const value = args[i + 1];
+    if (token === '--yes' && value !== undefined && /^[0-9a-f]{64}$/.test(value)) {
+      hashes.push(value);
+      i += 1;
+    } else if (token === '--yes-file' && value !== undefined) {
+      const text = readFile?.(value) ?? null;
+      if (text !== null) hashes.push(...parseYesFile(text));
+      i += 1;
+    }
+  }
+  return hashes;
+}
 
 export const HEX64_A = 'a'.repeat(64);
 export const HEX64_B = 'b'.repeat(64);

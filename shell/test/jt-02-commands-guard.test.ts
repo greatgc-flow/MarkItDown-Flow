@@ -38,8 +38,10 @@ function fakeApis(): FakeApis {
       openedFolders.push(folder);
     },
     writeClipboard: async () => undefined,
+    pickerAvailable: true,
     pickFiles: async () => null,
     pickFolder: async () => null,
+    filePath: () => null,
     homeDir: () => HOME,
     platform: process.platform === 'win32' ? 'win32' : 'posix',
     openedFolders,
@@ -57,7 +59,8 @@ async function loadPlugin(settings = settingsV2()): Promise<{ plugin: MarkItDown
   mockState.adapterFiles.set('.obsidian/plugins/markitdown-flow/data.json', text);
   mockState.adapterFolders.add('.obsidian/plugins/markitdown-flow');
   const plugin = new MarkItDownFlowPlugin(createApp(), testManifest());
-  await plugin.onload();
+  // Through the host lifecycle (`load` marks the component loaded so `unload` runs every registered cleanup).
+  await plugin.load();
   return { plugin, apis };
 }
 

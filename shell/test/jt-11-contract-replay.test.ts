@@ -8,12 +8,13 @@ import type { ApproveRequiredEvent, FrameResult, ProgressEvent } from '../src/pu
 import { JsonLinesFramer, MAX_LINE_BYTES } from '../src/pure/framing';
 import type { Plan, RunReport } from '../src/pure/protocol';
 import { EngineRun, type EngineResult } from '../src/process/engine-process';
-import { buildSpawnRequest, buildUtilityRequest, invocationViolations, snapshotJob, SPEC_COMMANDS, SPEC_OPTIONS } from '../src/process/launcher';
+import { APPROVED_BY_MODAL, buildSpawnRequest, buildUtilityRequest, snapshotJob } from '../src/process/launcher';
 import type { SpawnRequest } from '../src/process/types';
 import { FakeClock } from './fixtures/fake-clock';
 import { FakeFs, FakeSpoolFs } from './fixtures/fake-fs';
 import { chunksOf, FakeSpawner, type ScriptedChild } from './fixtures/fake-spawner';
 import { fx71Args, fx71Bytes, fx71Chunks, fx71Exit, fx71Lines, fx71Manifest, fx71Text } from './fixtures/fx71';
+import { invocationViolations, SPEC_COMMANDS, SPEC_OPTIONS } from './fixtures/protocol';
 import { abs, ENGINE_PYTHON, HOST_ENV, OPENAI_PROVIDER, PLUGIN_DIR, settingsV2, VAULT_ROOT } from './fixtures/shell-settings';
 
 const R = req('REQ-SHL-11');
@@ -92,7 +93,7 @@ it(R('JT-11 every recorded FX-71 invocation and every shell-built invocation use
   const snap = snapshotJob({ settings: settingsV2({ provider: { ...OPENAI_PROVIDER } }), inputs: [abs(CWD, 'inputs')], cwd: CWD, outDir: abs(VAULT_ROOT, 'out'), cacheDir: abs(PLUGIN_DIR, 'cache') });
   for (const request of [
     buildSpawnRequest(snap, 'plan', HOST_ENV),
-    buildSpawnRequest(snap, 'run', HOST_ENV, { yes: ['a'.repeat(64)], approvedBy: 'plugin:modal' }),
+    buildSpawnRequest(snap, 'run', HOST_ENV, { yesFile: abs(PLUGIN_DIR, 'consent', 'yes-0123456789abcdef.txt'), approvedBy: APPROVED_BY_MODAL }),
     buildUtilityRequest(ENGINE_PYTHON, 'version', HOST_ENV, CWD),
     buildUtilityRequest(ENGINE_PYTHON, 'selftest', HOST_ENV, CWD),
   ]) {

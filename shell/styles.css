@@ -52,3 +52,46 @@
   overflow-y: auto;
   font-size: var(--font-ui-smaller);
 }
+
+.mdflow-consent-informational {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+/* Status-bar job presenter (REQ-SHL-09/16): phase text, optional details, always a Cancel button. */
+.mdflow-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5em;
+}
+
+.mdflow-status-details {
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+}
+
+.mdflow-status-cancel {
+  font-size: var(--font-ui-smaller);
+  padding: 0 0.5em;
+  line-height: 1.4;
+}
+
+.mdflow-drop-files {
+  max-height: 40vh;
+  overflow-y: auto;
+  font-family: var(--font-monospace);
+  font-size: var(--font-ui-smaller);
+  word-break: break-all;
+}
+
+.mdflow-drop-buttons {
+  display: flex;
+  gap: 0.5em;
+  justify-content: flex-end;
+  margin-top: 1em;
+}
+
+.mdflow-settings-sensitive textarea {
+  min-height: 4em;
+  font-family: var(--font-monospace);
+}

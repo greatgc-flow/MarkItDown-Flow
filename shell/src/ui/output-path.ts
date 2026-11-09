@@ -3,7 +3,10 @@
  * (20_SHELL.md REQ-SHL-09). Platform-aware real paths, no bare string-prefix
  * check; nonexistent destinations resolve through the nearest existing ancestor.
  */
+import { comparablePath, joinPath } from '../pure/paths';
 import type { FileSystemOps, HostPlatform } from '../process/types';
+
+export { comparablePath, joinPath, separatorFor } from '../pure/paths';
 
 export type DestinationRejection = 'absolute' | 'traversal' | 'escape' | 'symlink' | 'invalid' | 'not_directory';
 
@@ -16,26 +19,6 @@ export interface PathOps {
   isDirectory: FileSystemOps['isDirectory'];
   isSymlink: FileSystemOps['isSymlink'];
   platform: HostPlatform;
-}
-
-export function separatorFor(platform: HostPlatform): string {
-  return platform === 'win32' ? '\\' : '/';
-}
-
-/** Join a base path and relative segments with the platform separator. */
-export function joinPath(platform: HostPlatform, base: string, ...segments: string[]): string {
-  const sep = separatorFor(platform);
-  let out = base.replace(/[\\/]+$/, '');
-  for (const segment of segments) {
-    for (const part of segment.split(/[\\/]+/)) if (part.length > 0) out += sep + part;
-  }
-  return out;
-}
-
-/** Comparable form of a real path: forward slashes, no trailing slash, case-folded on Windows. */
-export function comparablePath(platform: HostPlatform, path: string): string {
-  const slashed = path.replace(/\\/g, '/').replace(/\/+$/, '');
-  return platform === 'win32' ? slashed.toLowerCase() : slashed;
 }
 
 function isWithin(platform: HostPlatform, candidate: string, root: string): boolean {

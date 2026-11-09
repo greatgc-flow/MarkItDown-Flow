@@ -10,17 +10,18 @@
 import { req } from './req';
 import type { ConsentDecision, ConsentViewModel } from '../src/ui/consent-modal';
 import { ShellCoordinator, type CoordinatorDeps, type JobReport } from '../src/ui/coordinator';
-import { APPROVED_BY_MODAL, approvedHashesIn, parseYesFile, replayInvariantArgs } from '../src/process/launcher';
+import { APPROVED_BY_MODAL } from '../src/process/launcher';
 import type { SpawnRequest } from '../src/process/types';
 import { FakeClock, flush } from './fixtures/fake-clock';
 import { FakeFs, FakeSpoolFs } from './fixtures/fake-fs';
 import { chunksOf, FakeSpawner, type ScriptedChild } from './fixtures/fake-spawner';
 import { fx71Bytes, fx71Exit, fx71PlanObjects, fx71YesFile } from './fixtures/fx71';
-import { bytes, plan as syntheticPlan, planStdout } from './fixtures/protocol';
+import { approvedHashesIn, bytes, parseYesFile, plan as syntheticPlan, planStdout, replayInvariantArgs } from './fixtures/protocol';
 import { abs, HOST_ENV, KEY_VALUE, OPENAI_PROVIDER, PLUGIN_DIR, settingsV2, VAULT_ROOT } from './fixtures/shell-settings';
 import type { SettingsV2 } from '../src/pure/settings';
 
 const R = req('REQ-SHL-15');
+const R9 = req('REQ-SHL-09');
 
 const INPUT_ROOT = abs(VAULT_ROOT, 'inbox');
 const OUT = abs(VAULT_ROOT, 'markitdown-output');
@@ -208,6 +209,59 @@ it(R('JT-15 cache warming leaves the per-file hash stable: cold and warm Plans p
   const text = `# approved\n\n${approvable(warm).join('\n')}\n`;
   expect(parseYesFile(text)).toEqual(approvable(cold));
   expect(approvedHashesIn(['-m', 'mdflow', 'run', INPUT_ROOT, '-o', OUT, '--yes-file', 'x.txt', '--approved-by', APPROVED_BY_MODAL], () => text)).toEqual(approvable(cold));
+});
+
+it(R('JT-15 consent is asked only for files with requests to send: a warm plan lists cached files as informational and the yes-file holds exactly the hashes that need consent'), async () => {
+  const h = harness(remoteSettings, (request) => (request.args[2] === 'plan' ? recordedPlan('consent-4-plan-warm.stdout.json') : recordedRun('consent-6-warm')));
+  const report = await runJob(h);
+  expect(h.spawner.commands).toEqual(['plan', 'run']);
+  expect(h.consentCalls).toHaveLength(1);
+  const view = h.consentCalls[0];
+  expect(view.files.map((f) => [f.path, f.needsConsent])).toEqual([['b c.docx', false], ['memo.txt', false], ['sub/a.pdf', true], ['보고서/3분기 결산.pdf', true]]);
+  const warm = fx71PlanObjects('consent-4-plan-warm.stdout.json') as { plan_hash: string; approved: { provider: { egress: boolean } }; status: { requests_to_send: number } }[];
+  const needed = warm.filter((p) => p.approved.provider.egress && p.status.requests_to_send > 0).map((p) => p.plan_hash);
+  expect(needed).toHaveLength(2);
+  expect(h.yesFiles).toHaveLength(1);
+  expect(parseYesFile(h.yesFiles[0].text ?? '')).toEqual(needed);
+  expect(report.run?.outcome).toBe('complete');
+});
+
+it(R('JT-15 a plan with nothing left to send opens no modal and runs without any authorization argument'), async () => {
+  const cached = syntheticPlan('sub/a.pdf', 'd'.repeat(64), 2);
+  cached.status.units = { ...cached.status.units, eligible: 0, cached: 2 };
+  cached.status.requests_to_send = 0;
+  const h = harness(remoteSettings, (request) =>
+    request.args[2] === 'plan' ? { stdout: chunksOf(bytes(planStdout([cached])), 4096), exit: { code: 0, signal: null } } : recordedRun('consent-6-warm'),
+  );
+  await runJob(h);
+  expect(h.spawner.commands).toEqual(['plan', 'run']);
+  expect(h.consentCalls).toEqual([]);
+  expect(h.yesFiles).toEqual([]);
+  expect(h.spawner.requests[1].args).not.toContain('--yes-file');
+  expect(h.spawner.requests[1].args).not.toContain('--approved-by');
+});
+
+it(R9('JT-09 the destination is revalidated immediately before the run spawn: a destination swapped for an escaping symlink during consent refuses the run'), async () => {
+  const sibling = abs(`${VAULT_ROOT}2`, 'out');
+  const h: { current: Harness | null } = { current: null };
+  h.current = harness(
+    remoteSettings,
+    (request) => (request.args[2] === 'plan' ? recordedPlan('plan-mixed.stdout.json') : recordedRun('consent-5-approved')),
+    async (view) => {
+      const fs = (h.current as Harness).fs;
+      fs.directories.add(fs.norm(sibling));
+      fs.links.set(fs.norm(OUT), fs.norm(sibling));
+      return { approved: true, hashes: view.files.map((f) => f.planHash) };
+    },
+  );
+  const report = await runJob(h.current);
+  expect(h.current.spawner.commands).toEqual(['plan']);
+  expect(report.run).toBeNull();
+  expect(h.current.notices).toContain('shell.DESTINATION');
+  expect(h.current.yesFiles).toEqual([]);
+  expect(h.current.fs.mutations.filter((m) => /yes-/.test(m) && m.startsWith('write'))).toEqual([]);
+  expect(h.current.history).toEqual(['partial_failure']);
+  expect(h.current.coordinator.active).toBe(false);
 });
 
 it(R('JT-15 changed approved content or engine denial is displayed as pending for fresh review, never auto-approved or retried'), async () => {

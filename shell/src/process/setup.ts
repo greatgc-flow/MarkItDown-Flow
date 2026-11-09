@@ -4,7 +4,7 @@
  * for the user's own terminal. Nothing is installed, downloaded or executed as
  * a fallback interpreter.
  */
-import { type Env, keyPresence, type Presence, scrubEngineEnv } from '../pure/env';
+import { type Env, environmentDiagnostics, keyPresence, type Presence, scrubEngineEnv } from '../pure/env';
 import { diagnosticsCopy } from './log';
 import type { Clock, HostPlatform, Spawner, SpawnRequest } from './types';
 import { captureProbe, probeVersion, RELEASE_LOCK, VERSION_PROBE_TIMEOUT_MS, type VersionGate, type VersionPolicy } from './version-gate';
@@ -45,6 +45,8 @@ export interface SetupDiagnostics {
   bootstrapProbes: BootstrapProbe[];
   instructions: { windows: string; posix: string };
   apiKey: Presence;
+  /** Presence (never values) of every SPEC 10.2 provider variable in the Obsidian process. */
+  providerEnv: Record<string, Presence>;
   jobsEnabled: boolean;
   /** Redacted, code-only summary for the diagnostics copy button. */
   summary: string;
@@ -161,6 +163,7 @@ export async function collectSetupDiagnostics(deps: SetupDeps): Promise<SetupDia
     bootstrapProbes: probes,
     instructions,
     apiKey: keyPresence(deps.hostEnv),
+    providerEnv: environmentDiagnostics(deps.hostEnv),
     jobsEnabled: gate?.enabled === true,
     summary,
   };

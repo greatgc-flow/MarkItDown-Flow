@@ -30,7 +30,11 @@ export interface NormalizedHistory {
   skipped: number;
 }
 
-/** Facts the coordinator knows after a run ends; used to derive the outcome. */
+/**
+ * Facts the coordinator knows after a run ends; used to derive the outcome.
+ * Created output files are deliberately not an input: success is never
+ * inferred from a file on disk (REQ-SHL-07).
+ */
 export interface RunFacts {
   /** Engine exit per SPEC 10.3, or null when the process was force-terminated. */
   exit: number | null;
@@ -38,8 +42,6 @@ export interface RunFacts {
   filesOk: number;
   filesFailed: number;
   unitsPending: number;
-  /** Outputs created on disk. Must never by itself produce `complete`. */
-  outputsCreated: number;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

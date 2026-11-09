@@ -79,6 +79,8 @@ export class SetupModal extends Modal {
         for (const probe of d.bootstrapProbes) probes.createEl('li', { text: `${probe.command} ${probe.args.join(' ')}: ${probe.result}${probe.version ? ` ${probe.version}` : ''}` });
       }
       contentEl.createEl('p', { text: this.t('shell.setup.apiKey', { presence: d.apiKey }) });
+      const envList = contentEl.createEl('ul', { cls: 'mdflow-setup-env' });
+      for (const [name, presence] of Object.entries(d.providerEnv)) envList.createEl('li', { text: `${name}: ${presence}` });
       contentEl.createEl('p', { text: this.t('shell.setup.launchHint') });
       contentEl.createEl('p', { text: this.t('shell.setup.instructions') });
       contentEl.createEl('pre', { cls: 'mdflow-setup-commands', text: d.instructions.windows });

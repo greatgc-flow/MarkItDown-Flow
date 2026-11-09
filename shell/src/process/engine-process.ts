@@ -248,7 +248,6 @@ export class EngineRun<K extends 'report' | 'plan' = 'report'> {
       filesOk: runEnd && runEnd.ev === 'run_end' ? runEnd.files_ok : 0,
       filesFailed: runEnd && runEnd.ev === 'run_end' ? runEnd.files_failed : 0,
       unitsPending,
-      outputsCreated: 0,
     });
     if (outcome === 'complete' && (!stdout || !stdout.ok)) outcome = 'partial_failure';
 

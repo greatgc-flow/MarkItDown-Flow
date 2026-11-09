@@ -1,7 +1,8 @@
 /**
  * The single conversion coordinator every entry point shares (20_SHELL.md
  * REQ-SHL-08/09/14/15/16). One owned conversion per plugin instance; output
- * validation, diagnostics, consent, replay and cancellation live here.
+ * validation (before submit and again immediately before the `run` spawn),
+ * diagnostics, consent, replay, progress reporting and cancellation live here.
  */
 import { type Env, providerAvailability } from '../pure/env';
 import { type HistoryEntry, type HistoryOutcome } from '../pure/history';
@@ -10,12 +11,13 @@ import type { Plan, RunReport } from '../pure/protocol';
 import { defaultSettings, type SettingsV2 } from '../pure/settings';
 import type { SpoolFs } from '../pure/spool';
 import { EngineRun, type EngineResult } from '../process/engine-process';
-import { APPROVED_BY_MODAL, buildSpawnRequest, type JobSnapshot, renderYesFile, snapshotJob } from '../process/launcher';
+import { APPROVED_BY_MODAL, type Authorization, buildSpawnRequest, type JobSnapshot, renderYesFile, snapshotJob } from '../process/launcher';
 import type { RotatingLog } from '../process/log';
 import type { Clock, FileSystemOps, HostPlatform, Spawner } from '../process/types';
 import type { VersionGate } from '../process/version-gate';
 import { buildConsentView, type ConsentDecision, type ConsentViewModel } from './consent-modal';
 import { type DirEntry, joinPath, resolveDestination, selectImmediateFiles } from './output-path';
+import type { ProgressSink } from './progress';
 
 export type EntryPoint = 'command' | 'ribbon' | 'context-menu' | 'drop';
 
@@ -49,8 +51,8 @@ export interface CoordinatorDeps {
   pluginDir: string;
   locale: UiLocale;
   settings: () => SettingsV2;
-  /** Result of the version gate taken before jobs; null blocks with `shell.RUNTIME`. */
-  gate: () => VersionGate | null;
+  /** Result of the version gate taken before jobs (may be probed lazily); null blocks with `shell.RUNTIME`. */
+  gate: () => VersionGate | null | Promise<VersionGate | null>;
   /** Presents the single consent modal; tests inject a decision. */
   consent: (view: ConsentViewModel) => Promise<ConsentDecision>;
   notify: (key: string, params?: Record<string, string>) => void;
@@ -59,6 +61,8 @@ export interface CoordinatorDeps {
   log: RotatingLog | null;
   /** Random 16-hex nonce source for spool names. */
   nonce: () => string;
+  /** Progress/Cancel presenter (REQ-SHL-09/16); null in headless tests. */
+  progress?: ProgressSink | null;
 }
 
 export interface JobReport {
@@ -75,6 +79,17 @@ export const SPOOL_DIR_NAME = 'spool';
 export const CONSENT_DIR_NAME = 'consent';
 
 const APPROVAL_CODES: ReadonlySet<string> = new Set(['E_APPROVAL_REQUIRED', 'E_APPROVAL_DENIED']);
+
+/** SPEC 8.4 / approve.py: consent is required only when the provider has egress and requests remain to send. */
+export function needsConsent(plan: Plan): boolean {
+  return plan.approved.provider.egress && plan.status.requests_to_send > 0;
+}
+
+/** History display reference: the first path plus a count; never every absolute path (REQ-SHL-07). */
+export function historyInputLabel(inputs: readonly string[]): string {
+  if (inputs.length <= 1) return inputs[0] ?? '';
+  return `${inputs[0]} (+${inputs.length - 1})`;
+}
 
 export class ShellCoordinator {
   private job: Promise<JobReport> | null = null;
@@ -103,24 +118,31 @@ export class ShellCoordinator {
     return { accepted: false, diagnostic };
   }
 
-  /** Busy check, destination validation, snapshot; then starts the job (not awaited). */
-  async submit(selection: Selection, _entry: EntryPoint): Promise<SubmitResult> {
-    if (this.isActive) return this.refuse('shell.BUSY');
-    if (this.disposed) return this.refuse('shell.RUNTIME');
-    const gate = this.deps.gate();
-    if (!gate || !gate.enabled) return this.refuse('shell.RUNTIME');
-    const settings = this.deps.settings();
-    if (!settings.enginePython) return this.refuse('shell.RUNTIME');
-    if (selection.paths.length === 0) return this.refuse('shell.DESTINATION');
-
+  private async validateDestination(outputPath: string): Promise<string | null> {
     const { fs, platform } = this.deps;
-    const destination = await resolveDestination(this.deps.vaultRoot, settings.outputPath, {
+    const destination = await resolveDestination(this.deps.vaultRoot, outputPath, {
       realpath: (p) => fs.realpath(p),
       isDirectory: (p) => fs.isDirectory(p),
       isSymlink: (p) => fs.isSymlink(p),
       platform,
     });
-    if (!destination.ok) return this.refuse('shell.DESTINATION');
+    return destination.ok ? destination.absolute : null;
+  }
+
+  /** Busy check, version gate, destination validation, snapshot; then starts the job (not awaited). */
+  async submit(selection: Selection, entry: EntryPoint): Promise<SubmitResult> {
+    if (this.isActive) return this.refuse('shell.BUSY');
+    if (this.disposed) return this.refuse('shell.RUNTIME');
+    const settings = this.deps.settings();
+    if (!settings.enginePython) return this.refuse('shell.RUNTIME');
+    if (selection.paths.length === 0) return this.refuse('shell.DESTINATION');
+    const gate = await this.deps.gate();
+    if (!gate || !gate.enabled) return this.refuse('shell.RUNTIME');
+    if (this.isActive) return this.refuse('shell.BUSY');
+
+    const { fs, platform } = this.deps;
+    const outDir = await this.validateDestination(settings.outputPath);
+    if (outDir === null) return this.refuse('shell.DESTINATION');
 
     const request = this.buildRequest(selection);
     let inputs = request.inputs;
@@ -149,16 +171,18 @@ export class ShellCoordinator {
 
     let snapshot: JobSnapshot;
     try {
-      snapshot = snapshotJob({ settings: effective, inputs, cwd: request.cwd, outDir: destination.absolute, cacheDir: request.cacheDir });
+      snapshot = snapshotJob({ settings: effective, inputs, cwd: request.cwd, outDir, cacheDir: request.cacheDir });
     } catch {
       return this.refuse('shell.DESTINATION');
     }
 
     this.isActive = true;
     this.cancelled = false;
-    this.job = this.runJob(snapshot).finally(() => {
+    this.deps.progress?.begin(snapshot.provider.name !== 'none' ? 'plan' : 'run');
+    this.job = this.runJob(snapshot, entry).finally(() => {
       this.isActive = false;
       this.engine = null;
+      this.deps.progress?.end();
     });
     return { accepted: true, snapshot };
   }
@@ -200,6 +224,8 @@ export class ShellCoordinator {
   private async execute<K extends 'plan' | 'report'>(kind: K, request: ReturnType<typeof buildSpawnRequest>): Promise<EngineResult<K extends 'plan' ? Plan[] : RunReport> | null> {
     if (this.cancelled) return null;
     const run = new EngineRun(this.deps.spawner, request, { stdout: kind, spoolFs: this.deps.spoolFs, nonce: this.deps.nonce(), clock: this.deps.clock });
+    const progress = this.deps.progress;
+    if (progress) run.onEvent((event) => progress.event(event));
     this.engine = run as unknown as EngineRun<'plan'> | EngineRun<'report'>;
     run.start();
     const result = await run.done;
@@ -214,7 +240,7 @@ export class ShellCoordinator {
 
   private async record(snapshot: JobSnapshot, outcome: HistoryOutcome): Promise<void> {
     await this.deps.recordHistory({
-      inputFile: snapshot.inputs.join(', '),
+      inputFile: historyInputLabel(snapshot.inputs),
       outputFile: snapshot.outDir,
       timestamp: this.deps.clock.now(),
       success: outcome === 'complete',
@@ -222,13 +248,13 @@ export class ShellCoordinator {
     });
   }
 
-  private async runJob(snapshot: JobSnapshot): Promise<JobReport> {
+  private async runJob(snapshot: JobSnapshot, entry: EntryPoint): Promise<JobReport> {
     const report: JobReport = { snapshot, plan: null, run: null, decision: null, pendingShown: false };
     const remote = snapshot.provider.name !== 'none';
-    let authorization: { yesFile: string; approvedBy: typeof APPROVED_BY_MODAL } | null = null;
+    let authorization: Authorization | null = null;
     let yesFilePath: string | null = null;
 
-    await this.log({ stage: 'submit', count: snapshot.inputs.length, status: remote ? 'plan' : 'run' });
+    await this.log({ stage: 'submit', count: snapshot.inputs.length, status: `${entry}:${remote ? 'plan' : 'run'}` });
 
     if (remote) {
       const plan = await this.execute('plan', buildSpawnRequest(snapshot, 'plan', this.deps.hostEnv));
@@ -245,8 +271,9 @@ export class ShellCoordinator {
         return report;
       }
       const plans = plan.stdout.value;
-      const needingConsent = plans.filter((p) => p.approved.max_requests > 0);
+      const needingConsent = plans.filter(needsConsent);
       if (needingConsent.length > 0) {
+        this.deps.progress?.phase('consent');
         const view = buildConsentView(plans, snapshot.outDir);
         const decision = await Promise.race([this.deps.consent(view), this.cancelSignal()]);
         if (decision === null || this.cancelled) {
@@ -263,10 +290,12 @@ export class ShellCoordinator {
         const hashes = decision.hashes.filter((h) => approvable.has(h));
         const consentDir = joinPath(this.deps.platform, this.deps.pluginDir, CONSENT_DIR_NAME);
         yesFilePath = joinPath(this.deps.platform, consentDir, `yes-${this.deps.nonce()}-${this.deps.clock.now().toString(36)}.txt`);
-        await this.deps.fs.mkdir(consentDir);
-        await this.deps.fs.writeFile(yesFilePath, new TextEncoder().encode(renderYesFile(hashes)));
         authorization = { yesFile: yesFilePath, approvedBy: APPROVED_BY_MODAL };
         await this.log({ stage: 'approve', count: hashes.length, status: 'approved' });
+        // REQ-SHL-09: revalidate the destination immediately before the spawn; the plan/modal may have taken minutes.
+        if (!(await this.destinationStillValid(snapshot))) return this.refuseRun(snapshot, report);
+        await this.deps.fs.mkdir(consentDir);
+        await this.deps.fs.writeFile(yesFilePath, new TextEncoder().encode(renderYesFile(hashes)));
       }
     }
 
@@ -275,7 +304,9 @@ export class ShellCoordinator {
       await this.finishCancelled(snapshot);
       return report;
     }
+    if (!authorization && !(await this.destinationStillValid(snapshot))) return this.refuseRun(snapshot, report);
 
+    this.deps.progress?.phase('run');
     let run: EngineResult<RunReport> | null;
     try {
       run = await this.execute('report', buildSpawnRequest(snapshot, 'run', this.deps.hostEnv, authorization));
@@ -292,6 +323,19 @@ export class ShellCoordinator {
     if (run.outcome === 'complete') this.deps.notify('shell.notice.jobDone', { outcome: run.outcome });
     await this.log({ stage: 'run', code: run.startupError?.code, count: run.events.filter((e) => e.ev === 'file_end').length, status: `${run.termination}:${run.outcome}` });
     await this.record(snapshot, run.outcome);
+    return report;
+  }
+
+  /** The destination resolved at submit must still resolve to the same real vault location. */
+  private async destinationStillValid(snapshot: JobSnapshot): Promise<boolean> {
+    const outDir = await this.validateDestination(this.deps.settings().outputPath);
+    return outDir !== null && outDir === snapshot.outDir;
+  }
+
+  private async refuseRun(snapshot: JobSnapshot, report: JobReport): Promise<JobReport> {
+    this.deps.notify('shell.DESTINATION');
+    await this.log({ stage: 'run', status: 'destination_refused' });
+    await this.record(snapshot, 'partial_failure');
     return report;
   }
 

@@ -50,6 +50,7 @@ it(R('JT-14 per-file fields are copied from the engine Plans: hash, provider, mo
     thresholdExceeded: false,
     sensitiveHits: [],
     unknownCost: true,
+    needsConsent: true,
   });
   const korean = view.files[3];
   expect(korean.selectedUnits).toBe(3);
@@ -57,6 +58,18 @@ it(R('JT-14 per-file fields are copied from the engine Plans: hash, provider, mo
   expect(korean.approvedBudget).toBe(3);
   expect(view.requiresAcknowledgement).toBe(true);
   expect(view.billingNoticeKey).toBe('shell.consent.billing');
+  // memo.txt has nothing to send: listed for completeness, informational only (SPEC 8.4 / approve.py requests_to_send > 0).
+  expect(view.files[1].path).toBe('memo.txt');
+  expect(view.files[1].needsConsent).toBe(false);
+  const warm = buildConsentView(plans('consent-4-plan-warm.stdout.json'), DEST);
+  expect(warm.files.map((f) => [f.path, f.needsConsent])).toEqual([['b c.docx', false], ['memo.txt', false], ['sub/a.pdf', true], ['보고서/3분기 결산.pdf', true]]);
+  const modal = new ConsentModal(createApp(), warm, 'en');
+  modal.open();
+  const sections = asFake(modal.contentEl).findAll((el) => el.hasClass('mdflow-consent-file'));
+  expect(sections).toHaveLength(4);
+  expect(sections[0].textContent).toContain(dictionary('en')['shell.consent.informational']);
+  expect(sections[2].textContent).not.toContain(dictionary('en')['shell.consent.informational']);
+  modal.close();
 });
 
 it(R('JT-14 known cost is shown in USD from approved.est_max_cost, cached units are informational and never an authorization field'), () => {
@@ -74,10 +87,12 @@ it(R('JT-14 known cost is shown in USD from approved.est_max_cost, cached units 
   expect(warmView.files[0].cached).toBe(2);
   expect(coldView.files[0].cached).toBe(0);
   expect(warmView.files[0].requestsToSend).toBe(0);
-  const strip = (f: ConsentViewModel['files'][number]): Omit<typeof f, 'cached' | 'requestsToSend'> => {
-    const { cached: _c, requestsToSend: _r, ...rest } = f;
+  // `needsConsent` follows requests_to_send, so it is informational cache state too (SPEC 8.4), never part of the hash.
+  const strip = (f: ConsentViewModel['files'][number]): Omit<typeof f, 'cached' | 'requestsToSend' | 'needsConsent'> => {
+    const { cached: _c, requestsToSend: _r, needsConsent: _n, ...rest } = f;
     void _c;
     void _r;
+    void _n;
     return rest;
   };
   expect(warmView.files.map(strip)).toEqual(coldView.files.map(strip));

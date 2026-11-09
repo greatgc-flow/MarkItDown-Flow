@@ -3,8 +3,9 @@
  * files holding timestamp, stage, code, count and status only.
  */
 import { isKnownEngineCode } from '../pure/codes';
+import { joinPath } from '../pure/paths';
 import { type RedactOptions, redactText } from '../pure/redact';
-import type { FileSystemOps } from './types';
+import type { FileSystemOps, HostPlatform } from './types';
 
 export const LOG_FILE_LIMIT_BYTES = 1024 * 1024;
 export const LOG_FILE_COUNT = 5;
@@ -25,11 +26,6 @@ export interface LogRecord {
 
 const encoder = new TextEncoder();
 
-function joinPath(dir: string, name: string): string {
-  const separator = dir.includes('\\') && !dir.includes('/') ? '\\' : '/';
-  return dir.replace(/[\\/]+$/, '') + separator + name;
-}
-
 export class RotatingLog {
   private queue: Promise<void> = Promise.resolve();
   private dirReady = false;
@@ -38,7 +34,12 @@ export class RotatingLog {
     private readonly fs: FileSystemOps,
     private readonly dir: string,
     private readonly redact: RedactOptions,
+    private readonly platform: HostPlatform = process.platform === 'win32' ? 'win32' : 'posix',
   ) {}
+
+  private at(name: string): string {
+    return joinPath(this.platform, this.dir, name);
+  }
 
   /** Absolute owned log directory (the only folder `open-log-folder` opens). */
   get directory(): string {
@@ -70,19 +71,19 @@ export class RotatingLog {
       await this.fs.mkdir(this.dir);
       this.dirReady = true;
     }
-    const current = joinPath(this.dir, LOG_FILE_NAMES[0]);
+    const current = this.at(LOG_FILE_NAMES[0]);
     const size = (await this.fs.size(current)) ?? 0;
     if (size > 0 && size + bytes.length > LOG_FILE_LIMIT_BYTES) await this.rotate();
     await this.fs.appendFile(current, bytes);
   }
 
   private async rotate(): Promise<void> {
-    const oldest = joinPath(this.dir, LOG_FILE_NAMES[LOG_FILE_COUNT - 1]);
+    const oldest = this.at(LOG_FILE_NAMES[LOG_FILE_COUNT - 1]);
     if ((await this.fs.size(oldest)) !== null) await this.fs.remove(oldest);
     for (let i = LOG_FILE_COUNT - 2; i >= 0; i--) {
-      const from = joinPath(this.dir, LOG_FILE_NAMES[i]);
+      const from = this.at(LOG_FILE_NAMES[i]);
       if ((await this.fs.size(from)) === null) continue;
-      await this.fs.rename(from, joinPath(this.dir, LOG_FILE_NAMES[i + 1]));
+      await this.fs.rename(from, this.at(LOG_FILE_NAMES[i + 1]));
     }
   }
 }

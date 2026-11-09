@@ -1,6 +1,7 @@
 /**
  * Ribbon, optional context-menu actions and optional local-file drop
- * (20_SHELL.md REQ-SHL-08). All route through the shared coordinator.
+ * (20_SHELL.md REQ-SHL-08). All route through the shared coordinator; a drop
+ * shows its selection for confirmation before any work.
  */
 import { type EventRef, FileSystemAdapter, type Menu, Platform, type Plugin, type TAbstractFile, TFolder } from 'obsidian';
 import { formatMessage, type UiLocale } from '../pure/i18n';
@@ -10,11 +11,16 @@ import { joinPath } from './output-path';
 
 export const RIBBON_ICON = 'file-text';
 
+/** Absolute path of a dropped/picked `File`; null when the host cannot provide one. */
+export type PathResolver = (file: unknown) => string | null;
+
 export interface FilePicker {
   pickFiles(): Promise<string[] | null>;
   pickFolder(): Promise<string | null>;
   /** Selection confirmation shown before any work for drops. */
   confirmSelection(selection: Selection): Promise<boolean>;
+  /** Resolver for dropped files (Electron `webUtils.getPathForFile`); defaults to the legacy `File.path`. */
+  pathOf?: PathResolver;
 }
 
 export interface EntryPointRegistration {
@@ -45,18 +51,24 @@ function selectionFor(plugin: Plugin, files: TAbstractFile[]): Selection | null 
   return { kind: 'files', paths };
 }
 
+/** Legacy Electron `File.path` (removed upstream in Electron 32; Obsidian exposes `webUtils` instead). */
+export const legacyFilePath: PathResolver = (file) => {
+  const path = (file as { path?: unknown }).path;
+  return typeof path === 'string' && path.length > 0 ? path : null;
+};
+
 /** Local files only: returns null for text/URL drops so they are never intercepted. */
-export function selectionFromDrop(event: DragEvent): Selection | null {
+export function selectionFromDrop(event: DragEvent, pathOf: PathResolver = legacyFilePath): Selection | null {
   const transfer = event.dataTransfer;
   if (!transfer) return null;
   const types = Array.from((transfer.types ?? []) as ArrayLike<string>);
   if (!types.includes('Files')) return null;
-  const files = Array.from((transfer.files ?? []) as ArrayLike<{ path?: string; name?: string }>);
+  const files = Array.from((transfer.files ?? []) as ArrayLike<unknown>);
   if (files.length === 0) return null;
   const paths: string[] = [];
   for (const file of files) {
-    const path = typeof file.path === 'string' ? file.path : '';
-    if (path.length === 0) return null;
+    const path = pathOf(file);
+    if (!path) return null;
     paths.push(path);
   }
   return { kind: 'files', paths };
@@ -100,12 +112,13 @@ export function registerEntryPoints(
   let dropRegistered = false;
   if (settings.enableDragDrop) {
     const container = plugin.app.workspace.containerEl;
+    const pathOf = picker.pathOf ?? legacyFilePath;
     plugin.registerDomEvent(container, 'dragover', (event: DragEvent) => {
       const types = Array.from((event.dataTransfer?.types ?? []) as ArrayLike<string>);
       if (types.includes('Files')) event.preventDefault();
     });
     plugin.registerDomEvent(container, 'drop', (event: DragEvent) => {
-      const selection = selectionFromDrop(event);
+      const selection = selectionFromDrop(event, pathOf);
       if (!selection) return;
       event.preventDefault();
       event.stopPropagation();
