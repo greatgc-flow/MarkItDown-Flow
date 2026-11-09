@@ -11,7 +11,7 @@ import { JsonLinesFramer, type ProgressEvent } from '../src/pure/framing';
 import type { VersionGate } from '../src/process/version-gate';
 import { ShellCoordinator, type CoordinatorDeps } from '../src/ui/coordinator';
 import { resolveDestination, selectImmediateFiles, type DirEntry } from '../src/ui/output-path';
-import { summarizeProgress } from '../src/ui/progress';
+import { applyProgressEvent, emptyProgressSummary, summarizeProgress } from '../src/ui/progress';
 import { FakeClock, flush } from './fixtures/fake-clock';
 import { FakeFs, FakeSpoolFs } from './fixtures/fake-fs';
 import { FakeSpawner } from './fixtures/fake-spawner';
@@ -236,4 +236,76 @@ it(R('JT-09 progress details show stage, file counts and unit outcomes from even
   expect(partial.filesEnded).toBe(0);
   expect(partial.currentFile).toBe('b c.docx');
   expect(summarizeProgress([])).toEqual({ stage: null, currentFile: null, filesTotal: null, filesEnded: 0, unitsDone: 0, unitsPending: 0, unitsFailed: 0, filesAwaitingConsent: 0, exit: null });
+});
+
+const T = '2026-11-09T00:00:00+00:00';
+/** A `plan` process reports its own file_end units (pending work) before the `run` of the same job starts. */
+const PLAN_EVENTS: ProgressEvent[] = [
+  { v: 1, ev: 'run_start', ts: T, files: 7, provider: 'openai-compatible' },
+  { v: 1, ev: 'file_start', ts: T, file: 'x.pdf', index: 1, total: 7 },
+  { v: 1, ev: 'stage', ts: T, file: 'x.pdf', stage: 'plan', state: 'end' },
+  { v: 1, ev: 'file_end', ts: T, file: 'x.pdf', outputs: [], units: { total: 9, done: 0, pending: 9, failed: 0 } },
+  { v: 1, ev: 'run_end', ts: T, exit: 3, files_ok: 0, files_failed: 0, provider_calls: 0 },
+] as ProgressEvent[];
+const RUN_EVENTS: ProgressEvent[] = [
+  { v: 1, ev: 'run_start', ts: T, files: 1, provider: 'openai-compatible' },
+  { v: 1, ev: 'file_start', ts: T, file: 'x.pdf', index: 1, total: 1 },
+  { v: 1, ev: 'stage', ts: T, file: 'x.pdf', stage: 'write', state: 'end' },
+  { v: 1, ev: 'file_end', ts: T, file: 'x.pdf', outputs: ['x.pdf.md'], units: { total: 1, done: 1, pending: 0, failed: 0 } },
+] as ProgressEvent[];
+
+it(R('JT-09 a run_start resets the summary: Plan file_end units never leak into the Run counts of the same job (M4 P-01 / M3-V03)'), () => {
+  const mixed = summarizeProgress([...PLAN_EVENTS, ...RUN_EVENTS]);
+  const runOnly = summarizeProgress(RUN_EVENTS);
+  expect(runOnly).toEqual({ stage: 'write', currentFile: 'x.pdf', filesTotal: 1, filesEnded: 1, unitsDone: 1, unitsPending: 0, unitsFailed: 0, filesAwaitingConsent: 0, exit: null });
+  // Files ended can never exceed the files announced by the current run.
+  expect(mixed).toEqual(runOnly);
+  expect(mixed.filesEnded).toBeLessThanOrEqual(mixed.filesTotal as number);
+  // The Plan-only prefix still reports its own pending work (nothing is invented as done).
+  expect(summarizeProgress(PLAN_EVENTS)).toMatchObject({ filesTotal: 7, filesEnded: 1, unitsDone: 0, unitsPending: 9, exit: 3 });
+});
+
+it(R('JT-09 the incremental reducer applied event by event equals the whole-stream summary: no event history is needed to render progress (M4 P-01)'), () => {
+  const framer = new JsonLinesFramer();
+  const events: ProgressEvent[] = [...framer.push(fx71Bytes('approve-required.progress.jsonl')), ...framer.end()].flatMap((r) => (r.kind === 'event' ? [r.event] : []));
+  const incremental = emptyProgressSummary();
+  for (const [i, event] of events.entries()) {
+    const returned = applyProgressEvent(incremental, event);
+    // In-place, O(1) per event: the same object is returned and equals the reduce of the prefix.
+    expect(returned).toBe(incremental);
+    if (i % 17 === 0 || i === events.length - 1) expect(incremental).toEqual(summarizeProgress(events.slice(0, i + 1)));
+  }
+  expect(incremental).toEqual(summarizeProgress(events));
+  expect(emptyProgressSummary()).toEqual(summarizeProgress([]));
+});
+
+it(R('JT-09 a relative enginePython is refused as shell.RUNTIME before any spawn, never reported as a destination problem (M4 P-04)'), async () => {
+  const spawner = new FakeSpawner(() => ({ exit: { code: 0, signal: null } }));
+  const fs = new FakeFs({ directories: [VAULT_ROOT, abs(VAULT_ROOT, 'markitdown-output'), abs(VAULT_ROOT, 'inbox'), PLUGIN_DIR] });
+  const notices: string[] = [];
+  const deps: CoordinatorDeps = {
+    spawner,
+    fs,
+    spoolFs: new FakeSpoolFs(fs, abs(PLUGIN_DIR, 'spool')),
+    clock: new FakeClock(),
+    hostEnv: HOST_ENV,
+    platform: process.platform === 'win32' ? 'win32' : 'posix',
+    vaultRoot: VAULT_ROOT,
+    pluginDir: PLUGIN_DIR,
+    settings: () => settingsV2({ enginePython: 'venv/bin/python' }),
+    gate: () => ENABLED_GATE,
+    consent: async () => ({ approved: false }),
+    notify: (key) => {
+      notices.push(key);
+    },
+    recordHistory: async () => undefined,
+    log: null,
+    nonce: () => '0123456789abcdef',
+  };
+  const c = new ShellCoordinator(deps);
+  const result = await c.submit({ kind: 'files', paths: [abs(VAULT_ROOT, 'inbox', 'a.pdf')] }, 'command');
+  expect(result).toEqual({ accepted: false, diagnostic: 'shell.RUNTIME' });
+  expect(notices).toEqual(['shell.RUNTIME']);
+  expect(spawner.requests).toEqual([]);
+  expect(c.active).toBe(false);
 });

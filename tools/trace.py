@@ -8,6 +8,8 @@ import re
 import fnmatch
 import hashlib
 import os
+import subprocess
+import sys
 import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -302,21 +304,83 @@ def execution_registry_path(evidence: Path, junit_name: str) -> Path:
     return evidence / f'registry-{stem}.json'
 
 
+def collection_path(evidence: Path, junit_name: str) -> Path:
+    stem = junit_name.removeprefix('junit-').removesuffix('.xml')
+    return evidence / f'collection-{stem}.json'
+
+
+def suite_digest(root: Path) -> str:
+    """Bind collection to the candidate's tests, parameter builders and config."""
+    digest = hashlib.sha256()
+    paths = sorted((root / 'engine/tests').rglob('*.py'))
+    config = root / 'engine/pyproject.toml'
+    if config.is_file():
+        paths.append(config)
+    for path in paths:
+        digest.update(path.relative_to(root).as_posix().encode('utf-8') + b'\0')
+        digest.update(path.read_bytes() + b'\0')
+    return digest.hexdigest()
+
+
+def write_collection(path: Path, tests: list[dict], commit: str, *, root: Path = ROOT) -> None:
+    """Called by a separate, fixed full-root collection (or explicit synthetic tests)."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(dict(v=1, scope='engine/tests', commit=commit,
+        suite_sha256=suite_digest(root), tests=tests), ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+
+
+def collect_complete(destination: Path, commit: str, *, root: Path = ROOT) -> None:
+    """Collect the entire suite independently of the caller's files/nodeids/-k/-m.
+
+    Do not inherit pytest selection/plugin environment. This subprocess does not
+    execute tests, create a JUnit, or recurse into another collection subprocess.
+    """
+    environment = dict(os.environ)
+    for name in ('PYTEST_ADDOPTS', 'PYTEST_PLUGINS', 'MDFLOW_CI_TARGET'):
+        environment.pop(name, None)
+    environment['PYTEST_DISABLE_PLUGIN_AUTOLOAD'] = '1'
+    environment['GITHUB_SHA'] = commit
+    done = subprocess.run([sys.executable, '-B', '-I', '-m', 'pytest', 'engine/tests',
+        '--collect-only', '-q', '-p', 'no:cacheprovider',
+        '-o', 'addopts=--import-mode=importlib --strict-markers',
+        '--mdflow-collection-output=' + str(destination.resolve())],
+        cwd=root, env=environment, capture_output=True, text=True, encoding='utf-8', timeout=120)
+    if done.returncode:
+        raise ValueError('independent full collection failed: ' + done.stdout[-3000:] + done.stderr[-1000:])
+
+
 def write_execution_registry(evidence: Path, junit_name: str, tests: list[dict], commit: str) -> None:
     evidence.mkdir(parents=True, exist_ok=True)
+    canonical = collection_path(evidence, junit_name).read_bytes()
     execution_registry_path(evidence, junit_name).write_text(
-        json.dumps(dict(v=2, commit=commit, tests=tests), ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+        json.dumps(dict(v=3, commit=commit, tests=tests,
+            collection_sha256=hashlib.sha256(canonical).hexdigest()), ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
 
 
-def execution_receipt(evidence: Path, junit_name: str, expected_commit: str) -> tuple[list[dict], dict]:
+def execution_receipt(evidence: Path, junit_name: str, expected_commit: str, *, root: Path = ROOT) -> tuple[list[dict], dict]:
     """Read a candidate-bound collected inventory and exact, nonduplicated JUnit identities.
 
-    The inventory includes deselected parameters. Consumers select the required
-    source rows, so -k K01 cannot turn a 20-class test into one expected case.
+    Missing parameters are found against a separate complete collection, even
+    when restricted execution omitted them from both its registry and JUnit.
     """
     manifest = json.loads(execution_registry_path(evidence, junit_name).read_text(encoding='utf-8'))
-    if not isinstance(manifest, dict) or manifest.get('v') != 2 or not expected_commit or manifest.get('commit') != expected_commit:
+    if not isinstance(manifest, dict) or manifest.get('v') != 3 or not expected_commit or manifest.get('commit') != expected_commit:
         raise ValueError('collection registry version/commit differs')
+    canonical_bytes = collection_path(evidence, junit_name).read_bytes()
+    if manifest.get('collection_sha256') != hashlib.sha256(canonical_bytes).hexdigest():
+        raise ValueError('independent collection digest differs')
+    canonical = json.loads(canonical_bytes)
+    if (not isinstance(canonical, dict) or canonical.get('v') != 1 or canonical.get('scope') != 'engine/tests'
+            or canonical.get('commit') != expected_commit or canonical.get('suite_sha256') != suite_digest(root)):
+        raise ValueError('independent collection source/commit differs')
+    complete = canonical.get('tests')
+    if not isinstance(complete, list) or not complete or any(
+            not isinstance(t, dict) or not isinstance(t.get('nodeid'), str) or not isinstance(t.get('tid'), str)
+            for t in complete):
+        raise ValueError('malformed independent collection')
+    universe = {t['nodeid']: t for t in complete}
+    if len(universe) != len(complete):
+        raise ValueError('duplicate independent collection identity')
     tests = manifest['tests']
     if not isinstance(tests, list) or not tests:
         raise ValueError('empty collection registry')
@@ -326,6 +390,9 @@ def execution_receipt(evidence: Path, junit_name: str, expected_commit: str) -> 
     ids = [row['nodeid'] for row in tests]
     if len(ids) != len(set(ids)) or any(not isinstance(row.get('selected'), bool) for row in tests):
         raise ValueError('duplicate or malformed collection identity')
+    if any(t['nodeid'] not in universe or t['tid'] != universe[t['nodeid']]['tid'] or
+           t.get('markers', {}) != universe[t['nodeid']].get('markers', {}) for t in tests):
+        raise ValueError('execution identity differs from independent collection')
     selected = {row['nodeid']: row['tid'] for row in tests if row['selected']}
     actual = {}
     for case in ET.parse(evidence / junit_name).iter('testcase'):
@@ -336,7 +403,8 @@ def execution_receipt(evidence: Path, junit_name: str, expected_commit: str) -> 
         actual[nodeid] = not any(case.find(k) is not None for k in ('failure', 'error', 'skipped'))
     if not actual or set(actual) != set(selected):
         raise ValueError('JUnit differs from selected collection inventory')
-    return tests, actual
+    selection = {t['nodeid']: t['selected'] for t in tests}
+    return [dict(t, selected=selection.get(t['nodeid'], False)) for t in complete], actual
 
 
 def rows_passed(rows: list[dict], receipt: tuple[list[dict], dict]) -> bool:
@@ -503,7 +571,7 @@ def score(root: Path, evidence: Path, reviews: Path, expected_commit: str) -> di
     def engine_passed(filename, rows):
         if filename not in receipts:
             try:
-                receipts[filename] = execution_receipt(evidence, filename, expected_commit)
+                receipts[filename] = execution_receipt(evidence, filename, expected_commit, root=root)
             except (OSError, ValueError, KeyError, TypeError, ET.ParseError):
                 receipts[filename] = None
         return receipts[filename] is not None and rows_passed(rows, receipts[filename])

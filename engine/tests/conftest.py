@@ -75,6 +75,10 @@ def pytest_configure(config):
         config.addinivalue_line("markers", f"{name}(*args): {description}")
 
 
+def pytest_addoption(parser):
+    parser.addoption('--mdflow-collection-output', help='internal full-suite collection destination')
+
+
 @pytest.hookimpl(hookwrapper=True, tryfirst=True)
 def pytest_collection_modifyitems(config, items):
     # Snapshot before pytest's -k/-m filters: a passing subset cannot stand in
@@ -115,10 +119,17 @@ def pytest_collection_modifyitems(config, items):
     items[:] = selected
     if deselected:
         config.hook.pytest_deselected(items=deselected)
+    canonical = config.getoption('--mdflow-collection-output')
+    if canonical:
+        if not config.getoption('collectonly') or config.args != ['engine/tests']:
+            raise pytest.UsageError('canonical collection requires the full engine/tests root and --collect-only')
+        trace.write_collection(Path(canonical), records, os.environ.get('GITHUB_SHA', ''))
+        return
     trace.write_registry(REPO_ROOT, trace.requirement_registry(REPO_ROOT), records)
     junit = config.getoption('xmlpath')
     if junit:
         destination = Path(junit)
+        trace.collect_complete(trace.collection_path(destination.parent, destination.name), os.environ.get('GITHUB_SHA', ''))
         trace.write_execution_registry(destination.parent, destination.name, records, os.environ.get('GITHUB_SHA', ''))
 
 

@@ -293,14 +293,23 @@ def gate(response: dict) -> list[str]:
         problems.append("protocol")
     if response["triage_schema"] != 1:
         problems.append("triage_schema")
-    if not (2, 0, 0) <= version_tuple(response["mdflow"]) < (2, 1, 0):
+    from packaging.version import InvalidVersion, Version
+    def valid(text):
+        if not re.fullmatch(r'[0-9]+(?:\.[0-9]+)+(?:[A-Za-z0-9.+-]*)', text):
+            return False
+        try:
+            Version(text)
+            return True
+        except InvalidVersion:
+            return False
+    if not valid(response['mdflow']) or not (2, 0, 0) <= version_tuple(response["mdflow"]) < (2, 1, 0):
         problems.append("engine range")
-    if not (0, 3, 5) <= version_tuple(response["markitdown-gc"]) < (0, 4):
+    if not valid(response['markitdown-gc']) or not (0, 3, 5) <= version_tuple(response["markitdown-gc"]) < (0, 4):
         problems.append("Core range")
-    if not (3, 10) <= version_tuple(response["python"])[:2] < (3, 15):
+    if not valid(response['python']) or not (3, 10) <= version_tuple(response["python"])[:2] < (3, 15):
         problems.append("Python range")
     for key in ("pillow", "pypdfium2"):
-        if not re.fullmatch(r"[0-9]+(?:\.[0-9]+)+(?:[A-Za-z0-9.+-]*)", response[key]):
+        if not valid(response[key]):
             problems.append(f"{key} version is malformed")
         else:
             low, high = ((11, 0), (14, 0)) if key == 'pillow' else ((5, 0), (6, 0))

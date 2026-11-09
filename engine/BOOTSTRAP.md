@@ -23,9 +23,9 @@ py -3.14 -m venv 'C:\mdflow-venvs\2.0.0'
 if ($LASTEXITCODE -ne 0) { throw 'Wheel install failed' }
 & 'C:\mdflow-venvs\2.0.0\Scripts\python.exe' -m pip check
 if ($LASTEXITCODE -ne 0) { throw 'Dependency check failed' }
-& 'C:\mdflow-venvs\2.0.0\Scripts\python.exe' -m mdflow selftest
+& 'C:\mdflow-venvs\2.0.0\Scripts\python.exe' -I -m mdflow selftest
 if ($LASTEXITCODE -ne 0) { throw 'Engine selftest failed' }
-& 'C:\mdflow-venvs\2.0.0\Scripts\python.exe' -m mdflow version
+& 'C:\mdflow-venvs\2.0.0\Scripts\python.exe' -I -m mdflow version
 if ($LASTEXITCODE -ne 0) { throw 'Engine version check failed' }
 ```
 
@@ -37,8 +37,8 @@ cd '/path/to/mdflow-2.0.0-engine'
 python3.14 -m venv '/path/to/mdflow-venvs/2.0.0'
 '/path/to/mdflow-venvs/2.0.0/bin/python' -m pip install --only-binary=:all: --index-url https://pypi.org/simple './mdflow-2.0.0-py3-none-any.whl' 'markitdown-gc>=0.3.5,<0.4'
 '/path/to/mdflow-venvs/2.0.0/bin/python' -m pip check
-'/path/to/mdflow-venvs/2.0.0/bin/python' -m mdflow selftest
-'/path/to/mdflow-venvs/2.0.0/bin/python' -m mdflow version
+'/path/to/mdflow-venvs/2.0.0/bin/python' -I -m mdflow selftest
+'/path/to/mdflow-venvs/2.0.0/bin/python' -I -m mdflow version
 ```
 
 Set `enginePython` to the resulting absolute `Scripts/python.exe` or `bin/python`
@@ -76,7 +76,7 @@ the wheel; in a new venv on that target, from the download directory, run:
 ```sh
 '/path/to/reference-venv/bin/python' -m pip install --require-hashes --only-binary=:all: --index-url https://pypi.org/simple -r reference-requirements.txt
 '/path/to/reference-venv/bin/python' -m pip check
-'/path/to/reference-venv/bin/python' -m mdflow selftest
+'/path/to/reference-venv/bin/python' -I -m mdflow selftest
 ```
 
 This reference does not promise identical versions on other targets. Ordinary

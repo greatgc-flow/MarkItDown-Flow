@@ -156,7 +156,10 @@ jobs:
         if: ${{ always() }}
         with:
           name: release-verified-${{ matrix.os }}-py${{ matrix.python }}
-          path: build/trace/junit-release-*.xml
+          path: |
+            build/trace/junit-release-*.xml
+            build/trace/registry-release-*.json
+            build/trace/collection-release-*.json
           if-no-files-found: error
 
   accept-release:

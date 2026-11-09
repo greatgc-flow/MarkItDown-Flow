@@ -25,8 +25,11 @@ import { abs, ENGINE_PYTHON, HOST_ENV, PLUGIN_DIR, settingsV2, VAULT_ROOT } from
 
 const R = req('REQ-SHL-17');
 
-/** The recording host ran Python 3.15 (experimental per REQ-GEN-03); this policy admits it for the "actual response" checks. */
-const RECORDING_HOST_POLICY: VersionPolicy = { ...RELEASE_LOCK, pythonMaxExclusive: [3, 16, 0] };
+/**
+ * FX-71 was re-recorded on a supported host (Python 3.14, Core 0.3.6; M4 P-03 / X-11), so every
+ * "actual response" check below runs against the release policy itself; no widened policy remains.
+ */
+const RECORDING_HOST_POLICY: VersionPolicy = RELEASE_LOCK;
 
 function blocked(gate: VersionGate): { reason: string; field?: string } {
   if (gate.enabled) throw new Error('expected a blocked gate');
@@ -39,6 +42,10 @@ it(R('JT-17 the actual packaged version response passes the complete gate and ma
   expect(gate.enabled).toBe(true);
   if (!gate.enabled) return;
   expect(gate.info).toEqual(fx71Manifest().engine);
+  // Supported recording host (M4 P-03): Python 3.14.x inside the 3.10-3.14 policy, Core 0.3.6 reference baseline.
+  expect(releaseSegment(gate.info.python)).toEqual([3, 14, expect.any(Number)]);
+  expect(gate.info['markitdown-gc']).toBe('0.3.6');
+  expect(evaluateVersionResponse(fx71Text('version.json')).enabled).toBe(true);
   expect(gate.info.protocol).toBe(1);
   expect(gate.info.triage_schema).toBe(1);
   // R27: renderer/Pillow are compatibility ranges, not exact lock pins; the recorded CI identity lies inside them
@@ -109,6 +116,31 @@ it(R('JT-17 engine and Core ranges follow SPEC (engine >=2.0,<2.1 on the release
   expect(blocked(evaluateVersionResponse(withField('platform', ''), RECORDING_HOST_POLICY)).reason).toBe('platform');
   expect(blocked(evaluateVersionResponse(withField('pillow', 13), RECORDING_HOST_POLICY))).toEqual({ reason: 'bad_type', field: 'pillow' });
   for (const text of ['', 'not json', '[]', 'null', '{"mdflow": "2.0.0"} trailing']) expect(blocked(evaluateVersionResponse(text, RECORDING_HOST_POLICY)).reason).toMatch(/not_json|missing_field/);
+});
+
+it(R('JT-17 version syntax matches the package gate (test_pt_release.py): PEP 440-style suffixes are admitted, garbage suffixes and leading whitespace are rejected (M4 P-02 / M3-V04)'), () => {
+  // Same release segment on both sides for valid spellings.
+  for (const [text, segment] of [
+    ['5.15.1', [5, 15, 1]],
+    ['5.15.1rc1', [5, 15, 1]],
+    ['5.15.1.post1', [5, 15, 1]],
+    ['2.0.0.dev0', [2, 0, 0]],
+    ['3.14', [3, 14, 0]],
+    ['13.0.0+local', [13, 0, 0]],
+    ['1.2.3a1.dev4', [1, 2, 3]],
+  ] as const) {
+    expect({ text, segment: releaseSegment(text) }).toEqual({ text, segment });
+  }
+  // Rejected by `re.fullmatch(r"[0-9]+(?:\.[0-9]+)+(?:[A-Za-z0-9.+-]*)")` and therefore by the shell too.
+  for (const bad of ['5.15.1???', ' 5.15.1', '5.15.1 ', '5', 'v5.15.1', '5.15.1!', '5.15.1/2', '5..1', '', 'latest', '5.15.1\n']) {
+    expect({ bad, segment: releaseSegment(bad) }).toEqual({ bad, segment: null });
+  }
+  const base = JSON.parse(fx71Text('version.json')) as Record<string, unknown>;
+  const withField = (key: string, value: unknown): string => JSON.stringify({ ...base, [key]: value });
+  for (const bad of ['5.15.1???', ' 5.15.1']) expect(blocked(evaluateVersionResponse(withField('pypdfium2', bad)))).toEqual({ reason: 'pypdfium2', field: 'pypdfium2' });
+  for (const bad of ['3.14.2???', ' 3.14.2']) expect(blocked(evaluateVersionResponse(withField('python', bad)))).toEqual({ reason: 'python', field: 'python' });
+  for (const bad of ['2.0.0???', ' 2.0.0']) expect(blocked(evaluateVersionResponse(withField('mdflow', bad)))).toEqual({ reason: 'engine', field: 'mdflow' });
+  for (const good of ['5.15.1rc1', '5.15.1.post1']) expect(evaluateVersionResponse(withField('pypdfium2', good)).enabled).toBe(true);
 });
 
 async function probe(script: ScriptedChild, advanceMs = 0): Promise<{ gate: VersionGate; spawner: FakeSpawner; clock: FakeClock }> {

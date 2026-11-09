@@ -180,6 +180,59 @@ it(R4('JT-04 the Base URL field accepts https and loopback http only; a non-loop
   plugin.unload();
 });
 
+it(R4('JT-04 a refused text commit is never silent: one shell.settings.rejected notice and the field reverts to the persisted value (M4 P-05)'), async () => {
+  const { plugin, apis } = await loadPluginWith(mocked, settingsV2());
+  await tick();
+  const baselineSpawns = apis.spawner.requests.length;
+  const container = displayTab(plugin);
+  const rejected = (): number => noticesWith('shell.settings.rejected').length;
+  const cases: [string, string, string[]][] = [
+    [EN['shell.settings.enginePython'], ENGINE_PYTHON, ['venv/bin/python', 'python']],
+    [EN['shell.settings.outputPath'], 'markitdown-output', ['../outside', '/abs/out', 'C:\\vault\\out']],
+    [EN['shell.settings.baseUrl'], 'https://api.openai.com/v1', ['http://proxy.example/v1', 'http://127.1:11434/v1', 'nonsense']],
+    [EN['shell.settings.maxUnits'], '200', ['abc', '0', '-3', '1.5']],
+    [EN['shell.settings.approveThreshold'], '20', ['x', '-1']],
+  ];
+  let expected = 0;
+  for (const [label, persistedText, badValues] of cases) {
+    const input = controlFor(container, label);
+    for (const bad of badValues) {
+      input.value = bad;
+      input.dispatchEvent({ type: 'blur' });
+      await tick();
+      expected += 1;
+      expect({ label, bad, notices: rejected() }).toEqual({ label, bad, notices: expected });
+      // The field no longer shows text that was not saved.
+      expect({ label, bad, value: input.value }).toEqual({ label, bad, value: persistedText });
+    }
+    // Re-entering the same refused text after the revert is reported again (the revert reset the committed baseline).
+    input.value = badValues[0];
+    input.dispatchEvent({ type: 'keydown', key: 'Enter' });
+    await tick();
+    expected += 1;
+    expect(rejected()).toBe(expected);
+    expect(input.value).toBe(persistedText);
+  }
+  const saved = persisted();
+  expect(saved.enginePython).toBe(ENGINE_PYTHON);
+  expect(saved.outputPath).toBe('markitdown-output');
+  expect(saved.provider.baseUrl).toBe('https://api.openai.com/v1');
+  expect(saved.runOptions.maxUnits).toBe(200);
+  expect(saved.runOptions.approveThreshold).toBe(20);
+  // A refused interpreter is never probed.
+  expect(apis.spawner.requests).toHaveLength(baselineSpawns);
+  // An accepted commit produces no rejection notice and keeps its text.
+  const maxUnits = controlFor(container, EN['shell.settings.maxUnits']);
+  maxUnits.value = '50';
+  maxUnits.dispatchEvent({ type: 'blur' });
+  await tick();
+  expect(rejected()).toBe(expected);
+  expect(maxUnits.value).toBe('50');
+  expect(persisted().runOptions.maxUnits).toBe(50);
+  for (const locale of ['en', 'ko'] as const) expect(dictionary(locale)['shell.settings.rejected']?.length).toBeGreaterThan(0);
+  plugin.unload();
+});
+
 it(R4('JT-04 the context-menu, drop and language settings say they take effect after reload, and the drop toggle states its trade-off (M3 N-08/N-09)'), async () => {
   const { plugin } = await loadPluginWith(mocked, settingsV2());
   const container = displayTab(plugin);

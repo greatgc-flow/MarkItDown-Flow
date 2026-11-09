@@ -19,7 +19,10 @@ section for the rollback snapshot `data.v1.json` and the removals below.
   (destination, model, units, request budget, estimated maximum cost or
   unknown, threshold/sensitive notices); files with nothing left to send are
   informational. A status-bar item shows the job phase, optional progress
-  details and an always-visible Cancel (cooperative stop, forced after 5 s).
+  details (per run; Plan counts never carry into the Run) and an always-visible
+  Cancel (macOS/Linux: cooperative stop, forced after 5 s; Windows: every
+  Cancel is a forced termination without a conversion report, and the engine's
+  `mdflow-*` temporary folder may remain; see the README).
 - Diagnostics-only setup modal (version probe, provider variable presence,
   copyable terminal bootstrap instructions); redacted plugin-local logs;
   Korean and English UI.

@@ -1,6 +1,6 @@
 # MarkItDown-Flow v2 - Engine Specification (`mdflow`)
 
-Status: SPEC DRAFT-3.5 (authoritative for TDD). Binding inputs: `00_BRIEF.md`, `01_DECISIONS.md` R1-R25. Release/reference Core: **0.3.6** (2026-11-09); runtime range remains `>=0.3.5,<0.4`. Archived line-reference copies (see [reference note](ref/README.md)): `ref/markitdown-gc_GUIDE_0.3.5.md`, `ref/ocr_triage_0.3.5.py.txt` (line refs below are into that file). Scope: Python engine only. The Obsidian shell (`20_SHELL.md`) consumes only section 7 (JSON contracts), section 8.4 (consent) and section 10 (CLI) - the only engine/shell protocol (R19).
+Status: SPEC DRAFT-3.5 (authoritative for TDD). Binding inputs: `01_DECISIONS.md` R1-R28 (the DRAFT-1 brief `00_BRIEF.md` was superseded and removed; it survives in git history). Release/reference Core: **0.3.6** (2026-11-09); runtime range remains `>=0.3.5,<0.4`. Archived line-reference copies (see [reference note](ref/README.md)): `ref/markitdown-gc_GUIDE_0.3.5.md`, `ref/ocr_triage_0.3.5.py.txt` (line refs below are into that file). Scope: Python engine only. The Obsidian shell (`20_SHELL.md`) consumes only section 7 (JSON contracts), section 8.4 (consent) and section 10 (CLI) - the only engine/shell protocol (R19).
 
 Conventions: MUST/SHOULD per RFC 2119. Every normative rule has a stable ID `REQ-<AREA>-<NN>`; draft-1 ids `MAP-nn`, `ASM-Pn`, `SEC-nn` are aliases of `REQ-MAP-nn`, `REQ-ASM-Pn`, `REQ-SEC-nn`. Deleted rules keep their id with `(deleted draft-N, see changelog)`; nothing is renumbered. Values in `code` are literal.
 

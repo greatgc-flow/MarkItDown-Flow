@@ -9,9 +9,10 @@ import { req } from './req';
 import { asFake, asMockPlugin, createApp, fakeEl, mockState } from './__mocks__/obsidian';
 import type { ProgressEvent } from '../src/pure/framing';
 import { JsonLinesFramer } from '../src/pure/framing';
-import { dictionary } from '../src/pure/i18n';
+import { dictionary, formatMessage } from '../src/pure/i18n';
 import type { HistoryEntry } from '../src/pure/history';
 import type { SpawnRequest } from '../src/process/types';
+import type { VersionGate } from '../src/process/version-gate';
 import type { ConsentDecision } from '../src/ui/consent-modal';
 import { type CoordinatorDeps, type JobReport, ShellCoordinator } from '../src/ui/coordinator';
 import { JobStatusBar, type ProgressSink, summarizeProgress } from '../src/ui/progress';
@@ -54,11 +55,14 @@ function recordedRun(stem: string, blocked = false): ScriptedChild {
   };
 }
 
+const ENABLED_GATE: VersionGate = { enabled: true, info: { mdflow: '2.0.0', 'markitdown-gc': '0.3.5', pypdfium2: '5.15.1', pillow: '13.0.0', python: '3.14.0', platform: 'test', protocol: 1, triage_schema: 1 } };
+
 function harness(
   settings = settingsV2(),
   script: (request: SpawnRequest) => ScriptedChild = () => ({ blocked: true, exit: { code: 0, signal: null } }),
   consent: (view: unknown) => Promise<ConsentDecision> = async () => ({ approved: false }),
   showDetails = true,
+  gate: CoordinatorDeps['gate'] = () => ENABLED_GATE,
 ): Harness {
   const fs = new FakeFs({ directories: [VAULT_ROOT, OUT, INPUT_ROOT, PLUGIN_DIR] });
   const spawner = new FakeSpawner(script);
@@ -81,7 +85,7 @@ function harness(
     vaultRoot: VAULT_ROOT,
     pluginDir: PLUGIN_DIR,
     settings: () => settings,
-    gate: () => ({ enabled: true, info: { mdflow: '2.0.0', 'markitdown-gc': '0.3.5', pypdfium2: '5.15.1', pillow: '13.0.0', python: '3.14.0', platform: 'test', protocol: 1, triage_schema: 1 } }),
+    gate,
     consent,
     notify: (key) => {
       notices.push(key);
@@ -182,6 +186,132 @@ it(R9('JT-09 progress details render engine stage, file counts and unit outcomes
   expect(text).toContain(String(summary.unitsDone));
   expect(text).toContain(String(summary.unitsPending));
   expect(text).toContain(summary.stage as string);
+  h.coordinator.cancel();
+  await h.coordinator.current;
+});
+
+/** Progress a `plan` child reports on stderr before the job's `run` starts (distinctive counts: 7 files, 9 pending units). */
+const PLAN_PROGRESS = Buffer.from([
+  '{"v":1,"ev":"run_start","ts":"2026-11-09T00:00:00+00:00","files":7,"provider":"openai-compatible"}',
+  '{"v":1,"ev":"file_start","ts":"2026-11-09T00:00:00+00:00","file":"x.pdf","index":1,"total":7}',
+  '{"v":1,"ev":"file_end","ts":"2026-11-09T00:00:00+00:00","file":"x.pdf","outputs":[],"units":{"total":9,"done":0,"pending":9,"failed":0}}',
+  '{"v":1,"ev":"run_end","ts":"2026-11-09T00:00:00+00:00","exit":3,"files_ok":0,"files_failed":0,"provider_calls":0}',
+  '',
+].join('\n'));
+
+it(R9('JT-09 the status bar shows the current run only: Plan file_end units are discarded at the run_start of the same job, and no event history is kept (M4 P-01 / M3-V03)'), async () => {
+  let release: ((d: ConsentDecision) => void) | null = null;
+  const forwarded: ProgressEvent[] = [];
+  const h = harness(
+    settingsV2({ provider: { ...OPENAI_PROVIDER } }),
+    (request) => (subcommandOf(request) === 'plan'
+      ? { stderr: [new Uint8Array(PLAN_PROGRESS)], stdout: chunksOf(fx71Bytes('plan-mixed.stdout.json'), 4096), exit: { code: fx71Exit('plan-mixed.stdout.json'), signal: null } }
+      : recordedRun('consent-5-approved', true)),
+    () => new Promise<ConsentDecision>((resolve) => {
+      release = resolve;
+    }),
+  );
+  const original = h.bar.event.bind(h.bar);
+  h.bar.event = (event) => {
+    forwarded.push(event);
+    original(event);
+  };
+  await h.coordinator.submit({ kind: 'folder', paths: [INPUT_ROOT] }, 'ribbon');
+  for (let i = 0; i < 20 && release === null; i++) await flush();
+  expect(h.spawner.commands).toEqual(['plan']);
+  // The Plan phase displayed its own pending work; nothing was invented as done.
+  const planDetails = h.el.findAll((e) => e.hasClass('mdflow-status-details'))[0].textContent;
+  expect(planDetails).toContain('pending 9');
+  (release as unknown as ((d: ConsentDecision) => void) | null)?.({ approved: true, hashes: ['a'.repeat(64)] });
+  const runLines = fx71Lines('consent-5-approved.progress.jsonl').length;
+  for (let i = 0; i < 40 && forwarded.length < 4 + runLines; i++) await flush();
+  expect(h.spawner.commands).toEqual(['plan', 'run']);
+  const framer = new JsonLinesFramer();
+  const runEvents = [...framer.push(fx71Bytes('consent-5-approved.progress.jsonl')), ...framer.end()].flatMap((r) => (r.kind === 'event' ? [r.event] : []));
+  const run = summarizeProgress(runEvents);
+  expect(run).toMatchObject({ filesTotal: 4, filesEnded: 4, unitsPending: 0 });
+  const expectedText = formatMessage('en', 'shell.progress.details', {
+    stage: run.stage ?? '-',
+    filesEnded: String(run.filesEnded),
+    filesTotal: String(run.filesTotal),
+    done: String(run.unitsDone),
+    pending: String(run.unitsPending),
+    failed: String(run.unitsFailed),
+  });
+  const details = h.el.findAll((e) => e.hasClass('mdflow-status-details'));
+  expect(details).toHaveLength(1);
+  // Run-only counts (4/4, pending 0), not Plan + Run (5/4, pending 9).
+  expect(details[0].textContent).toBe(expectedText);
+  expect(details[0].textContent).not.toContain('files 5/');
+  // The presenter keeps an incremental summary, never the whole event history (bounded memory, linear work).
+  expect(Object.keys(h.bar)).not.toContain('events');
+  expect(cancelButtons(h.el)).toHaveLength(1);
+  h.coordinator.cancel();
+  await h.coordinator.current;
+});
+
+function deferredGate(): { gate: () => Promise<VersionGate>; release: (gate: VersionGate) => void } {
+  let release: ((gate: VersionGate) => void) | null = null;
+  const pending = new Promise<VersionGate>((resolve) => {
+    release = resolve;
+  });
+  return { gate: () => pending, release: (gate) => (release as unknown as (g: VersionGate) => void)(gate) };
+}
+
+it(R16('JT-16 Cancel while the admission still awaits the version gate prevents the launch: no spawn, not active, and a later submission is accepted (M4-V01)'), async () => {
+  const { gate, release } = deferredGate();
+  const h = harness(settingsV2(), undefined, undefined, true, gate);
+  const pending = h.coordinator.submit({ kind: 'files', paths: [abs(INPUT_ROOT, 'a.pdf')] }, 'command');
+  await flush();
+  expect(h.spawner.requests).toEqual([]);
+  h.coordinator.cancel();
+  release(ENABLED_GATE);
+  const result = await pending;
+  await flush();
+  expect(result).toEqual({ accepted: false, diagnostic: 'shell.CANCELLED' });
+  expect(h.spawner.requests).toEqual([]);
+  expect(h.coordinator.active).toBe(false);
+  expect(cancelButtons(h.el)).toEqual([]);
+  expect(h.history).toEqual([]);
+  // The cancelled admission does not poison the next one.
+  const later = await h.coordinator.submit({ kind: 'files', paths: [abs(INPUT_ROOT, 'b.pdf')] }, 'command');
+  expect(later.accepted).toBe(true);
+  await flush();
+  expect(h.spawner.requests).toHaveLength(1);
+  h.coordinator.cancel();
+  await h.coordinator.current;
+  expect(h.coordinator.active).toBe(false);
+});
+
+it(R16('JT-16 unload (dispose) while the admission still awaits the version gate prevents the launch and keeps the coordinator disposed (M4-V01)'), async () => {
+  const { gate, release } = deferredGate();
+  const h = harness(settingsV2(), undefined, undefined, true, gate);
+  const pending = h.coordinator.submit({ kind: 'files', paths: [abs(INPUT_ROOT, 'a.pdf')] }, 'command');
+  await flush();
+  h.coordinator.dispose();
+  release(ENABLED_GATE);
+  const result = await pending;
+  await flush();
+  expect(result).toEqual({ accepted: false, diagnostic: 'shell.RUNTIME' });
+  expect(h.spawner.requests).toEqual([]);
+  expect(h.coordinator.active).toBe(false);
+  expect(cancelButtons(h.el)).toEqual([]);
+  const afterDispose = await h.coordinator.submit({ kind: 'files', paths: [abs(INPUT_ROOT, 'b.pdf')] }, 'command');
+  expect(afterDispose).toEqual({ accepted: false, diagnostic: 'shell.RUNTIME' });
+  expect(h.spawner.requests).toEqual([]);
+});
+
+it(R16('JT-16 the control case: without Cancel the same deferred admission launches exactly one engine (M4-V01)'), async () => {
+  const { gate, release } = deferredGate();
+  const h = harness(settingsV2(), undefined, undefined, true, gate);
+  const pending = h.coordinator.submit({ kind: 'files', paths: [abs(INPUT_ROOT, 'a.pdf')] }, 'command');
+  await flush();
+  release(ENABLED_GATE);
+  const result = await pending;
+  await flush();
+  expect(result.accepted).toBe(true);
+  expect(h.spawner.requests).toHaveLength(1);
+  expect(h.coordinator.active).toBe(true);
   h.coordinator.cancel();
   await h.coordinator.current;
 });

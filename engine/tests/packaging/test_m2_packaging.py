@@ -89,6 +89,7 @@ def test_T_GEN_86_m2_missing_failed_or_wrong_commit_runtime_receipts_block_accep
                 ET.SubElement(props, 'property', name=key, value=record[key])
             filename = f'junit-engine-{target}-py{py}.xml'
             ET.ElementTree(suite).write(evidence / filename)
+            trace_module.write_collection(trace_module.collection_path(evidence, filename), [record], commit)
             trace_module.write_execution_registry(evidence, filename, [dict(record, selected=True)], commit)
             (evidence / f'runtime-{target}-py{py}.json').write_text(json.dumps(dict(installed=True, commit=commit)))
         for py in ('3.11', '3.12', '3.13'):

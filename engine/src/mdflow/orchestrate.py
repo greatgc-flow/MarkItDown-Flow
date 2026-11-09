@@ -20,6 +20,7 @@ from typing import Sequence
 
 from . import __version__, approve, assemble, classify, convert, ledger, plan, providers
 from . import render, report, select, sniff_io, transcribe, triage, write
+from . import runtime_temp
 
 DEFAULTS = dict(provider="none", model=None, dpi=200, min_priority="low", max_units=200,
                 approve_threshold=20, force=False, prompt_version="p1", max_bytes=209715200,
@@ -448,7 +449,7 @@ def run(roots: Sequence[Path], options: dict, *, provider=None,
             sources, value["skipped"] = pipeline.discover(roots)
             value["files"] = [_empty_file(s["sniff"]) for s in sources]
             pipeline.emit("run_start", files=len(sources), provider=provider.meta["name"])
-            with tempfile.TemporaryDirectory(prefix="mdflow-") as run_directory:
+            with runtime_temp.run_directory() as run_directory:
                 for index, (source, entry) in enumerate(zip(sources, value["files"]), 1):
                     directory = Path(run_directory) / str(index)
                     pipeline.emit("file_start", file=entry["path"], index=index, total=len(sources))

@@ -49,3 +49,25 @@ def test_T_META_03_golden_integrity_and_core_provenance(trace_module, repo_root)
 def test_T_META_04_matrix_cells_covered_or_reasoned_na(trace_module, repo_root, test_registry):
     problems = trace_module.matrix_problems(repo_root, test_registry)
     assert not problems, problems
+
+
+@pytest.mark.req("REQ-PKG-10")
+@pytest.mark.cov("S0", "FM10")
+@pytest.mark.fx("all")
+@pytest.mark.scope("schema")
+def test_T_META_05_no_stale_class_stage_na(trace_module, repo_root, test_registry):
+    """M4-H: a cell asserted by a real test must not also be declared N/A (stale registry)."""
+    import tomllib
+    declared = tomllib.loads((repo_root / "engine/tests/matrix.toml").read_text(encoding="utf-8"))
+    classes_of = trace_module.fixture_classes(repo_root)
+    covered = set()
+    for test in test_registry:
+        cov = test["markers"].get("cov", [])
+        if len(cov) != 1 or len(cov[0]) != 2:
+            continue
+        stage = cov[0][0]
+        covered |= {(k, stage) for k in trace_module.test_classes(test, classes_of, include_schema=True)}
+        covered |= trace_module.extra_cells(test, include_schema=True)
+    stale = sorted(f"{k}:{s}" for e in declared.get("class_stage", [])
+                   for k in e.get("classes", []) for s in e.get("stages", []) if (k, s) in covered)
+    assert not stale, f"stale N/A declarations also covered by tests: {stale}"

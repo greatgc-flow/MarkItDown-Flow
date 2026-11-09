@@ -39,8 +39,8 @@ const R = req('REQ-SHL-12');
 const CWD = engineWorkingDirectory(process.platform === 'win32' ? 'win32' : 'posix', ENGINE_PYTHON);
 const INPUT_ROOT = abs(VAULT_ROOT, 'inbox');
 const PLATFORM = process.platform === 'win32' ? 'win32' : 'posix';
-/** FX-71 `version.json` was recorded on Python 3.15 (X-11); admit it for the spawn-shape checks below. */
-const RELEASE_LOCK_FOR_RECORDING: VersionPolicy = { ...RELEASE_LOCK, pythonMaxExclusive: [3, 16, 0] };
+/** FX-71 `version.json` is recorded on a supported host (Python 3.14, X-11 closed in M4): the release policy admits it as is. */
+const RELEASE_LOCK_FOR_RECORDING: VersionPolicy = RELEASE_LOCK;
 const OUT_DIR = abs(VAULT_ROOT, 'markitdown-output');
 const CACHE_DIR = abs(PLUGIN_DIR, 'cache');
 const HASH_A = 'a80d66b3fa9f7d95ecc3dba770b6eaf01cd8ddd4934e5d0c66d31ea703b5efda';

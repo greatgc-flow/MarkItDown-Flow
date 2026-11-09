@@ -125,6 +125,7 @@ Cell = primary `S<stage>:FM<n>` (section 5).
 | T-META-02 | REQ-PKG-10 (marker/id grammar, manifest closure, plan-vs-marker diff) | all | S0:FM10 |
 | T-META-03 | REQ-CLS-05 (GOLDEN.lock integrity, Core version) | all | S0:FM10 |
 | T-META-04 | REQ-PKG-10 (matrix cells covered-or-N/A) | all | S0:FM10 |
+| T-META-05 | REQ-PKG-10 (no class x stage cell is both covered and declared N/A) | all | S0:FM10 |
 | T-GEN-01 | REQ-GEN-01 | - | S0:FM0 |
 | T-GEN-02 | REQ-GEN-02 | - | S0:FM10 |
 | T-GEN-03 | REQ-GEN-03 | - | S0:FM0 |
@@ -479,6 +480,12 @@ Every REQ id defined in `10_SPEC.md` (incl. new REQ-SNF-09), `20_SHELL.md` (SHL-
 | T-META-92 | REQ-PKG-10, REQ-PLN-01 | M3: handoff and class-specific Plan catalog reflect current ownership. |
 | T-META-94 | REQ-PKG-03, REQ-GEN-10 | M3: lower compatible Core endpoint checks the Core 0.3.6 reference seal without relabelling it. |
 | T-GEN-92 | REQ-PKG-09, REQ-PKG-01 | M3: observe recorder child argv with -I, excluding work-directory modules and source environment injection. |
+| T-CLS-91 | REQ-CLS-06, REQ-GEN-07 | M4: numeric candidate id is refused without losing a sibling. |
+| T-GEN-93 | REQ-GEN-09, REQ-RND-05 | M4: temp recovery preserves live and unowned trees. |
+| T-GEN-94 | REQ-GEN-09, REQ-RND-05 | M4: native death releases the temp lease; the next run recovers. |
+| T-GEN-95 | REQ-GEN-09, REQ-RND-05 | M4: temp recovery never follows links or bad owner records. |
+| T-META-95 | REQ-PKG-05, REQ-PKG-17 | M4: all bootstrap engine probes are isolated and evidence is explicit. |
+| T-META-96 | REQ-PKG-10, REQ-PKG-17 | M4: a restricted collection cannot define the complete inventory. |
 
 ## 5. Generated MECE matrices
 
@@ -522,7 +529,7 @@ Rule: step-N code is not merged before its tests exist red; step N+1 does not st
 
 Open items (DRAFT-3 sync):
 1. The shell code table (20_SHELL 6) now matches SPEC 7.5 by inspection (28 E_, 22 W_); `JT-SHL-19-01` is the authority and was not run.
-2. `SYNC-AFTER-DRAFT-3` markers remain in 20_SHELL/25_PACKAGING; FX-71 fixtures must be regenerated from the real DRAFT-3 engine, and JT-12..17 / PT-06 / PT-08 stay unverified until then.
+2. FX-71 fixtures are recordings of the real engine (SPEC DRAFT-3.5); re-recording on the release host is tracked as E-10 in 90_ACCEPTANCE section 7 (External evidence pending).
 3. TODO-VERIFY carried from 20/25, not settleable by tests: actual target installs and generated license review (PT-04; release/reference baseline Core 0.3.6), Windows signal/blocked-request behavior (JT-16 on real Windows runners), attestation eligibility (PT-13), terminal env launch commands per OS (PT-22), Obsidian min/current versions (MAN-04).
 4. REQ-PKG-18/19/21 describe post-publication procedures; pre-release only their tooling is testable (PT-18/19/21). Real post-deploy evidence goes to the acceptance report, unscored.
 5. Cross-OS `plan_hash` equality holds only for equal raster bytes (SPEC 10.4); T-PLN-02 asserts per-OS goldens, cross-OS equality only for pass-through PNG/JPEG fixtures (FX-09, FX-10).

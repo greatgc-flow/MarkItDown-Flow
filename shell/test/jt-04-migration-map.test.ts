@@ -219,6 +219,45 @@ it(R('JT-04 a persisted Base URL follows the engine rule (https, or http for loo
   expect(isAcceptableBaseUrl('not a url')).toBe(false);
 });
 
+it(R('JT-04 the Base URL rule is the engine\'s raw-text rule, not the WHATWG-normalised one: loopback aliases and an empty userinfo are refused up front (M4 P-06 / M4-V03)'), () => {
+  // `openai_compat.canonical_destination` compares the literal host token with {localhost, 127.0.0.1, ::1} and rejects any `@` in the netloc.
+  const refusedByEngine = [
+    'http://127.1:11434/v1',
+    'http://2130706433:11434/v1',
+    'http://0x7f000001:11434/v1',
+    'http://0177.0.0.1/v1',
+    'http://127.0.0.1./v1',
+    'https://@api.openai.com/v1',
+    'http://@localhost:11434/v1',
+    'https://api.openai.com@evil.example/v1',
+  ];
+  for (const bad of refusedByEngine) {
+    expect({ bad, accepted: isAcceptableBaseUrl(bad) }).toEqual({ bad, accepted: false });
+    const reset = migrateSettings({ schemaVersion: 2, provider: { name: 'openai-compatible', model: 'm', baseUrl: bad } });
+    expect({ bad, baseUrl: reset.settings?.provider.baseUrl }).toEqual({ bad, baseUrl: 'https://api.openai.com/v1' });
+    expect(reset.items).toContainEqual({ key: 'provider', action: 'reset', count: 1 });
+  }
+  // Spellings the engine accepts stay accepted (hostname is lower-cased on both sides; any https host; IPv6 loopback in brackets).
+  for (const good of ['http://127.0.0.1:11434/v1', 'http://LOCALHOST:8080/v1', 'http://[::1]:11434/v1', 'https://0x7f000001/v1', 'https://proxy.example:8443/v1/']) {
+    expect({ good, accepted: isAcceptableBaseUrl(good) }).toEqual({ good, accepted: true });
+  }
+});
+
+it(R('JT-04 a relative or non-path enginePython on disk is reset to unset with a notice item, exactly like the settings tab refuses it (M4 P-04)'), () => {
+  for (const relative of ['venv/bin/python', 'Scripts\\python.exe', 'python', './venv/bin/python', '~/venv/bin/python']) {
+    const result = migrateSettings({ schemaVersion: 2, enginePython: relative });
+    expect({ relative, enginePython: result.settings?.enginePython }).toEqual({ relative, enginePython: null });
+    expect(result.items).toContainEqual({ key: 'enginePython', action: 'reset', count: 1 });
+    expect(JSON.stringify(result)).not.toContain(relative);
+  }
+  for (const absolute of ['/home/alice/venvs/mdflow/bin/python', 'C:\\mdflow-venvs\\2.0.0\\Scripts\\python.exe', '\\\\server\\share\\venv\\Scripts\\python.exe']) {
+    const result = migrateSettings({ schemaVersion: 2, enginePython: absolute });
+    expect(result.settings?.enginePython).toBe(absolute);
+    expect(result.items).toEqual([]);
+  }
+  expect(migrateSettings({ schemaVersion: 2, enginePython: null }).items).toEqual([]);
+});
+
 it(R('JT-04 runOptions and locale use SPEC 10.2 validation; invalid values reset to defaults'), () => {
   const result = migrateSettings({
     schemaVersion: 2,

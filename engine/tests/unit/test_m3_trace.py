@@ -7,7 +7,9 @@ import pytest
 
 @pytest.mark.req('REQ-PKG-10', 'REQ-PKG-17', 'REQ-PKG-08')
 @pytest.mark.cov('S0', 'FM10')
-@pytest.mark.parametrize('mutation', ['omit', 'duplicate', 'wrong_parameter', 'skip', 'fail', 'stale', 'missing_registry'])
+@pytest.mark.parametrize('mutation', ['omit', 'duplicate', 'wrong_parameter', 'skip', 'fail', 'stale',
+    'missing_registry', 'omit_both', 'only_one', 'missing_collection', 'stale_collection',
+    'changed_source', 'collection_tamper', 'duplicate_collection'])
 def test_T_META_90_m3_score_requires_each_collected_parameter(trace_module, tmp_path, monkeypatch, mutation):
     commit = 'a' * 40
     base = 'engine/tests/stage_io/test_class_sweep.py::test_T_GEN_85_class_sweep'
@@ -42,8 +44,8 @@ def test_T_META_90_m3_score_requires_each_collected_parameter(trace_module, tmp_
         for py in ('3.10', '3.14'):
             filename = f'junit-engine-{runner}-py{py}.xml'
             receipt(filename, nodes)
-            manifest = dict(v=2, commit=commit, tests=nodes)
-            (evidence / filename.replace('junit-', 'registry-').replace('.xml', '.json')).write_text(json.dumps(manifest))
+            trace_module.write_collection(trace_module.collection_path(evidence, filename), nodes, commit, root=tmp_path)
+            trace_module.write_execution_registry(evidence, filename, nodes, commit)
     score = lambda: trace_module.score(tmp_path, evidence, tmp_path / 'reviews', commit)
     assert all(g['result'] == 'PASS' for g in score()['automated']), 'complete parameter inventory is the positive control'
     filename = 'junit-engine-windows-2022-py3.10.xml'
@@ -51,6 +53,12 @@ def test_T_META_90_m3_score_requires_each_collected_parameter(trace_module, tmp_
     changed = list(nodes)
     if mutation == 'omit':
         changed = [n for n in nodes if not n['nodeid'].endswith('[K09]')]
+    elif mutation == 'omit_both':
+        changed = [n for n in nodes if not n['nodeid'].endswith('[K09]')]
+        trace_module.write_execution_registry(evidence, filename, changed, commit)
+    elif mutation == 'only_one':
+        changed = nodes[:1]
+        trace_module.write_execution_registry(evidence, filename, changed, commit)
     elif mutation == 'duplicate':
         changed[8] = nodes[0]
     elif mutation == 'wrong_parameter':
@@ -60,7 +68,22 @@ def test_T_META_90_m3_score_requires_each_collected_parameter(trace_module, tmp_
         ET.SubElement(list(suite)[8], 'skipped' if mutation == 'skip' else 'failure')
         ET.ElementTree(suite).write(evidence / filename)
     elif mutation == 'stale':
-        registry.write_text(json.dumps(dict(v=2, commit='b' * 40, tests=nodes)))
+        trace_module.write_execution_registry(evidence, filename, nodes, 'b' * 40)
     elif mutation == 'missing_registry':
         registry.unlink()
+    elif mutation == 'missing_collection':
+        trace_module.collection_path(evidence, filename).unlink()
+    elif mutation == 'stale_collection':
+        trace_module.write_collection(trace_module.collection_path(evidence, filename), nodes, 'b' * 40, root=tmp_path)
+        trace_module.write_execution_registry(evidence, filename, nodes, commit)
+    elif mutation == 'changed_source':
+        source = tmp_path / 'engine/tests/new.py'
+        source.parent.mkdir(parents=True)
+        source.write_text('# changed candidate test source\n')
+    elif mutation == 'collection_tamper':
+        path = trace_module.collection_path(evidence, filename)
+        path.write_bytes(path.read_bytes() + b' ')
+    elif mutation == 'duplicate_collection':
+        trace_module.write_collection(trace_module.collection_path(evidence, filename), [*nodes, nodes[0]], commit, root=tmp_path)
+        trace_module.write_execution_registry(evidence, filename, nodes, commit)
     assert all(g['result'] == 'FAIL' for g in score()['automated']), mutation

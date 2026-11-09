@@ -14,7 +14,8 @@ import { fx71Bytes, fx71Exit } from './fixtures/fx71';
 import { ENGINE_PYTHON, HOST_ENV, KEY_VALUE, PLUGIN_DIR } from './fixtures/shell-settings';
 
 const R = req('REQ-SHL-20');
-const POLICY: VersionPolicy = { ...RELEASE_LOCK, pythonMaxExclusive: [3, 16, 0] };
+/** FX-71 is recorded on a supported host (Python 3.14, M4 P-03): the release policy is used unchanged. */
+const POLICY: VersionPolicy = RELEASE_LOCK;
 
 function script(selftestExit = fx71Exit('selftest.json')): (request: SpawnRequest) => ScriptedChild {
   return (request) => {

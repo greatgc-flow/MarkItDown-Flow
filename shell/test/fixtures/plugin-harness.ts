@@ -10,7 +10,7 @@ import MarkItDownFlowPlugin from '../../src/main';
 import { createApp, mockState, testManifest } from '../__mocks__/obsidian';
 import { FakeFs } from './fake-fs';
 import { FakeSpawner, type ScriptedChild, subcommandOf } from './fake-spawner';
-import { fx71Text } from './fx71';
+import { fx71Bytes } from './fx71';
 import { HOME, VAULT_ROOT } from './shell-settings';
 
 export const PLUGIN_DATA_PATH = '.obsidian/plugins/markitdown-flow/data.json';
@@ -20,10 +20,9 @@ export interface FakeApis extends NodeApis {
   openedFolders: string[];
 }
 
-/** The recorded `version` response with the interpreter inside the tested 3.10-3.14 policy range. */
+/** The recorded `version` response verbatim: FX-71 is recorded on a supported Python 3.14 host (M4 P-03), inside the release policy. */
 export function versionWithinPolicy(): Uint8Array {
-  const base = JSON.parse(fx71Text('version.json')) as Record<string, unknown>;
-  return new TextEncoder().encode(JSON.stringify({ ...base, python: '3.14.2' }));
+  return fx71Bytes('version.json');
 }
 
 /** `version` -> policy-admitted response; anything else exits 0 without output unless overridden. */

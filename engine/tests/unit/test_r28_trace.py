@@ -49,6 +49,7 @@ def test_T_META_54_r27_reference_score_requires_reference_execution_not_matrix_s
         if outcome:
             ET.SubElement(case, outcome)
         ET.ElementTree(suite).write(evidence / name, encoding='utf-8')
+        trace_module.write_collection(trace_module.collection_path(evidence, name), [record], commit, root=tmp_path)
         trace_module.write_execution_registry(evidence, name, [dict(record, selected=True)], commit)
 
     for os in ('windows-2022', 'ubuntu-24.04', 'macos-15-intel'):

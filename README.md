@@ -18,9 +18,11 @@ partially typed path. Keep the venv at its original location.
 
 The plugin always launches that interpreter in isolated mode
 (`python -I -X utf8 -m mdflow ...`) with the venv directory as working
-directory, never the vault. Isolated mode ignores `PYTHONPATH`, the user
-site-packages and the current directory, so files inside a vault (including a
-synced or downloaded vault) can never be imported in place of the engine or its
+directory, not the vault or the plugin folder (if you created the venv inside
+your vault, that venv directory is the working directory; it is still not on
+the import path). Isolated mode ignores `PYTHONPATH`, the user site-packages
+and the current directory, so files inside a vault (including a synced or
+downloaded vault) can never be imported in place of the engine or its
 libraries. Use the same `-I` form in your own scripts.
 
 ## Network services and purpose
