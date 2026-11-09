@@ -1,14 +1,16 @@
 /**
  * JT-17 / REQ-SHL-17: the complete SPEC 10.1 `version` response gates jobs.
  * FX-71 `version.json` is the actual packaged response; derived variants
- * remove or alter one field each. Protocol 2, schema 2, wrong Pillow/renderer
- * and every missing field block before conversion.
+ * remove or alter one field each. Protocol 2, schema 2, out-of-range
+ * Pillow/renderer (R27 compatibility ranges) and every missing field block
+ * before conversion.
  */
 import { req } from './req';
 import {
   evaluateVersionResponse,
   probeVersion,
   RELEASE_LOCK,
+  releaseSegment,
   VERSION_PROBE_TIMEOUT_MS,
   VERSION_REQUIRED_FIELDS,
   type VersionGate,
@@ -39,11 +41,25 @@ it(R('JT-17 the actual packaged version response passes the complete gate and ma
   expect(gate.info).toEqual(fx71Manifest().engine);
   expect(gate.info.protocol).toBe(1);
   expect(gate.info.triage_schema).toBe(1);
-  // Release lock values are exact lock entries equal to the packaged response, not SPEC examples.
-  expect(RELEASE_LOCK.pypdfium2).toBe(gate.info.pypdfium2);
-  expect(RELEASE_LOCK.pillow).toBe(gate.info.pillow);
-  expect(RELEASE_LOCK.pillow).not.toBe('11.0.0');
-  expect(RELEASE_LOCK.pypdfium2).not.toBe('4.30.0');
+  // R27: renderer/Pillow are compatibility ranges, not exact lock pins; the recorded CI identity lies inside them
+  // and the exact installed versions are still carried in `info` for diagnosis.
+  expect(gate.info.pypdfium2).toBe('5.15.1');
+  expect(gate.info.pillow).toBe('13.0.0');
+  expect(releaseSegment(gate.info.pypdfium2)).toEqual([5, 15, 1]);
+  expect(releaseSegment(gate.info.pillow)).toEqual([13, 0, 0]);
+  expect(RELEASE_LOCK.pypdfium2Min).toEqual([5, 0, 0]);
+  expect(RELEASE_LOCK.pypdfium2MaxExclusive).toEqual([6, 0, 0]);
+  expect(RELEASE_LOCK.pillowMin).toEqual([11, 0, 0]);
+  expect(RELEASE_LOCK.pillowMaxExclusive).toEqual([14, 0, 0]);
+});
+
+it(R('JT-17 R27 range-resolved renderer/Pillow installs are admitted inside the compatibility ranges and blocked outside them'), () => {
+  const base = JSON.parse(fx71Text('version.json')) as Record<string, unknown>;
+  const withField = (key: string, value: unknown): string => JSON.stringify({ ...base, [key]: value });
+  for (const good of ['5.0.0', '5.15.1', '5.99.9']) expect(evaluateVersionResponse(withField('pypdfium2', good), RECORDING_HOST_POLICY).enabled).toBe(true);
+  for (const bad of ['4.30.0', '6.0.0', '6.15.1', 'latest']) expect(blocked(evaluateVersionResponse(withField('pypdfium2', bad), RECORDING_HOST_POLICY))).toEqual({ reason: 'pypdfium2', field: 'pypdfium2' });
+  for (const good of ['11.0.0', '12.1.0', '13.0.0', '13.9.9']) expect(evaluateVersionResponse(withField('pillow', good), RECORDING_HOST_POLICY).enabled).toBe(true);
+  for (const bad of ['10.4.0', '14.0.0', '15.0.0', '']) expect(blocked(evaluateVersionResponse(withField('pillow', bad), RECORDING_HOST_POLICY))).toEqual({ reason: 'pillow', field: 'pillow' });
 });
 
 it(R('JT-17 the default policy admits Python 3.10-3.14 only; the 3.15 recording host is blocked as unsupported'), () => {

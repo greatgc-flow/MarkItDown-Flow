@@ -8,7 +8,7 @@
  */
 import { req } from './req';
 import { createApp, mockState } from './__mocks__/obsidian';
-import { BOOTSTRAP_PROBE_CANDIDATES, collectSetupDiagnostics, renderBootstrapInstructions, type SetupDeps } from '../src/process/setup';
+import { BOOTSTRAP_PROBE_CANDIDATES, collectSetupDiagnostics, CORE_REQUIREMENT, ENGINE_WHEEL, renderBootstrapInstructions, type SetupDeps } from '../src/process/setup';
 import { RELEASE_LOCK, VERSION_PROBE_TIMEOUT_MS, type VersionPolicy } from '../src/process/version-gate';
 import type { SpawnRequest } from '../src/process/types';
 import { SetupModal } from '../src/ui/setup-modal';
@@ -42,7 +42,7 @@ function deps(spawner: FakeSpawner, clock: FakeClock, enginePython: string | nul
     platform: process.platform === 'win32' ? 'win32' : 'posix',
     cwd: PLUGIN_DIR,
     enginePython,
-    paths: { engineRoot: '/downloads/mdflow-2.0.0-engine', venvDir: '/venvs/mdflow 2.0.0' },
+    paths: { downloadDir: '/downloads/mdflow-2.0.0', venvDir: '/venvs/mdflow 2.0.0' },
     policy: POLICY,
     home: HOME,
     vault: VAULT_ROOT,
@@ -97,23 +97,29 @@ it(R('JT-10 the version probe is bounded by five seconds; a hung interpreter blo
   expect(spawner.children[0].terminated).toBe(true);
 });
 
-it(R('JT-10 bootstrap instructions are the 25_PACKAGING section 2 commands with substituted paths, hash-checked wheel-only installs, no plugin-side execution'), () => {
-  const text = renderBootstrapInstructions({ engineRoot: 'C:\\Downloads\\mdflow 2.0.0', venvDir: 'C:\\mdflow-venvs\\2.0.0', bootstrapPython: 'py -3.14' });
+it(R('JT-10 bootstrap instructions are the R27 25_PACKAGING section 2 commands with substituted paths: venv, wheel-only install of the release wheel plus Core from PyPI, check, probe; no plugin-side execution'), () => {
+  const text = renderBootstrapInstructions({ downloadDir: 'C:\\Downloads\\mdflow 2.0.0', venvDir: 'C:\\mdflow-venvs\\2.0.0', bootstrapPython: 'py -3.14' });
   expect(text.windows).toContain("Set-Location -LiteralPath 'C:\\Downloads\\mdflow 2.0.0'");
   expect(text.windows).toContain("py -3.14 -m venv 'C:\\mdflow-venvs\\2.0.0'");
-  expect(text.windows).toContain("-m pip install --require-hashes --only-binary=:all: --find-links './wheels' -r './engine.lock'");
+  expect(text.windows).toContain(`-m pip install --only-binary=:all: '.\\${ENGINE_WHEEL}' '${CORE_REQUIREMENT}'`);
   expect(text.windows).toContain('-m pip check');
   expect(text.windows).toContain('-m mdflow version');
   expect(text.windows).toContain("'C:\\mdflow-venvs\\2.0.0\\Scripts\\python.exe'");
-  const posix = renderBootstrapInstructions({ engineRoot: '/path/to/mdflow-2.0.0-engine', venvDir: '/path/to/mdflow-venvs/2.0.0', bootstrapPython: 'python3.14' });
-  expect(posix.posix).toContain("cd '/path/to/mdflow-2.0.0-engine'");
+  const posix = renderBootstrapInstructions({ downloadDir: '/path/to/mdflow-2.0.0', venvDir: '/path/to/mdflow-venvs/2.0.0', bootstrapPython: 'python3.14' });
+  expect(posix.posix).toContain("cd '/path/to/mdflow-2.0.0'");
   expect(posix.posix).toContain("python3.14 -m venv '/path/to/mdflow-venvs/2.0.0'");
-  expect(posix.posix).toContain("'/path/to/mdflow-venvs/2.0.0/bin/python' -m pip install --require-hashes --only-binary=:all: --find-links './wheels' -r './engine.lock'");
+  expect(posix.posix).toContain(`'/path/to/mdflow-venvs/2.0.0/bin/python' -m pip install --only-binary=:all: './${ENGINE_WHEEL}' '${CORE_REQUIREMENT}'`);
   expect(posix.posix).toContain("'/path/to/mdflow-venvs/2.0.0/bin/python' -m mdflow version");
+  expect(ENGINE_WHEEL).toMatch(/^mdflow-2\.0\.0-py3-none-any\.whl$/);
+  expect(CORE_REQUIREMENT).toBe('markitdown-gc>=0.3.5,<0.4');
   for (const block of [text.windows, text.posix, posix.windows, posix.posix]) {
-    expect(block).not.toMatch(/pip install(?! --require-hashes)/);
+    // Every install is wheel-only; no source builds, no upgrades, no extras, no lock files or hash manifests remain (R27).
+    expect(block).not.toMatch(/pip install(?! --only-binary=:all:)/);
     expect(block).not.toContain('--upgrade');
     expect(block).not.toContain('[all]');
+    expect(block).not.toContain('--require-hashes');
+    expect(block).not.toContain('engine.lock');
+    expect(block).not.toContain('--find-links');
   }
 });
 
