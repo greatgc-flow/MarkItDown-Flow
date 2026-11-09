@@ -196,7 +196,9 @@ export default class MarkItDownFlowPlugin extends Plugin {
           if (interpreterChanged && !this.settingsReadOnly) {
             this.gate = null;
             this.gateProbe = null;
-            await this.refreshGate();
+            // Not awaited (M7-02): a hung interpreter can take about 11 s to settle. The probe is shared, so the next job
+            // waits on it under the admission's "checking the engine" status item with Cancel.
+            void this.refreshGate();
           }
         },
         openSetup: () => this.openSetup(),
