@@ -328,7 +328,8 @@ def test_PT_06_packaged_version_and_selftest_follow_declared_compatibility_polic
     assert done.returncode == 0, done.stderr
     real = json.loads(done.stdout)
     assert set(real) == {"mdflow", "markitdown-gc", "pypdfium2", "pillow", "python", "platform", "protocol", "triage_schema",
-                         "exiftool", "exiftool_status", "exiftool_source"}  # R31 additive, optional for the gate
+                         "exiftool", "exiftool_status", "exiftool_source",
+                         "libreoffice", "libreoffice_status", "libreoffice_source"}  # Optional tool diagnostics
     assert gate(real) == [], "the packaged engine fails its own gate"
     assert packaged_engine.run("selftest").returncode == 0
     record = load_py(REPO / "tools/record_protocol.py", "mdflow_pt_record_protocol")

@@ -3,3 +3,7 @@
 /engine/tests/fixtures/*.hwp -text
 /engine/tests/fixtures/*.zip -text
 /shell/test/fixtures/fx71/** -text
+# Wheel payloads must have identical bytes on Windows and POSIX checkouts.
+/engine/src/** text=auto eol=lf
+/engine/pyproject.toml text eol=lf
+/LICENSE text eol=lf

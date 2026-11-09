@@ -305,6 +305,13 @@ def test_T_SEC_03_command_child_gets_allowlisted_env_and_argument_wise_argv(tmp_
     expected_destination = "command:" + json.dumps(shlex.split(template), sort_keys=True, separators=(",", ":"), ensure_ascii=False)
     assert meta["destination"] == expected_destination
 
+    expected_env = {name for name in ALLOWED_ENV | {"KEEP_ME", "ABSENT_NAME"} if name in os.environ}
+    # Measure the same interpreter's startup additions independently. macOS
+    # CoreFoundation adds __CF_USER_TEXT_ENCODING; Python's launcher can also
+    # consume __PYVENV_LAUNCHER__. The env supplied to Popen stays exact below.
+    startup_env = json.loads(subprocess.check_output(
+        [sys.executable, '-c', 'import json, os, sys; print(json.dumps(sorted(os.environ)))'],
+        env={name: os.environ[name] for name in expected_env}, text=True, encoding='utf-8'))
     recorded = []
     real_popen = subprocess.Popen
     monkeypatch.setattr(subprocess, "Popen", lambda *a, **k: (recorded.append((a, k)), real_popen(*a, **k))[1])
@@ -313,15 +320,14 @@ def test_T_SEC_03_command_child_gets_allowlisted_env_and_argument_wise_argv(tmp_
 
     assert result["status"] == "ok", result
     payload = json.loads(result["text"])
-    expected_env = {name for name in ALLOWED_ENV | {"KEEP_ME", "ABSENT_NAME"} if name in os.environ}
     assert "SECRET_TOKEN" not in payload["env"] and "MDFLOW_API_KEY" not in payload["env"]
-    assert set(payload["env"]) - {"__PYVENV_LAUNCHER__"} == expected_env, "child env = allowlist + --command-env"
+    assert payload["env"] == startup_env, "child env = exact allowlist plus interpreter startup changes"
     assert len(recorded) == 1
     args, kwargs = recorded[0]
     argv = args[0] if args else kwargs["args"]
     assert isinstance(argv, list) and len(argv) == 4, "one argv element per template word, substituted argument-wise"
     assert kwargs.get("shell", False) is False
-    assert set(kwargs["env"]) - {"__PYVENV_LAUNCHER__"} == expected_env
+    assert set(kwargs["env"]) == expected_env
     assert Path(argv[0]) == Path(sys.executable) and Path(argv[1]) == script, "a space in the script path stays one argument"
     assert argv[3] == "image/png" and payload["argv"] == argv[2:]
     assert payload["input_len"] == len(raster), "{input} is a readable temp raster during the call"

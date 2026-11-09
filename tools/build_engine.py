@@ -1,7 +1,10 @@
 """Build the release wheel; CI optionally resolves and verifies one reference environment."""
 from __future__ import annotations
 import argparse
+import base64
+import csv
 import hashlib
+import io
 import importlib.metadata as metadata
 import os
 from pathlib import Path
@@ -23,6 +26,31 @@ def digest(path):
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def canonical_wheel(wheel):
+    """Seal host-independent ZIP metadata, LF text, and stored (codec-free) bytes."""
+    record = 'mdflow-2.0.0.dist-info/RECORD'
+    with zipfile.ZipFile(wheel) as archive:
+        members = {name: archive.read(name) for name in archive.namelist() if name != record}
+    for name, data in members.items():
+        # This wheel's Python/resources and dist-info are text. Keep future
+        # binary assets untouched; RECORD is recomputed from the actual bytes.
+        if name.endswith(('.py', '.txt', '.md', '.json', '/METADATA', '/WHEEL', '/LICENSE')):
+            members[name] = data.replace(b'\r\n', b'\n')
+    rows = io.StringIO(newline='')
+    writer = csv.writer(rows, lineterminator='\n')
+    for name, data in sorted(members.items()):
+        value = base64.urlsafe_b64encode(hashlib.sha256(data).digest()).rstrip(b'=').decode('ascii')
+        writer.writerow((name, 'sha256=' + value, len(data)))
+    writer.writerow((record, '', ''))
+    members[record] = rows.getvalue().encode('utf-8')
+    with zipfile.ZipFile(wheel, 'w', compression=zipfile.ZIP_STORED) as archive:
+        for name, data in sorted(members.items()):
+            info = zipfile.ZipInfo(name, date_time=(2020, 2, 2, 0, 0, 0))
+            info.create_system = 3
+            info.external_attr = 0o100644 << 16
+            archive.writestr(info, data)
+
+
 def build(output: Path):
     output = output.resolve()
     output.mkdir(parents=True, exist_ok=True)
@@ -34,6 +62,7 @@ def build(output: Path):
     env = dict(os.environ, SOURCE_DATE_EPOCH='1580601600', PYTHONHASHSEED='0')
     subprocess.run([sys.executable, '-m', 'hatchling', 'build', '-t', 'wheel', '-d', str(output)],
                    cwd=ROOT / 'engine', env=env, check=True)
+    canonical_wheel(wheel)
     with zipfile.ZipFile(wheel) as archive:
         if any(n.endswith(('.so', '.pyd', '.dll', '.dylib', '.pyc')) for n in archive.namelist()):
             raise ValueError('mdflow wheel must be pure Python')

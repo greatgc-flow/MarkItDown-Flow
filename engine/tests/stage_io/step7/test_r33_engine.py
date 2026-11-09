@@ -56,6 +56,37 @@ target.write_bytes(b'broken' if %r else (root / 'seed.docx').read_bytes())
     return exe
 
 
+@pytest.mark.req('REQ-CNV-07', 'REQ-GEN-02')
+@pytest.mark.cov('S0', 'FM10')
+@pytest.mark.parametrize('state', ['missing', 'invalid_override', 'ok', 'malformed', 'timeout'])
+def test_T_CLI_85_libreoffice_version_diagnostics(tmp_path, monkeypatch, capsys, state):
+    from mdflow import cli, preconvert
+    exe = fake_soffice(tmp_path / 'tool')
+    monkeypatch.delenv('SOFFICE_PATH', raising=False)
+    if state == 'missing':
+        monkeypatch.setenv('PATH', str(tmp_path / 'empty'))
+    elif state == 'invalid_override':
+        monkeypatch.setenv('SOFFICE_PATH', str(tmp_path / 'absent'))
+        monkeypatch.setenv('PATH', str(exe.parent))
+    else:
+        monkeypatch.setenv('SOFFICE_PATH', str(exe))
+    if state in {'malformed', 'timeout'}:
+        def probe(args, **kwargs):
+            assert kwargs['timeout_s'] == 5
+            if state == 'timeout':
+                raise TimeoutError('injected deadline')
+            return 'not a LibreOffice version'
+        monkeypatch.setattr(preconvert, '_execute', probe)
+    assert cli.main(['version']) == 0
+    captured = capsys.readouterr()
+    assert captured.err == ''
+    value = json.loads(captured.out)
+    assert value['libreoffice'] == ('25.2.7.2' if state == 'ok' else 'unavailable')
+    assert value['libreoffice_status'] == ('ok' if state == 'ok' else 'not_found' if state == 'missing' else 'unusable')
+    assert value['libreoffice_source'] == (None if state == 'missing' else 'SOFFICE_PATH')
+    assert not (exe.parent / 'args.json').exists(), 'version must never convert a document'
+
+
 @pytest.mark.req('REQ-CNV-07', 'REQ-ASM-03')
 @pytest.mark.cov('S5', 'FM0')
 @pytest.mark.fx('FX-36')

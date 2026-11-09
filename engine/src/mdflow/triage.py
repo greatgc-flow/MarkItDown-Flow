@@ -47,8 +47,9 @@ def run_triage(path: str | Path, sniff: SniffResult) -> TriageOutcome:
     if sniff["route"] != "NATIVE" or any(issue["code"] in _BLOCKING for issue in sniff["issues"]):
         return _outcome(False, None, NOT_RUN, [])
     try:
-        core = importlib.import_module("markitdown.ocr_triage")
-        report = core.triage(str(path))
+        with core_guard.quiet_output():
+            core = importlib.import_module("markitdown.ocr_triage")
+            report = core.triage(str(path))
     except Exception as exc:  # any Core failure is a verdict input, never a crash
         message = f"Core triage failed ({type(exc).__name__})"
         return _outcome(True, None, NOT_RUN, [{"code": "E_TRIAGE_FAIL", "message": message}])

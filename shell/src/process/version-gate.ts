@@ -40,8 +40,7 @@ export interface VersionInfo {
   exiftool_source?: ToolSource;
   /**
    * Optional (R33): LibreOffice (`soffice`) as detected through `SOFFICE_PATH`/PATH, same shape as
-   * exiftool. SPEC 10.1 (DRAFT-3.7) does not report it yet; the names follow the R33 text and the
-   * exiftool precedent, and an engine that omits them shows "not reported".
+   * exiftool. Older engines that omit these diagnostics show "not reported".
    */
   libreoffice?: string | null;
   libreoffice_status?: ToolStatus;

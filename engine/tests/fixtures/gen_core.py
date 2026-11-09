@@ -229,17 +229,20 @@ def cfb_bytes(streams):
 
 
 def hwp5_bytes(*, encrypted=False):
-    """FX-24 materialization recipe; orchestrator owns committed binary/provenance."""
-    from PIL import Image
-    picture = BytesIO()
-    Image.new("RGB", (200, 200), (80, 120, 160)).save(picture, format="PNG", compress_level=6)
-    compressor = zlib.compressobj(level=6, wbits=-15)
-    stored = compressor.compress(picture.getvalue()) + compressor.flush()
+    """Own FX-24 recipe, with sealed raw-DEFLATE payloads (no host codec).
+
+    The first payload is our 200x200 RGB(80,120,160) PNG, compressed with
+    raw DEFLATE. The second contains HWP record 67 and our UTF-16LE text.
+    Freezing these small payloads avoids both Pillow PNG and zlib variants.
+    """
+    stored = bytes.fromhex(
+        'eb0cf073e7e592e2626060e0f5f470096260603801c21c4c0c0c0c4a569627191898243c5d1c432ae6'
+        'bcbd62c87bc04080c5f13807af7a01d35595ba6e0f63867551778befe51fdc62bb8fe3d0a2471b3d38b'
+        'a5b368c78823bf1a3bcdcc03b83a644442bb78631d38f4f86579d181818183c5dfd5cd63925340100')
     header = b"HWP Document File".ljust(32, b"\0") + struct.pack("<II", 0x05000300, 3 if encrypted else 1) + b"\0" * 216
-    text = "Own deterministic HWP fixture".encode("utf-16-le")
-    records = struct.pack("<I", 67 | (len(text) << 20)) + text
-    compressor = zlib.compressobj(level=6, wbits=-15)
-    body = compressor.compress(records) + compressor.flush()
+    body = bytes.fromhex(
+        '05c1c10d40401000c0493472bdf8f8f1530027d9877b9c15ca51aa99d137cc1e4db1ab52d59d42132e'
+        '296c8ac96a511cc22bddbaea07')
     data = cfb_bytes({"FileHeader": header, "DocInfo": b"", "BodyText/Section0": body,
                       "BinData/BIN0001.png": stored, "BinData/BIN0002.wmf": b"own unsupported OLE payload"})
     assert len(data) < 8192

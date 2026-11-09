@@ -24,7 +24,8 @@ metadata.version = installed_version
     assert proc.returncode == 0 and proc.stderr == '', (proc.stdout, proc.stderr)
     value = json.loads(proc.stdout)
     required = {'mdflow', 'markitdown-gc', 'pypdfium2', 'pillow', 'python', 'platform', 'protocol', 'triage_schema'}
-    assert set(value) == required | {'exiftool', 'exiftool_status', 'exiftool_source'}  # R31 additive fields
+    assert set(value) == required | {'exiftool', 'exiftool_status', 'exiftool_source',
+                                    'libreoffice', 'libreoffice_status', 'libreoffice_source'}
     assert value['markitdown-gc'] == ('unavailable' if core is None else core)
     assert value['protocol'] == value['triage_schema'] == 1
     assert all(isinstance(value[k], str) and value[k] for k in required - {'protocol', 'triage_schema'})

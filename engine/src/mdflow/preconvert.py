@@ -15,6 +15,40 @@ _ENV = frozenset('PATH SYSTEMROOT SYSTEMDRIVE COMSPEC WINDIR HOME USERPROFILE AP
                  'TEMP TMP LANG LC_ALL'.split())
 
 
+def _resolve() -> tuple[str | None, str | None]:
+    explicit = os.environ.get('SOFFICE_PATH', '').strip()
+    executable = shutil.which(explicit or 'soffice')
+    source = 'SOFFICE_PATH' if explicit else 'PATH' if executable else None
+    if executable:
+        executable = str(Path(executable).absolute())
+        # The Windows GUI launcher opens a dialog for --version.
+        console = Path(executable).with_suffix('.com')
+        if os.name == 'nt' and Path(executable).name.lower() == 'soffice.exe' and console.is_file():
+            executable = str(console)
+    return executable, source
+
+
+def detect() -> dict:
+    """Bounded optional-tool diagnostics using the same resolver as conversion."""
+    executable, source = _resolve()
+    result = dict(version=None, status='unusable' if source else 'not_found', source=source)
+    if not executable:
+        return result
+    try:
+        with runtime_temp.run_directory() as work:
+            profile = work / 'profile'
+            profile.mkdir()
+            text = _execute([executable, '-env:UserInstallation=' + profile.as_uri(),
+                             '--headless', '--norestore', '--nofirststartwizard', '--version'],
+                            cwd=work, timeout_s=5, output=work / 'version.log')
+            match = re.search(r'LibreOffice\s+(\d+(?:\.\d+)+)', text)
+            if match:
+                result.update(version=match[1], status='ok')
+    except (OSError, ValueError, subprocess.SubprocessError):
+        pass
+    return result
+
+
 class _WindowsJob:
     """Contain descendants before the suspended launcher can create soffice.bin."""
     def __init__(self):
@@ -146,16 +180,9 @@ def prepare(data: bytes, sniff: dict, *, timeout_s: float = 60, max_bytes: int =
     target = TARGETS.get(sniff['format'])
     if sniff['route'] != 'LEGACY' or target is None or any(i['code'].startswith('E_') for i in sniff['issues']):
         return dict(data=data, sniff=sniff, provenance=None, issues=[])
-    explicit = os.environ.get('SOFFICE_PATH', '').strip()
-    executable = shutil.which(explicit or 'soffice')
+    executable, _ = _resolve()
     if not executable:
         return failure
-    executable = str(Path(executable).absolute())
-    # Windows' GUI launcher opens a version dialog even with --headless.
-    # The sibling console launcher provides stdout and waits for soffice.bin.
-    console = Path(executable).with_suffix('.com')
-    if os.name == 'nt' and Path(executable).name.lower() == 'soffice.exe' and console.is_file():
-        executable = str(console)
     try:
         with runtime_temp.run_directory() as work:
             profile, output = work / 'profile', work / 'derived'

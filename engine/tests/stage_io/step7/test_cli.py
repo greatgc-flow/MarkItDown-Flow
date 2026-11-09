@@ -53,7 +53,8 @@ def test_T_CLI_02_version_contract_and_rejected_core_before_input_read(tmp_path,
     proc = cli_probe.run("version", expected=0)
     value = json.loads(proc.stdout)
     assert set(value) == {"mdflow", "markitdown-gc", "pypdfium2", "pillow", "python", "platform",
-                          "protocol", "triage_schema", "exiftool", "exiftool_status", "exiftool_source"}  # R31
+                          "protocol", "triage_schema", "exiftool", "exiftool_status", "exiftool_source",
+                          "libreoffice", "libreoffice_status", "libreoffice_source"}
     assert value["protocol"] == value["triage_schema"] == 1
     for field in ("mdflow", "markitdown-gc", "pypdfium2", "pillow", "python", "platform"):
         assert isinstance(value[field], str) and value[field]

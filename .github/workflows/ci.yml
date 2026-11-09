@@ -79,9 +79,9 @@ jobs:
           echo "checkout=3d3c42e5aac5ba805825da76410c181273ba90b1 setup-python=6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 download-artifact=9000827ccba6bdab643e8b6fd33ac0654aef8333 upload-artifact=cf430e030ddbb5b0abf93d22962f4752f3646cd9"
       - name: Verify transfer and install release wheel with declared dependency policy
         run: |
+          python -m pip install --only-binary=:all: -r engine/requirements-test.txt -r engine/requirements-build.txt
           python tools/build_release.py --verify
           python tools/packaged_check.py install --bundle build/candidate --venv build/compat-env
-          python -m pip install --only-binary=:all: -r engine/requirements-test.txt
           python tools/packaged_check.py install-current --bundle build/candidate
       - name: Engine pytest including contract, security and offline mocks
         run: python -I -m pytest engine/tests -m "not release" --runxfail -q --junitxml=build/trace/junit-engine-${{ matrix.os }}-py${{ matrix.python }}.xml

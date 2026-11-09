@@ -206,6 +206,12 @@ def _exiftool_versions() -> dict:
                 exiftool_status=found["status"], exiftool_source=found["source"])
 
 
+def _libreoffice_versions() -> dict:
+    found = preconvert.detect()
+    return dict(libreoffice=found['version'] or 'unavailable',
+                libreoffice_status=found['status'], libreoffice_source=found['source'])
+
+
 def _selftest_exiftool(png: bytes) -> dict:
     """Informational only: does the detected exiftool actually yield metadata for the bundled PNG?"""
     found = exiftool.detect()
@@ -249,7 +255,7 @@ def main(argv: list[str] | None = None) -> int:
         core_guard.check()
         if args.command_name == "version":
             _print(dict(orchestrate.tools(), python=platform.python_version(), platform=platform.platform(),
-                        protocol=1, triage_schema=1, **_exiftool_versions()))
+                        protocol=1, triage_schema=1, **_exiftool_versions(), **_libreoffice_versions()))
             return 0
         try:
             _check_core()

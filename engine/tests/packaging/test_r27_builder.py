@@ -61,6 +61,19 @@ def test_T_GEN_54_r27_wheel_reproducible_and_every_frozen_asset_rejects_tamperin
     wheel = builder.build(first)
     other = builder.build(tmp_path / 'repeat')
     assert wheel.name == WHEEL and wheel.read_bytes() == other.read_bytes()
+    # Simulate a Windows checkout and another ZIP producer. Re-sealing must
+    # preserve the exact wheel, including valid RECORD hashes and metadata.
+    canonical = wheel.read_bytes()
+    with zipfile.ZipFile(other) as archive:
+        entries = {name: archive.read(name) for name in archive.namelist()}
+    with zipfile.ZipFile(other, 'w', compression=zipfile.ZIP_DEFLATED) as archive:
+        for name, data in reversed(list(entries.items())):
+            info = zipfile.ZipInfo(name, date_time=(2026, 11, 9, 1, 2, 4))
+            info.create_system = 0
+            info.external_attr = 0o100755 << 16
+            archive.writestr(info, data.replace(b'\n', b'\r\n') if name.endswith('.py') else data)
+    builder.canonical_wheel(other)
+    assert other.read_bytes() == canonical
     with zipfile.ZipFile(wheel) as archive:
         metadata = archive.read('mdflow-2.0.0.dist-info/METADATA').decode()
         dependency, = [line for line in metadata.splitlines() if line.startswith('Requires-Dist: markitdown-gc')]

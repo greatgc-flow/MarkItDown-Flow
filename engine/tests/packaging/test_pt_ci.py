@@ -81,6 +81,10 @@ def test_PT_07_engine_matrix_has_six_required_three_experimental_cells_and_gates
         for needle in ("sys.version", "platform.machine", "ImageVersion"):
             assert needle in text, f"{jid}: log must record {needle} (resolved patch, architecture, runner image)"
         run_text = "\n".join(str(s.get("run", "")) for s in job["steps"])
+        bootstrap = next(str(s['run']) for s in job['steps']
+                         if 'tools/build_release.py --verify' in str(s.get('run', '')))
+        assert bootstrap.index('-r engine/requirements-test.txt -r engine/requirements-build.txt') < bootstrap.index(
+            'python tools/build_release.py --verify'), 'tomli and the pinned builder must precede candidate verification'
         for sha in set(re.findall(r"@([0-9a-f]{40})", json.dumps(job["steps"]))):
             assert sha in run_text, f"{jid}: action SHA {sha} is not recorded in the log"
     for name, wf in load_workflows().items():

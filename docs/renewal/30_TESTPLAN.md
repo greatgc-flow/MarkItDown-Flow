@@ -365,6 +365,7 @@ R27/R28 added registrations (existing REQs; precise fixture assertions replace b
 | T-GEN-54 | REQ-PKG-01, REQ-PKG-02, REQ-PKG-14, REQ-PKG-17 (R27 deterministic wheel and frozen subject tamper rejection) | - | S0:FM9 |
 | T-GEN-55 | REQ-PKG-14, REQ-PKG-17 (fresh repository-root shell bundle and source stylesheet; reject stale build outputs) | - | S0:FM9 |
 | T-GEN-56 | REQ-GEN-10, REQ-TRI-04 (PNG and archive bytes independent of native encoders/compressors) | FX-09, FX-16, FX-23 | S2:FM10 |
+| T-GEN-57 | REQ-GEN-02 (HWP payloads independent of Pillow/zlib; sealed FX-24 bytes and exactly one encryption-property change for FX-27) | FX-24, FX-27 | S0:FM12 |
 | T-META-55 | REQ-PKG-10 (trace source digest survives CRLF checkout conversion and rejects content changes) | - | S0:FM10 |
 | T-META-56 | REQ-GEN-03, REQ-PKG-10 (meta checks use tomli on Python 3.10) | - | S0:FM10 |
 
@@ -529,6 +530,8 @@ Red logs: `build/trace/redgreen/r29-*.red.log` (R29 is green at baseline by audi
 | T-CNV-94 | REQ-CNV-07, REQ-PLN-01, REQ-APR-01, REQ-ASM-03 | Four enabled legacy filters with embedded media: derived hash-bound approval, exact request/transcription/placement, published media, ledger record and cached warm rerun; concrete K12 execution cells. |
 | T-CLS-93 | REQ-CLS-08 | Independently enumerated nine text extensions: T/NONE, exact warning policy. |
 | T-CLI-83 | REQ-GEN-12 | Temp sys.path fake markitdown dist-info, every CLI and direct entry refuses before Core import, including warm conversion path. |
+| T-CLI-84 | REQ-PLN-07, REQ-RPT-01, REQ-GEN-06 | Inject native writes to stdout/stderr at Core import; real plan/run subprocesses retain exact JSON/JSONL framing. |
+| T-CLI-85 | REQ-CNV-07, REQ-GEN-02 | LibreOffice version fields: real fake executable success, absent PATH, invalid explicit override without fallback, malformed output, bounded timeout; no document conversion. |
 | T-META-97 | REQ-PKG-10, REQ-PKG-17 | Actual scorer complete positive; omit, omit+duplicate, substitute, skip/fail, stale candidate/source, tampered/missing collection and omitted-from-both negatives. |
 | T-META-98 | REQ-PKG-10, REQ-PKG-17 | Source title discovery preserves escaped quotes and embedded quote characters; explicit POSIX/WINDOWS guards restrict per-target expectations. |
 
@@ -562,6 +565,8 @@ File classes: `K01` pdf_text, `K02` pdf_scan, `K03` pdf_mixed, `K04` pdf_capped,
 | 11 | Packaging: wheel, CI reference requirements, workflows, release dry-run | PT-01..09, PT-11..22 |
 
 Rule: step-N code is not merged before its tests exist red; step N+1 does not start while a step-N REQ is failing or unregistered.
+
+Real CI round-two regression checks: CT-03 retains complete report, input hash and sealed-golden equality on every OS; HWP payloads now freeze the original own-work compressed bytes (T-GEN-57), with no golden relaxation. T-GEN-54 also simulates different ZIP producers, CRLF source payloads, ordering, modes and timestamps, then requires identical canonical wheels and regenerated RECORD. Wheels use fixed Unix metadata and stored entries, independent of native zlib. CI installs pinned test/build tools before candidate verification, so tomli is present on Python 3.10 and Hatchling is present for the real wheel test. T-SEC-03 checks the exact Popen environment and compares child-observed names against an independent same-interpreter startup, including macOS-generated runtime variables; no inherited secret is permitted. T-CLI-84 checks native diagnostic isolation without filtering test output.
 
 ## 7. Manual sign-offs and open items
 

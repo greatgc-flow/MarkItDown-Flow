@@ -47,6 +47,7 @@ class ConvertResult(_ConvertBase, total=False):
     tools: dict[str, str]  # extra tools that shaped the body, e.g. {"exiftool": "13.59"} (REQ-CNV-06)
 
 
+@core_guard.quiet_output()
 def core_convert(
     data: bytes, ext: str, *, extract_media: str | None = None, media_base_dir: str | None = None,
     exiftool_path: str = "",

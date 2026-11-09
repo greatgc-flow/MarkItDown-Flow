@@ -20,7 +20,9 @@ def test_T_CLI_81_version_reports_exiftool_status_for_present_old_and_absent(tmp
                                        expected=0).stdout)
     assert (present["exiftool"], present["exiftool_status"], present["exiftool_source"]) == ("13.59", "ok", "EXIFTOOL_PATH")
     required = {"mdflow", "markitdown-gc", "pypdfium2", "pillow", "python", "platform", "protocol", "triage_schema"}
-    assert required <= set(present) and set(present) - required == {"exiftool", "exiftool_status", "exiftool_source"}
+    assert required <= set(present) and set(present) - required == {
+        "exiftool", "exiftool_status", "exiftool_source",
+        "libreoffice", "libreoffice_status", "libreoffice_source"}
     old = json.loads(cli_probe.run("version", env={"EXIFTOOL_PATH": str(fake_exiftool(tmp_path / "old", "12.23"))},
                                    expected=0).stdout)
     assert (old["exiftool"], old["exiftool_status"], old["exiftool_source"]) == ("unavailable", "too_old", "EXIFTOOL_PATH")
