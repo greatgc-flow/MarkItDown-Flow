@@ -1,25 +1,17 @@
-"""Exercise a candidate lock in a fresh, fixed-location environment outside sources."""
+"""Install the verified release wheel under its declared dependency policy, outside sources."""
 from __future__ import annotations
 import argparse
-import json
 import os
 from pathlib import Path
 import subprocess
 import sys
 import tempfile
-import zipfile
-from build_release import verify
+from build_release import verify, WHEEL
 
 def install(bundle, venv, current=False):
     verify(bundle)
-    root = bundle.parent / ('engine extract 한글 ' + venv.name)
+    root = bundle.parent / ('engine install 한글 ' + venv.name)
     root.mkdir(parents=True, exist_ok=True)
-    with zipfile.ZipFile(bundle / 'engine.zip') as z:
-        for name in z.namelist():
-            p = root / name
-            if p.is_symlink() or not p.resolve().is_relative_to(root.resolve()):
-                raise ValueError('unsafe ZIP member')
-        z.extractall(root)
     if current:
         python = Path(sys.executable)
     else:
@@ -27,8 +19,11 @@ def install(bundle, venv, current=False):
             raise ValueError('fresh venv required')
         subprocess.run([sys.executable, '-m', 'venv', str(venv)], check=True)
         python = venv.resolve() / ('Scripts/python.exe' if os.name == 'nt' else 'bin/python')
-    subprocess.run([str(python), '-m', 'pip', 'install', '--require-hashes', '--only-binary=:all:',
-                    '--index-url', 'https://pypi.org/simple', '--find-links', './wheels', '-r', './engine.lock'],
+    report = bundle.parent / 'trace' / f'install-{sys.platform}-py{sys.version_info.major}.{sys.version_info.minor}-{venv.name}.json'
+    report.parent.mkdir(parents=True, exist_ok=True)
+    subprocess.run([str(python), '-m', 'pip', 'install', '--only-binary=:all:',
+                    '--index-url', 'https://pypi.org/simple', '--report', str(report),
+                    str(bundle / WHEEL), 'markitdown-gc>=0.3.5,<0.4'],
                    cwd=root, check=True)
     subprocess.run([str(python), '-m', 'pip', 'check'], check=True)
     return python
@@ -43,6 +38,7 @@ def main():
     with tempfile.TemporaryDirectory(prefix='mdflow smoke 한글 ') as temp:
         cwd = Path(temp)
         subprocess.run([str(python), '-I', '-m', 'mdflow', 'version'], cwd=cwd, check=True)
+        subprocess.run([str(python), '-I', '-m', 'mdflow', 'selftest'], cwd=cwd, check=True)
         if a.command == 'smoke':
             source = cwd / 'local sample.txt'
             source.write_text('Local classification smoke.\n' * 40, encoding='utf-8')

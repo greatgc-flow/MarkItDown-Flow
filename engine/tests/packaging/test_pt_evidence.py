@@ -9,14 +9,15 @@ from datetime import datetime, timedelta, timezone
 import json
 import os
 from pathlib import Path
+import re
 
 import pytest
 
-from _support import REPO, SHA40, load_py, load_yaml, sha256_file, tree_digest
+from _support import REPO, SHA40, load_py, load_yaml, sha256_file, tree_digest, SUBJECTS
 
 OSES = ("windows", "macos", "linux")
 CHANNELS = ("minimum", "current")
-ASSETS = ("main.js", "manifest.json", "styles.css", "engine.zip", "engine.lock", "SHA256SUMS")
+ASSETS = SUBJECTS
 REHEARSAL_CHECKS = ("fresh_install", "upgrade_from_1_0_8", "rollback", "consent_dismiss", "consent_approve",
                     "mixed_document_mock_ocr", "warm_rerun", "cancel_restart", "terminal_env_launch", "commands", "en_ko")
 POSTDEPLOY_CHECKS = ("install_via_listing", "version_check", "sanitized_migration", "local_conversion",
@@ -59,27 +60,29 @@ REQUIRED_TARGETS = tuple(f"{o}:x64:py{p}" for o in ("windows-2022", "ubuntu-24.0
 
 
 def check_artifacts(data: dict) -> list[str]:
-    problems = [f"missing {k}" for k in ("checked_by", "date", "commit", "lock_entries", "install_logs") if not data.get(k)]
+    problems = [f"missing {k}" for k in ("checked_by", "date", "commit", "install_reports") if not data.get(k)]
     if problems:
         return problems
     if not SHA40.fullmatch(str(data["commit"])):
         problems.append("commit is not a 40-hex SHA")
-    entries = {e.get("name"): e for e in data["lock_entries"]}
-    core = entries.get("markitdown-gc")
-    if not core or core.get("version") != "0.3.5":
-        problems.append("markitdown-gc 0.3.5 is not recorded (do not substitute upstream markitdown)")
-    for entry in data["lock_entries"]:
-        label = f"{entry.get('name')}=={entry.get('version')}"
-        if not str(entry.get("url", "")).startswith("https://"):
-            problems.append(f"{label}: no https artifact URL")
-        if not (isinstance(entry.get("sha256"), str) and len(entry["sha256"]) == 64):
-            problems.append(f"{label}: no sha256")
-        if not entry.get("license"):
-            problems.append(f"{label}: no license")
-        missing = set(REQUIRED_TARGETS) - set(entry.get("targets") or [])
-        if missing:
-            problems.append(f"{label}: no wheel for {sorted(missing)}")
-    logged = {log.get("target") for log in data["install_logs"] if log.get("exit") == 0}
+    # Consume standard pip --report objects, not another hand-written catalog.
+    for run in data['install_reports']:
+        items = run.get('report', {}).get('install', [])
+        core = [i['metadata'] for i in items if i.get('metadata', {}).get('name') == 'markitdown-gc']
+        if len(core) != 1 or not (0, 3, 5) <= tuple(map(int, core[0]['version'].split('.'))) < (0, 4):
+            problems.append('target report lacks compatible markitdown-gc (no upstream substitution)')
+        if not items or run.get('licenses_reviewed') is not True:
+            problems.append('generated metadata/license review missing')
+        for item in items:
+            info = item.get('download_info', {})
+            metadata = item.get('metadata', {})
+            if not metadata.get('name') or not metadata.get('version'):
+                problems.append('missing resolved distribution metadata')
+            if not str(info.get('url', '')).startswith(('https://', 'file://')):
+                problems.append('missing artifact URL')
+            if not re.fullmatch('[0-9a-f]{64}', info.get('archive_info', {}).get('hashes', {}).get('sha256', '')):
+                problems.append('missing artifact hash')
+    logged = {run.get("target") for run in data["install_reports"] if run.get("exit") == 0}
     if set(REQUIRED_TARGETS) - logged:
         problems.append(f"no passing isolated install log for {sorted(set(REQUIRED_TARGETS) - logged)}")
     return problems
@@ -90,17 +93,20 @@ def check_artifacts(data: dict) -> list[str]:
 @pytest.mark.req("REQ-PKG-04")
 @pytest.mark.cov("S0", "FM10")
 def test_PT_04_public_artifact_license_and_target_wheel_evidence(attest_dir):
+    report = {'version': '1', 'install': [{'metadata': {'name': 'markitdown-gc', 'version': '0.3.5', 'license': 'MIT'},
+              'download_info': {'url': 'https://files.pythonhosted.org/x.whl', 'archive_info': {'hashes': {'sha256': HEX}}}}]}
     good = {"checked_by": "Reviewer", "date": "2026-11-09", "commit": "a" * 40,
-            "lock_entries": [{"name": "markitdown-gc", "version": "0.3.5", "url": "https://files.example/x.whl",
-                              "sha256": HEX, "license": "MIT", "targets": list(REQUIRED_TARGETS)}],
-            "install_logs": [{"target": t, "exit": 0, "log": "isolated install log"} for t in REQUIRED_TARGETS]}
+            "install_reports": [{"target": t, "exit": 0, 'report': deepcopy(report), 'licenses_reviewed': True}
+                                for t in REQUIRED_TARGETS]}
     assert check_artifacts(good) == []
-    for broken in (without(good, "lock_entries"), changed(good, "0.3.4", "lock_entries", 0, "version"),
-                   changed(good, "", "lock_entries", 0, "license"), changed(good, [], "install_logs")):
+    for broken in (without(good, "install_reports"),
+                   changed(good, '0.3.4', 'install_reports', 0, 'report', 'install', 0, 'metadata', 'version'),
+                   changed(good, False, 'install_reports', 0, 'licenses_reviewed'),
+                   changed(good, [], 'install_reports')):
         assert check_artifacts(broken), "the validator accepted incomplete artifact evidence"
     path = attest_dir / "pkg04_core_artifacts.json"
     if not path.is_file():
-        pytest.skip(f"human evidence absent: {path.as_posix()} (TODO-VERIFY public markitdown-gc 0.3.5 artifacts; mode H)")
+        pytest.skip(f"human evidence absent: {path.as_posix()} (generated install/license evidence requires named review; mode H)")
     problems = check_artifacts(json.loads(path.read_text(encoding="utf-8")))
     assert not problems, "\n".join(problems)
 
@@ -154,7 +160,7 @@ def postdeploy_sample():
     environments = [{"os": o, "vault": v, "app_version": "1.8.9", "python": "3.14.0", "unexpected_egress": 0,
                      "checks": {name: "PASS" for name in POSTDEPLOY_CHECKS}} for o in OSES for v in ("clean", "upgrade")]
     return {"listing": {"id": "markitdown-flow", "version": "2.0.0"}, "commit": "a" * 40,
-            "installed_assets": [{"asset": a, "sha256": HEX, "matches_release": True} for a in ASSETS[:5]],
+            "installed_assets": [{"asset": a, "sha256": HEX, "matches_release": True} for a in ASSETS[:-1]],
             "environments": environments, "critical_failed": False, "rollback_triggered": False}
 
 

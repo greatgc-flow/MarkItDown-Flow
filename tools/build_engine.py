@@ -1,80 +1,113 @@
-"""Build one pure mdflow wheel and the allowlisted engine ZIP from a frozen lock."""
+"""Build the release wheel; CI optionally resolves and verifies one reference environment."""
 from __future__ import annotations
 import argparse
 import hashlib
 import importlib.metadata as metadata
-import json
 import os
 from pathlib import Path
-import re
+import platform
 import shutil
 import subprocess
 import sys
+import tempfile
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
 WHEEL = 'mdflow-2.0.0-py3-none-any.whl'
+REFERENCE = 'reference-requirements.txt'
+ASSETS = ('main.js', 'manifest.json', 'styles.css', WHEEL, REFERENCE, 'BOOTSTRAP.md', 'NOTICE.txt', 'LICENSE')
+SUBJECTS = (*ASSETS, 'SHA256SUMS')
+
 
 def digest(path):
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
-def zip_bytes(path, entries):
-    with zipfile.ZipFile(path, 'w', compression=zipfile.ZIP_DEFLATED, compresslevel=9) as archive:
-        for name, payload in sorted(entries.items()):
-            info = zipfile.ZipInfo(name, (2020, 2, 2, 0, 0, 0))
-            info.compress_type = zipfile.ZIP_DEFLATED
-            info.external_attr = 0o100644 << 16
-            archive.writestr(info, payload)
 
-def build(output: Path, *, wheel_only=False):
+def build(output: Path):
     output = output.resolve()
     output.mkdir(parents=True, exist_ok=True)
     if metadata.version('hatchling') != '1.33.0':
         raise ValueError('install the separately pinned requirements-build.txt first')
-    wheel_dir = output / 'wheels'
-    wheel_dir.mkdir(exist_ok=True)
-    if (wheel_dir / WHEEL).exists():
+    wheel = output / WHEEL
+    if wheel.exists():
         raise ValueError('refusing to replace an existing candidate wheel; choose an empty output directory')
     env = dict(os.environ, SOURCE_DATE_EPOCH='1580601600', PYTHONHASHSEED='0')
-    subprocess.run([sys.executable, '-m', 'hatchling', 'build', '-t', 'wheel', '-d', str(wheel_dir)],
+    subprocess.run([sys.executable, '-m', 'hatchling', 'build', '-t', 'wheel', '-d', str(output)],
                    cwd=ROOT / 'engine', env=env, check=True)
-    wheel = wheel_dir / WHEEL
     with zipfile.ZipFile(wheel) as archive:
         if any(n.endswith(('.so', '.pyd', '.dll', '.dylib', '.pyc')) for n in archive.namelist()):
             raise ValueError('mdflow wheel must be pure Python')
         wm = archive.read('mdflow-2.0.0.dist-info/WHEEL').decode()
         if 'Root-Is-Purelib: true' not in wm or 'Tag: py3-none-any' not in wm:
             raise ValueError('unexpected wheel metadata')
-    if wheel_only:
-        return wheel
-    lock = (ROOT / 'engine/engine.lock').read_text(encoding='utf-8-sig')
-    inventory = json.loads((ROOT / 'engine/lock-inventory.json').read_text(encoding='utf-8'))
-    if inventory.get('unresolved'):
-        raise ValueError(f"release lock incomplete: {inventory['unresolved']}")
-    requirement = f'./wheels/{WHEEL} --hash=sha256:{digest(wheel)}'
-    old = re.search(r'^\./wheels/[^\n]+', lock, re.M)
-    if old and old[0] != requirement:
-        raise ValueError('frozen engine wheel hash differs; review and refreeze the candidate lock')
-    if not old:
-        lock = requirement + '\n' + lock
-    entries = {f'wheels/{WHEEL}': wheel.read_bytes(), 'engine.lock': lock.encode(),
-               'BOOTSTRAP.md': (ROOT / 'engine/BOOTSTRAP.md').read_bytes(),
-               'LICENSE': (ROOT / 'LICENSE').read_bytes(),
-               'package-inventory.json': json.dumps(inventory, indent=2).encode()}
-    notices = ['Package licenses are recorded verbatim from package metadata.']
-    for package in inventory['packages']:
-        notices.append(f"\n{package['name']}=={package['version']}\n{package['license']}")
-    entries['NOTICE.txt'] = '\n'.join(notices).encode()
-    (output / 'engine.lock').write_bytes(entries['engine.lock'])
-    zip_bytes(output / 'engine.zip', entries)
     return wheel
+
+
+def reference(output: Path, evidence: Path):
+    """pip-tools owns resolution/hashes. This file promises only Linux x64/Python 3.14."""
+    if (sys.platform, sys.version_info[:2], platform.machine().lower()) != ('linux', (3, 14), 'x86_64'):
+        raise ValueError('reference generation requires Linux x64 / Python 3.14')
+    output, evidence = output.resolve(), evidence.resolve()
+    evidence.mkdir(parents=True, exist_ok=True)
+    requirements = output / REFERENCE
+    if requirements.exists():
+        raise ValueError('refusing to replace frozen reference requirements')
+    # Core is the wheel's sole dependency. Keep its baseline separate from the
+    # local wheel input so pip-compile cannot embed a runner-specific file URL.
+    with tempfile.TemporaryDirectory(prefix='mdflow-reference-') as temp:
+        scratch = Path(temp)
+        source = scratch / 'reference.in'
+        source.write_text('markitdown-gc==0.3.5\n', encoding='utf-8')
+        subprocess.run([sys.executable, '-m', 'piptools', 'compile', '--generate-hashes', '--allow-unsafe',
+                        '--no-header', '--no-annotate', '--no-emit-index-url', '--no-emit-trusted-host',
+                        '--index-url=https://pypi.org/simple', '--pip-args=--only-binary=:all:',
+                        '--output-file', str(requirements), str(source)], check=True)
+        resolved = requirements.read_text(encoding='utf-8')
+        requirements.write_text('# CI reference only: Linux x64, CPython 3.14, Core 0.3.5.\n'
+                                '# Generated by pip-tools; other targets resolve the declared dependency range.\n'
+                                f'./{WHEEL} --hash=sha256:{digest(output / WHEEL)}\n' + resolved,
+                                encoding='utf-8')
+        venv = scratch / 'venv'
+        subprocess.run([sys.executable, '-m', 'venv', str(venv)], check=True)
+        python = str(venv / 'bin/python')
+        subprocess.run([python, '-m', 'pip', 'install', '--require-hashes', '--only-binary=:all:',
+                        '--index-url', 'https://pypi.org/simple', '--report', str(evidence / 'reference-install.json'),
+                        '-r', REFERENCE], cwd=output, check=True)
+        subprocess.run([python, '-m', 'pip', 'check'], cwd=scratch, check=True)
+        for command in ('version', 'selftest'):
+            result = subprocess.run([python, '-I', '-m', 'mdflow', command], cwd=scratch, check=True,
+                                    capture_output=True, text=True, encoding='utf-8')
+            (evidence / f'reference-{command}.json').write_text(result.stdout, encoding='utf-8')
+        # Preserve installed metadata AND actual license files, without a public
+        # all-wheel catalog or a separately maintained dependency inventory.
+        licenses = subprocess.check_output([python, '-I', '-c', '''
+import importlib.metadata as m
+for d in sorted(m.distributions(), key=lambda d: d.metadata['Name'].lower()):
+    print('\\n' + d.metadata['Name'] + '==' + d.version)
+    print(d.metadata.get('License-Expression') or d.metadata.get('License') or 'See license files below')
+    for f in d.files or []:
+        if any(s in f.name.lower() for s in ('license', 'copying', 'notice')):
+            p = d.locate_file(f)
+            if p.is_file():
+                print(str(f) + '\\n' + p.read_text(encoding='utf-8', errors='replace'))
+'''], text=True, encoding='utf-8')
+        (output / 'NOTICE.txt').write_text(licenses, encoding='utf-8')
+        with (evidence / 'reference-metadata.json').open('w', encoding='utf-8') as stream:
+            subprocess.run([python, '-m', 'pip', 'inspect'], stdout=stream, check=True)
+    shutil.copyfile(ROOT / 'engine/BOOTSTRAP.md', output / 'BOOTSTRAP.md')
+    shutil.copyfile(ROOT / 'LICENSE', output / 'LICENSE')
+
 
 def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument('--output', type=Path, default=ROOT / 'build/engine')
-    p.add_argument('--wheel-only', action='store_true')
+    p.add_argument('--reference', action='store_true')
+    p.add_argument('--evidence', type=Path, default=ROOT / 'build/trace')
     a = p.parse_args()
-    print(build(a.output, wheel_only=a.wheel_only))
+    print(build(a.output))
+    if a.reference:
+        reference(a.output, a.evidence)
+
 
 if __name__ == '__main__':
     main()

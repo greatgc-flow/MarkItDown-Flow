@@ -1,11 +1,12 @@
 # Engine bootstrap
 
-Download `engine.zip`, `engine.lock`, `SHA256SUMS`, and provenance bundles from
-the same release host. Verify SHA-256 and GitHub attestations before extraction.
-Extract to your chosen directory. The commands below use the Python package
-index https://pypi.org/simple and download missing wheels over the network;
-`./wheels` supplies the engine wheel. Execute commands in your own terminal.
-The Obsidian plugin never downloads or installs Python, dependencies or updates.
+Download the release wheel `mdflow-2.0.0-py3-none-any.whl`, `BOOTSTRAP.md`,
+`NOTICE.txt`, `LICENSE`, `SHA256SUMS` and provenance bundles from the same release
+host. Verify SHA-256 and attestations before installation. The commands below
+use the Python package index (PyPI) https://pypi.org/simple and download dependency
+wheels over the network. Execute commands in your own terminal from the wheel’s
+download directory. The Obsidian plugin never downloads or installs Python,
+dependencies or updates.
 
 Install a supported Python with venv support yourself: [Windows/macOS downloads](https://www.python.org/downloads/),
 or [Ubuntu Python documentation](https://documentation.ubuntu.com/ubuntu-for-developers/howto/python-setup/).
@@ -18,10 +19,12 @@ Windows PowerShell (replace both quoted directory paths):
 ```powershell
 Set-Location -LiteralPath 'C:\Downloads\mdflow-2.0.0-engine'
 py -3.14 -m venv 'C:\mdflow-venvs\2.0.0'
-& 'C:\mdflow-venvs\2.0.0\Scripts\python.exe' -m pip install --require-hashes --only-binary=:all: --index-url https://pypi.org/simple --find-links './wheels' -r './engine.lock'
-if ($LASTEXITCODE -ne 0) { throw 'Locked install failed' }
+& 'C:\mdflow-venvs\2.0.0\Scripts\python.exe' -m pip install --only-binary=:all: --index-url https://pypi.org/simple './mdflow-2.0.0-py3-none-any.whl' 'markitdown-gc>=0.3.5,<0.4'
+if ($LASTEXITCODE -ne 0) { throw 'Wheel install failed' }
 & 'C:\mdflow-venvs\2.0.0\Scripts\python.exe' -m pip check
 if ($LASTEXITCODE -ne 0) { throw 'Dependency check failed' }
+& 'C:\mdflow-venvs\2.0.0\Scripts\python.exe' -m mdflow selftest
+if ($LASTEXITCODE -ne 0) { throw 'Engine selftest failed' }
 & 'C:\mdflow-venvs\2.0.0\Scripts\python.exe' -m mdflow version
 if ($LASTEXITCODE -ne 0) { throw 'Engine version check failed' }
 ```
@@ -32,8 +35,9 @@ Ubuntu/macOS POSIX shell:
 set -e
 cd '/path/to/mdflow-2.0.0-engine'
 python3.14 -m venv '/path/to/mdflow-venvs/2.0.0'
-'/path/to/mdflow-venvs/2.0.0/bin/python' -m pip install --require-hashes --only-binary=:all: --index-url https://pypi.org/simple --find-links './wheels' -r './engine.lock'
+'/path/to/mdflow-venvs/2.0.0/bin/python' -m pip install --only-binary=:all: --index-url https://pypi.org/simple './mdflow-2.0.0-py3-none-any.whl' 'markitdown-gc>=0.3.5,<0.4'
 '/path/to/mdflow-venvs/2.0.0/bin/python' -m pip check
+'/path/to/mdflow-venvs/2.0.0/bin/python' -m mdflow selftest
 '/path/to/mdflow-venvs/2.0.0/bin/python' -m mdflow version
 ```
 
@@ -63,3 +67,20 @@ Do not save the key in settings, command arguments or a checked-in file. Finder,
 Dock and shortcut launches may not inherit the terminal environment. A running
 Obsidian instance will not gain variables by activating an engine venv. The UI
 shows presence only. Read the README network and cost disclosures before consent.
+
+## Reference reproduction (Linux x64 / CPython 3.14 only)
+
+CI generates one `reference-requirements.txt` with pip-tools, including Core
+0.3.5, the exact wheel hash and resolved dependency hashes. Verify it alongside
+the wheel; in a new venv on that target, from the download directory, run:
+
+```sh
+'/path/to/reference-venv/bin/python' -m pip install --require-hashes --only-binary=:all: --index-url https://pypi.org/simple -r reference-requirements.txt
+'/path/to/reference-venv/bin/python' -m pip check
+'/path/to/reference-venv/bin/python' -m mdflow selftest
+```
+
+This reference does not promise identical versions on other targets. Ordinary
+installs resolve the wheel’s supported dependency range; CI checks all advertised
+OS/Python targets separately. Exact installed tool versions appear in `version`
+and output provenance. Keep each venv at its creation path for rollback.

@@ -5,8 +5,8 @@ commit). H needs a human evidence file. R/H tests *collect* and ``skip`` with an
 input is absent; they never pass without it (90_ACCEPTANCE: skipped = FAIL for a release candidate).
 
 FX-72 layout (``$MDFLOW_RELEASE_BUNDLE``), the exact bytes that would be attached to the draft release:
-    main.js manifest.json styles.css engine.zip engine.lock SHA256SUMS
-    <asset>.sigstore.json         attestation bundle per attested subject (6)
+    Shared ASSETS from tools/build_engine.py plus SHA256SUMS
+    <asset>.sigstore.json         attestation bundle per attested subject
     release-candidate.json        PKG-17 candidate manifest (see test_pt_release.py)
 Human evidence lives in ``attest/`` of the repository (or ``$MDFLOW_ATTEST_DIR``).
 """
@@ -19,7 +19,6 @@ import shutil
 import subprocess
 import sys
 from types import SimpleNamespace
-import zipfile
 
 import pytest
 
@@ -29,7 +28,7 @@ import _support  # noqa: E402  (helper module next to this file)
 REPO = _support.REPO
 BUNDLE_ENV = "MDFLOW_RELEASE_BUNDLE"
 ATTEST_ENV = "MDFLOW_ATTEST_DIR"
-SUBJECTS = ("main.js", "manifest.json", "styles.css", "engine.zip", "engine.lock", "SHA256SUMS")
+SUBJECTS = _support.SUBJECTS
 
 
 def pytest_configure(config):
@@ -96,12 +95,11 @@ def require_evidence(path: Path, what: str) -> Path:
 
 @pytest.fixture(scope="session")
 def bootstrap_root(release_bundle, pt_temps) -> Path:
-    """engine.zip extracted under a path with a space and Korean text."""
+    """Verified direct assets copied under a path with a space and Korean text."""
     root = pt_temps.mktemp("엔진 번들 extract")
-    with zipfile.ZipFile(release_bundle / "engine.zip") as archive:
-        archive.extractall(root)
-    entries = [p for p in root.iterdir()]
-    return entries[0] if len(entries) == 1 and entries[0].is_dir() else root
+    for name in _support.ASSETS:
+        shutil.copyfile(release_bundle / name, root / name)
+    return root
 
 
 def venv_python(venv: Path) -> Path:
@@ -110,14 +108,14 @@ def venv_python(venv: Path) -> Path:
 
 @pytest.fixture(scope="session")
 def packaged_venv(bootstrap_root, pt_temps) -> SimpleNamespace:
-    """Fresh venv installed exactly as BOOTSTRAP.md says: hash-checked, wheel-only, from engine.lock."""
+    """Fresh venv installed as BOOTSTRAP.md says: verified wheel plus declared Core range."""
     venv = pt_temps.mktemp("venv 한글") / "2.0.0"
     subprocess.run([sys.executable, "-m", "venv", str(venv)], check=True, timeout=600)
     python = venv_python(venv)
-    install = [str(python), "-m", "pip", "install", "--require-hashes", "--only-binary=:all:",
-               "--find-links", "./wheels", "-r", "./engine.lock"]
+    install = [str(python), "-m", "pip", "install", "--only-binary=:all:",
+               '--index-url', 'https://pypi.org/simple', './' + _support.WHEEL, 'markitdown-gc>=0.3.5,<0.4']
     done = subprocess.run(install, cwd=bootstrap_root, capture_output=True, text=True, timeout=1800)
-    assert done.returncode == 0, f"locked install failed:\n{done.stdout[-2000:]}\n{done.stderr[-2000:]}"
+    assert done.returncode == 0, f"compatibility install failed:\n{done.stdout[-2000:]}\n{done.stderr[-2000:]}"
     check = subprocess.run([str(python), "-m", "pip", "check"], capture_output=True, text=True, timeout=300)
     assert check.returncode == 0, check.stdout + check.stderr
     return SimpleNamespace(python=python, venv=venv, root=bootstrap_root)

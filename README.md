@@ -8,7 +8,7 @@ verification is still pending; see [packaging verification](docs/renewal/PACKAGI
 ## Setup
 
 Download the standard plugin assets `main.js`, `manifest.json`, and `styles.css`
-from the same release. Download and verify `engine.zip`, `engine.lock`, and
+from the same release. Download and verify `mdflow-2.0.0-py3-none-any.whl`, `BOOTSTRAP.md`, and
 `SHA256SUMS` separately. Follow [BOOTSTRAP.md](engine/BOOTSTRAP.md) in your own
 terminal, then select the absolute venv Python path in the plugin. The plugin
 never installs Python or dependencies. Keep the venv at its original location.

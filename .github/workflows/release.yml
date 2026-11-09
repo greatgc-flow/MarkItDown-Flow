@@ -28,6 +28,8 @@ jobs:
   freeze:
     needs: ci
     runs-on: ubuntu-24.04
+    outputs:
+      subjects: ${{ steps.subjects.outputs.value }}
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
@@ -58,6 +60,9 @@ jobs:
           python -m pip install --only-binary=:all: -r engine/requirements-build.txt
           python tools/build_release.py --verify --tag "$GITHUB_REF_NAME"
           python tools/release_gate.py --candidate build/candidate --evidence build/trace --manual build/manual
+      - id: subjects
+        name: Read the shared release subject list
+        run: python -c "import sys,json; sys.path.insert(0,'tools'); from build_engine import SUBJECTS; print('value='+json.dumps(SUBJECTS))" >> "$GITHUB_OUTPUT"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: frozen-candidate
@@ -74,7 +79,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        subject: [main.js, manifest.json, styles.css, engine.zip, engine.lock, SHA256SUMS]
+        subject: ${{ fromJSON(needs.freeze.outputs.subjects) }}
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:

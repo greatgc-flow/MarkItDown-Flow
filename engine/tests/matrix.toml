@@ -418,7 +418,13 @@ reason = "Report determinism and --report timestamps are asserted by the warm-re
 owner = "S0:FM12"
 
 # ======================================================================= file class x stage (117 cells)
-# Stages with an `fx("all")` test (S0 S1 S2 S3 S8 S11 S13) cover every class; the stages below do not.
+# R28: only S0-S3 and S13 may expand fx("all"); other stages need explicit fixture assertions.
+
+[[class_stage]]
+classes = ["K12", "K13", "K17", "K19"]
+stages = ["S11"]
+reason = "Legacy, media, oversize and unknown-extension sources are report_only (REQ-CLS-05): the orchestrator publishes no Markdown and does not invoke Assemble. Classification owns this exclusion; protected/corrupt no-output integration is independently asserted on K15/K16."
+owner = "S3"
 
 # M1-H (MECE round 1, horizontal): S5:K01 K02 K04 K05 K06 K11 K18, S4:K03 K04, S6:K03 and S10:K02 were declared
 # N/A by delegation; dedicated tests T-CNV-06..12, T-SEL-05/06, T-RND-09 and T-TRX-07 (stage_io/test_class_closure.py)

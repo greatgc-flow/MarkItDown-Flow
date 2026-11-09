@@ -29,6 +29,18 @@ jobs:
       - run: python -m pip install --only-binary=:all: -r engine/requirements-build.txt
       - name: Build candidate once (publication uses these exact bytes)
         run: python tools/build_release.py --tag 2.0.0
+      - name: Reference-target complete closure and tamper checks
+        env:
+          MDFLOW_RELEASE_BUNDLE: ${{ github.workspace }}/build/candidate
+        run: |
+          python -m pip install --only-binary=:all: -r engine/requirements-test.txt
+          python -I -m pytest engine/tests/packaging -k PT_02 -q --junitxml=build/trace/junit-reference.xml
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: ${{ always() }}
+        with:
+          name: reference-evidence
+          path: build/trace/
+          if-no-files-found: error
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: release-candidate
@@ -62,10 +74,10 @@ jobs:
           python -c "import platform,sys; print(sys.version); print(platform.machine()); print(platform.platform())"
           echo "Runner image: $ImageOS $ImageVersion"
           echo "checkout=11bd71901bbe5b1630ceea73d27597364c9af683 setup-python=a26af69be951a213d495a4c3e4e4022e16d87065 download-artifact=d3f86a106a0bac45b974a628896c90dbdf5c8093 upload-artifact=ea165f8d65b6e75b540449e92b4886f43607fa02"
-      - name: Verify transfer and install exact release lock
+      - name: Verify transfer and install release wheel with declared dependency policy
         run: |
           python tools/build_release.py --verify
-          python tools/packaged_check.py install --bundle build/candidate --venv build/locked-env
+          python tools/packaged_check.py install --bundle build/candidate --venv build/compat-env
           python -m pip install --only-binary=:all: -r engine/requirements-test.txt
           python tools/packaged_check.py install-current --bundle build/candidate
       - name: Engine pytest including contract, security and offline mocks
@@ -75,7 +87,7 @@ jobs:
       - name: Packaged integration outside source tree (spaces and Korean paths)
         env:
           MDFLOW_RELEASE_BUNDLE: ${{ github.workspace }}/build/candidate
-        run: python -I -m pytest engine/tests/packaging -k "PT_01 or PT_02 or PT_05 or PT_06 or PT_08 or PT_14" -q --junitxml=build/trace/junit-pkg-${{ matrix.os }}-py${{ matrix.python }}.xml
+        run: python -I -m pytest engine/tests/packaging -k "PT_01 or PT_05 or PT_06 or PT_08 or PT_14" -q --junitxml=build/trace/junit-pkg-${{ matrix.os }}-py${{ matrix.python }}.xml
       - name: Preserve execution evidence even on failure
         if: ${{ always() }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -183,8 +195,14 @@ jobs:
         with:
           name: release-candidate
           path: build/candidate/
-      - name: Locked install, mdflow version and classify smoke
+      - name: Policy install, mdflow version and classify smoke
         run: python tools/packaged_check.py smoke --bundle build/candidate --venv build/smoke-env
+      - if: ${{ always() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: smoke-${{ matrix.os }}-py${{ matrix.python }}
+          path: build/trace/
+          if-no-files-found: error
 
   trace:
     needs: [pytest, jest, contract-min, contract-max, smoke]
@@ -211,6 +229,10 @@ jobs:
           pattern: contract-*
           path: build/trace/
           merge-multiple: true
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: reference-evidence
+          path: build/trace/
       - run: |
           python -m pip install --only-binary=:all: -r engine/requirements-build.txt
           python tools/trace.py check

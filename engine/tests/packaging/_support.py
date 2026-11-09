@@ -22,7 +22,6 @@ import sys
 REPO = Path(__file__).resolve().parents[3]
 SHA40 = re.compile(r"[0-9a-f]{40}")
 SENTINEL = "sk-pt-dummy-sentinel-7f3a"  # never a credential; must not appear in any produced byte
-SUBJECTS = ("main.js", "manifest.json", "styles.css", "engine.zip", "engine.lock", "SHA256SUMS")
 
 
 def load_py(path: Path, name: str):
@@ -31,6 +30,10 @@ def load_py(path: Path, name: str):
     sys.modules[name] = module
     spec.loader.exec_module(module)
     return module
+
+
+_release = load_py(REPO / 'tools/build_engine.py', 'build_engine')
+SUBJECTS, ASSETS, WHEEL, REFERENCE = _release.SUBJECTS, _release.ASSETS, _release.WHEEL, _release.REFERENCE
 
 
 def sha256_file(path: Path) -> str:

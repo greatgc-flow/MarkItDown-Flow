@@ -352,6 +352,16 @@ Cell = primary `S<stage>:FM<n>` (section 5).
 
 M1 red logs distinguish original behavioral failures from deliberate in-memory oracle mutations. Windows restricted-token temp adaptation is an explicit test-only bridge; it is not desktop/ACL certification. Runtime target and real release-asset evidence remain independent gates.
 
+R27/R28 added registrations (existing REQs; precise fixture assertions replace blanket class credit):
+
+| Test | Requirements | Fixtures | Cell |
+|---|---|---|---|
+| T-PLN-55 | REQ-PLN-01, REQ-PLN-02, REQ-PLN-04 (R28 class-specific identity, counts, caps and cache stability) | FX-01,07,11,23,24,28,30,38,42,41 | S8:FM0 |
+| T-ASM-51 | REQ-ASM-01, REQ-ASM-02, REQ-ASM-03, REQ-GEN-07 (R28 text/G2b/mismatch/directory base and provenance) | FX-28,31,41,51 | S11:FM0 |
+| T-META-53 | REQ-PKG-10 (R28 stage-restricted all-class credit in both projections) | - | S0:FM10 |
+| T-META-54 | REQ-PKG-02, REQ-PKG-10 (R27 reference scoring requires its own execution; matrix results cannot substitute) | - | S0:FM10 |
+| T-GEN-54 | REQ-PKG-01, REQ-PKG-02, REQ-PKG-14, REQ-PKG-17 (R27 deterministic wheel and frozen subject tamper rejection) | - | S0:FM9 |
+
 ### 4.2 Contract tests vs installed `markitdown-gc` (ids as cited by SPEC 3.0/11)
 
 | Test | Pins | REQ |
@@ -365,7 +375,7 @@ M1 red logs distinguish original behavioral failures from deliberate in-memory o
 | CT-07 | raster `fN`, `frame_cap`, `image_probe_failed` shapes; no total-frame field | REQ-RND-02, REQ-MAP-02 |
 | CT-08 | `extract_media` filename == `sha256(member)[:12]` | REQ-CNV-03, REQ-MAP-03 |
 | CT-09 | HWP5 filename == `payload_sha256[:12]`; `stored_ole_stream` | REQ-MAP-05 |
-| CT-10 | HWP5/HWPX no `missing_dependency` on the locked install | REQ-GEN-01 |
+| CT-10 | HWP5/HWPX no `missing_dependency` on reference/compatibility installs | REQ-GEN-01 |
 | CT-11 | Core offline: no plugins/LLM/DocIntel; bytes + extension hint; URI-like not fetched | REQ-CNV-05 |
 | CT-12 | `txt` -> `not_applicable`, html -> `media_not_inspected`, csv -> `unsupported_format` | REQ-TRI-01 |
 | CT-13 | installed Core in `>=0.3.5,<0.4`; startup gate rejects out-of-range | REQ-GEN-02, REQ-PKG-03 |
@@ -401,25 +411,25 @@ M1 red logs distinguish original behavioral failures from deliberate in-memory o
 
 | Test | REQ | Mode |
 |---|---|---|
-| PT-01 | REQ-PKG-01 | R |
-| PT-02 | REQ-PKG-02 | R |
+| PT-01 | REQ-PKG-01 (direct pure-Python wheel/metadata, notices, forbidden content and isolated import) | R |
+| PT-02 | REQ-PKG-02 (one CI-generated Linux x64/Python 3.14 hashed reference; full closure install and tamper/missing-pin/hash rejection; other targets use declared ranges) | R |
 | PT-03 | REQ-PKG-03 (Core 0.3.5 and newest `<0.4`; resolver failure = fail) | A |
-| PT-04 | REQ-PKG-04 | H |
-| PT-05 | REQ-PKG-05 (bootstrap commands run unchanged per OS; plugin mocks show diagnostics only) | R |
-| PT-06 | REQ-PKG-06 (complete `version` response gate vs real packaged output; protocol/schema/Pillow mismatch blocks) | R |
-| PT-07 | REQ-PKG-07, REQ-GEN-03 | A |
-| PT-08 | REQ-PKG-08 (fresh env, space/Korean paths; nested/multi-root `plan` then same-roots `run`; repeated hashes; hash stable after cache warming; displayed fields = Plans; OS cancellation leaves no process) | R |
+| PT-04 | REQ-PKG-04 (generated per-target resolved artifact URL/hash/license metadata and isolated installs; named license review, no universal catalog) | H |
+| PT-05 | REQ-PKG-05 (verified wheel + declared Core/PyPI policy; bootstrap commands execute per OS; plugin diagnostics only) | R |
+| PT-06 | REQ-PKG-06 (complete packaged version response, protocol/schema/Core policy and selftest; record renderer/Pillow versions without reference-pin blocking) | R |
+| PT-07 | REQ-PKG-07, REQ-GEN-03 (declared-policy matrix installs; one candidate reference job and preserved reports) | A |
+| PT-08 | REQ-PKG-08 (compatibility installs under declared ranges; fresh env, consent/hash/root replay/security/cancellation retained) | R |
 | PT-09 | REQ-PKG-09 (`npm ci`/typecheck/build/jest x3 OS; desktop guard; `JT-SHL-19-01` run; pinned Node; 3.11-3.13 smoke) | A |
 | PT-10 | REQ-PKG-10 (mutation self-test; automated vs manual reported separately) | A |
 | PT-11 | REQ-PKG-11 | A |
 | PT-12 | REQ-PKG-12 | A |
-| PT-13 | REQ-PKG-13 | R |
-| PT-14 | REQ-PKG-14 | R |
+| PT-13 | REQ-PKG-13 (shared release subjects include wheel/reference/bootstrap/notices; constrained provenance verification and tamper rejection) | R |
+| PT-14 | REQ-PKG-14 (shared asset checksums, exact reference-wheel hash and wheel forbidden-content scan) | R |
 | PT-15 | REQ-PKG-15 (manifest/versions/description/commands/sample removal; MAN-01, MAN-03, MAN-04 rows checked by validator, not proven) | R/H |
 | PT-16 | REQ-PKG-16 (README has the five R16 disclosures; no telemetry endpoints; no unplanned sockets) | A |
-| PT-17 | REQ-PKG-17 | R |
-| PT-18 | REQ-PKG-18 (draft release = tested bytes; rehearsal checklist schema) | R/H |
-| PT-19 | REQ-PKG-19 (post-deploy report schema validator) | A |
+| PT-17 | REQ-PKG-17 (frozen candidate wheel/reference digest and actual acceptance/manual gates) | R |
+| PT-18 | REQ-PKG-18 (draft subjects equal tested bytes; named desktop rehearsal schema) | R/H |
+| PT-19 | REQ-PKG-19 (post-deploy report schema for shared release subjects) | A |
 | PT-20 | REQ-PKG-20 (rollback rehearsal in isolated vault) | R/H |
 | PT-21 | REQ-PKG-21 (cleanup dry-run; sentinels unchanged) | A |
 | PT-22 | REQ-PKG-05 (terminal-launch env smoke: sentinel in child env, absent from diagnostics/persisted data) | A |
@@ -435,7 +445,7 @@ Every REQ id defined in `10_SPEC.md` (incl. new REQ-SNF-09), `20_SHELL.md` (SHL-
 **Axes.** Stages `S1..S13` = SPEC section 4 (Sniff, Triage, Classify, Select, Convert, Render, Lookup, Plan, Approve, Transcribe, Assemble, Write, Report) + `S0` general (startup, CLI, cancellation, cross-run). Failure modes (primary cause of the injected condition; lowest applicable number; `FM0` if none): `FM0` nominal; `FM1` corrupt/invalid or internal failure; `FM2` protected/encrypted; `FM3` bound exceeded (bytes, units, pixels, zip, threshold, length); `FM4` unsupported/out-of-scope/legacy; `FM5` local IO/permission; `FM6` provider failure; `FM7` interruption/crash/forced kill; `FM8` consent missing/denied/stale/unused; `FM9` hostile or security-relevant input; `FM10` contract/vocabulary/version drift; `FM11` partial coverage/cap/low priority/unmapped; `FM12` duplicate/collision/concurrency/idempotency/determinism.
 File classes: `K01` pdf_text, `K02` pdf_scan, `K03` pdf_mixed, `K04` pdf_capped, `K05` raster_single, `K06` raster_multiframe, `K07` office (docx/pptx/xlsx), `K08` hwpx, `K09` hwp5, `K10` text_g2a (txt/log), `K11` g2b (csv/tsv/json/md/html/epub/xls), `K12` legacy, `K13` media, `K14` zip_container, `K15` protected, `K16` corrupt/zero/unreadable, `K17` oversize, `K18` ext_mismatch, `K19` unknown_ext, `K20` dir_tree.
 
-**Exclusive and exhaustive by construction.** (1) Each engine test has exactly one primary `cov` cell. (2) Every cell of the 14x13 stage-FM grid and the 20x14 class-stage grid is REGISTERED to an assertion or declared `N/A` in `matrix.toml` with `reason` and `owner` cell; an undeclared empty cell fails `trace.py check`; an N/A cell that is registered appears as registered in the compatibility projection. (3) The class_stage registration projection includes explicit common-schema equivalences and does not assert runtime class execution. scope(schema) assertions are listed separately and excluded from class_execution_registrations; executed status requires the corresponding per-platform JUnit evidence. Class applicability ownership remains separate from this engine fix.
+**Exclusive and exhaustive by construction.** (1) Each engine test has exactly one primary `cov` cell. (2) Every cell of the 14x13 stage-FM grid and the 20x14 class-stage grid is REGISTERED to an assertion or declared `N/A` in `matrix.toml` with `reason` and `owner` cell; an undeclared empty cell fails `trace.py check`; an N/A cell that is registered appears as registered in the compatibility projection. (3) The class_stage registration projection expands `fx("all")` only for S0-S3 and S13 (R28); other stages require explicit class fixtures or justified N/A. It includes explicit common-schema equivalences and does not assert runtime class execution. scope(schema) assertions are listed separately and excluded from class_execution_registrations; executed status requires the corresponding per-platform JUnit evidence. Class applicability ownership remains separate from this engine fix.
 **Floor (cannot be N/A):** all `S3` x FM0/1/2/3/4/10/11/12; `S1:FM1/2/3/9`; `S2:FM1/10`; `S6:FM1/3`; `S7:FM1/5`; `S9:FM8`; `S10:FM6/7`; `S12:FM5/9`; `S0:FM7/10/12`; every class x `S3`; every class x `S13` (GEN-07); every class except report-only K12,K13,K15,K16,K17,K19 x `S11`.
 
 ## 6. TDD order (red -> green; each step ends with `trace.py check` green for its REQs)
@@ -453,7 +463,7 @@ File classes: `K01` pdf_text, `K02` pdf_scan, `K03` pdf_mixed, `K04` pdf_capped,
 | 8 | Shell pure: migration, history, framing, i18n, redaction | JT-03..07, JT-13, JT-SHL-19-01, JT-21 |
 | 9 | Shell process layer: spawn/replay, version gate, cancel, setup, selftest | JT-10..12, JT-16..18, JT-20 |
 | 10 | Shell UI: commands, desktop guard, modal, entry points, output validation | JT-01, JT-02, JT-08, JT-09, JT-14, JT-15 |
-| 11 | Packaging: lock, wheel, zip, workflows, release dry-run | PT-01..09, PT-11..22 |
+| 11 | Packaging: wheel, CI reference requirements, workflows, release dry-run | PT-01..09, PT-11..22 |
 
 Rule: step-N code is not merged before its tests exist red; step N+1 does not start while a step-N REQ is failing or unregistered.
 
@@ -471,7 +481,7 @@ Rule: step-N code is not merged before its tests exist red; step N+1 does not st
 Open items (DRAFT-3 sync):
 1. The shell code table (20_SHELL 6) now matches SPEC 7.5 by inspection (28 E_, 22 W_); `JT-SHL-19-01` is the authority and was not run.
 2. `SYNC-AFTER-DRAFT-3` markers remain in 20_SHELL/25_PACKAGING; FX-71 fixtures must be regenerated from the real DRAFT-3 engine, and JT-12..17 / PT-06 / PT-08 stay unverified until then.
-3. TODO-VERIFY carried from 20/25, not settleable by tests: public `markitdown-gc` 0.3.5 artifacts (PT-04), Windows signal/blocked-request behavior (JT-16 on real Windows runners), attestation eligibility (PT-13), terminal env launch commands per OS (PT-22), Obsidian min/current versions (MAN-04).
+3. TODO-VERIFY carried from 20/25, not settleable by tests: actual target installs and generated license review (PT-04; Core 0.3.5 availability established by R27), Windows signal/blocked-request behavior (JT-16 on real Windows runners), attestation eligibility (PT-13), terminal env launch commands per OS (PT-22), Obsidian min/current versions (MAN-04).
 4. REQ-PKG-18/19/21 describe post-publication procedures; pre-release only their tooling is testable (PT-18/19/21). Real post-deploy evidence goes to the acceptance report, unscored.
 5. Cross-OS `plan_hash` equality holds only for equal raster bytes (SPEC 10.4); T-PLN-02 asserts per-OS goldens, cross-OS equality only for pass-through PNG/JPEG fixtures (FX-09, FX-10).
 

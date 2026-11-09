@@ -29,7 +29,7 @@ def main():
     candidate['verifier'] = {'gh': version, 'source_digest': commit, 'signer_workflow': candidate['signer_workflow']}
     (folder / 'release-candidate.json').write_text(json.dumps(candidate, indent=2) + '\n')
     notes = ('MarkItDown Flow 2.0.0\n\nMajor-version migration: install the engine externally in a new venv '
-             'using engine.lock and BOOTSTRAP.md, then choose its interpreter. Audio/YouTube, Azure fallback '
+             'using the release wheel and BOOTSTRAP.md, then choose its interpreter. Audio/YouTube, Azure fallback '
              'routing and old wrapper settings are removed; review README disclosures before OCR. '
              'Keep 1.0.8 assets and the sanitized v1 settings snapshot for rollback. '
              'Never pass schema-2 settings to v1. Published assets are immutable.\n')

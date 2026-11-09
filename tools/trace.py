@@ -89,7 +89,10 @@ def test_classes(test: dict, classes: dict, *, include_schema=False) -> set[str]
     if not include_schema and 'schema' in marker_values(test, 'scope'):
         return set()
     fixtures = set(marker_values(test, 'fx'))
-    return set(MATRIX_CLASSES) if 'all' in fixtures else set().union(*(classes.get(f, set()) for f in fixtures))
+    stages = {cell[0] for cell in test['markers'].get('cov', []) if len(cell) == 2}
+    if 'all' in fixtures and stages <= {'S0', 'S1', 'S2', 'S3', 'S13'} and stages:
+        return set(MATRIX_CLASSES)
+    return set().union(*(classes.get(f, set()) for f in fixtures if f != 'all'))
 
 
 def coverage_problems(requirements: dict, tests: list[dict]) -> dict[str, list[str]]:
@@ -189,7 +192,7 @@ def matrix_problems(root: Path, tests: list[dict]) -> list[str]:
     """Both generated grids (stage x failure mode, class x stage): covered or reasoned N/A.
 
     Coverage is derived from the markers only: a test covers its single `cov` cell, and the class x stage
-    cell of every class of its `fx` ids (`fx("all")` = every class). `engine/tests/matrix.toml` supplies
+    cell of every class of its `fx` ids (`fx("all")` expands only at S0-S3 and S13). `engine/tests/matrix.toml` supplies
     applicability only; floor cells can never be declared N/A. An N/A that is covered is not a problem.
     """
     try:
@@ -390,6 +393,10 @@ def score(root: Path, evidence: Path, reviews: Path, expected_commit: str) -> di
         rows = [t for t in registry if t["tid"] == tid]
         if not rows:
             return False
+        if tid == 'PT-02':
+            # R27's hash reproduction is scoped to its single reference target.
+            values = results.get(('junit-reference.xml', tid), [])
+            return len(values) >= len(rows) and all(values)
         shell = tid.startswith("JT-")
         for runner in ("windows-2022", "ubuntu-24.04", "macos-15-intel"):
             for py in ([None] if shell else ["3.10", "3.14"]):

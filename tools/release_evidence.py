@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 import re
 
-SUBJECTS = ('main.js', 'manifest.json', 'styles.css', 'engine.zip', 'engine.lock', 'SHA256SUMS')
+from build_engine import SUBJECTS
 OSES = {'windows', 'macos', 'linux'}
 REHEARSAL = {'fresh_install', 'upgrade_from_1_0_8', 'rollback', 'consent_dismiss', 'consent_approve',
              'mixed_document_mock_ocr', 'warm_rerun', 'cancel_restart', 'terminal_env_launch', 'commands', 'en_ko'}
@@ -100,7 +100,7 @@ def validate_postdeploy(data: dict) -> list[str]:
     commit(data, problems)
     if data.get('listing') != {'id': 'markitdown-flow', 'version': '2.0.0'}:
         problems.append('wrong listing identity/version')
-    assets(data.get('installed_assets'), SUBJECTS[:5], problems, matching=True)
+    assets(data.get('installed_assets'), SUBJECTS[:-1], problems, matching=True)
     cells, failed = [], False
     for env in data.get('environments', []) if isinstance(data.get('environments'), list) else []:
         env = required(env, ('os', 'vault', 'app_version', 'python', 'unexpected_egress', 'checks'), problems)

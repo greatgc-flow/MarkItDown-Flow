@@ -1,4 +1,4 @@
-# Test and fixture tools; not the release runtime lock.
+# Test and fixture tools; separate from release reference requirements.
 # Registry snapshots (2026-11-09); see docs/renewal/PACKAGING_VERIFICATION.md.
 pytest==9.2.0
 python-docx==1.2.0

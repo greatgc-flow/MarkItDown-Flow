@@ -1,93 +1,79 @@
-# Step 11 packaging verification (2026-11-09)
+# R27/R28 engine packaging verification (2026-11-09)
 
-The implementation prepares candidates and refuses incomplete release evidence.
-No release, target installation, attestation, listing update or desktop rehearsal
-has been executed by this workspace task. Pytest is reserved for the orchestrator.
+R27 replaces the cached universal lock, fifteen-report merger and public
+wheel/license catalog. `tools/lock_engine.py`, `engine/engine.lock` and
+`engine/lock-inventory.json` are deleted. There is no engine ZIP or relocated
+venv. Core remains `markitdown-gc>=0.3.5,<0.4` from PyPI; R27 establishes public
+0.3.5 availability. Target installs remain separate evidence.
 
-## Dependency provenance and remaining lock work
+`tools/build_engine.py` builds the pure Python wheel. The candidate CI job on
+Ubuntu x64/Python 3.14 invokes pinned pip-tools 7.6.2 to generate ONE
+`reference-requirements.txt`, with exact Core 0.3.5 closure and local wheel hash.
+The header states its target. A fresh venv installs with hash checking and
+wheel-only mode, then runs pip check, version and selftest outside sources.
+CI retains the standard pip install report, installed metadata, version/selftest
+outputs and generated license text. The reference is not a universal lock.
 
-`pip index versions markitdown-gc` was attempted with an explicit PyPI index and
-Python 3.14 selection. It returned no matching distribution in this sandbox.
-Direct HTTPS from Python failed with WinError 10061. Web retrieval of the fork's
-[0.3.5 JSON](https://pypi.org/pypi/markitdown-gc/0.3.5/json) and version page
-returned cache misses. These failures do not establish package nonexistence.
+Six required endpoint jobs and nine intermediate Python smokes independently
+install the same verified wheel with its declared Core range and preserve
+per-target pip reports. Three Python 3.15 endpoint jobs remain experimental.
+PT-02 tamper tests run only on the reference target with `junit-reference.xml`;
+trace scoring requires that evidence. Matrix evidence cannot substitute for it.
 
-The local pip HTTP cache contains PEP 691 PyPI index snapshots and the actual
-0.3.5 wheel. `engine.lock` records 41 distribution/version branches with actual
-wheel SHA-256 values from those snapshots. `lock-inventory.json` preserves each
-artifact URL/hash and license metadata, identifies this cached provenance, and
-lists every unresolved check. Magika and its transitive closure, pandas 2.x's
-pytz closure, and selected older-branch metadata remain unresolved. This is a
-candidate snapshot, **not a complete release-installable lock**. The builder
-refuses an inventory with any unresolved entries. Missing hashes are never
-invented, and upstream markitdown is never substituted.
+The shared ASSETS/SUBJECTS in `tools/build_engine.py` drive checksums, release
+verification, workflow attestation subjects and publication. Subjects comprise
+the three plugin assets, direct wheel, reference requirements, BOOTSTRAP.md,
+NOTICE.txt, LICENSE and SHA256SUMS. Every transferred subject retains tested
+bytes. No build occurs in verification/publication. Named reviews, real target
+installs, desktop rehearsals and provenance verification remain release gates.
+No release or external installation is claimed by local tests.
 
-To finish the reviewed lock, run `python tools/lock_engine.py --report <file>
---runner <label>` in each real target interpreter/OS, then merge all fifteen
-3.10-3.14 target reports with `--merge <files...>`. This is an explicit
-maintainer update, not an installation/build-time upgrade. The merger requires
-all advertised cells, exact Core 0.3.5, wheel-only resolution, public artifact
-hashes and license metadata. `--wheel <path>` additionally freezes the local
-2.0.0 engine wheel hash; the candidate builder checks it when present.
+R28 limits `fx("all")` class-stage expansion to S0-S3/S13 in both registration
+and execution projections. Its initial restricted trace check exposed 18 unique
+cells (22 diagnostics). T-PLN-55 closes ten S8 classes; T-ASM-51 closes four S11
+floor classes. S11 K12/K13/K17/K19 are reasoned N/A because report_only excludes
+assembly, owned by S3. T-META-53 exercises every stage plus explicit fixture and
+schema behavior. Trace check has zero errors after these changes.
 
-Test pins were updated from available registry snapshots. Public pages also
-confirm [pypdf 7.0.0](https://pypi.org/project/pypdf/),
-[Pillow 12.3.0 for Python 3.10](https://pypi.org/project/pillow/12.3.0/),
-[Pillow 13.0.0 for Python 3.11+](https://pypi.org/project/pillow/),
-[exceptiongroup 1.3.1](https://pypi.org/project/exceptiongroup/), and
-[tomli 2.5.0](https://pypi.org/project/tomli/). Python markers keep the Python 3.10
-branch compatible. Build/bootstrap tools have their own pins. Node 24.22.2 is
-an exact 24.x patch found in the official
-[Node release index](https://nodejs.org/dist/index.json).
+## Requirement-led test change log
 
-## Candidate and execution gates
+The amendments in 25_PACKAGING and PT rows in 30_TESTPLAN precede the matching
+test changes. Existing engine behavior tests were not loosened.
 
-`build_engine.py --wheel-only` successfully builds mdflow 2.0.0 as a pure-Python
-wheel. Repeated fixed-epoch builds are compared locally for determinism. The
-complete engine ZIP is gated on the inventory above. Dependencies may contain
-native wheels. The ZIP uses an explicit member list, includes bootstrap,
-licenses and inventory, and shares its exact lock bytes with the release asset.
+| Test or helper | Amended authority | Change |
+|---|---|---|
+| PT-01 | PKG-01 | Inspect direct wheel/metadata and attached notices; retain isolated import assertion. |
+| PT-02 | PKG-02 | Check target header and direct wheel hash; retain complete dependency closure, missing-pin/hash and tamper oracles, scoped to reference target. |
+| T-GEN-52 / full-closure helper | PKG-02 | Offline three-wheel control uses a reference file and local wheelhouse instead of an engine ZIP. Pin/hash/dependency mutations still fail. |
+| PT-04 | PKG-04 | Consume standard generated per-target pip reports and named license review; remove universal per-wheel target catalog. Core range and actual URL/hash/install evidence remain required. |
+| PT-05 | PKG-05 | Execute wheel + PyPI/Core range examples, pip check, selftest and version per OS; retain plugin diagnostics-only assertion. |
+| PT-06 / gate | PKG-06 | Validate complete schema and supported Python/engine/Core policy; accept valid compatibility-resolved renderer/Pillow versions and require selftest. Missing/type/protocol/schema/Core mutations still fail. Shell gate belongs to Fable. |
+| PT-07 | PKG-07 amendment | Retain exact six-required/three-experimental matrix checks; assert one reference compiler/hash job and declared-policy installs with preserved reports. |
+| PT-13 | PKG-13 | Shared attestation subjects include wheel/reference/bootstrap/notices; constrained verifier and tamper checks retained. |
+| PT-14 | PKG-14 | Shared asset inventory, direct wheel forbidden-content scan and reference-to-wheel hash binding replace ZIP/embedded-lock identity. |
+| PT-15 | PKG-15 amendment / PKG-01 | Shared engine_wheel helper reads the direct attachment; other identity/checklist assertions unchanged. |
+| PT-17 | PKG-17 amendment | Candidate manifest binds reference_sha256 instead of lock_sha256. |
+| PT-18 | PKG-18 amendment | Rehearsal/download schema uses shared release subjects; same-byte assertion retained. |
+| PT-19 | PKG-19 amendment | Post-deploy installed asset schema uses all shared ASSETS. |
+| packaging conftest / _support | PKG-01/02/05/13/14 | Copy direct attachments; fresh venv follows ordinary wheel/range install; derive subjects from shared definition. PT-08 consent/security/cancellation assertions unchanged. |
+| T-GEN-54 (new) | PKG-01/02/14/17 | Real deterministic wheel builds; reject overwrite, each changed frozen subject and a rehashed but incorrectly bound reference. Synthetic plugin bytes are verification fixtures only. |
+| T-META-54 (new) | PKG-02/10 amendment | Scoring rejects matrix substitution and skipped/failed/error reference evidence. |
+| T-PLN-55 (new) | R28; PLN-01/02/04 unchanged | Ten explicit fixture classes assert identity, units/requests/caps/frame equations and cache-stable approval hash. Controlled Render/Lookup inputs; no claim to execute those stages. |
+| T-ASM-51 (new) | R28; ASM-01/02/03, GEN-07 unchanged | Explicit text/G2b/mismatch/directory fixtures run orchestration, assembly and write with controlled Core conversion; assert base, relative output, provenance and zero requests. |
+| T-META-53 (new) | PKG-10 R28 amendment | Restrict all-class credit to S0-S3/S13 in both projections; preserve explicit classes and schema exclusion. |
 
-The current `shell/package.json` still has the step-10 build placeholder, and
-production `main.js`/`styles.css` are absent. The candidate builder calls the
-actual shell build and requires both outputs. It does not fabricate attachments
-or reuse retired implementation assets. Trace registration currently reports
-13 missing shell requirement/test registrations; its two matrix checks have no
-coverage errors. These are independent upstream gates, not packaging successes.
+The local Windows sandbox uses the repository’s existing test-only
+`M1_WINDOWS_TEST_TEMP=1` bridge and TMP/TEMP inside build/trace/redgreen; pytest
+cache is disabled. Initial runs without this temp configuration failed on
+restricted-token temp permissions; that is not an engine behavior regression.
+Release-bundle/human-evidence skips are retained as skips, never release passes.
 
-CI is reusable and runs the required six engine cells, three experimental 3.15
-cells, three shell cells, Core endpoints, and nine intermediate-Python smokes.
-Packaged checks use hash-mode installs in new fixed-location environments and
-run outside sources. The code-set rerun preserves the full Jest results.
-Contract-max visibly deduplicates when the newest resolved Core is 0.3.5;
-resolver errors remain fatal. Trace reports registration matrices separately
-from executed automated results and named manual reviews. Missing evidence
-currently yields SCORE 0/100; no sign-off or score has been fabricated.
+## Local results
 
-All external action identities match the candidate SHAs in 25_PACKAGING.
-Ownership/implementation/transitive dependency security review still requires
-an independently supplied `actions-review.json`, bound to the candidate commit;
-SHA identity alone does not complete that review. GitHub CLI version/verification
-flags, attestation eligibility, real target installs and the minimum/current
-Obsidian versions remain release gates.
+- `python -I -m pytest engine/tests -q -p no:cacheprovider --junitxml=build/trace/junit-r27-r28-local.xml`: **446 passed, 12 skipped, 1 deselected**, 108.09 s. Uses the Windows test temp configuration above. Log: `build/trace/r27-r28-pytest.log`.
+- Targeted packaging/scoring checks: **27 passed, 12 skipped**. Log: `build/trace/r27-r28-final-targeted.log`.
+- `python -I tools/trace.py check`: **unknown_req=0 uncovered_req=0 untagged_tests=0 registration_errors=0 matrix_errors=0**.
+- Real wheel builds compare byte-for-byte and all synthetic frozen-asset mutation controls pass. Offline full-dependency hash/pin mutation controls pass.
 
-## Manual inputs and publication
-
-A tag must equal 2.0.0 without a v prefix and match every manifest/package/engine
-version. A release dispatch must select that tag. Supply a
-`named-release-evidence` artifact from the indicated evidence run containing
-MAN-01..04 records (filenames in `tools/trace.py`), `oracles.json`,
-`actions-review.json`, `pkg04_core_artifacts.json`, and `listing-review.json`.
-Each review binds the actual commit and names its reviewer; MAN-01 also names a
-different implementer. Receipts preserve command, exit code, stdout and commit.
-They never substitute for test execution or the human review itself.
-
-The release workflow reuses one candidate, verifies transfer hashes, separates
-attestation privileges from contents-write privileges, retains six individual
-Sigstore bundles, and constrains verification to repository/workflow/source SHA.
-It creates a draft with explicit assets, downloads the attachments, and compares
-the remote hashes before returning. It does not overwrite an existing release
-or publish automatically. The acceptance report is release-candidate.json and
-the CI evidence artifacts. Manual publication, community-listing install/update,
-post-deploy verification, rollback and the seven-day cleanup window remain the
-release operator's documented procedure. No cleanup of user data is performed.
+`shell/**` was not edited. No git command, CI run, release publication or real
+cross-platform installation was performed by this task.

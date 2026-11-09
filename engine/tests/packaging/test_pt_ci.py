@@ -61,6 +61,17 @@ def test_PT_07_engine_matrix_has_six_required_three_experimental_cells_and_gates
     expected = {(o, p, p == EXPERIMENTAL_PY) for o in REQUIRED_OS for p in (*REQUIRED_PY, EXPERIMENTAL_PY)}
     assert cells == expected, f"matrix cells differ from 25_PACKAGING 3: {sorted(cells ^ expected)}"
     assert sum(1 for c in cells if not c[2]) == 6 and sum(1 for c in cells if c[2]) == 3
+    candidate = job_named('candidate')
+    assert 'tools/build_release.py' in step_text(candidate)
+    builder = (REPO / 'tools/build_engine.py').read_text(encoding='utf-8')
+    assert "'piptools', 'compile', '--generate-hashes'" in builder
+    assert "'--require-hashes', '--only-binary=:all:'" in builder
+    assert 'reference-install.json' in builder and 'reference-metadata.json' in builder
+    assert 'Linux x64' in builder and '3.14' in builder
+    installer = (REPO / 'tools/packaged_check.py').read_text(encoding='utf-8')
+    assert 'markitdown-gc>=0.3.5,<0.4' in installer and "'--report'" in installer
+    assert '--require-hashes' not in installer, 'compatibility targets must not use the reference closure'
+
     for _, jid, job in engine:
         text = step_text(job)
         setups = [s for s in job["steps"] if str(s.get("uses", "")).startswith("actions/setup-python@")]

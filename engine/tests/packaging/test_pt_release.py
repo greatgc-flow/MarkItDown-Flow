@@ -5,7 +5,7 @@ explicit reason* until CI supplies ``$MDFLOW_RELEASE_BUNDLE``. They never pass w
 
 release-candidate.json (inside the bundle; REQ-PKG-17 candidate manifest):
     {"repo": "owner/name", "commit": "<40 hex>", "tag": "2.0.0", "signer_workflow": "owner/name/.github/workflows/release.yml",
-     "lock_sha256": "<64 hex>", "required_jobs": [{"name", "os", "python", "result": "success"}] x6,
+     "reference_sha256": "<64 hex>", "required_jobs": [{"name", "os", "python", "result": "success"}] x6,
      "shell_jobs": [{"name", "os", "result": "success"}] x3,
      "acceptance": {"score": "SCORE 100/100 (automated 93/93, manual 7/7)", "gates": [{"id": "G-01", "result": "PASS"}, ...]},
      "blockers": [], "rollback": {"tag": "1.0.8", "artifacts_retained": true},
@@ -27,10 +27,10 @@ import zipfile
 
 import pytest
 
-from _support import (REPO, SHA40, SUBJECTS, json_objects, load_py, load_yaml, progress_events, version_tuple)
+from _support import (REPO, SHA40, SUBJECTS, json_objects, load_py, load_yaml, progress_events, version_tuple, ASSETS, WHEEL, REFERENCE)
 
 PLATFORMS = ("windows-2022", "ubuntu-24.04", "macos-15-intel")
-LOCKED_ASSETS = ("main.js", "manifest.json", "styles.css", "engine.zip", "engine.lock")
+LOCKED_ASSETS = ASSETS
 FROZEN_COMMANDS = ("convert-file", "convert-folder", "convert-url", "view-conversion-history", "open-log-folder",
                    "run-image-pipeline-selftest")
 PRIOR_VERSIONS = {"0.1.0": "0.15.0", "1.0.0": "0.15.0", "1.0.1": "0.15.0", "1.0.2": "1.6.0", "1.0.3": "1.6.0",
@@ -67,10 +67,7 @@ def lock_pins(text: str) -> dict:
 
 
 def engine_wheel(bundle: Path) -> tuple[str, bytes]:
-    with zipfile.ZipFile(bundle / "engine.zip") as archive:
-        names = [n for n in archive.namelist() if re.search(r"(^|/)wheels/mdflow-2\.0\.0-py3-none-any\.whl$", n)]
-        assert len(names) == 1, f"exactly one engine wheel expected, found {names}"
-        return names[0], archive.read(names[0])
+    return WHEEL, (bundle / WHEEL).read_bytes()
 
 
 def assert_full_lock_rejects_dependency_mutations(release_bundle, work, *, pip_prefix=None, offline=False):
@@ -81,14 +78,17 @@ def assert_full_lock_rejects_dependency_mutations(release_bundle, work, *, pip_p
     """
     from email.parser import Parser
     work.mkdir(parents=True)
-    with zipfile.ZipFile(release_bundle / 'engine.zip') as archive:
-        archive.extractall(work)
+    for path in release_bundle.iterdir():
+        if path.is_file():
+            shutil.copyfile(path, work / path.name)
+    if (release_bundle / 'wheels').is_dir():
+        shutil.copytree(release_bundle / 'wheels', work / 'wheels')
     prefix = pip_prefix or [sys.executable, '-m', 'pip']
     def run(arguments):
         return subprocess.run([*prefix, *arguments], cwd=work, capture_output=True,
                               text=True, encoding='utf-8', timeout=600)
     download = run(['download', '--no-cache-dir', '--require-hashes', '--only-binary=:all:',
-                    '--find-links', './wheels', '-r', 'engine.lock', '--dest', 'wheelhouse',
+                    '--find-links', './wheels', '-r', 'reference-requirements.txt', '--dest', 'wheelhouse',
                     *(['--no-index'] if offline else ['--index-url', 'https://pypi.org/simple'])])
     assert download.returncode == 0, download.stdout + download.stderr
     dependencies = []
@@ -101,7 +101,7 @@ def assert_full_lock_rejects_dependency_mutations(release_bundle, work, *, pip_p
             dependencies.append((name, path))
     assert dependencies, 'the full-lock oracle needs a real transitive dependency'
     name, wheel = dependencies[0]
-    lock = (work / 'engine.lock').read_text(encoding='utf-8')
+    lock = (work / 'reference-requirements.txt').read_text(encoding='utf-8')
     logical = []
     buffer = ''
     for line in lock.splitlines():
@@ -138,24 +138,11 @@ def assert_full_lock_rejects_dependency_mutations(release_bundle, work, *, pip_p
 @pytest.mark.req("REQ-PKG-01")
 @pytest.mark.cov("S0", "FM0")
 @pytest.mark.fx("FX-72")
-def test_PT_01_engine_zip_inventory_wheel_metadata_and_run_outside_the_source_tree(release_bundle, packaged_venv,
+def test_PT_01_direct_wheel_inventory_wheel_metadata_and_run_outside_the_source_tree(release_bundle, packaged_venv,
                                                                                     tmp_path):
-    with zipfile.ZipFile(release_bundle / "engine.zip") as archive:
-        files = [n for n in archive.namelist() if not n.endswith("/")]
-        assert any(n.split("/")[-1] == "engine.lock" for n in files), "engine.lock missing from engine.zip"
-        assert any(n.endswith("BOOTSTRAP.md") for n in files), "BOOTSTRAP.md missing"
-        assert any(re.search(r"(^|/)(LICENSE|NOTICE|licenses?/)", n, re.I) for n in files), "license notices missing"
-        assert any("inventory" in n.lower() for n in files), "package inventory missing"
-        forbidden_parts = {".venv", "venv", "__pycache__", ".mdflow", "cache", "peerhub", ".peerhub", "scripts", "site-packages"}
-        for name in files:
-            parts = {p.lower() for p in Path(name).parts[:-1]}
-            leaf = Path(name).name.lower()
-            assert not parts & forbidden_parts, f"relocated venv/cache/runtime content: {name}"
-            assert not leaf.endswith((".pyc", ".key", ".pem", ".env")) and leaf not in {"data.json", "pyvenv.cfg"}, name
-            if leaf.endswith((".md", ".txt", ".lock", ".json", ".toml", ".cfg")):
-                text = archive.read(name).decode("utf-8", errors="replace")
-                assert not re.search(r"sk-[A-Za-z0-9]{16,}", text), f"credential-like text in {name}"
-        wheel_name, wheel = engine_wheel(release_bundle)
+    for name in ('BOOTSTRAP.md', 'NOTICE.txt', 'LICENSE'):
+        assert (release_bundle / name).stat().st_size, name
+    wheel_name, wheel = engine_wheel(release_bundle)
     with zipfile.ZipFile(io.BytesIO(wheel)) as inner:
         names = inner.namelist()
         assert not [n for n in names if n.lower().endswith((".so", ".pyd", ".dll", ".dylib"))], "native code in mdflow wheel"
@@ -166,7 +153,7 @@ def test_PT_01_engine_zip_inventory_wheel_metadata_and_run_outside_the_source_tr
     assert requires == {"markitdown-gc"}, f"mdflow must require only markitdown-gc, got {requires}"
     assert re.search(r"^Version: 2\.0\.0$", metadata, re.M) and re.search(r"^Name: mdflow$", metadata, re.M | re.I)
     assert "Root-Is-Purelib: true" in wheel_meta and "Tag: py3-none-any" in wheel_meta
-    # Import and run from the empty, locked environment, cwd outside the source tree.
+    # Import and run from the fresh compatibility environment, cwd outside the source tree.
     probe = subprocess.run([str(packaged_venv.python), "-I", "-c",
                             "import mdflow, sys; print(mdflow.__file__)"], cwd=tmp_path, capture_output=True,
                            text=True, encoding="utf-8", timeout=120)
@@ -179,18 +166,17 @@ def test_PT_01_engine_zip_inventory_wheel_metadata_and_run_outside_the_source_tr
 @pytest.mark.req("REQ-PKG-02")
 @pytest.mark.cov("S0", "FM10")
 @pytest.mark.fx("FX-72")
-def test_PT_02_lock_is_exact_hash_checked_wheel_only_and_a_changed_wheel_fails(release_bundle, tmp_path, cli_command):
-    lock = (release_bundle / "engine.lock").read_text(encoding="utf-8")
-    with zipfile.ZipFile(release_bundle / "engine.zip") as archive:
-        inner = [n for n in archive.namelist() if n.endswith("engine.lock")]
-        assert inner and archive.read(inner[0]) == (release_bundle / "engine.lock").read_bytes()
+def test_PT_02_reference_is_exact_hash_checked_wheel_only_and_a_changed_wheel_fails(release_bundle, tmp_path, cli_command):
+    lock = (release_bundle / "reference-requirements.txt").read_text(encoding="utf-8")
+    assert 'Linux x64' in lock and 'CPython 3.14' in lock and 'Core 0.3.5' in lock
+    assert sys.platform == 'linux' and sys.version_info[:2] == (3, 14), 'PT-02 runs on the reference target only'
     wheel_name, wheel = engine_wheel(release_bundle)
     entries = parse_lock(lock)
     assert entries
     engine = [e for e in entries if "mdflow-2.0.0-py3-none-any.whl" in e[0]]
-    assert len(engine) == 1 and re.match(r"^(mdflow\s*@\s*)?\./wheels/mdflow-2\.0\.0-py3-none-any\.whl$", engine[0][0]), \
-        "the engine must be the local wheel path ./wheels/mdflow-2.0.0-py3-none-any.whl"
-    assert engine[0][1] == [sha(wheel)], "locked engine hash differs from the wheel inside engine.zip"
+    assert len(engine) == 1 and re.match(r"^(mdflow\s*@\s*)?\./mdflow-2\.0\.0-py3-none-any\.whl$", engine[0][0]), \
+        "the engine must be the local wheel path ./mdflow-2.0.0-py3-none-any.whl"
+    assert engine[0][1] == [sha(wheel)], "locked engine hash differs from the attached release wheel"
     problems = []
     for requirement, hashes in entries:
         if re.search(r"git\+|https?://|\.tar\.gz|\.zip\b|\[all\]|^-e\b|^--editable", requirement):
@@ -247,9 +233,11 @@ def test_T_GEN_52_m1_v32_offline_dependency_hash_mutation_control(tmp_path, cli_
         members['wheels/' + wheel] = stream.getvalue()
         requirement = './wheels/' + wheel if name == 'mdflow' else name.replace('_', '-') + '==' + version
         requirements.append(requirement + ' --hash=sha256:' + sha(stream.getvalue()))
-    members['engine.lock'] = ('\n'.join(requirements) + '\n').encode()
-    with zipfile.ZipFile(bundle / 'engine.zip', 'w') as archive:
-        for name, data in members.items(): archive.writestr(name, data)
+    members['reference-requirements.txt'] = ('\n'.join(requirements) + '\n').encode()
+    for name, data in members.items():
+        path = bundle / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(data)
     assert_full_lock_rejects_dependency_mutations(bundle, tmp_path / 'closure', offline=True,
         pip_prefix=cli_command(code='from pip._internal.cli.main import main; raise SystemExit(main())'))
 
@@ -266,7 +254,7 @@ def test_PT_05_bootstrap_commands_run_unchanged_after_placeholder_substitution(r
     blocks = [body for lang, body in fences if lang in languages and "pip install" in body]
     assert blocks, "BOOTSTRAP.md has no install block for this OS"
     block = blocks[0]
-    for needle in ("--require-hashes", "--only-binary=:all:", "--find-links", "./wheels", "./engine.lock",
+    for needle in ("--only-binary=:all:", "./mdflow-2.0.0-py3-none-any.whl", "markitdown-gc>=0.3.5,<0.4", "https://pypi.org/simple", "-m mdflow selftest",
                    "pip check", "-m mdflow version", "-m venv"):
         assert needle in block, f"install block lacks {needle!r}"
     before = text[:text.index(block)]
@@ -290,7 +278,7 @@ def test_PT_05_bootstrap_commands_run_unchanged_after_placeholder_substitution(r
         assert not re.search(r"pip install|['\"]pip['\"]|-m['\"],\s*['\"]venv", source.read_text(encoding="utf-8")), source
 
 
-def gate(response: dict, pins: dict) -> list[str]:
+def gate(response: dict) -> list[str]:
     """SPEC 10.1 / REQ-PKG-06 acceptance rule, evaluated on the *package* side (the shell gate is JT-17)."""
     required = {"mdflow": str, "markitdown-gc": str, "pypdfium2": str, "pillow": str, "python": str, "platform": str,
                 "protocol": int, "triage_schema": int}
@@ -309,8 +297,8 @@ def gate(response: dict, pins: dict) -> list[str]:
     if not (3, 10) <= version_tuple(response["python"])[:2] < (3, 16):
         problems.append("Python range")
     for key in ("pillow", "pypdfium2"):
-        if response[key] != pins[key]:
-            problems.append(f"{key} is not the release-tested {pins[key]}")
+        if not re.fullmatch(r"[0-9]+(?:\.[0-9]+)+(?:[A-Za-z0-9.+-]*)", response[key]):
+            problems.append(f"{key} version is malformed")
     return problems
 
 
@@ -318,28 +306,28 @@ def gate(response: dict, pins: dict) -> list[str]:
 @pytest.mark.req("REQ-PKG-06")
 @pytest.mark.cov("S0", "FM10")
 @pytest.mark.fx("FX-71", "FX-72")
-def test_PT_06_packaged_version_response_passes_the_gate_and_every_drift_variant_is_blocked(release_bundle,
+def test_PT_06_packaged_version_and_selftest_follow_declared_compatibility_policy(release_bundle,
                                                                                             packaged_engine):
-    pins = lock_pins((release_bundle / "engine.lock").read_text(encoding="utf-8"))
     done = packaged_engine.run("version")
     assert done.returncode == 0, done.stderr
     real = json.loads(done.stdout)
     assert set(real) == {"mdflow", "markitdown-gc", "pypdfium2", "pillow", "python", "platform", "protocol", "triage_schema"}
-    assert gate(real, {"pillow": pins["pillow"], "pypdfium2": pins["pypdfium2"]}) == [], "the packaged engine fails its own gate"
+    assert gate(real) == [], "the packaged engine fails its own gate"
+    assert packaged_engine.run("selftest").returncode == 0
     record = load_py(REPO / "tools/record_protocol.py", "mdflow_pt_record_protocol")
     real_bytes = done.stdout.encode("utf-8")
     for name in record.VERSION_VARIANTS:
         variant = json.loads(record.version_variant(name, real_bytes))
-        problems = gate(variant, {"pillow": pins["pillow"], "pypdfium2": pins["pypdfium2"]})
-        assert bool(problems) == (name != "unknown-optional-field"), f"{name}: gate verdict {problems}"
+        problems = gate(variant)
+        assert bool(problems) == (name not in {"unknown-optional-field", "wrong-pillow", "wrong-renderer"}), f"{name}: gate verdict {problems}"
     fx71 = REPO / "shell/test/fixtures/fx71"
     assert (fx71 / "manifest.json").is_file(), "FX-71 not recorded: run python tools/record_protocol.py"
     assert record.verify(fx71) == 0, "FX-71 fixtures were edited or no longer match their parents"
     parent = json.loads((fx71 / "version.json").read_text(encoding="utf-8"))
     for path in sorted(fx71.glob("version.*.json")):
         name = path.name[len("version."):-len(".json")]
-        verdict = gate(json.loads(path.read_text(encoding="utf-8")), {"pillow": parent["pillow"], "pypdfium2": parent["pypdfium2"]})
-        assert bool(verdict) == (name != "unknown-optional-field"), f"{path.name}: {verdict}"
+        verdict = gate(json.loads(path.read_text(encoding="utf-8")))
+        assert bool(verdict) == (name not in {"unknown-optional-field", "wrong-pillow", "wrong-renderer"}), f"{path.name}: {verdict}"
 
 
 @pytest.mark.release
@@ -473,16 +461,17 @@ def test_PT_14_asset_inventory_digests_lock_identity_and_package_scan(release_bu
         if line.strip():
             digest, _, name = line.partition("  ")
             sums[name.strip().lstrip("*")] = digest
-    assert set(sums) == set(LOCKED_ASSETS), "SHA256SUMS must cover exactly the 3 plugin assets, the ZIP and the lock"
+    assert set(sums) == set(LOCKED_ASSETS), "SHA256SUMS must cover exactly the shared release ASSETS"
     for name, digest in sums.items():
         assert sha((release_bundle / name).read_bytes()) == digest, f"{name}: digest mismatch"
-    with zipfile.ZipFile(release_bundle / "engine.zip") as archive:
-        inside = [n for n in archive.namelist() if n.endswith("engine.lock")]
-        assert inside and archive.read(inside[0]) == (release_bundle / "engine.lock").read_bytes(), \
-            "engine.lock differs between the separate asset and engine.zip"
+    wheel_name, wheel = engine_wheel(release_bundle)
+    lock = (release_bundle / REFERENCE).read_text(encoding='utf-8')
+    assert f'./{WHEEL} --hash=sha256:{sha(wheel)}' in lock.splitlines()
+    with zipfile.ZipFile(io.BytesIO(wheel)) as archive:
         bad = [n for n in archive.namelist() if re.search(
             r"(^|/)(data\.json|\.env|\.venv|venv|__pycache__|cache|\.mdflow)(/|$)|\.pyc$", n)]
-        assert not bad, f"settings/cache/keys/venv/source-tree fallback in engine.zip: {bad}"
+        assert not bad, f"settings/cache/keys/venv in wheel: {bad}"
+
 
 
 def check_attest(name: str, data: dict) -> list[str]:
@@ -509,7 +498,7 @@ def test_PT_15_checklist_machine_rows_and_human_evidence_rows(release_bundle, ca
     manifest = json.loads((release_bundle / "manifest.json").read_text(encoding="utf-8"))
     assert manifest["id"] == "markitdown-flow" and manifest["isDesktopOnly"] is True
     package = json.loads((REPO / "shell/package.json").read_text(encoding="utf-8"))
-    engine_wheel(release_bundle)  # exactly one mdflow-2.0.0 wheel inside engine.zip
+    engine_wheel(release_bundle)  # exactly one mdflow-2.0.0 attached release wheel
     assert manifest["version"] == package["version"] == candidate["tag"] == "2.0.0", "version fields disagree"
     assert not candidate["tag"].startswith("v")
     versions = json.loads((REPO / "versions.json").read_text(encoding="utf-8"))
@@ -547,7 +536,7 @@ def test_PT_15_checklist_machine_rows_and_human_evidence_rows(release_bundle, ca
 @pytest.mark.fx("FX-72")
 def test_PT_17_candidate_manifest_binds_commit_lock_required_runs_and_binary_acceptance(release_bundle, candidate):
     assert SHA40.fullmatch(candidate["commit"]) and candidate["tag"] == "2.0.0"
-    assert candidate["lock_sha256"] == sha((release_bundle / "engine.lock").read_bytes())
+    assert candidate["reference_sha256"] == sha((release_bundle / "reference-requirements.txt").read_bytes())
     required = {(j["os"], j["python"]) for j in candidate["required_jobs"] if j["result"] == "success"}
     assert required == {(o, p) for o in PLATFORMS for p in ("3.10", "3.14")}, "six required engine runs must all succeed"
     assert {j["os"] for j in candidate["shell_jobs"] if j["result"] == "success"} == set(PLATFORMS)

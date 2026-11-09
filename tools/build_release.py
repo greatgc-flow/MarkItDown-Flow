@@ -10,11 +10,9 @@ import shutil
 import subprocess
 import sys
 import zipfile
-from build_engine import build
+from build_engine import ASSETS, SUBJECTS, WHEEL, REFERENCE, build, reference
 
 ROOT = Path(__file__).resolve().parents[1]
-ASSETS = ('main.js', 'manifest.json', 'styles.css', 'engine.zip', 'engine.lock')
-SUBJECTS = (*ASSETS, 'SHA256SUMS')
 COMMANDS = ('convert-file', 'convert-folder', 'convert-url', 'view-conversion-history',
             'open-log-folder', 'run-image-pipeline-selftest')
 
@@ -54,14 +52,15 @@ def verify(folder):
         path = folder / name
         if path.is_symlink() or sha(path) != expected:
             raise ValueError(f'changed candidate bytes: {name}')
-    with zipfile.ZipFile(folder / 'engine.zip') as z:
-        if z.read('engine.lock') != (folder / 'engine.lock').read_bytes():
-            raise ValueError('separate lock differs from ZIP lock')
+    with zipfile.ZipFile(folder / WHEEL) as z:
         if any(re.search(r'(^|/)(venv|\.venv|cache|__pycache__|\.peerhub|data\.json)(/|$)|\.pyc$', n) for n in z.namelist()):
-            raise ValueError('forbidden content in engine ZIP')
+            raise ValueError('forbidden content in engine wheel')
     candidate = json.loads((folder / 'release-candidate.json').read_text())
-    if candidate['lock_sha256'] != sha(folder / 'engine.lock'):
-        raise ValueError('candidate lock digest differs')
+    if candidate['reference_sha256'] != sha(folder / REFERENCE):
+        raise ValueError('candidate reference digest differs')
+    requirement = f'./{WHEEL} --hash=sha256:{sha(folder / WHEEL)}'
+    if requirement not in (folder / REFERENCE).read_text(encoding='utf-8').splitlines():
+        raise ValueError('reference wheel hash differs')
     versions(candidate['tag'])
     main = (folder / 'main.js').read_text(encoding='utf-8')
     if not (folder / 'styles.css').stat().st_size:
@@ -95,12 +94,11 @@ def assemble(folder, tag, commit, repo):
     shutil.copyfile(ROOT / 'manifest.json', folder / 'manifest.json')
     # Wheel is built once. Nothing in later jobs invokes a build command.
     build(folder)
-    # The wheel is inside engine.zip; standard release attachments are allowlisted.
-    # Retain the original wheel for audit. Publication allowlists attachments.
+    reference(folder, ROOT / 'build/trace')
     (folder / 'SHA256SUMS').write_text(''.join(f'{sha(folder / name)}  {name}\n' for name in ASSETS), encoding='utf-8')
     candidate = {'repo': repo, 'commit': commit, 'tag': tag,
                  'signer_workflow': f'{repo}/.github/workflows/release.yml',
-                 'lock_sha256': sha(folder / 'engine.lock'), 'required_jobs': [], 'shell_jobs': [],
+                 'reference_sha256': sha(folder / REFERENCE), 'required_jobs': [], 'shell_jobs': [],
                  'acceptance': {'gates': [], 'score': 'UNVERIFIED'},
                  'blockers': ['required CI, named reviews, desktop rehearsal and provenance verification pending'],
                  'rollback': {'tag': '1.0.8', 'artifacts_retained': False},
