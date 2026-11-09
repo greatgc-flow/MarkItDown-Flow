@@ -79,7 +79,9 @@ class Ledger:
                 directory.mkdir(mode=0o700 if os.name == "posix" else 0o777, parents=True, exist_ok=True)
                 if os.name == "posix":
                     directory.chmod(0o700)
-            write.atomic_write(target, data, dir_mode=0o700)
+            # Six replace attempts, at most 310 ms of fixed backoff, for Windows
+            # sharing violations only. The final successful replacement wins.
+            write.atomic_write(target, data, dir_mode=0o700, retry_windows_replace=True)
             return []
         except (OSError, ValueError, TypeError, KeyError):
             return [dict(code="E_CACHE_IO", message="Ledger entry could not be published.")]

@@ -216,6 +216,8 @@ Cell = primary `S<stage>:FM<n>` (section 5).
 | T-LKP-04 | REQ-LKP-04 (`v:2`, wrong key_id/destination, `ok`+null text, `inflight`) | FX-66 | S7:FM1 |
 | T-LKP-05 | REQ-LKP-05 | FX-02 | S7:FM5 |
 | T-LKP-06 | REQ-LKP-01 (command Key covers argv/model label/env names only: script change = hit, `--model` change = miss) | FX-63 | S7:FM12 |
+| T-LKP-07 | REQ-LKP-02, REQ-LKP-03 (transient Windows replace errors 5/32 retain the fsynced temp and preserve last-writer-wins) | FX-66, FX-55 | S7:FM12 |
+| T-LKP-08 | REQ-LKP-02, REQ-LKP-03, REQ-LKP-05 (replace retries are bounded and limited to Windows PermissionError 5/32; exhaustion preserves old bytes and cleans temp) | FX-66, FX-65 | S7:FM5 |
 | T-APR-01 | REQ-APR-01 | FX-01,02 | S9:FM0 |
 | T-APR-02 | REQ-APR-02 (bare `--yes` refusals; `--yes HASH`, `--yes-file` with comments/blank lines; 2 of 3 files approved) | FX-02,03 | S9:FM3 |
 | T-APR-03 | REQ-APR-03 (summary event <= 64 KiB, no units; `plan` prints full object) | FX-02, FX-64 | S9:FM8 |

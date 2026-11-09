@@ -1,10 +1,12 @@
 """Key/entry/store ownership remains in this worktree (R26/C3)."""
 from concurrent.futures import ThreadPoolExecutor
 from copy import deepcopy
+import errno
 import json
 import os
 from pathlib import Path
 import threading
+import time
 
 import pytest
 
@@ -160,6 +162,79 @@ def test_T_LKP_06_command_script_body_hit_env_name_set_miss(core_api, core_data,
     assert core_api.ledger.make_key(u, dict(p, command_env_names=["A", "B"]), "p1") == first
     for changes in (dict(command_env_names=["A"]), dict(model="new-label"), dict(destination='command:["python","other.py","{input}"]')):
         assert core_api.ledger.make_key(u, dict(p, **changes), "p1") != first
+
+
+@pytest.mark.req("REQ-LKP-02", "REQ-LKP-03")
+@pytest.mark.cov("S7", "FM12")
+@pytest.mark.fx("FX-66", "FX-55")
+@pytest.mark.parametrize("winerror", (5, 32))
+def test_T_LKP_07_transient_windows_replace_retries_preserve_last_writer(core_api, core_data, tmp_path,
+                                                                      monkeypatch, winerror):
+    store = core_api.ledger.Ledger(tmp_path)
+    old, rival, new = [core_data.entry(text=text) for text in ("old", "competing writer", "last writer")]
+    assert store.write(old) == []
+    target = store._path(old["key"])
+    rival_temp = target.with_suffix(".rival")
+    rival_temp.write_bytes(core_data.canonical(rival) + b"\n")
+    real_replace, real_fsync = os.replace, os.fsync
+    sources, waits, syncs = [], [], []
+
+    def transient(source, destination):
+        assert Path(destination) == target
+        assert json.loads(Path(source).read_bytes()) == new
+        sources.append(source)
+        if len(sources) <= 2:
+            if len(sources) == 2:
+                real_replace(rival_temp, target)
+            assert store.lookup(old["key"])["entry"] in (old, rival)
+            error = PermissionError(errno.EACCES, "injected Windows sharing violation")
+            error.winerror = winerror
+            raise error
+        return real_replace(source, destination)
+
+    monkeypatch.setattr(os, "replace", transient)
+    monkeypatch.setattr(os, "fsync", lambda fd: (syncs.append(fd), real_fsync(fd))[1])
+    monkeypatch.setattr(time, "sleep", waits.append)
+    assert store.write(new) == []
+    assert waits == [0.01, 0.02]
+    assert len(sources) == 3 and len(set(sources)) == 1
+    assert len(syncs) == 1, "retry only replace, retaining the fsynced temporary file"
+    assert store.lookup(new["key"]) == dict(hit=True, entry=new, issues=[])
+    assert not list(tmp_path.rglob("*.tmp-*"))
+
+
+@pytest.mark.req("REQ-LKP-02", "REQ-LKP-03", "REQ-LKP-05")
+@pytest.mark.cov("S7", "FM5")
+@pytest.mark.fx("FX-66", "FX-65")
+@pytest.mark.parametrize("error_type,winerror,retry", (
+    (PermissionError, 5, True), (PermissionError, 32, True),
+    (PermissionError, 13, False), (PermissionError, None, False), (OSError, 32, False),
+))
+def test_T_LKP_08_replace_retry_is_bounded_and_specific(core_api, core_data, tmp_path, monkeypatch,
+                                                     error_type, winerror, retry):
+    store = core_api.ledger.Ledger(tmp_path)
+    old, new = core_data.entry(text="old"), core_data.entry(text="new")
+    assert store.write(old) == []
+    before = deepcopy(new)
+    target = store._path(old["key"])
+    old_bytes = target.read_bytes()
+    attempts, waits = [], []
+
+    def denied(source, destination):
+        attempts.append(source)
+        assert Path(destination) == target and target.read_bytes() == old_bytes
+        error = error_type(errno.EACCES if error_type is PermissionError else errno.EIO, "injected failure")
+        if winerror is not None:
+            error.winerror = winerror
+        raise error
+
+    monkeypatch.setattr(os, "replace", denied)
+    monkeypatch.setattr(time, "sleep", waits.append)
+    assert store.write(new) == [dict(code="E_CACHE_IO", message="Ledger entry could not be published.")]
+    assert waits == ([0.01, 0.02, 0.04, 0.08, 0.16] if retry else [])
+    assert len(attempts) == (6 if retry else 1) and len(set(attempts)) == 1
+    assert target.read_bytes() == old_bytes and new == before
+    assert not list(tmp_path.rglob("*.tmp-*"))
 
 
 @pytest.mark.req("REQ-APR-01")

@@ -3,10 +3,11 @@
 All modules reach the OS through ``os.open``, ``os.fsync`` and ``os.replace`` *module attributes*
 (tests patch them).
 
-* ``atomic_write(target, data, *, dir_mode=None) -> bool``: temp ``<target>.tmp-<pid>-<seq>`` in the same
+* ``atomic_write(target, data, *, dir_mode=None, retry_windows_replace=False) -> bool``: temp ``<target>.tmp-<pid>-<seq>`` in the same
   directory (``O_CREAT|O_EXCL``, mode 0o600), fsync, byte-compare with an existing target (identical ->
   delete temp, leave target untouched, return False), ``os.replace`` (return True). Missing parent
-  directories are created with ``dir_mode`` when given. OSError propagates.
+  directories are created with ``dir_mode`` when given. Ledger callers opt into bounded retries of
+  Windows replace sharing/access violations, retaining the fsynced temp. Other OSError propagates.
 * ``publish_source(out_dir, md_rel, md_bytes, media=None) -> WriteResult``: containment (realpath inside
   out_dir and no symlink/junction between out_dir and the target, lstat walk at write time), media files
   (``media`` maps name -> source path) published to ``<dirname(md_rel)>/media/<name>`` BEFORE the ``.md``.
@@ -22,6 +23,7 @@ import os
 import posixpath
 import shutil
 import stat
+import time
 from pathlib import Path
 from typing import Mapping, TypedDict
 
@@ -30,6 +32,7 @@ from .contracts import Issue
 _SEQUENCE = itertools.count(1)
 _COMPARE_CHUNK = 1 << 20
 _REPARSE_POINT = getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0x400)
+_WINDOWS_REPLACE_DELAYS = (0.01, 0.02, 0.04, 0.08, 0.16)
 
 
 class WriteResult(TypedDict):
@@ -83,7 +86,8 @@ def _ensure_directory(directory: str, dir_mode: int | None) -> None:
             pass
 
 
-def atomic_write(target: str | Path, data: bytes, *, dir_mode: int | None = None) -> bool:
+def atomic_write(target: str | Path, data: bytes, *, dir_mode: int | None = None,
+                 retry_windows_replace: bool = False) -> bool:
     destination = os.fspath(target)
     _ensure_directory(os.path.dirname(os.path.abspath(destination)), dir_mode)
     flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_BINARY", 0)
@@ -107,7 +111,18 @@ def atomic_write(target: str | Path, data: bytes, *, dir_mode: int | None = None
         if os.path.isfile(destination) and _same_bytes(destination, data):
             os.unlink(temp)
             return False
-        os.replace(temp, destination)
+        delays = _WINDOWS_REPLACE_DELAYS if retry_windows_replace else ()
+        for attempt in range(len(delays) + 1):
+            try:
+                os.replace(temp, destination)
+                break
+            except PermissionError as error:
+                # winerror identifies native Windows errors without retrying POSIX EACCES.
+                # A racing reader/replacer may briefly deny delete sharing. Retain this
+                # complete temp and atomically replace the latest target when it clears.
+                if getattr(error, "winerror", None) not in {5, 32} or attempt == len(delays):
+                    raise
+                time.sleep(delays[attempt])
         return True
     except OSError:
         if descriptor >= 0:
