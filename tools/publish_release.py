@@ -6,6 +6,7 @@ from pathlib import Path
 import subprocess
 import tempfile
 from build_release import SUBJECTS, sha, verify, versions
+from trace import publication_problems
 
 def gh(*args, **kwargs):
     return subprocess.run(['gh', *map(str, args)], check=True, **kwargs)
@@ -18,7 +19,7 @@ def main():
     candidate = verify(folder)
     tag, repo, commit = candidate['tag'], candidate['repo'], candidate['commit']
     versions(os.environ['GITHUB_REF_NAME'])
-    if candidate['blockers'] or candidate['acceptance']['score'] != 'SCORE 100/100 (automated 93/93, manual 7/7)':
+    if candidate['blockers'] or publication_problems(candidate['acceptance']):
         raise ValueError('acceptance must pass before release creation')
     gh('--version')
     for name in SUBJECTS:
@@ -49,7 +50,7 @@ def main():
         for path in assets:
             if sha(path) != sha(remote / path.name):
                 raise ValueError(f'remote release asset differs: {path.name}; draft remains unpublished')
-    print('Draft release uploaded and digests compared. Named desktop/listing checks gate publication.')
+    print('Draft release uploaded and digests compared. MAN-04 deferred: post-release (R35); failure requires REQ-PKG-20 rollback.')
 
 if __name__ == '__main__':
     main()

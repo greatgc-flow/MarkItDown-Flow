@@ -6,12 +6,13 @@ on:
   workflow_dispatch:
     inputs:
       evidence-run:
-        description: 'Run ID containing named reviews, command-oracle receipts, desktop rehearsal and action review'
+        description: 'Run ID containing MAN-01..03 peers, oracles, actions, Core artifacts and listing review (MAN-04 post-release)'
         required: true
         type: string
 
 permissions:
   contents: read
+  actions: read # download named-release-evidence from the evidence run
 
 defaults:
   run:
@@ -194,7 +195,7 @@ jobs:
           path: build/manual/
           run-id: ${{ inputs.evidence-run }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
-      - name: Score actual post-attestation results and seal acceptance
+      - name: Score 93/93 automation plus MAN-01..03; record MAN-04 post-release (R35)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |

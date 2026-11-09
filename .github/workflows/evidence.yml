@@ -1,0 +1,138 @@
+name: v2 release evidence
+
+# Produces the `named-release-evidence` artifact that release.yml (accept-release) downloads from
+# `inputs.evidence-run`. R35 requires MAN-01..03 peer reviews before publication. MAN-04 is post-release.
+# API facts are generated automatically; peer verdicts are supplied, never synthesized.
+
+on:
+  workflow_dispatch:
+    inputs:
+      path:
+        description: 'Folder holding MAN-01..03 and four extra JSON peer templates (R35)'
+        required: true
+        default: 'release-evidence/2.0.0'
+        type: string
+      candidate:
+        description: 'Release candidate the reviews bind to: version tag or full 40-hex commit SHA'
+        required: true
+        default: '2.0.0'
+        type: string
+
+      ci-run:
+        description: 'Candidate CI/release run containing acceptance-evidence (pip reports and runtime receipts)'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read # download candidate evidence from another run
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  evidence:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.14'
+          architecture: x64
+      - name: Install the pinned release tools (PyYAML reads the review files)
+        run: |
+          python -m pip install --only-binary=:all: -r engine/requirements-build.txt
+      - name: Resolve the candidate commit and the evidence folder
+        id: bind
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          INPUT_PATH: ${{ inputs.path }}
+          INPUT_CANDIDATE: ${{ inputs.candidate }}
+        run: |
+          if [[ "$INPUT_CANDIDATE" =~ ^[0-9a-f]{40}$ ]]; then
+            commit="$INPUT_CANDIDATE"
+          elif [[ "$INPUT_CANDIDATE" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            commit="$(gh api "repos/$GITHUB_REPOSITORY/commits/$INPUT_CANDIDATE" --jq .sha)"
+          else
+            echo "::error::candidate must be a version tag such as 2.0.0 or a full 40-hex commit SHA"; exit 1
+          fi
+          [[ "$commit" =~ ^[0-9a-f]{40}$ ]] || { echo "::error::candidate did not resolve to a commit"; exit 1; }
+          case "$INPUT_PATH" in
+            /*|*..*|*\\*|"") echo "::error::path must be a relative folder inside this checkout"; exit 1 ;;
+          esac
+          folder="$(realpath -e -- "$INPUT_PATH")" || { echo "::error::evidence folder not found: $INPUT_PATH"; exit 1; }
+          case "$folder" in
+            "$GITHUB_WORKSPACE"/*) ;;
+            *) echo "::error::evidence folder resolves outside the checkout"; exit 1 ;;
+          esac
+          echo "Reviews must bind candidate commit $commit"
+          echo "commit=$commit" >> "$GITHUB_OUTPUT"
+          echo "folder=$folder" >> "$GITHUB_OUTPUT"
+      - name: Stage pre-publication peer reviews under their MANUAL_FILES names
+        env:
+          EVIDENCE_FOLDER: ${{ steps.bind.outputs.folder }}
+        run: |
+          python - <<'PY'
+          import importlib.util, os, shutil, sys
+          from pathlib import Path
+          spec = importlib.util.spec_from_file_location('mdflow_trace', 'tools/trace.py')
+          module = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(module)
+          source, target = Path(os.environ['EVIDENCE_FOLDER']), Path('build/evidence')
+          target.mkdir(parents=True, exist_ok=True)
+          required = [module.MANUAL_FILES[k] for k in ('MAN-01', 'MAN-02', 'MAN-03')]
+          missing = [n for n in required if not (source / n).is_file()]
+          if missing:
+              print('::error::missing review files in ' + str(source) + ': ' + ', '.join(missing))
+              sys.exit(1)
+          for name in module.MANUAL_FILES.values():
+              if (source / name).is_file():
+                  shutil.copyfile(source / name, target / name)
+          print('MAN-04 is deferred: post-release (R35) unless supplied and validated')
+          PY
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ steps.bind.outputs.commit }}
+          path: build/source
+          persist-credentials: false
+      - name: Retrieve the candidate CI pip reports and produce all extra evidence
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          INPUT_CI_RUN: ${{ inputs.ci-run }}
+          COMMIT: ${{ steps.bind.outputs.commit }}
+          EVIDENCE_FOLDER: ${{ steps.bind.outputs.folder }}
+        run: |
+          [[ "$INPUT_CI_RUN" =~ ^[0-9]+$ ]] || { echo "::error::ci-run must be a numeric run ID"; exit 1; }
+          run_commit="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$INPUT_CI_RUN" --jq .head_sha)"
+          [[ "$run_commit" == "$COMMIT" ]] || { echo "::error::CI run is for a different candidate"; exit 1; }
+          gh run download "$INPUT_CI_RUN" --repo "$GITHUB_REPOSITORY" -n acceptance-evidence -D build/executions
+          python build/source/tools/release_evidence.py produce --source "$EVIDENCE_FOLDER" --output build/evidence --executions build/executions --commit "$COMMIT"
+      - name: Reject unfilled template placeholders
+        run: |
+          if grep -nE '<[A-Z][A-Z0-9 /_.-]*>|\bTODO\b' build/evidence/*; then
+            echo "::error::unfilled template placeholders or TODO values remain (listed above)"; exit 1
+          fi
+      - name: Validate every review against the candidate commit
+        env:
+          COMMIT: ${{ steps.bind.outputs.commit }}
+        run: |
+          failed=0
+          for identity in MAN-01 MAN-02 MAN-03; do
+            echo "::group::$identity"
+            python build/source/tools/trace.py attest "$identity" --attest-dir build/evidence --commit "$COMMIT" || failed=1
+            echo "::endgroup::"
+          done
+          if [ -f build/evidence/release_rehearsal.yml ]; then
+            python build/source/tools/trace.py attest MAN-04 --attest-dir build/evidence --commit "$COMMIT" || failed=1
+          fi
+          if [ "$failed" -ne 0 ]; then
+            echo "::error::at least one named review failed validation; nothing is uploaded"; exit 1
+          fi
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: named-release-evidence
+          path: build/evidence/
+          if-no-files-found: error

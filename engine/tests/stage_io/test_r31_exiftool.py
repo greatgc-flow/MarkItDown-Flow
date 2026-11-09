@@ -156,6 +156,12 @@ def test_T_CNV_88_image_cache_is_keyed_by_the_exiftool_version_and_restores_the_
     exiftool.reset()
     fourth = run("d")
     assert fourth["tools"] == {"exiftool": "13.60"} and len(fake_core.convert_calls) == 3, "new version: reconvert"
+    clean_env.setenv("EXIFTOOL_PATH", str(fake_exiftool(tmp_path / "bin3", "13.60")))
+    exiftool.reset()
+    fifth = run("e")
+    assert fifth["tools"] == {"exiftool": "13.60"} and len(fake_core.convert_calls) == 4, "new executable: reconvert"
+    run("f")
+    assert len(fake_core.convert_calls) == 4, "same executable and version: reuse"
 
 
 @pytest.mark.req("REQ-CNV-06", "REQ-ASM-04")

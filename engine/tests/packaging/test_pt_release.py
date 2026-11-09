@@ -7,7 +7,7 @@ release-candidate.json (inside the bundle; REQ-PKG-17 candidate manifest):
     {"repo": "owner/name", "commit": "<40 hex>", "tag": "2.0.0", "signer_workflow": "owner/name/.github/workflows/release.yml",
      "reference_sha256": "<64 hex>", "required_jobs": [{"name", "os", "python", "result": "success"}] x6,
      "shell_jobs": [{"name", "os", "result": "success"}] x3,
-     "acceptance": {"score": "SCORE 100/100 (automated 93/93, manual 7/7)", "gates": [{"id": "G-01", "result": "PASS"}, ...]},
+     "acceptance": {"score": "SCORE 99/100 (automated 93/93, manual 6/7); MAN-04 deferred: post-release (R35)", "gates": [{"id": "G-01", "result": "PASS"}, ...]},
      "blockers": [], "rollback": {"tag": "1.0.8", "artifacts_retained": true},
      "draft_release": {"assets": [{"name": "main.js", "sha256": "<64 hex>"}, ...]}, "verifier": {"gh": "<version>"}}
 """
@@ -557,7 +557,7 @@ def test_PT_15_checklist_machine_rows_and_human_evidence_rows(release_bundle, ca
         assert f"markitdown-flow:{command}" not in bundle, f"{command} carries an embedded plugin prefix"
     assert not re.search(r"sample-modal-simple|open-sample-modal|SampleSettingTab|SampleModal|Sample Plugin", bundle)
     # Human-evidence rows: schema only; a valid file is not proof of authorship, meaning or rehearsal.
-    wanted = {"MAN-01": "R15_cleanroom.yml", "MAN-03": "shell_i18n_review.yml", "MAN-04": "release_rehearsal.yml"}
+    wanted = {"MAN-01": "R15_cleanroom.yml", "MAN-03": "shell_i18n_review.yml"}
     missing = [f for f in wanted.values() if not (attest_dir / f).is_file()]
     if missing:
         pytest.skip(f"human evidence absent: {', '.join(missing)} in {attest_dir.as_posix()} (mode H); machine rows passed")
@@ -565,10 +565,6 @@ def test_PT_15_checklist_machine_rows_and_human_evidence_rows(release_bundle, ca
     for man, filename in wanted.items():
         data = load_yaml((attest_dir / filename).read_text(encoding="utf-8"))
         problems += check_attest(man, data)
-        if man == "MAN-04":
-            minimum = [r["obsidian_version"] for r in data.get("runs") or [] if r.get("obsidian_channel") == "minimum"]
-            if not minimum or {manifest["minAppVersion"]} != set(minimum):
-                problems.append("minAppVersion is not the tested minimum recorded in MAN-04")
     assert not problems, "\n".join(problems)
 
 

@@ -533,6 +533,12 @@ def discover_shell_tests(root: Path) -> list[dict]:
 
 MANUAL_FILES = {"MAN-01": "R15_cleanroom.yml", "MAN-02": "R16_readme_review.yml",
                 "MAN-03": "shell_i18n_review.yml", "MAN-04": "release_rehearsal.yml"}
+DEFERRED = 'deferred: post-release (R35)'
+
+
+def peer_identity(value) -> bool:
+    """R35: identify the peer, profile and model, rather than a generic sign-off."""
+    return isinstance(value, str) and bool(re.fullmatch(r'[\w.-]+/[\w.-]+/[\w.:-]+', value))
 
 
 def attest(root: Path, identity: str, folder: Path, expected_commit: str) -> list[str]:
@@ -548,6 +554,8 @@ def attest(root: Path, identity: str, folder: Path, expected_commit: str) -> lis
             import yaml  # separately pinned release tool, not an engine dependency
             data = yaml.safe_load(source)
         errors = []
+        if identity != 'MAN-04' and not peer_identity(data.get('reviewer')):
+            errors.append(f'{identity}: reviewer must name peer/profile/model')
         for key in ("id", "reviewer", "date", "commit", "inputs", "checks", "evidence", "verdict"):
             if not data.get(key):
                 errors.append(f"{identity}: missing {key}")
@@ -559,11 +567,16 @@ def attest(root: Path, identity: str, folder: Path, expected_commit: str) -> lis
             result = item.get("result", item.get("status")) if isinstance(item, dict) else item
             if result != "PASS":
                 errors.append(f"{identity}: check did not pass")
-        if identity == "MAN-01" and (not data.get("implementer") or data.get("implementer") == data.get("reviewer")):
+        if identity == "MAN-01" and (not isinstance(data.get('implementer'), str) or
+                not data['implementer'].strip() or
+                data['implementer'].split('/')[0].casefold() == str(data.get('reviewer')).split('/')[0].casefold()):
             errors.append("MAN-01: independent named implementer/reviewer required")
         if identity == "MAN-04":
             from release_evidence import validate_rehearsal
-            errors += validate_rehearsal(data)
+            manifest = json.loads((root / 'manifest.json').read_text(encoding='utf-8'))
+            errors += validate_rehearsal(data, minimum_version=manifest['minAppVersion'])
+            if errors:
+                errors.append('MAN-04 failed post-release: REQ-PKG-20 rollback required')
         return errors
     except (OSError, ValueError, TypeError, AttributeError, ImportError) as error:
         return [f"{identity}: {error}"]
@@ -705,14 +718,49 @@ def score(root: Path, evidence: Path, reviews: Path, expected_commit: str) -> di
         # A command receipt must preserve its actual stdout and command, not just a PASS flag.
         good &= bool(oracle.get("command")) and isinstance(oracle.get("stdout"), str) and bool(expected_commit)
         gates.append({"id": identity, "weight": int(cells[2]), "result": "PASS" if good else "FAIL", "tests": sorted(tids)})
-    manual = [{"id": identity, "weight": weight, "problems": attest(root, identity, reviews, expected_commit)}
-              for identity, weight in zip(MANUAL_FILES, (3, 2, 1, 1))]
+    manual = []
+    for identity, weight in zip(MANUAL_FILES, (3, 2, 1, 1)):
+        deferred = identity == 'MAN-04' and not (reviews / MANUAL_FILES[identity]).exists()
+        problems = [] if deferred else attest(root, identity, reviews, expected_commit)
+        manual.append(dict(id=identity, weight=weight, problems=problems,
+                           status=DEFERRED if deferred else 'FAIL' if problems else 'PASS'))
     if len(gates) != 17 or sum(g["weight"] for g in gates) != 93:
         raise ValueError("acceptance table must define all 17 automated gates with total weight 93")
     automated_total = sum(g["weight"] for g in gates if g["result"] == "PASS")
-    manual_total = sum(g["weight"] for g in manual if not g["problems"])
-    return {"score": f"SCORE {automated_total + manual_total}/100 (automated {automated_total}/93, manual {manual_total}/7)",
-            "automated": gates, "manual": manual}
+    manual_total = sum(g['weight'] for g in manual if g['status'] == 'PASS')
+    post_release = [dict(id='MAN-04', status=manual[-1]['status']),
+                    dict(id='REQ-PKG-19', status='pending: post-release'),
+                    dict(id='REQ-PKG-21', status='pending: post-release')]
+    wording = DEFERRED if manual[-1]['status'] == DEFERRED else manual[-1]['status'] + ' (post-release)'
+    return {"score": f"SCORE {automated_total + manual_total}/100 (automated {automated_total}/93, manual {manual_total}/7); MAN-04 {wording}",
+            "automated": gates, "manual": manual, 'post_release': post_release}
+
+
+def publication_problems(result: dict) -> list[str]:
+    """Shared gate/publisher policy: 93 automated + six peer points; explicit MAN-04 state."""
+    problems = []
+    gates = result.get('automated', result.get('gates', []))
+    weights = (5, 7, 9, 6, 8, 7, 8, 6, 5, 6, 5, 5, 5, 4, 4, 2, 1)
+    if (len(gates) != 17 or {g.get('id') for g in gates} != {f'G-{i:02d}' for i in range(1, 18)} or
+            any(g.get('result') != 'PASS' or g.get('weight') != weights[int(g['id'][2:]) - 1] for g in gates)):
+        problems.append('pre-publication requires automated 93/93')
+    manual = result.get('manual', [])
+    if len(manual) != 4 or {g.get('id') for g in manual} != set(MANUAL_FILES):
+        return problems + ['all four manual states must be explicitly recorded']
+    for identity, weight in zip(MANUAL_FILES, (3, 2, 1, 1)):
+        row = next(g for g in manual if g['id'] == identity)
+        allowed = {'PASS', DEFERRED} if identity == 'MAN-04' else {'PASS'}
+        if row.get('weight') != weight or row.get('status') not in allowed or row.get('problems') != []:
+            problems.append(f'{identity}: invalid publication state')
+    state = next(g['status'] for g in manual if g['id'] == 'MAN-04')
+    expected = ('SCORE 99/100 (automated 93/93, manual 6/7); MAN-04 ' + DEFERRED if state == DEFERRED else
+                'SCORE 100/100 (automated 93/93, manual 7/7); MAN-04 PASS (post-release)')
+    if result.get('score') != expected:
+        problems.append('score disagrees with explicit R35 states')
+    if result.get('post_release') != [dict(id='MAN-04', status=state),
+            dict(id='REQ-PKG-19', status='pending: post-release'), dict(id='REQ-PKG-21', status='pending: post-release')]:
+        problems.append('post-release validators must be explicitly recorded')
+    return problems
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -728,6 +776,7 @@ def main(argv: list[str] | None = None) -> int:
     sc.add_argument("--evidence", type=Path, default=ROOT / "build/trace")
     sc.add_argument("--attest-dir", type=Path, default=ROOT / "attest")
     sc.add_argument("--commit", default=os.environ.get("GITHUB_SHA", ""))
+    sc.add_argument('--post-release', action='store_true', help='require MAN-04 PASS for 100/100')
     att = commands.add_parser("attest", help="validate an independently supplied named manual sign-off")
     att.add_argument("identity", choices=MANUAL_FILES)
     att.add_argument("--attest-dir", type=Path, default=ROOT / "attest")
@@ -748,7 +797,8 @@ def main(argv: list[str] | None = None) -> int:
         args.evidence.mkdir(parents=True, exist_ok=True)
         (args.evidence / "acceptance.json").write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
         print(result["score"])
-        return int(result["score"] != "SCORE 100/100 (automated 93/93, manual 7/7)")
+        return int(bool(publication_problems(result)) or
+                   (args.post_release and result['manual'][-1]['status'] != 'PASS'))
     try:
         requirements = requirement_registry(ROOT)
         tests = discover_tests(ROOT)

@@ -1,0 +1,25 @@
+# MAN-01  R15 clean-room attestation.   Validated by: python tools/trace.py attest MAN-01
+# Copy to release-evidence/2.0.0/R15_cleanroom.yml, then replace every angle-bracket placeholder and every
+# unfilled result value. Set verdict only after every check is true; the validator cannot check authorship.
+# R35: the reviewer names peer/profile/model and must be independent of the implementer.
+id: MAN-01
+implementer: <IMPLEMENTER NAME>
+reviewer: <PEER/PROFILE/MODEL>
+date: <YYYY-MM-DD>
+commit: <CANDIDATE COMMIT SHA 40 HEX>
+inputs:
+  # What the v2 shell was written from (list each document or API reference actually used).
+  - <SPEC OR DOCUMENT USED AS INPUT>
+  - <PUBLIC OBSIDIAN API REFERENCE USED AS INPUT>
+checks:
+  - {id: implementer_and_reviewer_are_different_people, result: TODO}
+  - {id: inputs_were_spec_and_public_obsidian_apis_only, result: TODO}
+  - {id: v1_src_not_read, result: TODO}
+  - {id: v1_styles_css_not_read, result: TODO}
+  - {id: v1_tests_not_read, result: TODO}
+  - {id: mit_credit_present_in_readme, result: TODO}
+  - {id: mit_credit_present_in_license, result: TODO}
+evidence:
+  # How each check was verified: file paths, commit links, interview notes.
+  - <EVIDENCE FOR THE CLEAN-ROOM CLAIM>
+verdict: TODO

@@ -36,8 +36,8 @@ it(R('JT-14 per-file fields are copied from the engine Plans: hash, provider, mo
   expect(docx).toEqual({
     path: 'b c.docx',
     label: 'M',
-    sha256: 'df0040649e78a0e8faa3326ee570ee4660399848908bd9348013f98c9df38d62',
-    planHash: 'a80d66b3fa9f7d95ecc3dba770b6eaf01cd8ddd4934e5d0c66d31ea703b5efda',
+    sha256: '4e4cbb1dc698162a53fd655903e4199a6b0aeb81d2896105b6f92e8ff6ffbabc',
+    planHash: 'e81c750520319e685f3483f10caaca33856e78dd8afb348a9e447a4b2f89695f',
     provider: 'openai-compatible',
     model: 'gpt-4.1-mini',
     destination: 'https://api.openai.com/v1/chat/completions',

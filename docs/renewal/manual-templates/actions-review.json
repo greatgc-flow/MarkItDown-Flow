@@ -1,0 +1,101 @@
+{
+  "reviewer": "<PEER/PROFILE/MODEL>",
+  "date": "<YYYY-MM-DD>",
+  "commit": "<CANDIDATE COMMIT SHA 40 HEX>",
+  "evidence": [
+    "<REVIEW NOTES OR RECEIPT LINKS>"
+  ],
+  "verdict": "TODO",
+  "actions": [
+    {
+      "action": "actions/checkout",
+      "sha": "3d3c42e5aac5ba805825da76410c181273ba90b1",
+      "checks": {
+        "ownership": "TODO",
+        "implementation": "TODO",
+        "dependencies": "TODO",
+        "runtime": "TODO",
+        "transitive_pins": "TODO"
+      },
+      "evidence": [
+        "<IMPLEMENTATION DEPENDENCY AND RUNTIME REVIEW LINKS>"
+      ],
+      "verification": {}
+    },
+    {
+      "action": "actions/setup-python",
+      "sha": "6d4fd22b20465ccc0f7354476588e8df7c9ca0e0",
+      "checks": {
+        "ownership": "TODO",
+        "implementation": "TODO",
+        "dependencies": "TODO",
+        "runtime": "TODO",
+        "transitive_pins": "TODO"
+      },
+      "evidence": [
+        "<IMPLEMENTATION DEPENDENCY AND RUNTIME REVIEW LINKS>"
+      ],
+      "verification": {}
+    },
+    {
+      "action": "actions/setup-node",
+      "sha": "949feb2413d6458794dcd2491c4babbbce0c15c1",
+      "checks": {
+        "ownership": "TODO",
+        "implementation": "TODO",
+        "dependencies": "TODO",
+        "runtime": "TODO",
+        "transitive_pins": "TODO"
+      },
+      "evidence": [
+        "<IMPLEMENTATION DEPENDENCY AND RUNTIME REVIEW LINKS>"
+      ],
+      "verification": {}
+    },
+    {
+      "action": "actions/upload-artifact",
+      "sha": "cf430e030ddbb5b0abf93d22962f4752f3646cd9",
+      "checks": {
+        "ownership": "TODO",
+        "implementation": "TODO",
+        "dependencies": "TODO",
+        "runtime": "TODO",
+        "transitive_pins": "TODO"
+      },
+      "evidence": [
+        "<IMPLEMENTATION DEPENDENCY AND RUNTIME REVIEW LINKS>"
+      ],
+      "verification": {}
+    },
+    {
+      "action": "actions/download-artifact",
+      "sha": "9000827ccba6bdab643e8b6fd33ac0654aef8333",
+      "checks": {
+        "ownership": "TODO",
+        "implementation": "TODO",
+        "dependencies": "TODO",
+        "runtime": "TODO",
+        "transitive_pins": "TODO"
+      },
+      "evidence": [
+        "<IMPLEMENTATION DEPENDENCY AND RUNTIME REVIEW LINKS>"
+      ],
+      "verification": {}
+    },
+    {
+      "action": "actions/attest",
+      "sha": "1e69f48acb82d1966a394da916b4c1698aa569d6",
+      "checks": {
+        "ownership": "TODO",
+        "implementation": "TODO",
+        "dependencies": "TODO",
+        "runtime": "TODO",
+        "transitive_pins": "TODO"
+      },
+      "evidence": [
+        "<IMPLEMENTATION DEPENDENCY AND RUNTIME REVIEW LINKS>"
+      ],
+      "verification": {}
+    }
+  ]
+}

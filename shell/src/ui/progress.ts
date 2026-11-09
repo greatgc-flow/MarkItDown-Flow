@@ -86,7 +86,8 @@ export function summarizeProgress(events: readonly ProgressEvent[]): ProgressSum
   return summary;
 }
 
-export type JobPhase = 'plan' | 'consent' | 'run';
+/** `check`: admission is waiting on the engine version gate; the item and its Cancel exist from then on (M7-02). */
+export type JobPhase = 'check' | 'plan' | 'consent' | 'run';
 
 /** What the coordinator reports to the UI for the life of one job. */
 export interface ProgressSink {

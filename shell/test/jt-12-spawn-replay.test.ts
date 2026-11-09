@@ -43,7 +43,7 @@ const PLATFORM = process.platform === 'win32' ? 'win32' : 'posix';
 const RELEASE_LOCK_FOR_RECORDING: VersionPolicy = RELEASE_LOCK;
 const OUT_DIR = abs(VAULT_ROOT, 'markitdown-output');
 const CACHE_DIR = abs(PLUGIN_DIR, 'cache');
-const HASH_A = 'a80d66b3fa9f7d95ecc3dba770b6eaf01cd8ddd4934e5d0c66d31ea703b5efda';
+const HASH_A = 'e81c750520319e685f3483f10caaca33856e78dd8afb348a9e447a4b2f89695f';
 const HASH_B = 'f918a5c781905fce7e7eca0c08f41192e0e2d475f2867c9ad1f1e1514eb14e84';
 const YES_FILE = abs(PLUGIN_DIR, 'consent', 'yes-0123456789abcdef-1.txt');
 /** The shell writes this file before the replay; the oracle reads it back. */

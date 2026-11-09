@@ -1,0 +1,19 @@
+# MAN-03  English/Korean meaning review of every message-table row.   Validated by: python tools/trace.py attest MAN-03
+# Copy to release-evidence/2.0.0/shell_i18n_review.yml, then replace every angle-bracket placeholder and every
+# unfilled result value. The reviewer must read both languages. Key parity (JT-SHL-19-01) does not replace this.
+id: MAN-03
+reviewer: <PEER/PROFILE/MODEL>
+date: <YYYY-MM-DD>
+commit: <CANDIDATE COMMIT SHA 40 HEX>
+inputs:
+  - shell/src message tables for en and ko at the candidate commit
+  - docs/renewal/10_SPEC.md section 7.5 code table
+checks:
+  - {id: reviewer_reads_english_and_korean, result: TODO}
+  - {id: english_meaning_correct_for_every_row, result: TODO}
+  - {id: korean_meaning_correct_for_every_row, result: TODO}
+  - {id: korean_equivalent_to_english_for_every_row, result: TODO}
+  - {id: placeholders_and_parameters_preserved_in_both_languages, result: TODO}
+evidence:
+  - <HOW EVERY ROW WAS REVIEWED AND WHERE THE NOTES ARE KEPT>
+verdict: TODO

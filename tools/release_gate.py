@@ -6,7 +6,8 @@ from pathlib import Path
 import shutil
 import subprocess
 from build_release import verify, versions, SUBJECTS
-from trace import ROOT, score, required_executions
+from trace import ROOT, score, required_executions, publication_problems
+from release_evidence import EXTRA_FILES, validate_extra
 
 def main():
     p = argparse.ArgumentParser(description=__doc__)
@@ -27,15 +28,17 @@ def main():
     problems = required_executions(a.evidence, candidate['commit'])
     if problems:
         raise ValueError('\n'.join(problems))
-    # Independent command-oracle receipts are evidence, not automatic PASS labels.
+    # Every extra record has a concrete schema, not just a generic PASS label.
+    for filename in EXTRA_FILES:
+        record = json.loads((a.manual / filename).read_text(encoding='utf-8'))
+        problems = validate_extra(filename, record, candidate['commit'], root=ROOT)
+        if problems:
+            raise ValueError(f'{filename}: ' + '\n'.join(problems))
     shutil.copyfile(a.manual / 'oracles.json', a.evidence / 'oracles.json')
     result = score(ROOT, a.evidence, a.manual, candidate['commit'])
-    if result['score'] != 'SCORE 100/100 (automated 93/93, manual 7/7)':
-        raise ValueError(result['score'])
-    for filename in ('actions-review.json', 'pkg04_core_artifacts.json', 'listing-review.json'):
-        record = json.loads((a.manual / filename).read_text())
-        if record.get('commit') != candidate['commit'] or record.get('verdict') != 'PASS' or not record.get('reviewer') or not record.get('evidence'):
-            raise ValueError(f'missing or invalid independent review: {filename}')
+    problems = publication_problems(result)
+    if problems:
+        raise ValueError(result['score'] + '\n' + '\n'.join(problems))
     retained = json.loads(subprocess.check_output(
         ['gh', 'release', 'view', '1.0.8', '--json', 'tagName,assets'], text=True))
     names = {x['name'] for x in retained['assets']}
@@ -48,7 +51,8 @@ def main():
                                    for o in platforms for py in ('3.10', '3.14')]
     candidate['shell_jobs'] = [{'name': f'jest ({o})', 'os': o, 'result': 'success',
                                 'run_id': os.environ['GITHUB_RUN_ID']} for o in platforms]
-    candidate['acceptance'] = {'score': result['score'], 'gates': result['automated'], 'manual': result['manual']}
+    candidate['acceptance'] = {'score': result['score'], 'gates': result['automated'],
+                               'manual': result['manual'], 'post_release': result['post_release']}
     candidate['rollback'] = {'tag': '1.0.8', 'artifacts_retained': True}
     candidate['blockers'] = []
     (a.candidate / 'release-candidate.json').write_text(json.dumps(candidate, indent=2) + '\n')

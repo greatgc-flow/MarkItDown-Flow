@@ -411,7 +411,7 @@ R27/R28 added registrations (existing REQs; precise fixture assertions replace b
 | JT-13 | REQ-SHL-13 (UTF-8 split/CRLF, 64 KiB limit, unknown events, summary events only, full Plan from `plan` stdout, raw triage `corrupt` retained, report spool removed) | FX-71 |
 | JT-14 | REQ-SHL-14 (50 files -> one modal; per-file fields = Plans; no run/token/interruption fields; Keep pending default; HTML literal) | FX-71 |
 | JT-15 | REQ-SHL-15 (`plan` then same-roots `run` with one plugin-owned `--yes-file` of the displayed hashes + `--approved-by plugin:modal`; consent only for `requests_to_send > 0`; cache warming keeps hash; changed bytes -> no egress; no per-file replay; yes-file deleted after the run) | FX-71 |
-| JT-16 | REQ-SHL-16 (cancel before launch / in modal / during blocked mock request / unload; cancel or dispose while the admission awaits the version gate -> zero spawns, `shell.CANCELLED`/`shell.RUNTIME`, later job admitted; status bar shows Run-only counts after Plan->consent->Run. Real OS process half: cooperative POSIX -> exit 130; forced POSIX + Windows -> native status, interrupted, restart recovers, no owned live process = 90_ACCEPTANCE E-03) | FX-63, FX-71 |
+| JT-16 | REQ-SHL-16 (cancel before launch / in modal / during blocked mock request / unload; cancel or dispose while the admission awaits the version gate -> zero spawns, `shell.CANCELLED`/`shell.RUNTIME`, later job admitted; the status item with Cancel exists while the gate is awaited and is removed on refusal (M7-02); status bar shows Run-only counts after Plan->consent->Run. Real OS process half: cooperative POSIX -> exit 130; forced POSIX + Windows -> native status, interrupted, restart recovers, no owned live process = 90_ACCEPTANCE E-03) | FX-63, FX-71 |
 | JT-17 | REQ-SHL-17 (M6-01: a timed-out probe is retried once after a backoff, timeout/spawn_failed are never cached as the jobs gate, compatibility verdicts are; complete `version` response recorded on a supported host against the release policy itself; protocol 2, schema 2, wrong Pillow/renderer, each missing field -> blocked; version syntax = both package-gate steps, character regex then PEP 440 public grammar: `5.15.1???`/leading whitespace/`3.14garbage`/`5.15.1abc`/`5.15.1..1`/`5.15.1+`/`5.15.1a1b2` blocked, rc/post/`-N`/dev/local admitted, the twelve T-GEN-96 cases mirrored per field; exit-1 `E_CORE_CONFLICT` -> `core_conflict`, other exit 1 -> `exit`; optional exiftool/LibreOffice fields diagnostics only) | FX-71 |
 | JT-18 | REQ-SHL-18 | - |
 | JT-SHL-19-01 | REQ-SHL-19 (parses active Code-column cells of SPEC 7.5; set-equality with table rows and en/ko engine keys, excl. `UNKNOWN`; non-empty; interpolation safe) | - |
@@ -436,18 +436,24 @@ R27/R28 added registrations (existing REQs; precise fixture assertions replace b
 | PT-12 | REQ-PKG-12 | A |
 | PT-13 | REQ-PKG-13 (shared release subjects include wheel/reference/bootstrap/notices; constrained provenance verification and tamper rejection) | R |
 | PT-14 | REQ-PKG-14 (shared asset checksums, exact reference-wheel hash and wheel forbidden-content scan) | R |
-| PT-15 | REQ-PKG-15 (manifest/versions/description/commands/sample removal; MAN-01, MAN-03, MAN-04 rows checked by validator, not proven) | R/H |
+| PT-15 | REQ-PKG-15 (manifest/versions/description/commands/sample removal; MAN-01, MAN-03 peer rows checked by validator, not proven; MAN-04 is post-release R35) | R/H |
 | PT-16 | REQ-PKG-16 (README has the five R16 disclosures; no telemetry endpoints; no unplanned sockets) | A |
 | PT-17 | REQ-PKG-17 (frozen candidate wheel/reference digest and actual acceptance/manual gates) | R |
-| PT-18 | REQ-PKG-18 (draft subjects equal tested bytes; named desktop rehearsal schema) | R/H |
+| PT-18 | REQ-PKG-18 (draft subjects equal tested bytes; desktop rehearsal validator mutation tests only, actual MAN-04 post-release R35) | R |
 | PT-19 | REQ-PKG-19 (post-deploy report schema for shared release subjects) | A |
-| PT-20 | REQ-PKG-20 (rollback rehearsal in isolated vault) | R/H |
+| PT-20 | REQ-PKG-20 (rollback record validator mutation tests; actual isolated-vault rollback belongs to post-release MAN-04, R35) | A |
 | PT-21 | REQ-PKG-21 (cleanup dry-run; sentinels unchanged) | A |
 | PT-22 | REQ-PKG-05 (terminal-launch env smoke: sentinel in child env, absent from diagnostics/persisted data) | A |
+| PT-23 | REQ-PKG-22 (evidence workflow: dispatch-only, least privilege, pinned, attests pre-publication MAN-01..03, produces/verifies four extra JSON files, optional MAN-04, and uploads `named-release-evidence`; owner guide and REQ/plan records) | A |
+| PT-24 | REQ-PKG-22 (MAN-01..04 templates fail validation until filled and pass once every placeholder is replaced; MAN-01 implementer must differ; MAN-04 lists six runs, nine subjects and eleven checks) | A |
+| PT-25 | REQ-PKG-17, REQ-PKG-22 (R35: shared gate/publisher requires 93/93 + MAN-01..03; explicit MAN-04 deferral; no silent point; supplied failures block) | A |
+| PT-26 | REQ-PKG-22, REQ-PKG-17 (R35: reviewer peer/profile/model; MAN-01 independent peer, including different profiles of the same peer) | A |
+| PT-27 | REQ-PKG-22, REQ-PKG-04, REQ-PKG-11, REQ-PKG-17 (four extra templates; API-generated Core hashes/action identities; candidate-bound pip receipts; stale/invalid evidence rejection) | A |
+| PT-28 | REQ-PKG-17, REQ-PKG-18, REQ-PKG-20, REQ-PKG-22 (execute gate/publisher offline: seal explicit deferral, reject missing manual state; post-release rollback observation never blocks pre-publication tooling tests) | A |
 
 ### 4.5 Coverage statement
 
-Every REQ id defined in `10_SPEC.md` (incl. new REQ-SNF-09), `20_SHELL.md` (SHL-01..21) and `25_PACKAGING.md` (PKG-01..21) appears in 4.1-4.4 at least once; no REQ id in this file is undefined (checked by grep and by `trace.py check`). **Unmappable: none.** Removed with cut features: tests for `run_plan_hash`, `inflight`/`E_PROVIDER_INTERRUPTED`/`units_interrupted`, `W_STALE_TEMP`, ledger `seen`, `est_cost`, csv/tsv/json media-free shortcut and UTF-8 validation (old T-CNV-06), "130 within 5 s", `--yes <run hash>`.
+Every REQ id defined in `10_SPEC.md` (incl. new REQ-SNF-09), `20_SHELL.md` (SHL-01..21) and `25_PACKAGING.md` (PKG-01..22) appears in 4.1-4.4 at least once; no REQ id in this file is undefined (checked by grep and by `trace.py check`). **Unmappable: none.** Removed with cut features: tests for `run_plan_hash`, `inflight`/`E_PROVIDER_INTERRUPTED`/`units_interrupted`, `W_STALE_TEMP`, ledger `seen`, `est_cost`, csv/tsv/json media-free shortcut and UTF-8 validation (old T-CNV-06), "130 within 5 s", `--yes <run hash>`.
 
 
 ### M2 engine regression catalog
@@ -513,7 +519,7 @@ Red logs: `build/trace/redgreen/r29-*.red.log` (R29 is green at baseline by audi
 | T-CNV-85 | REQ-CNV-06 | R31: png/jpeg bodies contain the metadata lines and `tools == {exiftool: version}`; pdf/txt never use exiftool. |
 | T-CNV-86 | REQ-CNV-06 | R31: Core receives an explicit `exiftool_path` (tool path for images, `""` for everything else and when absent). |
 | T-CNV-87 | REQ-CNV-06 | R31 (real Core): absent / invalid `EXIFTOOL_PATH` / too old / failing tool never yield `E_CONVERT_FAIL` and record no `tools` entry. |
-| T-CNV-88 | REQ-CNV-06, REQ-CNV-04 | R31: image base cache keyed by exiftool version; warm rerun restores `tools`; absent and new versions reconvert. |
+| T-CNV-88 | REQ-CNV-06, REQ-CNV-04 | R31/M7: image base cache keyed by exiftool path/version; warm rerun restores `tools`; absent tool, new versions and changed executable paths reconvert. |
 | T-ASM-81 | REQ-CNV-06, REQ-ASM-04 | R31: frontmatter `tools` gains `exiftool` after `pillow` only for the image that used it. |
 | T-CLI-81 | REQ-GEN-02, REQ-CNV-06 | R31: `version` adds `exiftool`, `exiftool_status`, `exiftool_source` for present/old/absent, exit 0, empty stderr, no sockets. |
 | T-CLI-82 | REQ-CNV-06, REQ-CLS-05 | R31: `selftest` reports `{status, version, metadata}` and passes without exiftool or with a failing one. |
@@ -542,6 +548,8 @@ Red logs: `build/trace/redgreen/r29-*.red.log` (R29 is green at baseline by audi
 Reviewed R33 golden changes: FX-30..33/classification.json and classification.review.json, GOLDEN.lock only. FX-30 csv becomes T/NONE without warning; FX-31 html, FX-32 md, FX-33 epub become T/NONE with W_MEDIA_NOT_INSPECTED. Core triage remains unchanged. Historical independent review is preserved and the implementing review's amendment is explicitly labeled.
 
 | T-CNV-95 | REQ-CNV-07, REQ-ASM-03, REQ-CNV-05 | Missing/malformed/wrong-source/non-DERIVED marker or oversized returned Markdown fails closed with E_PRECONVERT; siblings continue. |
+| T-CNV-96 | REQ-CNV-04, REQ-CNV-05 | M7-V01: exact identical-byte TXT/CSV counterexample, real Core cold literal outputs in both orders, separate shared-cache fills and no-call warm reuse. FX-28, FX-29; S5:FM12. |
+| T-CNV-97 | REQ-CNV-04 | M7-V01: legacy cache path and missing/mismatched conversion identities are rejected; real Core restores the literal TXT body. FX-28; S5:FM12. |
 | T-CLI-86 | REQ-GEN-12 | Core-owned loaded-code/metadata mismatch maps to E_CORE_CONFLICT, including version. |
 | T-CLI-87 | REQ-GEN-02, REQ-CNV-06, REQ-CNV-07 | M6: real stalled exiftool, LibreOffice and both together; isolated version child completes within 3 s with all gate fields and unavailable diagnostics; controlled child PATH/tool overrides and opt-in Windows temp bridge survive the containment env scrub; expected sources and launch markers prove the fake tools ran. Core contains descendants on a red timeout. |
 | T-CLI-88 | REQ-GEN-02, REQ-CNV-06, REQ-CNV-07 | M6: each optional version probe has a deadline at most 0.5 s; success, timeout and malformed results are cached per process/environment; explicit reset of both caches isolates every optional-probe test. |
@@ -583,17 +591,17 @@ Real CI round-two regression checks: CT-03 retains complete report, input hash a
 | ID | Subject | REQ (shown for linkage only) | File |
 |---|---|---|---|
 | MAN-01 | R15 clean-room: named implementer + different reviewer, inputs used, v1 `src/`/`styles.css`/tests not read; MIT credit in README/LICENSE | REQ-SHL-01, REQ-PKG-15 | `R15_cleanroom.yml` |
-| MAN-02 | R16 README reviewed against configured behavior, exact anchors cited | REQ-PKG-16 | `R16_readme.yml` |
+| MAN-02 | R16 README reviewed against configured behavior, exact anchors cited | REQ-PKG-16 | `R16_readme_review.yml` |
 | MAN-03 | en/ko meaning review of all table rows | REQ-SHL-19, REQ-PKG-15 | `shell_i18n_review.yml` |
-| MAN-04 | Release rehearsal (OS x Obsidian min/current, upgrade from 1.0.8, rollback, real Windows cancellation, terminal env launch) | REQ-PKG-15, REQ-PKG-18, REQ-PKG-20, REQ-SHL-16 | `release_rehearsal.yml` |
+| MAN-04 | Post-release owner rehearsal (R35) (OS x Obsidian min/current, upgrade from 1.0.8, rollback, real Windows cancellation, terminal env launch) | REQ-PKG-15, REQ-PKG-18, REQ-PKG-20, REQ-SHL-16 | `release_rehearsal.yml` |
 
-`trace.py attest` validates the schema (`id`, named `reviewer` != implementer for MAN-01, `date`, `commit` = candidate or ancestor with no later change to attested paths, `inputs[]`, `checks[]` all PASS, `evidence[]`, `verdict: PASS`). A passing schema check is not evidence of authorship, meaning or disclosure accuracy and is reported as MANUAL, outside automated coverage.
+`trace.py attest` validates the schema (`id`, named `reviewer` = peer/profile/model for MAN-01..03, independent of implementer for MAN-01, `date`, `commit` = exact frozen candidate, `inputs[]`, `checks[]` all PASS, `evidence[]`, `verdict: PASS`). A passing schema check is not evidence of authorship, meaning or disclosure accuracy and is reported as MANUAL, outside automated coverage.
 
 Open items (DRAFT-3 sync):
 1. The shell code table (20_SHELL 6) now matches SPEC 7.5 by inspection (28 E_, 22 W_); `JT-SHL-19-01` is the authority and was not run.
 2. FX-71 fixtures are recordings of the real engine (SPEC DRAFT-3.5); re-recording on the release host is tracked as E-10 in 90_ACCEPTANCE section 7 (External evidence pending).
 3. TODO-VERIFY carried from 20/25, not settleable by tests: actual target installs and generated license review (PT-04; release/reference baseline Core 0.3.7 is published on PyPI), Windows signal/blocked-request behavior (JT-16 on real Windows runners), attestation eligibility (PT-13), terminal env launch commands per OS (PT-22), Obsidian min/current versions (MAN-04).
-4. REQ-PKG-18/19/21 describe post-publication procedures; pre-release only their tooling is testable (PT-18/19/21). Real post-deploy evidence goes to the acceptance report, unscored.
+4. REQ-PKG-18/19/21 describe post-publication procedures; pre-release only their tooling is testable (PT-18/19/21). R35: pre-publication requires automated 93/93 + MAN-01..03 PASS (99/100), with MAN-04 explicitly `deferred: post-release (R35)`. Actual MAN-04 joins REQ-PKG-19/21 post-release validators and earns the final point only when attested. Failed MAN-04 triggers REQ-PKG-20 rollback; post-deploy/cleanup remain unscored.
 5. Cross-OS `plan_hash` equality holds only for equal raster bytes (SPEC 10.4); T-PLN-02 asserts per-OS goldens, cross-OS equality only for pass-through PNG/JPEG fixtures (FX-09, FX-10).
 
 Vote: APPROVE-TDD. Every one of the 153 spec REQs has a registered, oracle-backed test path, DRAFT-3's cuts removed the untestable inflight/run-hash/5 s claims, and remaining risks (Windows cancellation, public Core artifacts, regenerated shell fixtures) are explicit gates, not silent gaps.

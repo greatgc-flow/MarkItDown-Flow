@@ -17,7 +17,7 @@
   - ``docx|pptx|xlsx|hwp|hwpx``: ``extract_media=str(run_temp/'media')``, ``media_base_dir=str(run_temp)``.
   - any Core exception -> ``E_CONVERT_FAIL`` issue, ``body == ""``, never raises.
   - ``media`` maps file name (e.g. ``3f9a1c2b7d10.png``) -> absolute path under ``run_temp/media``.
-  - ``cache_dir``: base body + media cached at ``<cache>/base/<sha256>-<core_version>.md`` / ``.media/``.
+  - ``cache_dir``: base body + media cached by source hash, Core version and conversion-input digest.
 """
 
 from __future__ import annotations
@@ -31,7 +31,7 @@ import shutil
 from pathlib import Path
 from typing import TypedDict
 
-from . import classify, core_guard, exiftool, sniff_io, triage, write
+from . import classify, core_guard, exiftool, hashing, sniff_io, triage, write
 from .contracts import Issue, SniffResult
 
 _MEDIA_FORMATS = frozenset({"docx", "pptx", "xlsx", "hwp", "hwpx"})
@@ -200,18 +200,27 @@ def _collect_media(media_dir: Path) -> dict[str, str]:
     return {entry.name: str(entry) for entry in sorted(media_dir.iterdir(), key=lambda p: p.name) if entry.is_file()}
 
 
-def _cache_paths(cache_dir: str | Path, sha256: str, variant: str = "") -> tuple[Path, Path, Path]:
-    # ``variant`` (e.g. the exiftool version for images) keeps entries made with different helper tools apart.
-    stem = f"{sha256}-{_core_version()}" + (f"+{_SAFE_VERSION.sub('_', variant)}" if variant else "")
+def _conversion_identity(fmt: str, ext: str, found: dict | None) -> dict:
+    # Bind every conversion-affecting option. Temporary extraction destinations
+    # vary per run, but Core emits relative media links and the cache restores media.
+    return dict(format=fmt, extension=ext, extract_media=fmt in _MEDIA_FORMATS,
+                enable_plugins=False,
+                exiftool={"path": found["path"], "version": found["version"]} if found else None)
+
+
+def _cache_paths(cache_dir: str | Path, sha256: str, conversion: dict) -> tuple[Path, Path, Path]:
+    stem = f"{sha256}-{_core_version()}-{hashing.key_id(conversion)}"
     base = Path(cache_dir) / "base"
     return base / f"{stem}.md", base / f"{stem}.json", base / f"{stem}.media"
 
 
-def _load_cache(cache_dir: str | Path, sha256: str, run_temp: Path, variant: str = "") -> ConvertResult | None:
-    body_path, meta_path, media_cache = _cache_paths(cache_dir, sha256, variant)
+def _load_cache(cache_dir: str | Path, sha256: str, run_temp: Path, conversion: dict) -> ConvertResult | None:
+    body_path, meta_path, media_cache = _cache_paths(cache_dir, sha256, conversion)
     try:
         body = body_path.read_text(encoding="utf-8")
         meta = json.loads(meta_path.read_text(encoding="utf-8"))
+        if not isinstance(meta, dict) or meta.get("conversion") != conversion:
+            return None
         pages = meta["pages"]
         names = meta["media"]
         tools = meta.get("tools", {})
@@ -236,12 +245,12 @@ def _load_cache(cache_dir: str | Path, sha256: str, run_temp: Path, variant: str
         return None
 
 
-def _store_cache(cache_dir: str | Path, sha256: str, result: ConvertResult, variant: str = "") -> None:
-    body_path, meta_path, media_cache = _cache_paths(cache_dir, sha256, variant)
+def _store_cache(cache_dir: str | Path, sha256: str, result: ConvertResult, conversion: dict) -> None:
+    body_path, meta_path, media_cache = _cache_paths(cache_dir, sha256, conversion)
     try:
         for name, source in result["media"].items():
             write.atomic_write(media_cache / name, Path(source).read_bytes(), dir_mode=0o700)
-        meta = {"pages": result["pages"], "media": sorted(result["media"])}
+        meta = {"conversion": conversion, "pages": result["pages"], "media": sorted(result["media"])}
         if result.get("tools"):
             meta["tools"] = result["tools"]
         write.atomic_write(meta_path, json.dumps(meta, ensure_ascii=False).encode("utf-8"), dir_mode=0o700)
@@ -266,9 +275,9 @@ def convert_source(
     fmt = sniff["format"]
     ext = _hint(fmt)
     found = exiftool.for_extension(ext)  # None for everything but standalone images (R31)
-    variant = "exiftool" + found["version"] if found else ""
+    conversion = _conversion_identity(fmt, ext, found)
     if cache_dir is not None:
-        cached = _load_cache(cache_dir, sniff["sha256"], temp, variant)
+        cached = _load_cache(cache_dir, sniff["sha256"], temp, conversion)
         if cached is not None:
             return cached
     try:
@@ -295,5 +304,6 @@ def convert_source(
         return result
     if cache_dir is not None:
         # a fallback conversion (exiftool failed on this file) is cached under the plain key, never the tool's
-        _store_cache(cache_dir, sniff["sha256"], result, variant if result.get("tools") else "")
+        _store_cache(cache_dir, sniff["sha256"], result,
+                     conversion if result.get("tools") else _conversion_identity(fmt, ext, None))
     return result
