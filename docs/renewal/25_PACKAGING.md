@@ -76,11 +76,11 @@ REQ-PKG-11 MUST: Every external `uses:` reference, including reusable workflows 
 
 | Action / observed version | Verified commit SHA / evidence |
 |---|---|
-| `actions/checkout`, v4.2.2 | [`11bd71901bbe5b1630ceea73d27597364c9af683`](https://github.com/actions/checkout/commit/11bd71901bbe5b1630ceea73d27597364c9af683) |
-| `actions/setup-python`, v5.6.0 | [`a26af69be951a213d495a4c3e4e4022e16d87065`](https://github.com/actions/setup-python/commit/a26af69be951a213d495a4c3e4e4022e16d87065) |
-| `actions/setup-node`, v4.4.0 | [`49933ea5288caeca8642d1e84afbd3f7d6820020`](https://github.com/actions/setup-node/commit/49933ea5288caeca8642d1e84afbd3f7d6820020) |
-| `actions/upload-artifact`, v4.6.2 | [`ea165f8d65b6e75b540449e92b4886f43607fa02`](https://github.com/actions/upload-artifact/commit/ea165f8d65b6e75b540449e92b4886f43607fa02) |
-| `actions/download-artifact`, v4.3.0 | [`d3f86a106a0bac45b974a628896c90dbdf5c8093`](https://github.com/actions/download-artifact/commit/d3f86a106a0bac45b974a628896c90dbdf5c8093) |
+| `actions/checkout`, v7.0.1 | [`3d3c42e5aac5ba805825da76410c181273ba90b1`](https://github.com/actions/checkout/commit/3d3c42e5aac5ba805825da76410c181273ba90b1) |
+| `actions/setup-python`, v7.1.0 | [`6d4fd22b20465ccc0f7354476588e8df7c9ca0e0`](https://github.com/actions/setup-python/commit/6d4fd22b20465ccc0f7354476588e8df7c9ca0e0) |
+| `actions/setup-node`, v7.1.0 | [`949feb2413d6458794dcd2491c4babbbce0c15c1`](https://github.com/actions/setup-node/commit/949feb2413d6458794dcd2491c4babbbce0c15c1) |
+| `actions/upload-artifact`, v7.0.2 | [`cf430e030ddbb5b0abf93d22962f4752f3646cd9`](https://github.com/actions/upload-artifact/commit/cf430e030ddbb5b0abf93d22962f4752f3646cd9) |
+| `actions/download-artifact`, v8.0.2 | [`9000827ccba6bdab643e8b6fd33ac0654aef8333`](https://github.com/actions/download-artifact/commit/9000827ccba6bdab643e8b6fd33ac0654aef8333) |
 | `actions/attest`, v4 at verification | [`1e69f48acb82d1966a394da916b4c1698aa569d6`](https://github.com/actions/attest/commit/1e69f48acb82d1966a394da916b4c1698aa569d6) |
 
 Oracle: recursive workflow/action audit rejects every floating external reference; an evidence record links each selected SHA to review. **TODO-VERIFY:** final selected action versions, their runner-runtime requirements, transitive pins and security review. Avoid another release-helper action by using reviewed GitHub CLI commands; record CLI version. [GitHub action security guidance](https://docs.github.com/en/actions/reference/security/secure-use).
