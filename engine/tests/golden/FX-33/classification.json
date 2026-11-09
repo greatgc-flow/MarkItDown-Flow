@@ -1,0 +1,19 @@
+{
+ "action": "convert_only",
+ "candidates_unique": [],
+ "coverage_state": "none",
+ "decision": "unknown",
+ "issues": [
+  {
+   "code": "W_MEDIA_NOT_INSPECTED",
+   "message": "W media not inspected."
+  }
+ ],
+ "label": "T",
+ "need": "NONE",
+ "reasons": [
+  "core:unsupported_format"
+ ],
+ "route": "NATIVE",
+ "uninspected_pages": 0
+}

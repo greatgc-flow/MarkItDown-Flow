@@ -1,0 +1,30 @@
+[build-system]
+requires = ["hatchling==1.33.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "mdflow"
+version = "2.0.0"
+description = "Local document conversion with selective OCR planning."
+license = "MIT"
+requires-python = ">=3.10"
+dependencies = ["markitdown-gc>=0.3.5,<0.4", "pypdfium2>=5,<6", "Pillow>=11,<14"]
+
+[project.scripts]
+mdflow = "mdflow.__main__:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/mdflow"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "--import-mode=importlib --strict-markers"
+junit_family = "xunit2"
+markers = [
+    "integration: real optional external tool; skip only when absent",
+    "req(*ids): normative requirements asserted by the test",
+    "cov(stage, failure_mode): exactly one primary matrix cell",
+    "fx(*ids): fixture IDs, or all",
+    "plat(platform): collect only on posix or windows",
+    "scope(kind): schema or execution; common schema is not class execution",
+]

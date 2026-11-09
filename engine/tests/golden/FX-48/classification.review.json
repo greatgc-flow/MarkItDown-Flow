@@ -1,0 +1,30 @@
+{
+ "date": "2026-11-09",
+ "independent": {
+  "action": "report_only",
+  "label": "U",
+  "need": "UNKNOWN",
+  "route": "NATIVE",
+  "row": "3b"
+ },
+ "method": "independent-oracle-diff",
+ "reviewer": "ag.effort (gemini-3.8-flash-high), independent derivation from SPEC DRAFT-3.1 §3 without implementation access; diffed by orchestrator (cc, claude-opus-5-5)",
+ "sniff": {
+  "bytes": 100931,
+  "ext": "docx",
+  "format": "docx",
+  "issues": [
+   {
+    "code": "E_ZIP_ENTRIES",
+    "message": "archive has 1001 entries, bound is 1000"
+   }
+  ],
+  "magic": "504b0304140000000800000021005f5b",
+  "path": "FX-48.docx",
+  "reasons": [],
+  "root": 0,
+  "route": "NATIVE",
+  "sha256": "f796e0dc07168f524ac0e4f382f478ef20cb2243cd0387bbfc02e04db0014461"
+ },
+ "verdict": "PASS"
+}

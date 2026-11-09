@@ -1,0 +1,25 @@
+{
+ "date": "2026-11-09",
+ "independent": {
+  "action": "convert_and_ocr",
+  "label": "M",
+  "need": "PARTIAL",
+  "route": "NATIVE",
+  "row": 21
+ },
+ "method": "independent-oracle-diff",
+ "reviewer": "ag.effort (gemini-3.8-flash-high), independent derivation from SPEC DRAFT-3.1 §3 without implementation access; diffed by orchestrator (cc, claude-opus-5-5)",
+ "sniff": {
+  "bytes": 270340,
+  "ext": "pptx",
+  "format": "pptx",
+  "issues": [],
+  "magic": "504b030414000000080000002100c107",
+  "path": "FX-21.pptx",
+  "reasons": [],
+  "root": 0,
+  "route": "NATIVE",
+  "sha256": "789a3107d3211975e9abe8c7626ff20bc914fd58be82a486d80146aa56261d6c"
+ },
+ "verdict": "PASS"
+}

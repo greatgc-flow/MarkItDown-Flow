@@ -1,0 +1,76 @@
+# Decision Log (ADR-lite). Source: peer round 1 (cx.effort REJECT-until-fixed, ag.effort & cc.fable APPROVE-WITH-CHANGES) + orchestrator probes 2026-11-09.
+
+## Verified facts that shape the design
+- F1 Published: `markitdown-flow` 1.0.8 is in the Obsidian community directory (~1k downloads) -> plugin `id` and v1 command IDs are frozen; v1 `data.json` settings MUST migrate (tested). Desktop-only stays; mobile claim is dropped.
+- F2 Core PDF conversion emits NO page markers; scanned page -> empty text. Per-page conversion works (pypdfium2 split -> markitdown per page); pypdfium2 ships with pdfplumber (render needs no new dep).
+- F3 DOCX/PPTX/XLSX: `--extract-media DIR` links `![..](media/<sha256[:12]>.<ext>)`; triage media candidate id = zip member path (e.g. `word/media/rId10.png`). Mapping rule: sha256(member bytes)[:12] == media filename => in-situ replacement anchor.
+- F4 Triage: standalone image => id `image`; PDF => `pN`; DOCX embedded image => `review`/low; `.txt/.log` => not_applicable. `no_candidates` != born-digital proof.
+- F5 Upstream `markitdown-ocr` (LLM-vision plugin, needs upstream markitdown >=0.1.8) exists but targets upstream package, not the gc fork, and OCRs inline w/o consent/ledger -> not used.
+
+## Resolutions
+| ID | Resolution | Basis |
+|---|---|---|
+| R1 Taxonomy | Two independent axes. Route = {NATIVE, CONTAINER, LEGACY, PROTECTED, UNSUPPORTED} (media/audio -> UNSUPPORTED reason `media_out_of_scope`); Need = {NONE, PARTIAL, FULL, UNKNOWN}. User-facing labels: T(text)=NATIVE+NONE, S(scan)=NATIVE+FULL, M(mixed)=NATIVE+PARTIAL. Need rule is deterministic from triage (see SPEC). OVERSIZE is a Plan bound, not a class. | cx#1, fable#1 |
+| R2 Pipeline | Sniff(magic+encryption+container only) -> Triage(core) -> Classify -> Plan -> Convert(core) -> Lookup(ledger) -> Approve -> Render -> Transcribe -> Assemble -> Report. Verify/Reconcile deferred (v2.1): no auto-merge ever. | all |
+| R3 OCR unit | Executable unit = {kind: page|media, source_id, raster bytes sha256, dpi}. Page ids render via pypdfium2 (200dpi; 300 for dense CJK); media units use extracted bytes. | cx#2, fable#2 |
+| R4 Ledger | Single source of truth: content-addressed cache (CLI `~/.mdflow/cache`, plugin `<plugin-dir>/cache`), key=sha256(raster)+provider+model+prompt_version+dpi. No sidecar in vault (rename-proof, no pollution). Frontmatter = summary only (sha256, class, counts, versions). Failed/partial units stay retryable; atomic writes. | ag#2, cx#3, fable#3 |
+| R5 Placement | Inline: PDF assembled per page with `<!-- mdflow:page N -->` anchors, OCR block in page order; Office: OCR text replaces/follows the image link at its in-situ position. Provenance heading/comment keeps provider, model, date, key. | all 3 (D6 CHANGE) |
+| R6 Egress/consent | Providers declare `egress: bool`, `cost_hint`, `max_batch`. Approve stage gates ANY egress provider on a concrete Plan (destination, N units, est. cost cap, sensitive-glob hits); approval hash recorded; default=plan-only. Thresholds configurable (default >20 units). Applies to every adapter incl. `command`. | cx#4, fable#4 |
+| R7 Providers v2.0 | `none` (default; emits plan + pending markers), `openai-compatible` (single stdlib-HTTP adapter: OpenAI/Azure OpenAI/Gemini-compat/Anthropic-compat/Ollama via base_url), `command` (template, secrets via env, explicit trust flag). Azure DocIntel/CU removed from 2.0 (whole-document, not unit-level) -> migration notice; `command` can wrap `markitdown-gc -d`. peerhub = dev tool + documented `command` recipe, NOT a dependency (D3 KEEP, unanimous). | cx/fable |
+| R8 Secrets | Env only; scrub child env; redact logs/progress/exceptions; no keys in persisted provider config. | cx#7 |
+| R9 i18n | en + ko shipped, key-based table-driven; other 6 languages = v1 strings kept only if migrating is free, else deferred (not scaffolded). | cx, fable, ag |
+| R10 Runtime/distribution (AMENDED r2: Obsidian Developer policies forbid plugins to 'Install or update themselves or their dependencies', verified in obsidianmd/obsidian-developer-docs) | Engine = pure-Python package `mdflow` + pinned lock; the plugin NEVER installs/updates anything: SetupModal only DIAGNOSES (python found? engine+core versions? handshake) and shows copy-paste bootstrap/upgrade commands to run in the user's own terminal (dedicated venv recommended). Versioned JSON-lines progress/error protocol with cancellation. | ag#3, fable D1, cx D1/D10 |
+| R11 LibreOffice | Dropped from 2.0 (LEGACY -> report with reason + hint). Revisit 2.1 with original+derived provenance. | ag, fable, cx(bounded) |
+| R12 Tests | pytest (engine; programmatic + small real fixtures; malformed/encrypted/oversize/partial-failure/cache-invalidation) + jest (shell) + contract tests pinned to markitdown-gc version range, fail loud on schema_version!=1. CI: win+ubuntu+macos; py3.10 and 3.14 required, 3.15 allowed-failure. | fable D9, cx D9 |
+| R13 Quality bar | "100/100" = every checklist item in 90_ACCEPTANCE.md PASS with evidence (tests green + measurable thresholds: classification accuracy 100% on labelled fixtures, 0 unit loss/duplication, idempotent rerun = 0 provider calls). Scores are per-criterion and evidence-linked, never self-asserted. | cx#5, fable |
+| R14 Release | 2.0.0 semver-major; tag == manifest version; assets main.js, manifest.json, styles.css (+ engine zip + lock); attestations kept; Obsidian submission rules (description <=250 chars, no plugin id in command ids, sample code removed). | web research |
+
+## Open questions for the user (batched, ask once)
+Q1 Is dropping Azure DocIntel/CU from the built-in set acceptable (kept only via `command`)? Q2 Default OCR provider when user configures none: `none` (plan only) - confirm. Q3 Sensitive-glob defaults. Q4 Real-API OCR smoke test needs a key/quota approval (offline mocks used otherwise).
+
+## Amendments (round 2)
+| ID | Resolution | Basis |
+|---|---|---|
+| R15 Fork hygiene | v1 TS shell was 'inherited largely intact' from ethanolivertroy/obsidian-markitdown (MIT). Obsidian policy: forks only with approval; diverging projects 'should inherit no code from the original repo'. v2 shell is therefore CLEAN-ROOM (written from SPEC, no copied code); MIT attribution kept in README/LICENSE as courtesy. Supersedes cx PKG 'preserve useful shell code' where code is upstream-derived. | policy text |
+| R16 Disclosures | README MUST disclose: network use (which remote services, why), access to files outside vaults (engine reads/writes outside vault paths, cache dir), no client telemetry, account/API key requirement for optional OCR. | policy text |
+| R17 Output naming | Output keeps original extension (`q3.pdf.md`) - engine contract (Fable obj. 3); shell may display differently. dpi is an explicit option, no auto-CJK rule (Fable obj. 2). openai-compatible max_batch=1 in 2.0. | Fable r2 |
+| R18 Reference pinning | markitdown-gc 0.3.5 GUIDE + ocr_triage.py copied read-only to docs/renewal/ref/ for peers; contract tests CT-* pin vocab (reasons incl. scan_like, embedded_image, standalone_image, suspect_text_layer, low_text_nonblank, image_with_text_layer, external_media, decor_media, unresolved_embed...). | Fable obj. 1 |
+
+## Amendments (round 3 - cross audit: cx 26 findings/9 BLOCKER, Fable cross-audit REJECT, ag coverage: ~37 REQs unmapped)
+| ID | Resolution | Basis |
+|---|---|---|
+| R19 Engine<->shell protocol | SPEC §7.3/§8.4/§10 is the ONLY protocol: progress JSON-lines on stderr, run report on stdout, NO stdin, consent = rerun with `--yes <plan_hash>`, cancel = SIGTERM (exit 130), shell passes `-o <vault>/<path>` (inside-vault validated). PKG stdin/staging protocol deleted. | Fable X-10/X-11 |
+| R20 Traceability is generated, not asserted | Every test carries a `@req("REQ-..")` marker; a meta-test fails CI if any spec REQ has 0 tests or any marker names an unknown REQ; vertical (stage x failure-mode) and horizontal (file class x stage) MECE matrices are GENERATED from markers + fixture manifest, never hand-written. | ag coverage, Fable ACC |
+| R21 Acceptance | 90_ACCEPTANCE v2 = list of objectively checkable gates (oracle given per gate), score = generated from CI test results (+ named manual attestations: R15 clean-room, R16 README). No partial rubric. v1 AC draft is superseded. | Fable |
+| R22 Docs layout | 10_SPEC (engine) / 20_SHELL (Obsidian shell, clean-room, behaviour inventory not reuse table) / 25_PACKAGING (dist, CI, release, policy) / 30_TESTPLAN (REQ->TEST->FX) / 90_ACCEPTANCE (gates). Fixture expectations come from pinned golden triage reports (generated from Core), not hand-written ids. | Fable |
+| R23 Spec corrections to apply | cx R3-01..26 + Fable X-40..48: multi-frame `fN` units, duplicate Office candidate ids, capped/partial inspection must not reach FULL, decision-table dead rows 13/14 (issue codes are not states), HWP/hwpx marker, zero-byte -> corrupt, 16-byte sniff, comment-escape in provider text, Windows reserved names, ordering of raster-hash/cache-count fields in Plan, consent must bind executable work, warm-rerun zero-call vs retry/--force. | cx, Fable |
+
+## Amendments (round 4)
+| ID | Resolution | Basis |
+|---|---|---|
+| R24 | SPEC DRAFT-2 accepted as basis (Fable: 27 findings fixed, 8 partially/rejected with reasons in SPEC §13). X-13 `--tag` frontmatter key: DROPPED. X-14 `--no-media`: DROPPED (minimalism; YAGNI). | orchestrator, Fable recommendation |
+| R25 | CI runner labels per cx verification: `macos-14` retired 2026-11-02 -> use current documented labels (25_PACKAGING). HWP/HWPX ship in markitdown-gc by default; no `[hwp]` extra. | cx (web/gh verified) |
+
+## Ratification (round 7) - TDD kickoff UNANIMOUS
+Votes: cx APPROVE-TDD (88/100, 8 fix-during-TDD items, review/R7_cx_ratify.md); cc APPROVE-TDD (153 REQ -> 197 tests, 0 missing); Fable APPROVE-TDD + plan CHANGE C1-C9 (review/R7_fable_ratify.md); ag plan APPROVE.
+| ID | Resolution |
+|---|---|
+| R26 | Execution plan = orchestrator plan P1-P5 amended by Fable C1-C9 verbatim: step-0 contracts/conftest/trace/pyproject/CI skeleton by cx before forks; v1 deleted in first commit (done); ledger.py wholly in wt-engine-core; strict red-green (collectable red, no test edits to go green, logs in build/trace/redgreen/); goldens only via orchestrator `tools/golden.py gen`; runtime dep markitdown-gc>=0.3.5,<0.4 (original universal lock superseded by R27; M3 reference baseline 0.3.6), test deps pinned separately; shell starts with pure step 8; honest loop exit: orchestrator-runnable gates PASS + N/A list reviewed; 3-OS CI gates and manual M-01..04 require push + named human attestation. F-01 (Key provider fingerprint) SPEC amendment by Fable before step 3. |
+
+## Amendments (MECE round 1)
+| ID | Resolution | Basis |
+|---|---|---|
+| R27 (pending Fable vote) | Packaging simplification: drop hand-built 15-cell universal lock + wheel/license catalog; ship pure-Python wheel on the release, declared `markitdown-gc>=0.3.5,<0.4` from PyPI (0.3.5 published, orchestrator-verified), ONE CI-generated hashed reference requirements file (Core0.3.6 release baseline per M3), matrix install checks. Votes: cx (proposer) APPROVE, ag APPROVE, orchestrator APPROVE. | M1-V34/V35 |
+| R28 | `fx("all")` credits class_stage cells only for tests that genuinely iterate every class (S0-S3, S13); not S8/S11. trace.py must enforce; resulting gaps get dedicated tests. | ag M1 horizontal, cc proposal |
+
+Core baseline amendment (orchestrator instruction, 2026-11-09): release/reference Core is **0.3.6**. Runtime compatibility remains `>=0.3.5,<0.4`; 0.3.5 is still the minimum endpoint. R18's archived 0.3.5 guide/source retain their stable line references; see [the reference note](ref/README.md). Earlier publication/verification statements are historical evidence, not a current 0.3.5 release pin.
+
+## Owner directives (2026-11-09, user)
+| ID | Resolution |
+|---|---|
+| R29 | markitdown-gc's own LLM features (`llm_client`/`llm_model`/LLM captioning) are permanently OFF: the engine never passes LLM arguments to MarkItDown; settings/docs expose none; a test pins it. (Our OCR providers are unaffected.) |
+| R30 | Priority = the no-OCR path: T-class (born-digital) classification accuracy and conversion quality first (all G1/G2 formats incl. HWP/HWPX, Office, PDF text, CSV/HTML/EPUB...). |
+| R31 | Use exiftool fully: detect via `EXIFTOOL_PATH`/PATH (>= 12.24), pass to markitdown-gc so image/audio metadata is extracted; surface exiftool status in diagnostics; works without it (graceful). |
+| R32 | Shell UI polish: clean, consistent Obsidian-native look (settings grouping, consent modal, progress/cancel, history), en/ko. |
+| R33 (unanimous with amendments: cx, ag, Fable, orchestrator) | (a) LEGACY pre-convert via user-installed LibreOffice (optional, OFF by default, `SOFFICE_PATH`/PATH): .doc->.docx, .ppt->.pptx, .rtf->.docx, HWP<5.0->.docx; derived file re-sniffed/classified; original+derived sha256 in frontmatter; isolated `-env:UserInstallation` profile, timeout, no network; Fable amendment: derived files carry `W_PRECONVERTED{tool,version}` and fidelity DERIVED (never NATIVE), timeout kills the whole soffice process tree (soffice.bin lingers and locks the profile), derived file in a temp dir deleted after hashing. No markitdown plugin support in 2.0 (all plugins depend on upstream `markitdown`, see markitdown-gc#66). (b) csv/tsv/json -> T; md/html/xml/epub -> T + W_MEDIA_NOT_INSPECTED (not U). (c) cx amendment: co-installed upstream `markitdown` distribution is detected on EVERY conversion entry point before importing markitdown (and in version/selftest) -> clear error code. |
+| R34 (owner decision 2026-11-09) | Format-level legacy conversion moves INTO markitdown-gc (optional LibreOffice converter, like exiftool; plus fix of markitdown-gc#66 co-install guard). mdflow keeps orchestration only (classify/plan/consent/ledger/OCR providers); MarkItDown-Flow plugin = TS shell. After markitdown-gc 0.3.7 is published, mdflow removes its own pre-convert module, pins `markitdown-gc>=0.3.7,<0.4`, maps the gc provenance marker to W_PRECONVERTED/DERIVED. |

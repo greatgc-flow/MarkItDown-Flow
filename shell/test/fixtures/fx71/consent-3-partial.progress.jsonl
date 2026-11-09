@@ -1,0 +1,70 @@
+{"v":1,"ev":"run_start","ts":"2026-11-09T03:49:07+00:00","files":4,"provider":"command"}
+{"v":1,"ev":"file_start","ts":"2026-11-09T03:49:07+00:00","file":"b c.docx","index":1,"total":4}
+{"v":1,"ev":"stage","ts":"2026-11-09T03:49:07+00:00","file":"b c.docx","stage":"sniff","state":"end","ms":0}
+{"v":1,"ev":"stage","ts":"2026-11-09T03:49:08+00:00","file":"b c.docx","stage":"triage","state":"end","ms":1159}
+{"v":1,"ev":"stage","ts":"2026-11-09T03:49:08+00:00","file":"b c.docx","stage":"classify","state":"end","ms":0}
+{"v":1,"ev":"warning","ts":"2026-11-09T03:49:08+00:00","file":"b c.docx","code":"W_REVIEW_PRIORITY","message":"W review priority."}
+{"v":1,"ev":"classified","ts":"2026-11-09T03:49:08+00:00","file":"b c.docx","route":"NATIVE","need":"PARTIAL","label":"M","action":"convert_and_ocr"}
+{"v":1,"ev":"stage","ts":"2026-11-09T03:49:08+00:00","file":"b c.docx","stage":"select","state":"end","ms":0}
+{"v":1,"ev":"stage","ts":"2026-11-09T03:49:08+00:00","file":"b c.docx","stage":"convert","state":"end","ms":21}
+{"v":1,"ev":"stage","ts":"2026-11-09T03:49:08+00:00","file":"b c.docx","stage":"render","state":"end","ms":9}
+{"v":1,"ev":"stage","ts":"2026-11-09T03:49:08+00:00","file":"b c.docx","stage":"lookup","state":"end","ms":0}
+{"v":1,"ev":"stage","ts":"2026-11-09T03:49:08+00:00","file":"b c.docx","stage":"plan","state":"end","ms":0}
+{"v":1,"ev":"stage","ts":"2026-11-09T03:49:08+00:00","file":"b c.docx","stage":"approve","state":"end","ms":0}
+{"v":1,"ev":"stage","ts":"2026-11-09T03:49:08+00:00","file":"b c.docx","stage":"transcribe","state":"end","ms":98}
+{"v":1,"ev":"unit","ts":"2026-11-09T03:49:08+00:00","file":"b c.docx","unit":"word/media/image1.png","state":"ok","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-09T03:49:08+00:00","file":"b c.docx","unit":"word/media/image2.png","state":"ok","code":null}
+{"v":1,"ev":"stage","ts":"2026-11-09T03:49:08+00:00","file":"b c.docx","stage":"assemble","state":"end","ms":0}
+{"v":1,"ev":"stage","ts":"2026-11-09T03:49:08+00:00","file":"b c.docx","stage":"write","state":"end","ms":24}
+{"v":1,"ev":"file_end","ts":"2026-11-09T03:49:08+00:00","file":"b c.docx","outputs":["b c.docx.md"],"units":{"total":2,"done":2,"pending":0,"failed":0}}
+{"v":1,"ev":"file_start","ts":"2026-11-09T03:49:08+00:00","file":"memo.txt","index":2,"total":4}
+{"v":1,"ev":"stage","ts":"2026-11-09T03:49:08+00:00","file":"memo.txt","stage":"sniff","state":"end","ms":0}
+{"v":1,"ev":"stage","ts":"2026-11-09T03:49:08+00:00","file":"memo.txt","stage":"triage","state":"end","ms":1}
+{"v":1,"ev":"stage","ts":"2026-11-09T03:49:08+00:00","file":"memo.txt","stage":"classify","state":"end","ms":0}
+{"v":1,"ev":"classified","ts":"2026-11-09T03:49:08+00:00","file":"memo.txt","route":"NATIVE","need":"NONE","label":"T","action":"convert_only"}
+{"v":1,"ev":"stage","ts":"2026-11-09T03:49:08+00:00","file":"memo.txt","stage":"select","state":"end","ms":0}
+{"v":1,"ev":"stage","ts":"2026-11-09T03:49:08+00:00","file":"memo.txt","stage":"convert","state":"end","ms":2}
+{"v":1,"ev":"stage","ts":"2026-11-09T03:49:08+00:00","file":"memo.txt","stage":"render","state":"end","ms":0}
+{"v":1,"ev":"stage","ts":"2026-11-09T03:49:08+00:00","file":"memo.txt","stage":"lookup","state":"end","ms":0}
+{"v":1,"ev":"stage","ts":"2026-11-09T03:49:08+00:00","file":"memo.txt","stage":"plan","state":"end","ms":0}
+{"v":1,"ev":"stage","ts":"2026-11-09T03:49:08+00:00","file":"memo.txt","stage":"approve","state":"end","ms":0}
+{"v":1,"ev":"stage","ts":"2026-11-09T03:49:08+00:00","file":"memo.txt","stage":"transcribe","state":"end","ms":0}
+{"v":1,"ev":"stage","ts":"2026-11-09T03:49:08+00:00","file":"memo.txt","stage":"assemble","state":"end","ms":0}
+{"v":1,"ev":"stage","ts":"2026-11-09T03:49:08+00:00","file":"memo.txt","stage":"write","state":"end","ms":5}
+{"v":1,"ev":"file_end","ts":"2026-11-09T03:49:08+00:00","file":"memo.txt","outputs":["memo.txt.md"],"units":{"total":0,"done":0,"pending":0,"failed":0}}
+{"v":1,"ev":"file_start","ts":"2026-11-09T03:49:08+00:00","file":"sub/a.pdf","index":3,"total":4}
+{"v":1,"ev":"stage","ts":"2026-11-09T03:49:08+00:00","file":"sub/a.pdf","stage":"sniff","state":"end","ms":0}
+{"v":1,"ev":"stage","ts":"2026-11-09T03:49:08+00:00","file":"sub/a.pdf","stage":"triage","state":"end","ms":27}
+{"v":1,"ev":"stage","ts":"2026-11-09T03:49:08+00:00","file":"sub/a.pdf","stage":"classify","state":"end","ms":0}
+{"v":1,"ev":"classified","ts":"2026-11-09T03:49:08+00:00","file":"sub/a.pdf","route":"NATIVE","need":"PARTIAL","label":"M","action":"convert_and_ocr"}
+{"v":1,"ev":"stage","ts":"2026-11-09T03:49:08+00:00","file":"sub/a.pdf","stage":"select","state":"end","ms":0}
+{"v":1,"ev":"stage","ts":"2026-11-09T03:49:08+00:00","file":"sub/a.pdf","stage":"convert","state":"end","ms":15}
+{"v":1,"ev":"stage","ts":"2026-11-09T03:49:08+00:00","file":"sub/a.pdf","stage":"render","state":"end","ms":66}
+{"v":1,"ev":"stage","ts":"2026-11-09T03:49:08+00:00","file":"sub/a.pdf","stage":"lookup","state":"end","ms":0}
+{"v":1,"ev":"stage","ts":"2026-11-09T03:49:08+00:00","file":"sub/a.pdf","stage":"plan","state":"end","ms":0}
+{"v":1,"ev":"error","ts":"2026-11-09T03:49:08+00:00","file":"sub/a.pdf","code":"E_APPROVAL_REQUIRED","message":"This file requires approval of its Plan."}
+{"v":1,"ev":"approve_required","ts":"2026-11-09T03:49:08+00:00","file":"sub/a.pdf","plan_hash":"3c1c696bf3b98206a4ed25a0a086e0feb82aa6acc191b69db491290e48877fc2","destination":"command:[\"python\",\"ocr_echo.py\",\"{input}\"]","model":"fx71-echo","requests_to_send":1,"keys_unique":1,"max_requests":1,"est_max_cost":null,"cost_known":false,"threshold_exceeded":false,"sensitive_hits":[]}
+{"v":1,"ev":"unit","ts":"2026-11-09T03:49:08+00:00","file":"sub/a.pdf","unit":"p2","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-09T03:49:08+00:00","file":"sub/a.pdf","unit":"p4","state":"pending","code":null}
+{"v":1,"ev":"stage","ts":"2026-11-09T03:49:08+00:00","file":"sub/a.pdf","stage":"assemble","state":"end","ms":0}
+{"v":1,"ev":"stage","ts":"2026-11-09T03:49:08+00:00","file":"sub/a.pdf","stage":"write","state":"end","ms":6}
+{"v":1,"ev":"file_end","ts":"2026-11-09T03:49:08+00:00","file":"sub/a.pdf","outputs":["sub/a.pdf.md"],"units":{"total":2,"done":0,"pending":2,"failed":0}}
+{"v":1,"ev":"file_start","ts":"2026-11-09T03:49:08+00:00","file":"보고서/3분기 결산.pdf","index":4,"total":4}
+{"v":1,"ev":"stage","ts":"2026-11-09T03:49:08+00:00","file":"보고서/3분기 결산.pdf","stage":"sniff","state":"end","ms":0}
+{"v":1,"ev":"stage","ts":"2026-11-09T03:49:09+00:00","file":"보고서/3분기 결산.pdf","stage":"triage","state":"end","ms":11}
+{"v":1,"ev":"stage","ts":"2026-11-09T03:49:09+00:00","file":"보고서/3분기 결산.pdf","stage":"classify","state":"end","ms":0}
+{"v":1,"ev":"classified","ts":"2026-11-09T03:49:09+00:00","file":"보고서/3분기 결산.pdf","route":"NATIVE","need":"FULL","label":"S","action":"convert_and_ocr"}
+{"v":1,"ev":"stage","ts":"2026-11-09T03:49:09+00:00","file":"보고서/3분기 결산.pdf","stage":"select","state":"end","ms":0}
+{"v":1,"ev":"stage","ts":"2026-11-09T03:49:09+00:00","file":"보고서/3분기 결산.pdf","stage":"convert","state":"end","ms":7}
+{"v":1,"ev":"stage","ts":"2026-11-09T03:49:09+00:00","file":"보고서/3분기 결산.pdf","stage":"render","state":"end","ms":92}
+{"v":1,"ev":"stage","ts":"2026-11-09T03:49:09+00:00","file":"보고서/3분기 결산.pdf","stage":"lookup","state":"end","ms":0}
+{"v":1,"ev":"stage","ts":"2026-11-09T03:49:09+00:00","file":"보고서/3분기 결산.pdf","stage":"plan","state":"end","ms":0}
+{"v":1,"ev":"error","ts":"2026-11-09T03:49:09+00:00","file":"보고서/3분기 결산.pdf","code":"E_APPROVAL_REQUIRED","message":"This file requires approval of its Plan."}
+{"v":1,"ev":"approve_required","ts":"2026-11-09T03:49:09+00:00","file":"보고서/3분기 결산.pdf","plan_hash":"8491c676dbed6a93bc95663a2488e7136a8b65cb0ed7e176e17cf903604edf75","destination":"command:[\"python\",\"ocr_echo.py\",\"{input}\"]","model":"fx71-echo","requests_to_send":1,"keys_unique":1,"max_requests":1,"est_max_cost":null,"cost_known":false,"threshold_exceeded":false,"sensitive_hits":[]}
+{"v":1,"ev":"unit","ts":"2026-11-09T03:49:09+00:00","file":"보고서/3분기 결산.pdf","unit":"p1","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-09T03:49:09+00:00","file":"보고서/3분기 결산.pdf","unit":"p2","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-09T03:49:09+00:00","file":"보고서/3분기 결산.pdf","unit":"p3","state":"pending","code":null}
+{"v":1,"ev":"stage","ts":"2026-11-09T03:49:09+00:00","file":"보고서/3분기 결산.pdf","stage":"assemble","state":"end","ms":0}
+{"v":1,"ev":"stage","ts":"2026-11-09T03:49:09+00:00","file":"보고서/3분기 결산.pdf","stage":"write","state":"end","ms":5}
+{"v":1,"ev":"file_end","ts":"2026-11-09T03:49:09+00:00","file":"보고서/3분기 결산.pdf","outputs":["보고서/3분기 결산.pdf.md"],"units":{"total":3,"done":0,"pending":3,"failed":0}}
+{"v":1,"ev":"run_end","ts":"2026-11-09T03:49:09+00:00","exit":3,"files_ok":2,"files_failed":2,"provider_calls":2}

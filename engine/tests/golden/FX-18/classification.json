@@ -1,0 +1,42 @@
+{
+ "action": "convert_and_ocr",
+ "candidates_unique": [
+  {
+   "id": "word/media/image1.emf",
+   "kind": "image",
+   "page": null,
+   "priority": "low",
+   "priority_core": "low",
+   "refs": 1
+  },
+  {
+   "id": "word/media/image2.png",
+   "kind": "image",
+   "page": null,
+   "priority": "low",
+   "priority_core": "low",
+   "refs": 1
+  }
+ ],
+ "coverage_state": "complete",
+ "decision": "review",
+ "issues": [
+  {
+   "code": "W_IMAGE_PROBE",
+   "message": "W image probe."
+  },
+  {
+   "code": "W_REVIEW_PRIORITY",
+   "message": "W review priority."
+  }
+ ],
+ "label": "M",
+ "need": "PARTIAL",
+ "reasons": [
+  "core:image_probe_failed",
+  "cand:embedded_image",
+  "cand:embedded_image"
+ ],
+ "route": "NATIVE",
+ "uninspected_pages": 0
+}

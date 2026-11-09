@@ -1,0 +1,518 @@
+# Applicability declaration for the generated MECE matrices (30_TESTPLAN section 5, R20).
+#
+# This file holds applicability ONLY. Coverage is generated from `@pytest.mark.cov`/`fx` markers and the
+# fixture manifest; nothing here claims a test exists. A cell that is neither registered to an assertion nor
+# listed below fails `tools/trace.py check` (T-META-04). A listed cell that is also registered is displayed as registered.
+#
+# Schema (the verifier is tools/trace.py `matrix_problems`, implemented registration verifier):
+#   [[stage_fm]]  cross product `stages` x `fms` of the 14x13 stage/failure-mode grid (S0..S13 x FM0..FM12)
+#   [[class_stage]] cross product `classes` x `stages` of the 20x14 file-class/stage grid (K01..K20 x S0..S13)
+#   reason  why the cell cannot occur or is not separately testable (must be non-empty prose)
+#   owner   stage_fm: the "S<n>:FM<m>" cell that tests the condition instead
+#           class_stage: "S<n>:K<nn>" (explicit cell) or "S<n>" (the SAME class at stage S<n>)
+#
+# R28: fx("all") expands only at S0-S3/S13. Later stages require explicit consumed fixture IDs.
+# scope("schema") assertions contribute only common equivalences to the registration view;
+# class execution registrations exclude them, and passing execution still requires JUnit evidence.
+#
+# FLOOR (30_TESTPLAN section 5) is never declared here: all S3 x FM0/1/2/3/4/10/11/12; S1:FM1/2/3/9; S2:FM1/10;
+# S6:FM1/3; S7:FM1/5; S9:FM8; S10:FM6/7; S12:FM5/9; S0:FM7/10/12; every class x S3, S13, and (except the
+# report-only K13 K15 K16 K17 K19) S11; K12 participates when R33 is enabled.
+#
+# M1: applicability and registration are distinct from executed JUnit evidence.
+# Common schema equivalences are labelled scope(schema); class execution registrations are separate.
+# Previously declared nominal/report gaps now have directly registered scenarios.
+
+version = 1
+
+# ======================================================================= stage x failure mode (reviewed declarations)
+
+# ---- S0 general (startup, CLI, cancellation, cross-run): covered FM0 FM1 FM7 FM9 FM10 FM12
+[[stage_fm]]
+stages = ["S0"]
+fms = ["FM2"]
+reason = "Protection is a property of one input file, detected while sniffing; startup, CLI and cancellation have no protected state."
+owner = "S1:FM2"
+
+[[stage_fm]]
+stages = ["S0"]
+fms = ["FM3"]
+reason = "File and archive bounds are enforced per input at Sniff; the CLI-level bound (--max-bytes above 256 MiB) is a usage error, FM1."
+owner = "S1:FM3"
+
+[[stage_fm]]
+stages = ["S0"]
+fms = ["FM4"]
+reason = "Unsupported or legacy formats are decided per file by Classify; the general-level equivalent (unsupported Python or Core) is a version-contract failure, FM10."
+owner = "S3:FM4"
+
+[[stage_fm]]
+stages = ["S0"]
+fms = ["FM6"]
+reason = "Provider failures are per Key inside Transcribe; startup only validates configuration (E_PROVIDER_CONFIG, FM9)."
+owner = "S10:FM6"
+
+[[stage_fm]]
+stages = ["S0"]
+fms = ["FM8"]
+reason = "Consent is evaluated per file at Approve; no general-level consent state exists."
+owner = "S9:FM8"
+
+[[stage_fm]]
+stages = ["S0"]
+fms = ["FM11"]
+reason = "Partial coverage, caps and low priority are per-file and per-unit facts decided at Classify."
+owner = "S3:FM11"
+
+# ---- S1 Sniff: covered FM0 FM1 FM2 FM3 FM4 FM5 FM9 FM12
+[[stage_fm]]
+stages = ["S1"]
+fms = ["FM6"]
+reason = "Sniff reads local bytes only and never contacts a provider."
+owner = "S10:FM6"
+
+[[stage_fm]]
+stages = ["S1"]
+fms = ["FM7"]
+reason = "Sniff is read-only with no durable side effect; cancellation and forced kill are asserted for the whole run."
+owner = "S0:FM7"
+
+[[stage_fm]]
+stages = ["S1"]
+fms = ["FM8"]
+reason = "Sniff precedes planning and consent; it cannot observe consent state."
+owner = "S9:FM8"
+
+[[stage_fm]]
+stages = ["S1"]
+fms = ["FM10"]
+reason = "Sniff has no dependency on the Core vocabularies or schema version (it reads magic bytes itself); contract drift is observed at Triage."
+owner = "S2:FM10"
+
+[[stage_fm]]
+stages = ["S1"]
+fms = ["FM11"]
+reason = "Sniff yields a complete SniffResult or an error code; partial coverage is derived later from the Core report."
+owner = "S3:FM11"
+
+# ---- S2 Triage: covered FM0 FM1 FM4 FM9 FM10
+[[stage_fm]]
+stages = ["S2"]
+fms = ["FM3"]
+reason = "mdflow-owned bounds are checked at Sniff; Core's own limits come back as report coverage state and are interpreted at Classify."
+owner = "S1:FM3"
+
+[[stage_fm]]
+stages = ["S2"]
+fms = ["FM5"]
+reason = "A Triage read error is wrapped as E_TRIAGE_FAIL, the same internal-failure path as FM1."
+owner = "S2:FM1"
+
+[[stage_fm]]
+stages = ["S2"]
+fms = ["FM6"]
+reason = "Triage runs offline Core code and never contacts a provider."
+owner = "S10:FM6"
+
+[[stage_fm]]
+stages = ["S2"]
+fms = ["FM7"]
+reason = "Triage has no durable side effect (REQ-TRI-05: bytes untouched); cancellation is asserted for the whole run."
+owner = "S0:FM7"
+
+[[stage_fm]]
+stages = ["S2"]
+fms = ["FM8"]
+reason = "Triage precedes planning and consent."
+owner = "S9:FM8"
+
+[[stage_fm]]
+stages = ["S2"]
+fms = ["FM11"]
+reason = "Partial coverage is a Core coverage state; Triage returns it verbatim and Classify interprets it."
+owner = "S3:FM11"
+
+[[stage_fm]]
+stages = ["S2"]
+fms = ["FM12"]
+reason = "Triage determinism is the regenerated-golden equality of CT-03 and the whole-run determinism of T-GEN-06; it has no collision or concurrency state of its own."
+owner = "S0:FM12"
+
+# ---- S3 Classify: covered FM0 FM1 FM2 FM3 FM4 FM10 FM11 FM12 (all floor cells covered)
+[[stage_fm]]
+stages = ["S3"]
+fms = ["FM5", "FM6", "FM7"]
+reason = "Classify is a PURE function (REQ-GEN-04, T-GEN-04): no IO, no provider and no durable effect to interrupt."
+owner = "S3:FM1"
+
+[[stage_fm]]
+stages = ["S3"]
+fms = ["FM8"]
+reason = "Consent is requested after Classify, Select and Plan."
+owner = "S9:FM8"
+
+[[stage_fm]]
+stages = ["S4"]
+fms = ["FM1", "FM9", "FM10"]
+reason = "Select is a PURE total function over candidates already validated by Classify (V1-V4, vocabulary, ids); invalid or hostile reports never reach it."
+owner = "S3:FM1"
+
+[[stage_fm]]
+stages = ["S4"]
+fms = ["FM5", "FM6", "FM7", "FM8"]
+reason = "Select is PURE: no IO, no provider, no side effect to interrupt, and it runs before consent."
+owner = "S3:FM1"
+
+# ---- S5 Convert: covered FM0 FM1 FM9 FM12
+[[stage_fm]]
+stages = ["S5"]
+fms = ["FM2"]
+reason = "Protected sources are never converted; Classify routes them to report_only."
+owner = "S3:FM2"
+
+[[stage_fm]]
+stages = ["S5"]
+fms = ["FM4"]
+reason = "Unsupported and legacy sources are routed to report_only and never converted."
+owner = "S3:FM4"
+
+[[stage_fm]]
+stages = ["S5"]
+fms = ["FM6", "FM8"]
+reason = "Convert uses offline Core only (REQ-CNV-05) and runs before consent; no provider or consent state exists here."
+owner = "S10:FM6"
+
+[[stage_fm]]
+stages = ["S5"]
+fms = ["FM10"]
+reason = "Core drift is detected by the startup gate (CT-13) and the Core contract pins; Convert has no separate vocabulary."
+owner = "S0:FM10"
+
+[[stage_fm]]
+stages = ["S5"]
+fms = ["FM11"]
+reason = "Unmapped and partial results are produced when Assemble places units, not when Core converts."
+owner = "S11:FM11"
+
+# ---- S6 Render: covered FM0 FM1 FM3 FM4 FM10 FM11 FM12
+[[stage_fm]]
+stages = ["S6"]
+fms = ["FM2"]
+reason = "Protected sources produce no units to render."
+owner = "S3:FM2"
+
+[[stage_fm]]
+stages = ["S6"]
+fms = ["FM6", "FM8"]
+reason = "Render is local and runs before consent; no provider or consent state exists here."
+owner = "S10:FM6"
+
+[[stage_fm]]
+stages = ["S6"]
+fms = ["FM7"]
+reason = "Rasters are temp-only and removed at run end on every handled path; cancellation cleanup is asserted for the whole run."
+owner = "S0:FM7"
+
+[[stage_fm]]
+stages = ["S6"]
+fms = ["FM9"]
+reason = "Hostile images are handled by the pixel bound checked before decoding (FM3) and by probe failure (FM1/FM10); no further security-specific path exists."
+owner = "S6:FM3"
+
+# ---- S7 Lookup: covered FM0 FM1 FM5 FM12
+[[stage_fm]]
+stages = ["S7"]
+fms = ["FM2", "FM4"]
+reason = "Only sources with eligible units reach Lookup; protected, unsupported and legacy sources stop at Classify."
+owner = "S3:FM2"
+
+[[stage_fm]]
+stages = ["S7"]
+fms = ["FM3"]
+reason = "Lookup reads at most one ledger entry per Key and has no count or size bound beyond entry validation."
+owner = "S7:FM1"
+
+[[stage_fm]]
+stages = ["S7"]
+fms = ["FM6"]
+reason = "Lookup is local and never contacts a provider."
+owner = "S10:FM6"
+
+[[stage_fm]]
+stages = ["S7"]
+fms = ["FM7"]
+reason = "Lookup reads only; interruption of ledger publication is asserted at Transcribe (T-TRX-02) and by the replace-atomicity test (T-LKP-03)."
+owner = "S10:FM7"
+
+[[stage_fm]]
+stages = ["S7"]
+fms = ["FM8"]
+reason = "A cache hit needs no consent; consent is evaluated after Lookup against remaining misses."
+owner = "S9:FM8"
+
+[[stage_fm]]
+stages = ["S7"]
+fms = ["FM10"]
+reason = "Ledger version drift (v:2) is one of the REQ-LKP-04 invalid-entry cases and is asserted under FM1."
+owner = "S7:FM1"
+
+[[stage_fm]]
+stages = ["S7"]
+fms = ["FM11"]
+reason = "Lookup has no partial state: an entry is valid or a miss."
+owner = "S7:FM1"
+
+# ---- S8 Plan: covered FM0 FM3 FM9 FM10 FM11 FM12
+[[stage_fm]]
+stages = ["S8"]
+fms = ["FM1", "FM5", "FM6", "FM7", "FM8"]
+reason = "Plan is a PURE function of validated inputs (T-GEN-04) that writes nothing (T-CLI-01); the consent decision itself is made at Approve."
+owner = "S9:FM8"
+
+[[stage_fm]]
+stages = ["S9"]
+fms = ["FM1"]
+reason = "Malformed --yes or --yes-file input is rejected as a usage error before any file is processed."
+owner = "S0:FM1"
+
+[[stage_fm]]
+stages = ["S9"]
+fms = ["FM2", "FM4"]
+reason = "Protected, unsupported and legacy sources have no egress and need no consent."
+owner = "S3:FM2"
+
+[[stage_fm]]
+stages = ["S9"]
+fms = ["FM5", "FM6", "FM7"]
+reason = "Approve is PURE (REQ-APR-07: IO and clock patched to raise): no IO, no provider call, no durable effect to interrupt."
+owner = "S9:FM8"
+
+[[stage_fm]]
+stages = ["S9"]
+fms = ["FM9"]
+reason = "Sensitive-path matching is a Plan fact (glob on the path, content never read); Approve only compares hashes."
+owner = "S8:FM9"
+
+[[stage_fm]]
+stages = ["S9"]
+fms = ["FM10"]
+reason = "Approval compares an opaque sha256; a schema or vocabulary change changes the hash and is the stale-consent case."
+owner = "S9:FM8"
+
+[[stage_fm]]
+stages = ["S9"]
+fms = ["FM11"]
+reason = "Partial approval of some files (two of three) is a bound-style per-file decision asserted as FM3."
+owner = "S9:FM3"
+
+# ---- S10 Transcribe: covered FM3 FM6 FM7 FM9 FM10 FM12
+[[stage_fm]]
+stages = ["S10"]
+fms = ["FM1"]
+reason = "A provider that raises is a per-Key provider failure (REQ-TRX-03) and is asserted under FM6."
+owner = "S10:FM6"
+
+[[stage_fm]]
+stages = ["S10"]
+fms = ["FM2"]
+reason = "Protected sources never produce units."
+owner = "S3:FM2"
+
+[[stage_fm]]
+stages = ["S10"]
+fms = ["FM11"]
+reason = "Units left pending after a failure are rendered by Assemble as pending markers."
+owner = "S11:FM6"
+
+# ---- S11 Assemble: covered FM0 FM6 FM9 FM11 FM12
+[[stage_fm]]
+stages = ["S11"]
+fms = ["FM5", "FM7"]
+reason = "Assemble is a PURE total function (T-ASM-01: IO and clock patched to raise); failures become markers or Write errors, and durable effects belong to Write."
+owner = "S12:FM5"
+
+[[stage_fm]]
+stages = ["S11"]
+fms = ["FM2", "FM4"]
+reason = "Report-only sources are not assembled (the class-by-S11 floor excludes K13 K15 K16 K17 K19)."
+owner = "S3:FM2"
+
+[[stage_fm]]
+stages = ["S11"]
+fms = ["FM3"]
+reason = "Output-size bounds are applied at provider output (200000 characters, REQ-TRX-04) and anchor counts are covered under FM11 (1001 anchors)."
+owner = "S10:FM3"
+
+[[stage_fm]]
+stages = ["S11"]
+fms = ["FM8"]
+reason = "approval_required and approval_denied pending markers are covered by T-ASM-15, whose primary cell is FM6."
+owner = "S11:FM6"
+
+[[stage_fm]]
+stages = ["S11"]
+fms = ["FM10"]
+reason = "The output grammar is fixed by this release (REQ-ASM-03 key order); there is no external vocabulary to drift."
+owner = "S11:FM0"
+
+# ---- S12 Write: covered FM5 FM7 FM9 FM12
+[[stage_fm]]
+stages = ["S12"]
+fms = ["FM1"]
+reason = "Invalid output names are prevented by Assemble (reserved-name handling, REQ-ASM-02); a failed write is FM5."
+owner = "S11:FM9"
+
+[[stage_fm]]
+stages = ["S12"]
+fms = ["FM2", "FM4"]
+reason = "Report-only sources write no Markdown output."
+owner = "S3:FM2"
+
+[[stage_fm]]
+stages = ["S12"]
+fms = ["FM3"]
+reason = "The only output-size bound is provider-text truncation, applied before Write."
+owner = "S10:FM3"
+
+[[stage_fm]]
+stages = ["S12"]
+fms = ["FM6", "FM8"]
+reason = "Write runs regardless of provider or consent outcomes, emitting pending markers; it has no provider or consent state."
+owner = "S11:FM6"
+
+[[stage_fm]]
+stages = ["S12"]
+fms = ["FM10"]
+reason = "Write consumes bytes and relative paths; it has no versioned vocabulary."
+owner = "S11:FM0"
+
+[[stage_fm]]
+stages = ["S12"]
+fms = ["FM11"]
+reason = "Partial output is a set of pending markers decided by Assemble."
+owner = "S11:FM11"
+
+# ---- S13 Report: covered FM0 FM9 FM10
+[[stage_fm]]
+stages = ["S13"]
+fms = ["FM2", "FM4"]
+reason = "Report aggregates codes produced by earlier stages (REQ-RPT-02 equations, REQ-RPT-03 code map); each cause is injected where it occurs."
+owner = "S13:FM10"
+
+[[stage_fm]]
+stages = ["S13"]
+fms = ["FM7"]
+reason = "Cooperative cancellation reports exit 130 and forced kill yields no report; both are asserted at the run level."
+owner = "S0:FM7"
+
+[[stage_fm]]
+stages = ["S13"]
+fms = ["FM12"]
+reason = "Report determinism and --report timestamps are asserted by the warm-rerun test (T-GEN-06)."
+owner = "S0:FM12"
+
+# ======================================================================= file class x stage (59 cells)
+# R28: only S0-S3 and S13 may expand fx("all"); other stages need explicit fixture assertions.
+
+[[class_stage]]
+classes = ["K13", "K17", "K19"]
+stages = ["S11"]
+reason = "Legacy, media, oversize and unknown-extension sources are report_only (REQ-CLS-05): the orchestrator publishes no Markdown and does not invoke Assemble. Classification owns this exclusion; protected/corrupt no-output integration is independently asserted on K15/K16."
+owner = "S3"
+
+# M1-H (MECE round 1, horizontal): S5:K01 K02 K04 K05 K06 K11 K18, S4:K03 K04, S6:K03 and S10:K02 were declared
+# N/A by delegation; dedicated tests T-CNV-06..12, T-SEL-05/06, T-RND-09 and T-TRX-07 (stage_io/test_class_closure.py)
+# now cover them, so those cells are no longer listed here.
+
+# ---- S4 Select: covered K02 K03 K04 K05 K06 K07 K08 K09 K11 K14
+# M4-H: S4:K11 is also asserted by existing tests, so it is no longer declared N/A.
+[[class_stage]]
+classes = ["K01", "K10", "K13", "K15", "K16", "K17", "K18", "K19", "K20"]
+stages = ["S4"]
+reason = "Sources of these classes carry no OCR candidates (convert_only or report_only), or are directory-level; Select receives an empty list."
+owner = "S3"
+
+# M3-H: S4:K05 K06 K08 K09 K14 are asserted by the class sweep (T-GEN-85: ordered Select units per class) and
+# S6:K04 likewise (rendered rasters of the inspected pages), so they are no longer listed here.
+
+# ---- S5 Convert: covered K01 K02 K03 K04 K05 K06 K07 K08 K09 K10 K11 K13 K14 K18
+# M4-H: S5:K14 is asserted (members converted as their own classes) and no longer declared here.
+[[class_stage]]
+classes = ["K15", "K16", "K17", "K19"]
+stages = ["S5"]
+reason = "report_only sources are never converted."
+owner = "S3"
+
+[[class_stage]]
+classes = ["K20"]
+stages = ["S5"]
+reason = "A directory tree is discovered at Sniff; each discovered file is converted as its own class."
+owner = "S1:K20"
+
+# ---- S6 Render: covered K02 K03 K04 K05 K06 K07 K08 K09
+# M4-H: S6:K08 and S6:K09 (HWPX/HWP5 media) are asserted directly and no longer delegated to K07.
+[[class_stage]]
+classes = ["K01", "K10", "K11", "K18"]
+stages = ["S6"]
+reason = "No OCR candidates, so nothing is rendered."
+owner = "S3"
+
+[[class_stage]]
+classes = ["K13", "K15", "K16", "K17", "K19"]
+stages = ["S6"]
+reason = "report_only sources produce no units."
+owner = "S3"
+
+[[class_stage]]
+classes = ["K14"]
+stages = ["S6"]
+reason = "Container members render as their own classes."
+owner = "S1:K14"
+
+[[class_stage]]
+classes = ["K20"]
+stages = ["S6"]
+reason = "A directory tree renders per discovered file."
+owner = "S1:K20"
+
+# M2-H (MECE round 2, horizontal): the class sweep (T-GEN-85, stage_io/test_class_sweep.py) executes every
+# unit-bearing class (K02..K09, K14/K20 through their members) at S7/S9/S10 and every output-producing class
+# (K01..K11 with output, K14, K18, K20) at S12 through the real CLI, so those cells are no longer listed here.
+# Only the cells that genuinely cannot occur remain.
+
+# ---- S7 Lookup: covered K02..K09 K14 K20
+[[class_stage]]
+classes = ["K01", "K10", "K11", "K13", "K15", "K16", "K17", "K18", "K19"]
+stages = ["S7"]
+reason = "Without eligible units there is no Key to look up."
+owner = "S3"
+
+# ---- S9 Approve: covered K01 K02..K09 K14 K20
+[[class_stage]]
+classes = ["K10", "K11", "K13", "K15", "K16", "K17", "K18", "K19"]
+stages = ["S9"]
+reason = "No egress without eligible units, so no consent is requested (REQ-APR-01)."
+owner = "S9:K01"
+
+# ---- S10 Transcribe: covered K02..K09 K14 K20
+[[class_stage]]
+classes = ["K01"]
+stages = ["S10"]
+reason = "A native text PDF is convert_only: it has no OCR units, so nothing is transcribed (asserted by the class sweep: 0 requests, no socket)."
+owner = "S10:K03"
+
+[[class_stage]]
+classes = ["K10", "K11", "K13", "K15", "K16", "K17", "K18", "K19"]
+stages = ["S10"]
+reason = "No eligible units, so nothing is transcribed."
+owner = "S3"
+
+# ---- S12 Write: covered K01 K02 K03 K04 K05 K06 K07 K08 K09 K10 K11 K14 K18 K20
+[[class_stage]]
+classes = ["K13", "K15", "K16", "K17", "K19"]
+stages = ["S12"]
+reason = "report_only sources produce no Markdown output to write."
+owner = "S3"
+
+# R33: K12 is report_only by default; enabled eligible legacy sources execute S4-S12.
+# T-CNV-91 asserts the actual pipeline and provenance; these cells are no longer N/A.

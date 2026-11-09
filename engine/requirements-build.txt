@@ -1,0 +1,11 @@
+# Build/bootstrap/review tools only. Separate from reference-requirements.txt.
+pip-tools==7.6.2
+pip==26.3
+hatchling==1.33.0
+packaging==26.3
+pathspec==1.1.1
+pluggy==1.7.0
+tomlkit==0.15.2
+trove-classifiers==2026.9.21.13
+tomli==2.5.0; python_version < "3.11"
+PyYAML==6.0.3

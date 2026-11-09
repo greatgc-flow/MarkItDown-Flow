@@ -1,0 +1,41 @@
+{
+ "action": "convert_and_ocr",
+ "candidates_unique": [
+  {
+   "id": "p1",
+   "kind": "page",
+   "page": 1,
+   "priority": "normal",
+   "priority_core": "high",
+   "refs": 1
+  },
+  {
+   "id": "p2",
+   "kind": "page",
+   "page": 2,
+   "priority": "normal",
+   "priority_core": "high",
+   "refs": 1
+  },
+  {
+   "id": "p3",
+   "kind": "page",
+   "page": 3,
+   "priority": "normal",
+   "priority_core": "high",
+   "refs": 1
+  }
+ ],
+ "coverage_state": "complete",
+ "decision": "ocr_recommended",
+ "issues": [],
+ "label": "S",
+ "need": "FULL",
+ "reasons": [
+  "cand:scan_like",
+  "cand:scan_like",
+  "cand:scan_like"
+ ],
+ "route": "NATIVE",
+ "uninspected_pages": 0
+}

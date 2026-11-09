@@ -1,0 +1,7 @@
+# fx71 approval file (hashes taken from the preceding `plan` stdout, as the shell does)
+
+e12a76d282b1df9da28d1e7cd5dbf7e11d86125845c05d0e67711201485ee4fe
+3c1c696bf3b98206a4ed25a0a086e0feb82aa6acc191b69db491290e48877fc2
+8491c676dbed6a93bc95663a2488e7136a8b65cb0ed7e176e17cf903604edf75
+
+# end

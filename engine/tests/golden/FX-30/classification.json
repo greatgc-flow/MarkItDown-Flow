@@ -1,0 +1,14 @@
+{
+ "action": "convert_only",
+ "candidates_unique": [],
+ "coverage_state": "none",
+ "decision": "unknown",
+ "issues": [],
+ "label": "T",
+ "need": "NONE",
+ "reasons": [
+  "core:unsupported_format"
+ ],
+ "route": "NATIVE",
+ "uninspected_pages": 0
+}

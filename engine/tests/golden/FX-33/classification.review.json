@@ -1,0 +1,39 @@
+{
+ "date": "2026-11-09",
+ "independent": {
+  "route": "NATIVE",
+  "need": "NONE",
+  "label": "T",
+  "action": "convert_only",
+  "row": "9e"
+ },
+ "method": "R33-policy-amendment; explicit oracle values, no implementation generation",
+ "reviewer": "Codex implementing reviewer; policy adjudication from user-authorized R33, not an independent human review",
+ "sniff": {
+  "bytes": 156,
+  "ext": "epub",
+  "format": "epub",
+  "issues": [],
+  "magic": "504b0304140000000800000021005499",
+  "path": "FX-33.epub",
+  "reasons": [],
+  "root": 0,
+  "route": "NATIVE",
+  "sha256": "9db2742e474d5d707344fbf92e98b5f7bb7a2a7dc317d03dadf7e67427bd50b0"
+ },
+ "verdict": "PASS",
+ "historical_independent_review": {
+  "independent": {
+   "action": "convert_only",
+   "label": "U",
+   "need": "UNKNOWN",
+   "route": "NATIVE",
+   "row": "9c"
+  },
+  "reviewer": "ag.effort (gemini-3.8-flash-high), independent derivation from SPEC DRAFT-3.1 §3 without implementation access; diffed by orchestrator (cc, claude-opus-5-5)",
+  "verdict": "PASS",
+  "method": "independent-oracle-diff",
+  "date": "2026-11-09"
+ },
+ "amendment": "R33: T/NONE; retain media warning; embedded media not inspected"
+}

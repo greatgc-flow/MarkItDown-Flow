@@ -1,0 +1,12 @@
+{
+ "action": "recurse",
+ "candidates_unique": [],
+ "coverage_state": "not_run",
+ "decision": "not_run",
+ "issues": [],
+ "label": "C",
+ "need": "NONE",
+ "reasons": [],
+ "route": "CONTAINER",
+ "uninspected_pages": 0
+}

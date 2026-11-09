@@ -1,0 +1,19 @@
+{
+ "action": "report_only",
+ "candidates_unique": [],
+ "coverage_state": "not_run",
+ "decision": "not_run",
+ "issues": [
+  {
+   "code": "E_ENCRYPTED",
+   "message": "E encrypted."
+  }
+ ],
+ "label": "P",
+ "need": "UNKNOWN",
+ "reasons": [
+  "cfb_encrypted_package"
+ ],
+ "route": "PROTECTED",
+ "uninspected_pages": 0
+}

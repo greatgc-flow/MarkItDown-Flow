@@ -1,0 +1,23 @@
+{
+ "action": "convert_and_ocr",
+ "candidates_unique": [
+  {
+   "id": "image",
+   "kind": "image",
+   "page": null,
+   "priority": "normal",
+   "priority_core": "high",
+   "refs": 1
+  }
+ ],
+ "coverage_state": "complete",
+ "decision": "ocr_recommended",
+ "issues": [],
+ "label": "S",
+ "need": "FULL",
+ "reasons": [
+  "cand:standalone_image"
+ ],
+ "route": "NATIVE",
+ "uninspected_pages": 0
+}

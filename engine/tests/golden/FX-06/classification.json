@@ -1,0 +1,17 @@
+{
+ "action": "report_only",
+ "candidates_unique": [],
+ "coverage_state": "not_run",
+ "decision": "not_run",
+ "issues": [
+  {
+   "code": "E_CORRUPT",
+   "message": "PDF could not be opened"
+  }
+ ],
+ "label": "U",
+ "need": "UNKNOWN",
+ "reasons": [],
+ "route": "NATIVE",
+ "uninspected_pages": 0
+}

@@ -1,0 +1,17 @@
+{
+ "action": "report_only",
+ "candidates_unique": [],
+ "coverage_state": "not_run",
+ "decision": "not_run",
+ "issues": [
+  {
+   "code": "E_ZIP_ENTRIES",
+   "message": "archive has 1001 entries, bound is 1000"
+  }
+ ],
+ "label": "C",
+ "need": "UNKNOWN",
+ "reasons": [],
+ "route": "CONTAINER",
+ "uninspected_pages": 0
+}

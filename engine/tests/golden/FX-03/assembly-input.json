@@ -1,0 +1,89 @@
+{
+ "base_body": "<!-- mdflow:page 1 -->\nBase first page\n\n<!-- mdflow:page 2 -->\n\n<!-- mdflow:page 3 -->\nBase third page\n\n<!-- mdflow:page 4 -->",
+ "ledger_entries": {
+  "p2": {
+   "consent": null,
+   "created": "2026-11-09T00:00:00+00:00",
+   "duration_ms": 1,
+   "error": null,
+   "key": {
+    "dpi": 200,
+    "provider_fingerprint": "fa9588dc2b224dd22b02e4a5701925377d7309c28e292d6c84ff1c1d36f00b19",
+    "raster_sha256": "3946ca64ff78d93ca61090a437cbb6b3d2ca0d488f5f9ccf3059608368b27693"
+   },
+   "key_id": "41a1c2a66238a20cc6624a28961ca8412c6e0ab43173523eab58f33ec68c7122",
+   "provider": {
+    "command_env_names": [],
+    "destination": "https://example.invalid/v1/chat/completions",
+    "egress": true,
+    "model": "fixture-model",
+    "name": "openai-compatible",
+    "prompt_version": "p1"
+   },
+   "status": "ok",
+   "text": "Own OCR text",
+   "tools": {
+    "markitdown-gc": "0.3.6",
+    "mdflow": "2.0.0"
+   },
+   "unit": {
+    "bytes": 100,
+    "dpi": 200,
+    "kind": "page",
+    "mime": "image/png"
+   },
+   "v": 1
+  }
+ },
+ "meta": {
+  "bytes": 1024,
+  "coverage_state": "complete",
+  "dpi": 200,
+  "format": "pdf",
+  "frames_total": null,
+  "label": "M",
+  "model": "fixture-model",
+  "need": "PARTIAL",
+  "now": "2026-11-09T00:00:00+00:00",
+  "pages_total": 4,
+  "pending_reason": "no_provider",
+  "prompt_version": "p1",
+  "provider": "openai-compatible",
+  "route": "NATIVE",
+  "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "source": "reports/q3.pdf",
+  "tools": {
+   "markitdown-gc": "0.3.6",
+   "mdflow": "2.0.0",
+   "pillow": "fixture",
+   "pypdfium2": "fixture"
+  },
+  "triage_decision": "ocr_recommended"
+ },
+ "units": [
+  {
+   "bytes": 100,
+   "dpi": 200,
+   "kind": "page",
+   "mime": "image/png",
+   "page": 2,
+   "priority": "normal",
+   "priority_core": "high",
+   "raster_sha256": "3946ca64ff78d93ca61090a437cbb6b3d2ca0d488f5f9ccf3059608368b27693",
+   "source_id": "p2",
+   "status": "eligible"
+  },
+  {
+   "bytes": 100,
+   "dpi": 200,
+   "kind": "page",
+   "mime": "image/png",
+   "page": 4,
+   "priority": "normal",
+   "priority_core": "high",
+   "raster_sha256": "ab71fc4c8a1c4d62b9202b36ee7c07dd398a0907a37037bd8c3959d6af573608",
+   "source_id": "p4",
+   "status": "eligible"
+  }
+ ]
+}

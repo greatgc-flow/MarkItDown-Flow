@@ -1,0 +1,119 @@
+# Engine packaging verification (2026-11-09)
+
+Current release/reference baseline: **Core0.3.6**, SPEC DRAFT-3.5. See [M3_ENGINE_FIXES.md](review/M3_ENGINE_FIXES.md) for the current repair and test evidence. R27/R28 and M2 run counts below are historical receipts, not new Core0.3.6 platform/reference results.
+
+R27 replaces the cached universal lock, fifteen-report merger and public
+wheel/license catalog. `tools/lock_engine.py`, `engine/engine.lock` and
+`engine/lock-inventory.json` are deleted. There is no engine ZIP or relocated
+venv. Core remains `markitdown-gc>=0.3.5,<0.4` from PyPI; R27 establishes public
+0.3.5 availability. Target installs remain separate evidence.
+
+`tools/build_engine.py` builds the pure Python wheel. The candidate CI job on
+Ubuntu x64/Python 3.14 invokes pinned pip-tools 7.6.2 to generate ONE
+`reference-requirements.txt`, with exact Core 0.3.6 closure and local wheel hash.
+The header states its target. A fresh venv installs with hash checking and
+wheel-only mode, then runs pip check, version and selftest outside sources.
+CI retains the standard pip install report, installed metadata, version/selftest
+outputs and generated license text. The reference is not a universal lock.
+
+Six required endpoint jobs and nine intermediate Python smokes independently
+install the same verified wheel with its declared Core range and preserve
+per-target pip reports. Three Python 3.15 endpoint jobs remain experimental.
+PT-02 tamper tests run only on the reference target with `junit-reference.xml`;
+trace scoring requires that evidence. Matrix evidence cannot substitute for it.
+
+The shared ASSETS/SUBJECTS in `tools/build_engine.py` drive checksums, release
+verification, workflow attestation subjects and publication. Subjects comprise
+the three plugin assets, direct wheel, reference requirements, BOOTSTRAP.md,
+NOTICE.txt, LICENSE and SHA256SUMS. Every transferred subject retains tested
+bytes. No build occurs in verification/publication. Named reviews, real target
+installs, desktop rehearsals and provenance verification remain release gates.
+No release or external installation is claimed by local tests.
+
+R28 limits `fx("all")` class-stage expansion to S0-S3/S13 in both registration
+and execution projections. Its initial restricted trace check exposed 18 unique
+cells (22 diagnostics). T-PLN-55 closes ten S8 classes; T-ASM-51 closes four S11
+floor classes. S11 K12/K13/K17/K19 are reasoned N/A because report_only excludes
+assembly, owned by S3. T-META-53 exercises every stage plus explicit fixture and
+schema behavior. Trace check has zero errors after these changes.
+
+## Requirement-led test change log
+
+The amendments in 25_PACKAGING and PT rows in 30_TESTPLAN precede the matching
+test changes. Existing engine behavior tests were not loosened.
+
+| Test or helper | Amended authority | Change |
+|---|---|---|
+| PT-01 | PKG-01 | Inspect direct wheel/metadata and attached notices; retain isolated import assertion. |
+| PT-02 | PKG-02 | Check target header and direct wheel hash; retain complete dependency closure, missing-pin/hash and tamper oracles, scoped to reference target. |
+| T-GEN-52 / full-closure helper | PKG-02 | Offline three-wheel control uses a reference file and local wheelhouse instead of an engine ZIP. Pin/hash/dependency mutations still fail. |
+| PT-04 | PKG-04 | Consume standard generated per-target pip reports and named license review; remove universal per-wheel target catalog. Core range and actual URL/hash/install evidence remain required. |
+| PT-05 | PKG-05 | Execute wheel + PyPI/Core range examples, pip check, selftest and version per OS; retain plugin diagnostics-only assertion. |
+| PT-06 / gate | PKG-06 | Validate complete schema and supported Python/engine/Core policy; accept valid compatibility-resolved renderer/Pillow versions and require selftest. Missing/type/protocol/schema/Core mutations still fail. Shell gate belongs to Fable. |
+| PT-07 | PKG-07 amendment | Retain exact six-required/three-experimental matrix checks; assert one reference compiler/hash job and declared-policy installs with preserved reports. |
+| PT-13 | PKG-13 | Shared attestation subjects include wheel/reference/bootstrap/notices; constrained verifier and tamper checks retained. |
+| PT-14 | PKG-14 | Shared asset inventory, direct wheel forbidden-content scan and reference-to-wheel hash binding replace ZIP/embedded-lock identity. |
+| PT-15 | PKG-15 amendment / PKG-01 | Shared engine_wheel helper reads the direct attachment; other identity/checklist assertions unchanged. |
+| PT-17 | PKG-17 amendment | Candidate manifest binds reference_sha256 instead of lock_sha256. |
+| PT-18 | PKG-18 amendment | Rehearsal/download schema uses shared release subjects; same-byte assertion retained. |
+| PT-19 | PKG-19 amendment | Post-deploy installed asset schema uses all shared ASSETS. |
+| packaging conftest / _support | PKG-01/02/05/13/14 | Copy direct attachments; fresh venv follows ordinary wheel/range install; derive subjects from shared definition. PT-08 consent/security/cancellation assertions unchanged. |
+| T-GEN-54 (new) | PKG-01/02/14/17 | Real deterministic wheel builds; reject overwrite, each changed frozen subject and a rehashed but incorrectly bound reference. Synthetic plugin bytes are verification fixtures only. |
+| T-META-54 (new) | PKG-02/10 amendment | Scoring rejects matrix substitution and skipped/failed/error reference evidence. |
+| T-PLN-55 (new) | R28; PLN-01/02/04 unchanged | Ten explicit fixture classes assert identity, units/requests/caps/frame equations and cache-stable approval hash. Controlled Render/Lookup inputs; no claim to execute those stages. |
+| T-ASM-51 (new) | R28; ASM-01/02/03, GEN-07 unchanged | Explicit text/G2b/mismatch/directory fixtures run orchestration, assembly and write with controlled Core conversion; assert base, relative output, provenance and zero requests. |
+| T-META-53 (new) | PKG-10 R28 amendment | Restrict all-class credit to S0-S3/S13 in both projections; preserve explicit classes and schema exclusion. |
+
+The local Windows sandbox uses the repository’s existing test-only
+`M1_WINDOWS_TEST_TEMP=1` bridge and TMP/TEMP inside build/trace/redgreen; pytest
+cache is disabled. Initial runs without this temp configuration failed on
+restricted-token temp permissions; that is not an engine behavior regression.
+Release-bundle/human-evidence skips are retained as skips, never release passes.
+
+## Local results
+
+- `python -I -m pytest engine/tests -q -p no:cacheprovider --junitxml=build/trace/junit-r27-r28-local.xml`: **446 passed, 12 skipped, 1 deselected**, 108.09 s. Uses the Windows test temp configuration above. Log: `build/trace/r27-r28-pytest.log`.
+- Targeted packaging/scoring checks: **27 passed, 12 skipped**. Log: `build/trace/r27-r28-final-targeted.log`.
+- `python -I tools/trace.py check`: **unknown_req=0 uncovered_req=0 untagged_tests=0 registration_errors=0 matrix_errors=0**.
+- Real wheel builds compare byte-for-byte and all synthetic frozen-asset mutation controls pass. Offline full-dependency hash/pin mutation controls pass.
+
+`shell/**` was not edited. No git command, CI run, release publication or real
+cross-platform installation was performed by this task.
+
+## M2 engine follow-up — SPEC DRAFT-3.4
+
+See [M2_ENGINE_FIXES.md](review/M2_ENGINE_FIXES.md) for all ten reopened findings,
+six new defects, individual red-log mappings, and the final local results. The
+R27/R28 results above are historical; they are not the M2 verification receipt.
+
+The wheel now explicitly declares its direct renderer/Pillow imports:
+`pypdfium2>=5,<6` and `Pillow>=11,<14`, alongside the unchanged Core range.
+These match the shell admission ranges. Core constraints can tighten them;
+pip check and selftest still apply. The reference compiler resolves the declared
+runtime constraints with exact Core0.3.6. Python3.15 remains experimental-only.
+
+Required behavior CI disables source injection, checks the selected installed
+package identity and preserves six endpoint import/execution receipts plus all
+nine intermediate smoke receipts. Release ordering is compatibility checks,
+immutable-subject freeze, attestation, actual release tests with named inputs
+on six targets, then final acceptance/publication. Release-mode skips cannot
+substitute for `junit-release-<os>-py<ver>.xml`; PT-02 still requires its separate
+reference receipt. PT-17 validates independent identity/prerequisites without
+depending on its own computed final score. No success is synthesized for absent
+target/reference or human evidence.
+
+Local M2 verification uses an isolated workspace interpreter/dependency snapshot
+with the newly built wheel installed offline, not a fresh public-index resolver
+environment. No source or global dependency fallback is allowed in that run.
+The final module-byte comparison, pip check, full pytest and trace receipts are
+linked in the fix report. Public reference resolution, six required advertised
+targets, nine smokes and named desktop/provenance reviews remain pending until
+their real CI/manual evidence is supplied.
+
+Final M2 local result: full installed-wheel pytest with `--runxfail` gives
+**498 passed, 12 skipped, 1 deselected, zero failures/errors/xfails**. The skips
+are absent release/human inputs, never release passes. Final V1/contract controls:
+116 passed; Plan/class controls: 12 passed; schema-marker controls: 3 passed.
+Trace check: all five error counters zero. XML:
+`build/trace/junit-m2-installed-draft34.xml`; full log:
+`build/trace/redgreen/m2-installed-draft34.green.log`.

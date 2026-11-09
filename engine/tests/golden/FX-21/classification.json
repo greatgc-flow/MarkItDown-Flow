@@ -1,0 +1,34 @@
+{
+ "action": "convert_and_ocr",
+ "candidates_unique": [
+  {
+   "id": "ppt/media/image1.png",
+   "kind": "image",
+   "page": null,
+   "priority": "normal",
+   "priority_core": "high",
+   "refs": 1
+  },
+  {
+   "id": "ppt/media/image2.png",
+   "kind": "image",
+   "page": null,
+   "priority": "normal",
+   "priority_core": "high",
+   "refs": 1
+  }
+ ],
+ "coverage_state": "complete",
+ "decision": "ocr_recommended",
+ "issues": [],
+ "label": "M",
+ "need": "PARTIAL",
+ "reasons": [
+  "cand:embedded_image",
+  "cand:scan_like",
+  "cand:embedded_image",
+  "cand:scan_like"
+ ],
+ "route": "NATIVE",
+ "uninspected_pages": 0
+}
