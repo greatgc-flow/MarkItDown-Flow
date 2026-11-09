@@ -2,7 +2,7 @@
 # Copy to release-evidence/2.0.0/shell_i18n_review.yml, then replace every angle-bracket placeholder and every
 # unfilled result value. The reviewer must read both languages. Key parity (JT-SHL-19-01) does not replace this.
 id: MAN-03
-reviewer: <BILINGUAL REVIEWER NAME>
+reviewer: <PEER/PROFILE/MODEL>
 date: <YYYY-MM-DD>
 commit: <CANDIDATE COMMIT SHA 40 HEX>
 inputs:

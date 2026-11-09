@@ -50,8 +50,9 @@ def fill(node, key=""):
         return node
     if node.strip() == "TODO":
         return "PASS"  # a result, a rehearsal check or the verdict
-    return {"reviewer": "Named Reviewer", "implementer": "Named Implementer", "date": "2026-11-09",
-            "commit": COMMIT, "sha256": HEX64}.get(key, "filled value")
+    return {"reviewer": "cx/cx.effort/gpt-6.1-sol", "implementer": "cc.fable", "date": "2026-11-09",
+            "commit": COMMIT, "sha256": HEX64,
+            "obsidian_version": json.loads((REPO / 'manifest.json').read_text())['minAppVersion']}.get(key, "filled value")
 
 
 def load_template(identity):
@@ -76,9 +77,13 @@ def check_workflow():
     on = flow.get("on", flow.get(True))
     inputs = on["workflow_dispatch"]["inputs"]
     assert inputs["path"]["default"] == "release-evidence/2.0.0"
-    assert flow.get("permissions") == {"contents": "read"}
-    assert "permissions" not in job or job["permissions"] == {"contents": "read"}, "no job-level elevation"
+    assert flow.get("permissions") == {"contents": "read", "actions": "read"}
+    assert 'permissions' not in job, 'no job-level elevation'
     WORKFLOW_TEXT = (REPO / WORKFLOW).read_text(encoding="utf-8")
+    # pinned release tool (engine/requirements-build.txt); no PyYAML wheel exists yet for the
+    # experimental Python 3.15 cells, where this release-tooling check cannot run.
+    yaml = pytest.importorskip("yaml", reason="PyYAML (release tool) unavailable on this interpreter")
+    yaml.safe_load(WORKFLOW_TEXT)  # the small structural test reader is deliberately permissive
     assert "secrets." not in WORKFLOW_TEXT.replace("secrets.GITHUB_TOKEN", ""), "only GITHUB_TOKEN may be referenced"
     assert audit_uses(WORKFLOW_TEXT) == [], "every external action must be a SHA with a version comment"
     packaging = (REPO / "docs/renewal/25_PACKAGING.md").read_text(encoding="utf-8")
@@ -97,8 +102,11 @@ def check_workflow():
     checkout = next(s for s in job["steps"] if s["uses"].startswith("actions/checkout@"))
     assert checkout["with"]["persist-credentials"] is False
     text = step_text(job)
-    for identity in MANUAL_FILES:
+    for identity in ('MAN-01', 'MAN-02', 'MAN-03'):
         assert identity in text, f"{identity} is not attested"
+    assert 'for identity in MAN-01 MAN-02 MAN-03 MAN-04' not in text
+    assert 'tools/release_evidence.py produce' in text
+    assert 'acceptance-evidence' in text and 'gh run download' in text
     assert "tools/trace.py attest" in text and "--commit" in text and "--attest-dir" in text
     assert "requirements-build.txt" in text, "PyYAML (release tool pin) must be installed for the MAN-04 YAML"
     assert "MANUAL_FILES" in text, "staged file names must come from tools/trace.py::MANUAL_FILES"

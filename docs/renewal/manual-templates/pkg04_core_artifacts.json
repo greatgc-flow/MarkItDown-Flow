@@ -1,0 +1,23 @@
+{
+  "reviewer": "<PEER/PROFILE/MODEL>",
+  "date": "<YYYY-MM-DD>",
+  "commit": "<CANDIDATE COMMIT SHA 40 HEX>",
+  "evidence": [
+    "<REVIEW NOTES OR RECEIPT LINKS>"
+  ],
+  "verdict": "TODO",
+  "package": "markitdown-gc",
+  "version": "0.3.7",
+  "source": "https://pypi.org/pypi/markitdown-gc/0.3.7/json",
+  "artifacts": [],
+  "install_reports": [],
+  "checks": {
+    "artifact_licenses": "TODO",
+    "windows-2022:x64:py3.10": "TODO",
+    "windows-2022:x64:py3.14": "TODO",
+    "ubuntu-24.04:x64:py3.10": "TODO",
+    "ubuntu-24.04:x64:py3.14": "TODO",
+    "macos-26:arm64:py3.10": "TODO",
+    "macos-26:arm64:py3.14": "TODO"
+  }
+}

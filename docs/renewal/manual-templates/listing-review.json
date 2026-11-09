@@ -1,0 +1,21 @@
+{
+  "reviewer": "<PEER/PROFILE/MODEL>",
+  "date": "<YYYY-MM-DD>",
+  "commit": "<CANDIDATE COMMIT SHA 40 HEX>",
+  "evidence": [
+    "<REVIEW NOTES OR RECEIPT LINKS>"
+  ],
+  "verdict": "TODO",
+  "listing": {
+    "id": "markitdown-flow",
+    "version": "2.0.0"
+  },
+  "checks": {
+    "identity": "TODO",
+    "manifest_versions": "TODO",
+    "description": "TODO",
+    "commands": "TODO",
+    "desktop_only": "TODO",
+    "readme_disclosures": "TODO"
+  }
+}

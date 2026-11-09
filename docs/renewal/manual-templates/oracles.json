@@ -1,0 +1,240 @@
+{
+  "G-01": {
+    "reviewer": "<PEER/PROFILE/MODEL>",
+    "date": "<YYYY-MM-DD>",
+    "commit": "<CANDIDATE COMMIT SHA 40 HEX>",
+    "evidence": [
+      "<REVIEW NOTES OR RECEIPT LINKS>"
+    ],
+    "verdict": "TODO",
+    "command": "<ACTUAL COMMAND>",
+    "stdout": "<ACTUAL UNEDITED STDOUT>",
+    "exit": null,
+    "expected": "exit 0; `uncovered_req=0 unknown_req=0 untagged_tests=0 undeclared_cells=0 plan_diff=0 plan_undefined_req=0` over all REQs defined in 10/20/25",
+    "expected_output_review": "TODO"
+  },
+  "G-02": {
+    "reviewer": "<PEER/PROFILE/MODEL>",
+    "date": "<YYYY-MM-DD>",
+    "commit": "<CANDIDATE COMMIT SHA 40 HEX>",
+    "evidence": [
+      "<REVIEW NOTES OR RECEIPT LINKS>"
+    ],
+    "verdict": "TODO",
+    "command": "<ACTUAL COMMAND>",
+    "stdout": "<ACTUAL UNEDITED STDOUT>",
+    "exit": null,
+    "expected": "exit 0; `failed=0 skipped=0 missing=0` on 6/6 cells",
+    "expected_output_review": "TODO"
+  },
+  "G-03": {
+    "reviewer": "<PEER/PROFILE/MODEL>",
+    "date": "<YYYY-MM-DD>",
+    "commit": "<CANDIDATE COMMIT SHA 40 HEX>",
+    "evidence": [
+      "<REVIEW NOTES OR RECEIPT LINKS>"
+    ],
+    "verdict": "TODO",
+    "command": "<ACTUAL COMMAND>",
+    "stdout": "<ACTUAL UNEDITED STDOUT>",
+    "exit": null,
+    "expected": "all selected classification tests pass against reviewed `classification.json`; every live row, V1-V4 and 14/14 Core issue codes have explicit expectations",
+    "expected_output_review": "TODO"
+  },
+  "G-04": {
+    "reviewer": "<PEER/PROFILE/MODEL>",
+    "date": "<YYYY-MM-DD>",
+    "commit": "<CANDIDATE COMMIT SHA 40 HEX>",
+    "evidence": [
+      "<REVIEW NOTES OR RECEIPT LINKS>"
+    ],
+    "verdict": "TODO",
+    "command": "<ACTUAL COMMAND>",
+    "stdout": "<ACTUAL UNEDITED STDOUT>",
+    "exit": null,
+    "expected": "0 failed on both; schema!=1 mutation makes `CT-01` fail loud",
+    "expected_output_review": "TODO"
+  },
+  "G-05": {
+    "reviewer": "<PEER/PROFILE/MODEL>",
+    "date": "<YYYY-MM-DD>",
+    "commit": "<CANDIDATE COMMIT SHA 40 HEX>",
+    "evidence": [
+      "<REVIEW NOTES OR RECEIPT LINKS>"
+    ],
+    "verdict": "TODO",
+    "command": "<ACTUAL COMMAND>",
+    "stdout": "<ACTUAL UNEDITED STDOUT>",
+    "exit": null,
+    "expected": "all selected independent accounting/placement tests pass: `count(blocks)+count(markers)==sum(placements)`, `total==eligible+pending`, `eligible==cached+transcribed+failed`",
+    "expected_output_review": "TODO"
+  },
+  "G-06": {
+    "reviewer": "<PEER/PROFILE/MODEL>",
+    "date": "<YYYY-MM-DD>",
+    "commit": "<CANDIDATE COMMIT SHA 40 HEX>",
+    "evidence": [
+      "<REVIEW NOTES OR RECEIPT LINKS>"
+    ],
+    "verdict": "TODO",
+    "command": "<ACTUAL COMMAND>",
+    "stdout": "<ACTUAL UNEDITED STDOUT>",
+    "exit": null,
+    "expected": "after a fully successful run the 2nd run has `provider_calls=0` and a byte-identical recursive digest of `out_dir` and cache (only `--report` may differ); `failed` units retried only; `--force` resends; lost-response resend is a separate assertion",
+    "expected_output_review": "TODO"
+  },
+  "G-07": {
+    "reviewer": "<PEER/PROFILE/MODEL>",
+    "date": "<YYYY-MM-DD>",
+    "commit": "<CANDIDATE COMMIT SHA 40 HEX>",
+    "evidence": [
+      "<REVIEW NOTES OR RECEIPT LINKS>"
+    ],
+    "verdict": "TODO",
+    "command": "<ACTUAL COMMAND>",
+    "stdout": "<ACTUAL UNEDITED STDOUT>",
+    "exit": null,
+    "expected": "provider `none` = 0 connects; missing consent = 0 calls, exit 3; per-file `plan_hash` flips on any `approved` field, not on cache state; raster overwritten after approval = 0 bytes sent; modal dismissal = 0 launches; replay uses same roots + one plugin-owned `--yes-file` (deleted after the run)",
+    "expected_output_review": "TODO"
+  },
+  "G-08": {
+    "reviewer": "<PEER/PROFILE/MODEL>",
+    "date": "<YYYY-MM-DD>",
+    "commit": "<CANDIDATE COMMIT SHA 40 HEX>",
+    "evidence": [
+      "<REVIEW NOTES OR RECEIPT LINKS>"
+    ],
+    "verdict": "TODO",
+    "command": "<ACTUAL COMMAND>",
+    "stdout": "<ACTUAL UNEDITED STDOUT>",
+    "exit": null,
+    "expected": "0 failed; nothing written outside `out_dir`; lying-size zip aborted with peak memory < 1 MiB; injected key/home path absent from every produced artifact",
+    "expected_output_review": "TODO"
+  },
+  "G-09": {
+    "reviewer": "<PEER/PROFILE/MODEL>",
+    "date": "<YYYY-MM-DD>",
+    "commit": "<CANDIDATE COMMIT SHA 40 HEX>",
+    "evidence": [
+      "<REVIEW NOTES OR RECEIPT LINKS>"
+    ],
+    "verdict": "TODO",
+    "command": "<ACTUAL COMMAND>",
+    "stdout": "<ACTUAL UNEDITED STDOUT>",
+    "exit": null,
+    "expected": "cooperative cancel: exit 130, report `exit:130`, temp and command child gone, outputs old-or-complete; forced kill: no report, rerun completes without cleanup; shell shows native status as interrupted, never success; no owned live process left",
+    "expected_output_review": "TODO"
+  },
+  "G-10": {
+    "reviewer": "<PEER/PROFILE/MODEL>",
+    "date": "<YYYY-MM-DD>",
+    "commit": "<CANDIDATE COMMIT SHA 40 HEX>",
+    "evidence": [
+      "<REVIEW NOTES OR RECEIPT LINKS>"
+    ],
+    "verdict": "TODO",
+    "command": "<ACTUAL COMMAND>",
+    "stdout": "<ACTUAL UNEDITED STDOUT>",
+    "exit": null,
+    "expected": "exit 0, `failed=0 skipped=0`; all 21 `REQ-SHL-*` have PASS tests",
+    "expected_output_review": "TODO"
+  },
+  "G-11": {
+    "reviewer": "<PEER/PROFILE/MODEL>",
+    "date": "<YYYY-MM-DD>",
+    "commit": "<CANDIDATE COMMIT SHA 40 HEX>",
+    "evidence": [
+      "<REVIEW NOTES OR RECEIPT LINKS>"
+    ],
+    "verdict": "TODO",
+    "command": "<ACTUAL COMMAND>",
+    "stdout": "<ACTUAL UNEDITED STDOUT>",
+    "exit": null,
+    "expected": "21/21 keys mapped; credential sentinels absent from `data.json`, snapshot, notices, logs, argv; write-denied fixture leaves original bytes and blocks jobs; 105 history entries -> 100",
+    "expected_output_review": "TODO"
+  },
+  "G-12": {
+    "reviewer": "<PEER/PROFILE/MODEL>",
+    "date": "<YYYY-MM-DD>",
+    "commit": "<CANDIDATE COMMIT SHA 40 HEX>",
+    "evidence": [
+      "<REVIEW NOTES OR RECEIPT LINKS>"
+    ],
+    "verdict": "TODO",
+    "command": "<ACTUAL COMMAND>",
+    "stdout": "<ACTUAL UNEDITED STDOUT>",
+    "exit": null,
+    "expected": "streams recorded from the real engine (SPEC DRAFT-3.5) replay clean; summary events <= 64 KiB, full Plan via `plan` stdout; no invented command/flag; complete `version` gate (protocol 2, schema 2 and out-of-range Core blocked; renderer/Pillow versions recorded under declared compatibility policy and selftest); Korean/space paths intact",
+    "expected_output_review": "TODO"
+  },
+  "G-13": {
+    "reviewer": "<PEER/PROFILE/MODEL>",
+    "date": "<YYYY-MM-DD>",
+    "commit": "<CANDIDATE COMMIT SHA 40 HEX>",
+    "evidence": [
+      "<REVIEW NOTES OR RECEIPT LINKS>"
+    ],
+    "verdict": "TODO",
+    "command": "<ACTUAL COMMAND>",
+    "stdout": "<ACTUAL UNEDITED STDOUT>",
+    "exit": null,
+    "expected": "reference hash install and 6/6 compatibility installs exit 0; `version` JSON has the SPEC 10.1 keys; reference wheel/dependency tamper fails on its Linux x64/Python 3.14 target (PT-02 has separate junit-reference.xml evidence); terminal-launch sentinel visible to child, absent from diagnostics",
+    "expected_output_review": "TODO"
+  },
+  "G-14": {
+    "reviewer": "<PEER/PROFILE/MODEL>",
+    "date": "<YYYY-MM-DD>",
+    "commit": "<CANDIDATE COMMIT SHA 40 HEX>",
+    "evidence": [
+      "<REVIEW NOTES OR RECEIPT LINKS>"
+    ],
+    "verdict": "TODO",
+    "command": "<ACTUAL COMMAND>",
+    "stdout": "<ACTUAL UNEDITED STDOUT>",
+    "exit": null,
+    "expected": "6 required + 4 experimental allowed-failure cells (three Python 3.15 cells and macOS Intel/Python 3.12); required macOS arm64 cells remain required and experimental cells cannot replace required evidence; every `uses:` = 40-hex SHA; default `contents:read`; no privileged `pull_request_target` build",
+    "expected_output_review": "TODO"
+  },
+  "G-15": {
+    "reviewer": "<PEER/PROFILE/MODEL>",
+    "date": "<YYYY-MM-DD>",
+    "commit": "<CANDIDATE COMMIT SHA 40 HEX>",
+    "evidence": [
+      "<REVIEW NOTES OR RECEIPT LINKS>"
+    ],
+    "verdict": "TODO",
+    "command": "<ACTUAL COMMAND>",
+    "stdout": "<ACTUAL UNEDITED STDOUT>",
+    "exit": null,
+    "expected": "assets = shared tools/build_engine.py SUBJECTS (three plugin assets, wheel, reference requirements, bootstrap, notices, LICENSE, SHA256SUMS) + bundles; constrained `gh attestation verify` OK for every subject; manifest/package/engine/tag all `2.0.0`; `id=markitdown-flow`; `isDesktopOnly=true`; description <= 250 chars; six command IDs; reference names exact attached wheel/hash",
+    "expected_output_review": "TODO"
+  },
+  "G-16": {
+    "reviewer": "<PEER/PROFILE/MODEL>",
+    "date": "<YYYY-MM-DD>",
+    "commit": "<CANDIDATE COMMIT SHA 40 HEX>",
+    "evidence": [
+      "<REVIEW NOTES OR RECEIPT LINKS>"
+    ],
+    "verdict": "TODO",
+    "command": "<ACTUAL COMMAND>",
+    "stdout": "<ACTUAL UNEDITED STDOUT>",
+    "exit": null,
+    "expected": "pass: active Code-column set of SPEC 7.5 == table rows == en keys == ko keys (excl. `UNKNOWN`); no deleted/Core codes",
+    "expected_output_review": "TODO"
+  },
+  "G-17": {
+    "reviewer": "<PEER/PROFILE/MODEL>",
+    "date": "<YYYY-MM-DD>",
+    "commit": "<CANDIDATE COMMIT SHA 40 HEX>",
+    "evidence": [
+      "<REVIEW NOTES OR RECEIPT LINKS>"
+    ],
+    "verdict": "TODO",
+    "command": "<ACTUAL COMMAND>",
+    "stdout": "<ACTUAL UNEDITED STDOUT>",
+    "exit": null,
+    "expected": "validators reject invalid records; R35 gate/publisher and automatic/peer evidence contracts pass; actual MAN-04 is post-release; cleanup dry-run preserves sentinels",
+    "expected_output_review": "TODO"
+  }
+}

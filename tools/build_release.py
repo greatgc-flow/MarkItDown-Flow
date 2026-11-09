@@ -103,7 +103,7 @@ def assemble(folder, tag, commit, repo):
                  'signer_workflow': f'{repo}/.github/workflows/release.yml',
                  'reference_sha256': sha(folder / REFERENCE), 'required_jobs': [], 'shell_jobs': [],
                  'acceptance': {'gates': [], 'score': 'UNVERIFIED'},
-                 'blockers': ['required CI, named reviews, desktop rehearsal and provenance verification pending'],
+                 'blockers': ['required CI, named peer reviews and provenance verification pending'],
                  'rollback': {'tag': '1.0.8', 'artifacts_retained': False},
                  'draft_release': {'assets': [{'name': n, 'sha256': sha(folder / n)} for n in SUBJECTS]}}
     (folder / 'release-candidate.json').write_text(json.dumps(candidate, indent=2) + '\n')

@@ -183,8 +183,11 @@ def test_PT_12_least_privilege_jobs_and_no_privileged_pr_context():
         trig = triggers(wf)
         if "pull_request_target" in trig:
             problems.append(f"{name}: pull_request_target is forbidden")
-        if wf.get("permissions") != {"contents": "read"}:
-            problems.append(f"{name}: top-level permissions must be exactly `contents: read`")
+        expected = {'contents': 'read'}
+        if name in {'.github/workflows/evidence.yml', '.github/workflows/release.yml'}:
+            expected['actions'] = 'read'  # cross-run evidence downloads only
+        if wf.get('permissions') != expected:
+            problems.append(f'{name}: unexpected top-level permissions')
         raw = (REPO / name).read_text(encoding="utf-8")
         if "pull_request" in trig and re.search(r"secrets\.(?!GITHUB_TOKEN\b)\w+", raw):
             problems.append(f"{name}: PR-triggered workflow references a secret")

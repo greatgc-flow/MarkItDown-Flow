@@ -108,7 +108,9 @@ def test_PT_04_public_artifact_license_and_target_wheel_evidence(attest_dir):
     path = attest_dir / "pkg04_core_artifacts.json"
     if not path.is_file():
         pytest.skip(f"human evidence absent: {path.as_posix()} (generated install/license evidence requires named review; mode H)")
-    problems = check_artifacts(json.loads(path.read_text(encoding="utf-8")))
+    from release_evidence import validate_extra
+    problems = validate_extra(path.name, json.loads(path.read_text(encoding='utf-8')),
+                              os.environ.get('GITHUB_SHA', ''), root=REPO)
     assert not problems, "\n".join(problems)
 
 
@@ -148,11 +150,8 @@ def test_PT_18_rehearsal_checklist_schema_and_draft_release_is_the_tested_bytes(
     candidate = json.loads((folder / "release-candidate.json").read_text(encoding="utf-8"))
     draft = {a["name"]: a["sha256"] for a in candidate["draft_release"]["assets"]}
     assert draft == {name: sha256_file(folder / name) for name in ASSETS}, "draft release bytes differ from the tested bytes"
-    path = attest_dir / "release_rehearsal.yml"
-    if not path.is_file():
-        pytest.skip(f"human evidence absent: {path.as_posix()} (MAN-04 rehearsal; mode H)")
-    problems = evidence.validate_rehearsal(load_yaml(path.read_text(encoding="utf-8")))
-    assert not problems, "\n".join(problems)
+    # R35: real-app MAN-04 is attested after publication. This gate tests the validator
+    # and immutable subject bytes only; it never awards the deferred manual point.
 
 
 # ------------------------------------------------------------------- PT-19
@@ -196,8 +195,6 @@ def rollback_sample():
             "runtime_rollback": {"previous_venv_selected": True, "incompatible_interpreter_rejected": True}}
 
 
-@pytest.mark.release
-@pytest.mark.human
 @pytest.mark.req("REQ-PKG-20")
 @pytest.mark.cov("S0", "FM0")
 def test_PT_20_rollback_rehearsal_schema_validator(evidence, attest_dir):
@@ -213,11 +210,8 @@ def test_PT_20_rollback_rehearsal_schema_validator(evidence, attest_dir):
         "non-1.0.8 asset restored": changed(sample, "2.0.0", "restored_assets", 0, "version"),
     })
     assert_validator(evidence.validate_rollback, sample, mutations)
-    path = attest_dir / "rollback_rehearsal.json"
-    if not path.is_file():
-        pytest.skip(f"human evidence absent: {path.as_posix()} (isolated-vault rollback rehearsal; mode H)")
-    problems = evidence.validate_rollback(json.loads(path.read_text(encoding="utf-8")))
-    assert not problems, "\n".join(problems)
+    # R35: actual real-app rollback is part of post-release MAN-04. The owner
+    # validates the recorded observations with release_evidence.py rollback.
 
 
 # ------------------------------------------------------------------- PT-21

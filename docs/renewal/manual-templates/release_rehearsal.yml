@@ -1,10 +1,10 @@
-# MAN-04  Release rehearsal on real desktops.   Validated by:
+# MAN-04  Post-release owner rehearsal on real desktops (R35).   Validated by:
 #   python tools/trace.py attest MAN-04      (also runs tools/release_evidence.py validate_rehearsal)
 # Copy to release-evidence/2.0.0/release_rehearsal.yml, then replace every angle-bracket placeholder and every
-# unfilled result value (use PASS only for a check you performed and saw succeed; FAIL blocks the release).
+# unfilled result value (use PASS only for a check you performed and saw succeed; FAIL requires REQ-PKG-20 rollback).
 # Exactly six runs are required: windows, macos and linux, each with Obsidian "minimum" and "current".
 # Always quote version numbers and digests so YAML keeps them as text. Each run installs from the downloaded
-# release-candidate assets, and cancel_restart on Windows must be a real Windows cancellation.
+# published release assets, and cancel_restart on Windows must be a real Windows cancellation.
 id: MAN-04
 reviewer: <REVIEWER NAME>
 date: <YYYY-MM-DD>

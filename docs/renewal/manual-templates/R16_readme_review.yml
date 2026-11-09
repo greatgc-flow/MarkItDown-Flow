@@ -3,7 +3,7 @@
 # unfilled result value. Open the README at the candidate commit and the plugin as configured; cite the exact
 # README heading or anchor for each disclosure and confirm it matches the actual behavior.
 id: MAN-02
-reviewer: <REVIEWER NAME>
+reviewer: <PEER/PROFILE/MODEL>
 date: <YYYY-MM-DD>
 commit: <CANDIDATE COMMIT SHA 40 HEX>
 inputs:
