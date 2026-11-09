@@ -162,6 +162,27 @@ export class ShellCoordinator {
     }
   }
 
+  /**
+   * The gate, or `null` as soon as Cancel/unload arrives (M8-01): the pending probe is ignored (its result still
+   * updates the plugin's cache) so the admission is released immediately instead of after the probe settles.
+   */
+  private async gateOrCancel(): Promise<Awaited<ReturnType<CoordinatorDeps['gate']>>> {
+    const probe = Promise.resolve(this.deps.gate());
+    probe.catch(() => undefined);
+    if (this.admissionCancelled) return null;
+    let waiter: () => void = () => undefined;
+    const cancelled = new Promise<null>((resolve) => {
+      waiter = () => resolve(null);
+      this.cancelWaiters.push(waiter);
+    });
+    try {
+      return await Promise.race([probe, cancelled]);
+    } finally {
+      const at = this.cancelWaiters.indexOf(waiter);
+      if (at >= 0) this.cancelWaiters.splice(at, 1);
+    }
+  }
+
   /** After each await of `admit`: unload refuses with `shell.RUNTIME`, Cancel with `shell.CANCELLED`; null continues. */
   private admissionInterrupted(): SubmitResult | null {
     if (this.disposed) return this.refuse('shell.RUNTIME');
@@ -179,7 +200,7 @@ export class ShellCoordinator {
     // M7-02: a re-probe after a transient failure can take about 11 s; show the item and its Cancel while we wait.
     this.deps.progress?.begin('check');
     this.checking = true;
-    const gate = await this.deps.gate();
+    const gate = await this.gateOrCancel();
     const afterGate = this.admissionInterrupted();
     if (afterGate) return afterGate;
     if (!gate || !gate.enabled) return this.refuse('shell.RUNTIME');

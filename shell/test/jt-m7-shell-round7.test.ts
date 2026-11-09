@@ -54,7 +54,7 @@ class RecordingSink implements ProgressSink {
 
 const GOOD_GATE: VersionGate = { enabled: true, info: { mdflow: '2.0.0', 'markitdown-gc': '0.3.7', pypdfium2: '5.15.1', pillow: '13.0.0', python: '3.14.0', platform: 'test', protocol: 1, triage_schema: 1 } };
 
-function gateHarness(gate: CoordinatorDeps['gate'], progress: ProgressSink): { coordinator: ShellCoordinator; spawner: FakeSpawner } {
+function gateHarness(gate: CoordinatorDeps['gate'], progress: ProgressSink, notify: CoordinatorDeps['notify'] = () => undefined): { coordinator: ShellCoordinator; spawner: FakeSpawner } {
   const fsys = new FakeFs({ directories: [VAULT_ROOT, abs(VAULT_ROOT, 'markitdown-output'), abs(VAULT_ROOT, 'inbox'), PLUGIN_DIR, abs(PLUGIN_DIR, 'cache')] });
   const spawner = new FakeSpawner((request) => {
     if (subcommandOf(request) === 'plan') return { stdout: chunksOf(fx71Bytes('plan-mixed.stdout.json'), 4096), exit: { code: fx71Exit('plan-mixed.stdout.json'), signal: null } };
@@ -72,7 +72,7 @@ function gateHarness(gate: CoordinatorDeps['gate'], progress: ProgressSink): { c
     settings: () => settingsV2({}),
     gate,
     consent: async () => ({ approved: false }),
-    notify: () => undefined,
+    notify,
     recordHistory: async () => undefined,
     log: null,
     nonce: () => '0123456789abcdef',
@@ -111,6 +111,26 @@ it(R16('JT-16 M7-02 a gate that refuses ends the status item; an admitted job ke
   expect(admitted.calls.filter((c) => c === 'end')).toHaveLength(1);
   expect(admitted.calls[0]).toBe('begin:check');
   expect(admitted.calls.at(-1)).toBe('end');
+});
+
+it(R16('JT-16 M8-01 Cancel during the checking phase refuses the admission at once even though the version probe never settles'), async () => {
+  const sink = new RecordingSink();
+  const notices: string[] = [];
+  const h = gateHarness(() => new Promise<VersionGate>(() => undefined), sink, (key) => notices.push(String(key)));
+  let settled: { accepted: boolean } | null = null;
+  void h.coordinator.submit(SELECTION, 'command').then((r) => {
+    settled = r;
+  });
+  await flush();
+  expect(sink.calls).toEqual(['begin:check']);
+  expect(settled).toBeNull();
+  h.coordinator.cancel();
+  await flush();
+  expect(settled).toEqual(expect.objectContaining({ accepted: false }));
+  expect(sink.calls).toEqual(['begin:check', 'end']);
+  expect(notices).toContain('shell.CANCELLED');
+  expect(h.spawner.commands).toEqual([]);
+  expect((h.coordinator as unknown as { cancelWaiters: unknown[] }).cancelWaiters).toHaveLength(0);
 });
 
 it(R16('JT-16 M7-02 the checking phase has text in both locales'), () => {
