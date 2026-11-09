@@ -1,0 +1,193 @@
+# MAN-04  Release rehearsal on real desktops.   Validated by:
+#   python tools/trace.py attest MAN-04      (also runs tools/release_evidence.py validate_rehearsal)
+# Copy to release-evidence/2.0.0/release_rehearsal.yml, then replace every angle-bracket placeholder and every
+# unfilled result value (use PASS only for a check you performed and saw succeed; FAIL blocks the release).
+# Exactly six runs are required: windows, macos and linux, each with Obsidian "minimum" and "current".
+# Always quote version numbers and digests so YAML keeps them as text. Each run installs from the downloaded
+# release-candidate assets, and cancel_restart on Windows must be a real Windows cancellation.
+id: MAN-04
+reviewer: <REVIEWER NAME>
+date: <YYYY-MM-DD>
+commit: <CANDIDATE COMMIT SHA 40 HEX>
+candidate_tag: "2.0.0"
+manifest_version: "2.0.0"
+versions_json_entry: "2.0.0"
+inputs:
+  - <FROZEN CANDIDATE RUN ID OR ARTIFACT USED>
+checks:
+  - {id: six_os_by_obsidian_runs_complete, result: TODO}
+  - {id: downloaded_assets_match_release_candidate_digests, result: TODO}
+  - {id: tag_manifest_and_versions_json_agree, result: TODO}
+  - {id: windows_cancel_restart_on_real_windows, result: TODO}
+evidence:
+  - <SCREENSHOTS OR LOGS FOR THE RUNS AND WHERE THEY ARE KEPT>
+runs:
+  - os: windows
+    obsidian_channel: minimum
+    obsidian_version: "<OBSIDIAN MINIMUM VERSION>"
+    python: "<PYTHON VERSION>"
+    engine: "2.0.0"
+    core: "0.3.7"
+    downloads:
+      - {asset: main.js, sha256: "<SHA256 OF DOWNLOADED ASSET>"}
+      - {asset: manifest.json, sha256: "<SHA256 OF DOWNLOADED ASSET>"}
+      - {asset: styles.css, sha256: "<SHA256 OF DOWNLOADED ASSET>"}
+      - {asset: mdflow-2.0.0-py3-none-any.whl, sha256: "<SHA256 OF DOWNLOADED ASSET>"}
+      - {asset: reference-requirements.txt, sha256: "<SHA256 OF DOWNLOADED ASSET>"}
+      - {asset: BOOTSTRAP.md, sha256: "<SHA256 OF DOWNLOADED ASSET>"}
+      - {asset: NOTICE.txt, sha256: "<SHA256 OF DOWNLOADED ASSET>"}
+      - {asset: LICENSE, sha256: "<SHA256 OF DOWNLOADED ASSET>"}
+      - {asset: SHA256SUMS, sha256: "<SHA256 OF DOWNLOADED ASSET>"}
+    checks:
+      fresh_install: TODO
+      upgrade_from_1_0_8: TODO
+      rollback: TODO
+      consent_dismiss: TODO
+      consent_approve: TODO
+      mixed_document_mock_ocr: TODO
+      warm_rerun: TODO
+      cancel_restart: TODO
+      terminal_env_launch: TODO
+      commands: TODO
+      en_ko: TODO
+  - os: windows
+    obsidian_channel: current
+    obsidian_version: "<OBSIDIAN CURRENT VERSION>"
+    python: "<PYTHON VERSION>"
+    engine: "2.0.0"
+    core: "0.3.7"
+    downloads:
+      - {asset: main.js, sha256: "<SHA256 OF DOWNLOADED ASSET>"}
+      - {asset: manifest.json, sha256: "<SHA256 OF DOWNLOADED ASSET>"}
+      - {asset: styles.css, sha256: "<SHA256 OF DOWNLOADED ASSET>"}
+      - {asset: mdflow-2.0.0-py3-none-any.whl, sha256: "<SHA256 OF DOWNLOADED ASSET>"}
+      - {asset: reference-requirements.txt, sha256: "<SHA256 OF DOWNLOADED ASSET>"}
+      - {asset: BOOTSTRAP.md, sha256: "<SHA256 OF DOWNLOADED ASSET>"}
+      - {asset: NOTICE.txt, sha256: "<SHA256 OF DOWNLOADED ASSET>"}
+      - {asset: LICENSE, sha256: "<SHA256 OF DOWNLOADED ASSET>"}
+      - {asset: SHA256SUMS, sha256: "<SHA256 OF DOWNLOADED ASSET>"}
+    checks:
+      fresh_install: TODO
+      upgrade_from_1_0_8: TODO
+      rollback: TODO
+      consent_dismiss: TODO
+      consent_approve: TODO
+      mixed_document_mock_ocr: TODO
+      warm_rerun: TODO
+      cancel_restart: TODO
+      terminal_env_launch: TODO
+      commands: TODO
+      en_ko: TODO
+  - os: macos
+    obsidian_channel: minimum
+    obsidian_version: "<OBSIDIAN MINIMUM VERSION>"
+    python: "<PYTHON VERSION>"
+    engine: "2.0.0"
+    core: "0.3.7"
+    downloads:
+      - {asset: main.js, sha256: "<SHA256 OF DOWNLOADED ASSET>"}
+      - {asset: manifest.json, sha256: "<SHA256 OF DOWNLOADED ASSET>"}
+      - {asset: styles.css, sha256: "<SHA256 OF DOWNLOADED ASSET>"}
+      - {asset: mdflow-2.0.0-py3-none-any.whl, sha256: "<SHA256 OF DOWNLOADED ASSET>"}
+      - {asset: reference-requirements.txt, sha256: "<SHA256 OF DOWNLOADED ASSET>"}
+      - {asset: BOOTSTRAP.md, sha256: "<SHA256 OF DOWNLOADED ASSET>"}
+      - {asset: NOTICE.txt, sha256: "<SHA256 OF DOWNLOADED ASSET>"}
+      - {asset: LICENSE, sha256: "<SHA256 OF DOWNLOADED ASSET>"}
+      - {asset: SHA256SUMS, sha256: "<SHA256 OF DOWNLOADED ASSET>"}
+    checks:
+      fresh_install: TODO
+      upgrade_from_1_0_8: TODO
+      rollback: TODO
+      consent_dismiss: TODO
+      consent_approve: TODO
+      mixed_document_mock_ocr: TODO
+      warm_rerun: TODO
+      cancel_restart: TODO
+      terminal_env_launch: TODO
+      commands: TODO
+      en_ko: TODO
+  - os: macos
+    obsidian_channel: current
+    obsidian_version: "<OBSIDIAN CURRENT VERSION>"
+    python: "<PYTHON VERSION>"
+    engine: "2.0.0"
+    core: "0.3.7"
+    downloads:
+      - {asset: main.js, sha256: "<SHA256 OF DOWNLOADED ASSET>"}
+      - {asset: manifest.json, sha256: "<SHA256 OF DOWNLOADED ASSET>"}
+      - {asset: styles.css, sha256: "<SHA256 OF DOWNLOADED ASSET>"}
+      - {asset: mdflow-2.0.0-py3-none-any.whl, sha256: "<SHA256 OF DOWNLOADED ASSET>"}
+      - {asset: reference-requirements.txt, sha256: "<SHA256 OF DOWNLOADED ASSET>"}
+      - {asset: BOOTSTRAP.md, sha256: "<SHA256 OF DOWNLOADED ASSET>"}
+      - {asset: NOTICE.txt, sha256: "<SHA256 OF DOWNLOADED ASSET>"}
+      - {asset: LICENSE, sha256: "<SHA256 OF DOWNLOADED ASSET>"}
+      - {asset: SHA256SUMS, sha256: "<SHA256 OF DOWNLOADED ASSET>"}
+    checks:
+      fresh_install: TODO
+      upgrade_from_1_0_8: TODO
+      rollback: TODO
+      consent_dismiss: TODO
+      consent_approve: TODO
+      mixed_document_mock_ocr: TODO
+      warm_rerun: TODO
+      cancel_restart: TODO
+      terminal_env_launch: TODO
+      commands: TODO
+      en_ko: TODO
+  - os: linux
+    obsidian_channel: minimum
+    obsidian_version: "<OBSIDIAN MINIMUM VERSION>"
+    python: "<PYTHON VERSION>"
+    engine: "2.0.0"
+    core: "0.3.7"
+    downloads:
+      - {asset: main.js, sha256: "<SHA256 OF DOWNLOADED ASSET>"}
+      - {asset: manifest.json, sha256: "<SHA256 OF DOWNLOADED ASSET>"}
+      - {asset: styles.css, sha256: "<SHA256 OF DOWNLOADED ASSET>"}
+      - {asset: mdflow-2.0.0-py3-none-any.whl, sha256: "<SHA256 OF DOWNLOADED ASSET>"}
+      - {asset: reference-requirements.txt, sha256: "<SHA256 OF DOWNLOADED ASSET>"}
+      - {asset: BOOTSTRAP.md, sha256: "<SHA256 OF DOWNLOADED ASSET>"}
+      - {asset: NOTICE.txt, sha256: "<SHA256 OF DOWNLOADED ASSET>"}
+      - {asset: LICENSE, sha256: "<SHA256 OF DOWNLOADED ASSET>"}
+      - {asset: SHA256SUMS, sha256: "<SHA256 OF DOWNLOADED ASSET>"}
+    checks:
+      fresh_install: TODO
+      upgrade_from_1_0_8: TODO
+      rollback: TODO
+      consent_dismiss: TODO
+      consent_approve: TODO
+      mixed_document_mock_ocr: TODO
+      warm_rerun: TODO
+      cancel_restart: TODO
+      terminal_env_launch: TODO
+      commands: TODO
+      en_ko: TODO
+  - os: linux
+    obsidian_channel: current
+    obsidian_version: "<OBSIDIAN CURRENT VERSION>"
+    python: "<PYTHON VERSION>"
+    engine: "2.0.0"
+    core: "0.3.7"
+    downloads:
+      - {asset: main.js, sha256: "<SHA256 OF DOWNLOADED ASSET>"}
+      - {asset: manifest.json, sha256: "<SHA256 OF DOWNLOADED ASSET>"}
+      - {asset: styles.css, sha256: "<SHA256 OF DOWNLOADED ASSET>"}
+      - {asset: mdflow-2.0.0-py3-none-any.whl, sha256: "<SHA256 OF DOWNLOADED ASSET>"}
+      - {asset: reference-requirements.txt, sha256: "<SHA256 OF DOWNLOADED ASSET>"}
+      - {asset: BOOTSTRAP.md, sha256: "<SHA256 OF DOWNLOADED ASSET>"}
+      - {asset: NOTICE.txt, sha256: "<SHA256 OF DOWNLOADED ASSET>"}
+      - {asset: LICENSE, sha256: "<SHA256 OF DOWNLOADED ASSET>"}
+      - {asset: SHA256SUMS, sha256: "<SHA256 OF DOWNLOADED ASSET>"}
+    checks:
+      fresh_install: TODO
+      upgrade_from_1_0_8: TODO
+      rollback: TODO
+      consent_dismiss: TODO
+      consent_approve: TODO
+      mixed_document_mock_ocr: TODO
+      warm_rerun: TODO
+      cancel_restart: TODO
+      terminal_env_launch: TODO
+      commands: TODO
+      en_ko: TODO
+verdict: TODO

@@ -444,10 +444,12 @@ R27/R28 added registrations (existing REQs; precise fixture assertions replace b
 | PT-20 | REQ-PKG-20 (rollback rehearsal in isolated vault) | R/H |
 | PT-21 | REQ-PKG-21 (cleanup dry-run; sentinels unchanged) | A |
 | PT-22 | REQ-PKG-05 (terminal-launch env smoke: sentinel in child env, absent from diagnostics/persisted data) | A |
+| PT-23 | REQ-PKG-22 (evidence workflow: dispatch-only, least privilege, pinned, attests MAN-01..04 and uploads `named-release-evidence`; owner guide and REQ/plan records) | A |
+| PT-24 | REQ-PKG-22 (MAN-01..04 templates fail validation until filled and pass once every placeholder is replaced; MAN-01 implementer must differ; MAN-04 lists six runs, nine subjects and eleven checks) | A |
 
 ### 4.5 Coverage statement
 
-Every REQ id defined in `10_SPEC.md` (incl. new REQ-SNF-09), `20_SHELL.md` (SHL-01..21) and `25_PACKAGING.md` (PKG-01..21) appears in 4.1-4.4 at least once; no REQ id in this file is undefined (checked by grep and by `trace.py check`). **Unmappable: none.** Removed with cut features: tests for `run_plan_hash`, `inflight`/`E_PROVIDER_INTERRUPTED`/`units_interrupted`, `W_STALE_TEMP`, ledger `seen`, `est_cost`, csv/tsv/json media-free shortcut and UTF-8 validation (old T-CNV-06), "130 within 5 s", `--yes <run hash>`.
+Every REQ id defined in `10_SPEC.md` (incl. new REQ-SNF-09), `20_SHELL.md` (SHL-01..21) and `25_PACKAGING.md` (PKG-01..22) appears in 4.1-4.4 at least once; no REQ id in this file is undefined (checked by grep and by `trace.py check`). **Unmappable: none.** Removed with cut features: tests for `run_plan_hash`, `inflight`/`E_PROVIDER_INTERRUPTED`/`units_interrupted`, `W_STALE_TEMP`, ledger `seen`, `est_cost`, csv/tsv/json media-free shortcut and UTF-8 validation (old T-CNV-06), "130 within 5 s", `--yes <run hash>`.
 
 
 ### M2 engine regression catalog

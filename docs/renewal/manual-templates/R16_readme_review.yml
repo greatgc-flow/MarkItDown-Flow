@@ -1,0 +1,21 @@
+# MAN-02  R16 README disclosure review.   Validated by: python tools/trace.py attest MAN-02
+# Copy to release-evidence/2.0.0/R16_readme_review.yml, then replace every angle-bracket placeholder and every
+# unfilled result value. Open the README at the candidate commit and the plugin as configured; cite the exact
+# README heading or anchor for each disclosure and confirm it matches the actual behavior.
+id: MAN-02
+reviewer: <REVIEWER NAME>
+date: <YYYY-MM-DD>
+commit: <CANDIDATE COMMIT SHA 40 HEX>
+inputs:
+  - README.md at the candidate commit
+  - <PLUGIN SETTINGS OR PROVIDER UI OBSERVED>
+checks:
+  - {id: network_services_and_purpose, readme_anchor: <README HEADING OR ANCHOR>, result: TODO}
+  - {id: outside_vault_access, readme_anchor: <README HEADING OR ANCHOR>, result: TODO}
+  - {id: no_client_telemetry, readme_anchor: <README HEADING OR ANCHOR>, result: TODO}
+  - {id: account_key_cost, readme_anchor: <README HEADING OR ANCHOR>, result: TODO}
+  - {id: migration_and_operation, readme_anchor: <README HEADING OR ANCHOR>, result: TODO}
+  - {id: setup_and_provider_ui_link_to_disclosures, readme_anchor: <README HEADING OR ANCHOR>, result: TODO}
+evidence:
+  - <WHAT YOU OBSERVED THAT CONFIRMS EACH CLAIM MATCHES THE BEHAVIOR>
+verdict: TODO
