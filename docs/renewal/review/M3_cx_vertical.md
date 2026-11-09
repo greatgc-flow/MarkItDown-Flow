@@ -1,5 +1,7 @@
 # M3 recursive MECE audit — vertical closure, oracles, docs ↔ code, simplicity
 
+Repair follow-up: [M3_ENGINE_FIXES.md](M3_ENGINE_FIXES.md) records the DRAFT-3.5/Core0.3.6 engine repairs, red/green evidence, supported-host recording handoff and remaining excluded-owner/release obligations. Findings and scores below retain the original audit snapshot.
+
 Date: 2026-11-09. Workspace: repository. Authority: SPEC DRAFT-3.4, current SHELL/PACKAGING/TESTPLAN/ACCEPTANCE documents. Predecessors: `M2_cx_vertical.md`, `M2_ag_horizontal.md`, `M2_fable_cross.md`; repair claims: `M2_ENGINE_FIXES.md`, `M2_ENGINE_FOLLOWUP.md` and SHELL §7. Finding IDs retain their originating round; “new” below means newly demonstrated in this audit, not a claim about historical introduction.
 
 **Verdict: substantial closure; incomplete validation and release evidence.** The six M2 vertical findings are **5 CLOSED / 1 OPEN** (runtime-policy parity has a residual mismatch). The 38 inherited M1 findings are **34 CLOSED / 4 OPEN**, including a newly reopened pixel-bound finding. Of M2 horizontal's 30 disputed cells, **25 CLOSED / 5 OPEN** as execution registrations. Fable's 19 X findings are **16 CLOSED / 3 OPEN**; its 15 S proposals are **14 CLOSED / 1 OPEN**. Overlapping findings are cross-referenced, not counted as independent defects.

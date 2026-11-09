@@ -1,6 +1,6 @@
 # MarkItDown-Flow v2 - Engine Specification (`mdflow`)
 
-Status: SPEC DRAFT-3.4 (authoritative for TDD). Binding inputs: `00_BRIEF.md`, `01_DECISIONS.md` R1-R25. Pinned Core: `ref/markitdown-gc_GUIDE_0.3.5.md`, `ref/ocr_triage_0.3.5.py.txt` (line refs below are into that file). Scope: Python engine only. The Obsidian shell (`20_SHELL.md`) consumes only section 7 (JSON contracts), section 8.4 (consent) and section 10 (CLI) - the only engine/shell protocol (R19).
+Status: SPEC DRAFT-3.5 (authoritative for TDD). Binding inputs: `00_BRIEF.md`, `01_DECISIONS.md` R1-R25. Release/reference Core: **0.3.6** (2026-11-09); runtime range remains `>=0.3.5,<0.4`. Archived line-reference copies (see [reference note](ref/README.md)): `ref/markitdown-gc_GUIDE_0.3.5.md`, `ref/ocr_triage_0.3.5.py.txt` (line refs below are into that file). Scope: Python engine only. The Obsidian shell (`20_SHELL.md`) consumes only section 7 (JSON contracts), section 8.4 (consent) and section 10 (CLI) - the only engine/shell protocol (R19).
 
 Conventions: MUST/SHOULD per RFC 2119. Every normative rule has a stable ID `REQ-<AREA>-<NN>`; draft-1 ids `MAP-nn`, `ASM-Pn`, `SEC-nn` are aliases of `REQ-MAP-nn`, `REQ-ASM-Pn`, `REQ-SEC-nn`. Deleted rules keep their id with `(deleted draft-N, see changelog)`; nothing is renumbered. Values in `code` are literal.
 
@@ -103,7 +103,7 @@ Design rule applied in draft-3 (VerySimpleGuide): where a review found a contrad
 - REQ-RND-01 MUST: PDF page units: render with pypdfium2 at `--dpi` (default 200, allowed 200|300), RGB, encoded as PNG by Pillow with `optimize=False`, `compress_level=6`, no ancillary chunks (`pnginfo=None`); identical pixels -> identical bytes on the same pypdfium2/Pillow versions (recorded in `tools`).
 - REQ-RND-02 MUST: Standalone raster files (`is_raster`): candidate `image` -> page unit `page=1`; candidate `fN` -> page unit `page=N` rendering frame `N-1` (Pillow `seek`). Raster bytes: original file bytes when the file is single-frame PNG or JPEG; otherwise the frame re-encoded per REQ-RND-01 after `ImageOps.exif_transpose`. `dpi = 0`. Render also reports `frames_total` (Pillow `n_frames`) for REQ-PLN-01/REQ-ASM-04. With Core issue `image_probe_failed` the single unit `image` is attempted on frame 0; failure -> REQ-RND-04.
 - REQ-RND-03 MUST: Media units: raster = bytes of the media file identified by `h12` (REQ-MAP-03/05); PNG/JPEG passed through; GIF/BMP/TIFF/WebP re-encoded to PNG (frame 0; `n_frames > 1` -> `W_MEDIA_MULTIFRAME`); anything Pillow cannot open (EMF, WMF, SVG, Core omission marker, `stored_ole_stream`) -> `W_MEDIA_FORMAT`, `status = unsupported_media_format`. `dpi = 0`.
-- REQ-RND-04 MUST: Render failure for a unit -> `E_RENDER_FAIL`, `status = render_failed`; other units continue; file exit contribution 2.
+- REQ-RND-04 MUST: Check PDF allocation dimensions with `ceil(page_width * dpi/72)` and `ceil(page_height * dpi/72)` before invoking the renderer; account for the page orientation. Fractional dimensions that exceed the configured pixel area are refused before bitmap allocation. Render failure for a unit -> `E_RENDER_FAIL`, `status = render_failed`; other units continue; file exit contribution 2.
 - REQ-RND-05 MUST: Rasters are written to the per-run temp dir (`tempfile.mkdtemp`, `0o700`), one file per unit, read back for hashing and sending; never under `out_dir`; the temp dir is removed at run end (also on handled errors and signals). Memory holds at most one raster at a time.
 - REQ-RND-06 MUST: Pixel bound: `width*height > --max-pixels` (default 50000000) computed before decoding (PDF: page box * dpi/72; images: header) -> `E_RENDER_FAIL`, `status = render_failed`, message `pixel_bound`. Pillow's decompression-bomb check stays enabled.
 
@@ -162,7 +162,7 @@ Design rule applied in draft-3 (VerySimpleGuide): where a review found a contrad
 
 ## 3. Deterministic classification
 
-### 3.0 Pinned Core triage contract (0.3.5; CT-01..CT-14 fail on drift)
+### 3.0 Pinned Core triage contract (0.3.6; CT-01..CT-14 fail on drift)
 
 | Field | Values / shape (line ref) | mdflow use |
 |---|---|---|
@@ -217,6 +217,8 @@ B. Extension-only formats (no recognised magic)
 Groups: G1 (Core inspects media) = `pdf png jpeg gif bmp tiff webp docx pptx xlsx hwp hwpx`. G2a (Core-validated plain text) = `txt log`. G2b (converted, media uninspected) = `csv tsv json md markdown xml html htm ipynb epub msg xls`.
 
 ### 3.2 Decision table (total; ordered first-match)
+
+HWP payload-kind validation first requires a string, then checks its enum; JSON arrays/objects are ordinary V1 failures, never exceptions.
 
 Validation, evaluated for every NATIVE source after rows 10/11 and before rows 9+: V1 required fields present with the types of 3.0, including nullable raster dpi_tag pairs, page-image record fields, media where/references, and HWP stored-byte/hash facts; V2 enums: `decision`, `coverage.state`, `candidates[].kind`, `candidates[].priority`, `issues[].code` within 3.0; V3 candidate ids match the format (`pN` with `1 <= N <= pages_total` **and** `candidate.page == N` for PDF; `image`|`fN` with `1 <= N <= len(rasters)` and `page == null` for rasters; non-empty string and `page == null` for office) and `kind` matches (`page` iff PDF); V4 consistency: `no_candidates` ⇒ `candidates == []` and `state in {complete, not_applicable}`; `ocr_recommended` ⇒ some `high`; `review` ⇒ no `high` and some `low`; `file.format` agrees with Sniff (`image` ⇔ is_raster; `unknown` allowed for G2; else equal names). V1/V2 failure -> row 11a; V3/V4 failure -> row 11b.
 
@@ -370,7 +372,7 @@ provider: "openai-compatible"            # omitted when units.total == 0
 model: "gpt-4.1-mini"                    # omitted when units.total == 0
 prompt_version: "p1"                     # omitted when units.total == 0
 dpi: 200                                 # omitted unless format is pdf
-tools: {mdflow: "2.0.0", markitdown-gc: "0.3.5", pypdfium2: "4.30.0", pillow: "11.0.0"}
+tools: {mdflow: "2.0.0", markitdown-gc: "0.3.6", pypdfium2: "4.30.0", pillow: "11.0.0"}
 generated: "2026-11-09T14:03:21+09:00"
 content_sha256: "<64 hex>"
 ---
@@ -448,7 +450,7 @@ Equations: `units_total == len(approved.units)`; in `approved.units` every `stat
   "text": "…transcription…",
   "error": null,
   "consent": {"plan_hash": "<64 hex>", "approved_at": "2026-11-09T14:03:00+09:00", "by": "cli:--yes"},
-  "tools": {"mdflow": "2.0.0", "markitdown-gc": "0.3.5", "pypdfium2": "4.30.0", "pillow": "11.0.0"},
+  "tools": {"mdflow": "2.0.0", "markitdown-gc": "0.3.6", "pypdfium2": "4.30.0", "pillow": "11.0.0"},
   "created": "2026-11-09T14:03:21+09:00",
   "duration_ms": 2310
 }
@@ -634,7 +636,7 @@ Env: `MDFLOW_API_KEY`, `MDFLOW_BASE_URL`, `MDFLOW_TIMEOUT_S`, `MDFLOW_PROXY`. No
 
 | REQ | Oracle |
 |---|---|
-| GEN-01 | `importlib.metadata` requires of `mdflow` == {`markitdown-gc`}; no `.so/.pyd` in the `mdflow` wheel; CT-10 HWP5 triage without extra has no `missing_dependency`. |
+| GEN-01 | `importlib.metadata` requires of `mdflow` == {`markitdown-gc`, `pypdfium2`, `Pillow`}; no `.so/.pyd` in the `mdflow` wheel; CT-10 HWP5 triage without extra has no `missing_dependency`. |
 | GEN-02 | Monkeypatch Core version to `0.4.0` -> exit 1, `E_CORE_VERSION`, no file read (`open` spy); CT-13 installed Core in range. |
 | GEN-03 | CI matrix green on 3.10 and 3.14; 3.15 job allowed-failure. |
 | GEN-04 | PURE stages run with `builtins.open`, `time.time`, `os.urandom` patched to raise; no exception. |
@@ -790,6 +792,17 @@ R3-01 pinned contract 3.0/3.4, rows 13/14 deleted · R3-02 `is_raster` · R3-03/
 Clarified section 6.1 to omit the base-text line on empty anchored pages, and section 6.4 to require bare flow-mapping keys, JSON-quoted string values, and the example's mapping key order and spacing.
 
 ---
+
+### 12.7 DRAFT-3.5: M3 engine boundaries, evidence and Core baseline
+
+| Finding | Binding clarification / repair |
+|---|---|
+| M3-V01 / M1-V22 | Container-valued HWP payload kinds fail V1 with W_TRIAGE_UNKNOWN_VALUE; malformed per-source Core data must not abort sibling processing. |
+| M3-V02 / M1-V26 | PDF pre-render pixel bounds use the renderer's ceil allocation dimensions, including orientation. Boundary regressions use supported 200/300 dpi with permitted controls. |
+| M3-V05 | Every scored Python JUnit file has a candidate-bound registry of all collected parameter nodeids, including deselections. Missing/duplicate/substituted/deselected parameters cannot be replaced by one passing TID. Target/phase-specific registries survive artifact merging; reference PT-02 keeps its own scope. |
+| M3-O01 | Independent vertical publication oracles check exact unit IDs, paired OCR delimiters, pending reasons/counts, retained capped-page anchors and corrupted-member sibling continuation. The protected class sweep is not rewritten by the engine owner. |
+| Core reference | Release/reference baseline 0.3.6; retain compatibility >=0.3.5,<0.4 and the 0.3.5 minimum endpoint. The golden seal names its reference producer; each installed endpoint regenerates and compares the actual reports rather than relabelling the seal. Archived 0.3.5 source/guide retain line numbers; see ref/README.md. |
+| M3-D01 | GEN-01 hook names all three direct dependencies; current handoff links engine/shell review ownership and real validation receipts. |
 
 ### 12.6 DRAFT-3.4: M2 engine fix round 2
 

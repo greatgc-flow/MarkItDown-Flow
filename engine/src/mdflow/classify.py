@@ -98,6 +98,7 @@ def _well_typed(report: dict, fmt: str) -> bool:
         if fmt == 'hwp' and any(
             not isinstance(m.get('payload_sha256'), str) or
             not re.fullmatch('[0-9a-f]{64}', m['payload_sha256']) or
+            not isinstance(m.get('payload_kind'), str) or
             m.get('payload_kind') not in {'parser_image_payload', 'stored_ole_stream'} for m in media):
             return False
     cov, file = report["coverage"], report["file"]

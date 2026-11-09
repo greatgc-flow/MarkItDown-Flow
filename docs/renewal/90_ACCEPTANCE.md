@@ -4,8 +4,8 @@ Status: DRAFT-2, 2026-11-09. Synced to SPEC DRAFT-3, 20_SHELL/25_PACKAGING R5; t
 
 ## 1. Evaluation rules
 
-- Evidence = `build/trace/` of the candidate commit's CI run: `junit-engine-<os>-py<ver>.xml` (6 required cells: windows-2022, ubuntu-24.04, macos-15-intel x py3.10, py3.14), `junit-shell-<os>.xml` (3 OS), `junit-pkg-*.xml`, `registry.json`. Python 3.15 cells are never evidence.
-- Test PASS = ran and passed on every cell where expected (`plat` rule, `30_TESTPLAN` section 0). Skipped, xfail, missing, not collected = FAIL.
+- Evidence = `build/trace/` of the candidate commit's CI run: `junit-engine-<os>-py<ver>.xml` (6 required cells: windows-2022, ubuntu-24.04, macos-15-intel x py3.10, py3.14), `junit-shell-<os>.xml` (3 OS), `junit-pkg-*.xml`, and candidate-bound `registry-<target/phase>.json` files containing every collected Python parameter identity. The shared registry.json is a registration view, not execution evidence. Python 3.15 cells are never evidence.
+- Test PASS = every collected Python parameter nodeid ran exactly once and passed on every cell where expected (`plat` rule, `30_TESTPLAN` section 0). Skipped, xfail, missing, not collected = FAIL.
 - Automated gate (`G-nn`) PASS iff **all** tests matched by its Selector are PASS **and** its Oracle exits 0 with the Expected output. Selectors are test ids/globs; overlap between gates is intentional.
 - Manual gate (`M-nn`) PASS iff `python tools/trace.py attest MAN-nn` exits 0 (schema-valid sign-off by a named reviewer, `verdict: PASS`, commit is the candidate or an ancestor with no later change to attested paths). It proves a named human signed, not the property itself; it is never counted in automated coverage.
 - `trace.py score` parses the two gate tables below (single source), checks weights sum to 100, and writes `SCORE.json`/`SCORE.md`: `SCORE <n>/100 (automated a/93, manual m/7)` plus per gate PASS/FAIL, failing test ids and evidence links.
@@ -65,7 +65,7 @@ M2 execution order: compatibility CI produces installed-wheel endpoint and inter
 ## 6. Open items before gates can pass
 
 1. `SYNC-AFTER-DRAFT-3` in 20_SHELL/25_PACKAGING: FX-71 streams and version fixtures must be regenerated from the real DRAFT-3 engine; G-12 cannot pass on hand-edited fixtures.
-2. TODO-VERIFY (25_PACKAGING): public `markitdown-gc` 0.3.5 artifacts and lock hashes, attestation eligibility, Windows blocked-request/forced-kill behavior, terminal env launch per OS, Obsidian min/current. Until settled by real runs, G-09, G-13, G-15, M-04 stay FAIL; none is waived.
+2. TODO-VERIFY (25_PACKAGING): Core 0.3.6 reference closure, artifact and dependency hashes, attestation eligibility, Windows blocked-request/forced-kill behavior, terminal env launch per OS, Obsidian min/current. Until settled by real runs, G-09, G-13, G-15, M-04 stay FAIL; none is waived.
 3. SPEC code table vs shell table match by inspection; G-16 is the authority.
 
 Vote: APPROVE-TDD. All 21 gates (17 automated, 4 manual) have a concrete command oracle, weights sum to 100 (automated 93, manual 7), scoring is generated from junit and attestations, and the unverified items are listed as blockers rather than waived.

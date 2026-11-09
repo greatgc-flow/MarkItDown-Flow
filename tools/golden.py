@@ -15,6 +15,7 @@ import json
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+REFERENCE_CORE = '0.3.6'
 
 
 def recipes(root):
@@ -78,7 +79,9 @@ def verify(root=ROOT):
     assert lock_path.is_file(), "Orchestrator must run tools/golden.py gen"
     lock = json.loads(lock_path.read_text(encoding="utf-8"))
     assert lock["v"] == 1
-    assert lock["core_version"] == importlib.metadata.version("markitdown-gc"), "Core version differs from GOLDEN.lock"
+    # The seal records the reference producer, not whichever compatible Core
+    # endpoint is now regenerating and comparing the reports in CT-03.
+    assert lock["core_version"] == REFERENCE_CORE, "Core version differs from reference GOLDEN.lock"
     actual = {p.relative_to(destination).as_posix(): sha256(p.read_bytes()).hexdigest()
               for p in destination.rglob("*") if p.is_file() and p.name != "GOLDEN.lock"}
     assert actual == lock["files"], "Missing, extra or modified golden file"

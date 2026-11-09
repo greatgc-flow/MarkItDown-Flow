@@ -317,7 +317,7 @@ class Recorder:
     def record(self, label: str, args, *, expect, stdout: str | None, progress: str | None = None,
                env: dict | None = None, note: str = ""):
         """``expect``: an exit code or a collection of acceptable codes (plan may announce missing consent: 0 or 3)."""
-        argv = [sys.executable, "-m", "mdflow", *map(str, args)]
+        argv = [sys.executable, "-I", "-m", "mdflow", *map(str, args)]
         proc = subprocess.run(argv, cwd=self.work, env=dict(self.env, **(env or {})), capture_output=True, timeout=900)
         if proc.returncode not in ({expect} if isinstance(expect, int) else set(expect)):
             raise SystemExit(f"{label}: exit {proc.returncode}, expected {expect}\n"

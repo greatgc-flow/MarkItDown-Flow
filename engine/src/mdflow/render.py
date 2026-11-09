@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import hashlib
 import io
+import math
 import os
 import re
 from pathlib import Path
@@ -91,7 +92,8 @@ def _render_pdf_page(document, unit: Unit, dpi: int, max_pixels: int) -> bytes:
     try:
         width, height = page.get_size()
         scale = dpi / 72
-        _check_pixels(int(round(width * scale)), int(round(height * scale)), max_pixels)
+        # Match PdfPage.render's allocation: fractional device pixels round up.
+        _check_pixels(math.ceil(width * scale), math.ceil(height * scale), max_pixels)
         bitmap = page.render(scale=scale)
         try:
             return _png_bytes(bitmap.to_pil())

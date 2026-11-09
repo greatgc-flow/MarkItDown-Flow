@@ -86,7 +86,7 @@ def validate_rehearsal(data: dict) -> list[str]:
             problems.append('run identifiers and runtime versions must be nonempty strings')
             continue
         cells.append((run.get('os'), run.get('obsidian_channel')))
-        if run.get('engine') != '2.0.0' or run.get('core') != '0.3.5':
+        if run.get('engine') != '2.0.0' or run.get('core') != '0.3.6':
             problems.append('rehearsal must use the exact engine/Core')
         assets(run.get('downloads'), SUBJECTS, problems)
         checks(run, REHEARSAL, problems)

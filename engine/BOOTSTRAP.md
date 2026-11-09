@@ -70,8 +70,7 @@ shows presence only. Read the README network and cost disclosures before consent
 
 ## Reference reproduction (Linux x64 / CPython 3.14 only)
 
-CI generates one `reference-requirements.txt` with pip-tools, including Core
-0.3.5, the exact wheel hash and resolved dependency hashes. Verify it alongside
+CI generates one `reference-requirements.txt` with pip-tools, including Core 0.3.6, the exact wheel hash and resolved dependency hashes. Verify it alongside
 the wheel; in a new venv on that target, from the download directory, run:
 
 ```sh

@@ -23,7 +23,7 @@ def test_T_GEN_80_m2_installed_import_accepts_repo_local_venv_and_rejects_source
 @pytest.mark.cov('S0', 'FM10')
 def test_T_GEN_81_m2_package_runtime_policy_rejects_experimental_and_renderer_mismatches():
     release = load_py(REPO / 'engine/tests/packaging/test_pt_release.py', 'm2_pt_release')
-    value = dict(mdflow='2.0.0', **{'markitdown-gc': '0.3.5'}, python='3.14.0', platform='test',
+    value = dict(mdflow='2.0.0', **{'markitdown-gc': '0.3.6'}, python='3.14.0', platform='test',
                  protocol=1, triage_schema=1, pypdfium2='5.15.1', pillow='13.0.0')
     assert release.gate(value) == []
     for field, bad in [('python', '3.15.0'), ('pypdfium2', '6.0.0'), ('pypdfium2', '4.30.0'),
@@ -71,18 +71,25 @@ def test_T_GEN_84_m2_fable_s14_s15_duplicate_provider_and_report_boundaries_remo
 
 @pytest.mark.req('REQ-PKG-08', 'REQ-GEN-03', 'REQ-PKG-17')
 @pytest.mark.cov('S0', 'FM10')
-def test_T_GEN_86_m2_missing_failed_or_wrong_commit_runtime_receipts_block_acceptance(tmp_path, trace_module):
+def test_T_GEN_86_m2_missing_failed_or_wrong_commit_runtime_receipts_block_acceptance(tmp_path, trace_module, monkeypatch):
     import json
     import xml.etree.ElementTree as ET
     evidence = tmp_path / 'evidence'
     evidence.mkdir()
     commit = 'a' * 40
+    record = dict(nodeid='engine/tests/synthetic.py::test_T_GEN_00_receipt_control', tid='T-GEN-00', markers={})
+    monkeypatch.setattr(trace_module, 'discover_tests', lambda root: [record])
     assert trace_module.required_executions(evidence, commit)
     for target in ('windows-2022', 'ubuntu-24.04', 'macos-15-intel'):
         for py in ('3.10', '3.14'):
             suite = ET.Element('testsuite')
-            ET.SubElement(suite, 'testcase', name='explicit synthetic receipt control')
-            ET.ElementTree(suite).write(evidence / f'junit-engine-{target}-py{py}.xml')
+            case = ET.SubElement(suite, 'testcase', name='explicit synthetic receipt control')
+            props = ET.SubElement(case, 'properties')
+            for key in ('nodeid', 'tid'):
+                ET.SubElement(props, 'property', name=key, value=record[key])
+            filename = f'junit-engine-{target}-py{py}.xml'
+            ET.ElementTree(suite).write(evidence / filename)
+            trace_module.write_execution_registry(evidence, filename, [dict(record, selected=True)], commit)
             (evidence / f'runtime-{target}-py{py}.json').write_text(json.dumps(dict(installed=True, commit=commit)))
         for py in ('3.11', '3.12', '3.13'):
             (evidence / f'smoke-{target}-py{py}.json').write_text(json.dumps(dict(exit=0, commit=commit)))

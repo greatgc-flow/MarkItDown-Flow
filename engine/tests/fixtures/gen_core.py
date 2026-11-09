@@ -439,7 +439,7 @@ def entry(u=None, p=None, *, status="ok", text="Own OCR text", **changes):
              unit={k: u[k] for k in ("kind", "dpi", "mime", "bytes")}, status=status,
              text=text if status == "ok" else None,
              error=None if status == "ok" else dict(code="E_PROVIDER_HTTP", message="fixture", exit=None),
-             consent=None, tools={"mdflow": "2.0.0", "markitdown-gc": "0.3.5"}, created=NOW, duration_ms=1)
+             consent=None, tools={"mdflow": "2.0.0", "markitdown-gc": "0.3.6"}, created=NOW, duration_ms=1)
     e.update(changes)
     return e
 
@@ -448,7 +448,7 @@ def assembly_meta(**changes):
     m = dict(source="reports/q3.pdf", sha256="a" * 64, bytes=1024, format="pdf",
              route="NATIVE", need="PARTIAL", label="M", triage_decision="ocr_recommended",
              coverage_state="complete", provider="openai-compatible", model="fixture-model",
-             prompt_version="p1", dpi=200, tools={"mdflow": "2.0.0", "markitdown-gc": "0.3.5",
+             prompt_version="p1", dpi=200, tools={"mdflow": "2.0.0", "markitdown-gc": "0.3.6",
              "pypdfium2": "fixture", "pillow": "fixture"}, now=NOW, pages_total=4,
              frames_total=None, pending_reason="no_provider")
     m.update(changes)

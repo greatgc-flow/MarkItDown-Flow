@@ -169,7 +169,7 @@ def test_PT_01_direct_wheel_inventory_wheel_metadata_and_run_outside_the_source_
 @pytest.mark.fx("FX-72")
 def test_PT_02_reference_is_exact_hash_checked_wheel_only_and_a_changed_wheel_fails(release_bundle, tmp_path, cli_command):
     lock = (release_bundle / "reference-requirements.txt").read_text(encoding="utf-8")
-    assert 'Linux x64' in lock and 'CPython 3.14' in lock and 'Core 0.3.5' in lock
+    assert 'Linux x64' in lock and 'CPython 3.14' in lock and 'Core 0.3.6' in lock
     assert sys.platform == 'linux' and sys.version_info[:2] == (3, 14), 'PT-02 runs on the reference target only'
     wheel_name, wheel = engine_wheel(release_bundle)
     entries = parse_lock(lock)
@@ -190,7 +190,7 @@ def test_PT_02_reference_is_exact_hash_checked_wheel_only_and_a_changed_wheel_fa
             problems.append(f"no --hash: {requirement}")
     assert not problems, "\n".join(problems)
     pins = lock_pins(lock)
-    assert pins.get("markitdown-gc") == "0.3.5"
+    assert pins.get("markitdown-gc") == "0.3.6"
     assert "pillow" in pins and "pypdfium2" in pins, "renderer and Pillow must be exact lock entries"
     # A changed wheel fails hash-mode installation; the real one installs.
     good, bad = tmp_path / "good" / "wheels", tmp_path / "bad" / "wheels"
@@ -219,7 +219,7 @@ def test_T_GEN_52_m1_v32_offline_dependency_hash_mutation_control(tmp_path, cli_
     bundle.mkdir()
     members, requirements = {}, []
     packages = [('mdflow', '2.0.0', 'markitdown-gc>=0.3.5,<0.4'),
-                ('markitdown_gc', '0.3.5', 'm1-dependency>=1'), ('m1_dependency', '1.0', None)]
+                ('markitdown_gc', '0.3.6', 'm1-dependency>=1'), ('m1_dependency', '1.0', None)]
     for name, version, dependency in packages:
         stream = io.BytesIO()
         info = f'{name}-{version}.dist-info'
@@ -287,6 +287,8 @@ def gate(response: dict) -> list[str]:
     problems += [f"bad type {k}" for k, t in required.items() if k in response and type(response[k]) is not t]
     if problems:
         return problems
+    if not response['platform'].strip():
+        problems.append('platform')
     if response["protocol"] != 1:
         problems.append("protocol")
     if response["triage_schema"] != 1:

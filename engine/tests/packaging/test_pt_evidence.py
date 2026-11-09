@@ -93,7 +93,7 @@ def check_artifacts(data: dict) -> list[str]:
 @pytest.mark.req("REQ-PKG-04")
 @pytest.mark.cov("S0", "FM10")
 def test_PT_04_public_artifact_license_and_target_wheel_evidence(attest_dir):
-    report = {'version': '1', 'install': [{'metadata': {'name': 'markitdown-gc', 'version': '0.3.5', 'license': 'MIT'},
+    report = {'version': '1', 'install': [{'metadata': {'name': 'markitdown-gc', 'version': '0.3.6', 'license': 'MIT'},
               'download_info': {'url': 'https://files.pythonhosted.org/x.whl', 'archive_info': {'hashes': {'sha256': HEX}}}}]}
     good = {"checked_by": "Reviewer", "date": "2026-11-09", "commit": "a" * 40,
             "install_reports": [{"target": t, "exit": 0, 'report': deepcopy(report), 'licenses_reviewed': True}
@@ -115,7 +115,7 @@ def test_PT_04_public_artifact_license_and_target_wheel_evidence(attest_dir):
 
 def rehearsal_sample():
     runs = [{"os": o, "obsidian_channel": c, "obsidian_version": "1.8.9" if c == "current" else "1.6.0",
-             "python": "3.14.0", "engine": "2.0.0", "core": "0.3.5",
+             "python": "3.14.0", "engine": "2.0.0", "core": "0.3.6",
              "downloads": [{"asset": a, "sha256": HEX} for a in ASSETS],
              "checks": {name: "PASS" for name in REHEARSAL_CHECKS}} for o in OSES for c in CHANNELS]
     return {"id": "MAN-04", "reviewer": "Named Reviewer", "date": "2026-11-09", "commit": "a" * 40,

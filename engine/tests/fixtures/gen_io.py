@@ -27,7 +27,7 @@ from pathlib import Path
 MIB = 1024 * 1024
 KEY = "sk-test-SECRET-9f3a7c1e5b42d0"
 FINGERPRINT = "f" * 64
-TOOLS = {"mdflow": "2.0.0", "markitdown-gc": "0.3.5", "pypdfium2": "4.30.0", "pillow": "11.0.0"}
+TOOLS = {"mdflow": "2.0.0", "markitdown-gc": "0.3.6", "pypdfium2": "4.30.0", "pillow": "11.0.0"}
 NOW = datetime(2026, 11, 9, 14, 3, 21, tzinfo=timezone(timedelta(hours=9)))
 CONSENT = {"plan_hash": "a" * 64, "approved_at": "2026-11-09T14:03:00+09:00", "by": "cli:--yes"}
 PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"

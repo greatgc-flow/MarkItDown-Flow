@@ -22,7 +22,7 @@ def test_T_META_54_r27_reference_score_requires_reference_execution_not_matrix_s
     import json
     import xml.etree.ElementTree as ET
 
-    record = {'tid': 'PT-02', 'markers': {}}
+    record = {'tid': 'PT-02', 'nodeid': 'engine/tests/packaging/test_pt_release.py::test_PT_02_reference', 'markers': {'release': [[]]}}
     monkeypatch.setattr(trace_module, 'discover_tests', lambda root: [record])
     monkeypatch.setattr(trace_module, 'discover_shell_tests', lambda root: [])
     monkeypatch.setattr(trace_module, 'planned_tests', lambda root: {'PT-02': {'REQ-PKG-02'}})
@@ -45,9 +45,11 @@ def test_T_META_54_r27_reference_score_requires_reference_execution_not_matrix_s
         case = ET.SubElement(suite, 'testcase', name='reference-test')
         props = ET.SubElement(case, 'properties')
         ET.SubElement(props, 'property', name='tid', value='PT-02')
+        ET.SubElement(props, 'property', name='nodeid', value=record['nodeid'])
         if outcome:
             ET.SubElement(case, outcome)
         ET.ElementTree(suite).write(evidence / name, encoding='utf-8')
+        trace_module.write_execution_registry(evidence, name, [dict(record, selected=True)], commit)
 
     for os in ('windows-2022', 'ubuntu-24.04', 'macos-15-intel'):
         for py in ('3.10', '3.14'):

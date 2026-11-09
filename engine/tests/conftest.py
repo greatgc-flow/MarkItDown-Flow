@@ -75,32 +75,51 @@ def pytest_configure(config):
         config.addinivalue_line("markers", f"{name}(*args): {description}")
 
 
-@pytest.hookimpl(trylast=True)
+@pytest.hookimpl(hookwrapper=True, tryfirst=True)
 def pytest_collection_modifyitems(config, items):
+    # Snapshot before pytest's -k/-m filters: a passing subset cannot stand in
+    # for the complete collected parameter family in release evidence.
+    collected = list(items)
+    yield
+    admitted = set(items)
     selected, deselected, records = [], [], []
-    for item in items:
+    for item in collected:
         markers = {
             name: [list(marker.args) for marker in item.iter_markers(name)]
             for name in ("req", "cov", "fx", "plat", "scope", "cells")
         }
         tid = trace.test_id(item.originalname or item.name)
+        nodeid = item.path.relative_to(REPO_ROOT).as_posix() + '::' + item.nodeid.split('::', 1)[1]
+        if item.get_closest_marker('release'):
+            markers['release'] = [[]]
         # Direct properties also work with JUnit xunit2 (no record_property warning).
         item.user_properties.extend([
             ("tid", tid),
+            ('nodeid', nodeid),
             *[(name, json.dumps(groups, separators=(",", ":"))) for name, groups in markers.items()
               if name != "cells" or groups],
         ])
-        records.append({"nodeid": item.nodeid, "tid": tid, "markers": markers})
+        record = {"nodeid": nodeid, "tid": tid, "markers": markers, 'selected': False}
+        records.append(record)
         platforms = [value for group in markers["plat"] for value in group]
         if platforms and (len(platforms) != 1 or platforms[0] not in {"posix", "windows"}):
             raise pytest.UsageError(f"Invalid plat marker: {item.nodeid}")
         current = "windows" if os.name == "nt" else "posix"
-        (deselected if platforms and current not in platforms else selected).append(item)
+        if item in admitted:
+            if platforms and current not in platforms:
+                deselected.append(item)
+            else:
+                selected.append(item)
+                record['selected'] = True
     config._mdflow_registry = records
     items[:] = selected
     if deselected:
         config.hook.pytest_deselected(items=deselected)
     trace.write_registry(REPO_ROOT, trace.requirement_registry(REPO_ROOT), records)
+    junit = config.getoption('xmlpath')
+    if junit:
+        destination = Path(junit)
+        trace.write_execution_registry(destination.parent, destination.name, records, os.environ.get('GITHUB_SHA', ''))
 
 
 @pytest.fixture(scope="session")

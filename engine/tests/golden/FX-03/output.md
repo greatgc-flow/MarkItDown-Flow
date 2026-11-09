@@ -14,7 +14,7 @@ provider: "openai-compatible"
 model: "fixture-model"
 prompt_version: "p1"
 dpi: 200
-tools: {mdflow: "2.0.0", markitdown-gc: "0.3.5", pypdfium2: "fixture", pillow: "fixture"}
+tools: {mdflow: "2.0.0", markitdown-gc: "0.3.6", pypdfium2: "fixture", pillow: "fixture"}
 generated: "2026-11-09T00:00:00+00:00"
 content_sha256: "08fa087d16a3e04c17e41f7d34e5f4fe43c44fc5b18f4cc690873684293ad76e"
 ---

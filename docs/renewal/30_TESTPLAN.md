@@ -356,7 +356,7 @@ R27/R28 added registrations (existing REQs; precise fixture assertions replace b
 
 | Test | Requirements | Fixtures | Cell |
 |---|---|---|---|
-| T-PLN-55 | REQ-PLN-01, REQ-PLN-02, REQ-PLN-04 (R28 class-specific identity, counts, caps and cache stability) | FX-01,07,11,23,24,28,30,38,42,41 | S8:FM0 |
+| T-PLN-55 | REQ-PLN-01, REQ-PLN-02, REQ-PLN-04 (R28 class-specific identity, counts, caps and cache stability) | FX-01,03,07,11,23,24,28,30,38,42,41 | S8:FM0 |
 | T-ASM-51 | REQ-ASM-01, REQ-ASM-02, REQ-ASM-03, REQ-GEN-07 (R28 text/G2b/mismatch/directory base and provenance) | FX-28,31,41,51 | S11:FM0 |
 | T-META-53 | REQ-PKG-10 (R28 stage-restricted all-class credit in both projections) | - | S0:FM10 |
 | T-META-54 | REQ-PKG-02, REQ-PKG-10 (R27 reference scoring requires its own execution; matrix results cannot substitute) | - | S0:FM10 |
@@ -457,7 +457,7 @@ Every REQ id defined in `10_SPEC.md` (incl. new REQ-SNF-09), `20_SHELL.md` (SHL-
 | T-GEN-82 | REQ-PKG-17, REQ-PKG-13, REQ-PKG-08, REQ-GEN-03 | M2 regression: release_attests_then_verifies_then_scores_and_installed_suite_is_real. |
 | T-GEN-83 | REQ-PKG-08, REQ-GEN-03 | M2 regression: all_fixture_launchers_honor_installed_mode. |
 | T-GEN-84 | REQ-PKG-10, REQ-PLN-08, REQ-RPT-01 | M2 regression: fable_s14_s15_duplicate_provider_and_report_boundaries_removed. |
-| T-GEN-85 | REQ-GEN-07, REQ-GEN-08, REQ-LKP-01, REQ-APR-02, REQ-WRT-01 | M2-H class sweep (`stage_io/test_class_sweep.py`, one parametrized case per class K01..K20): real isolated CLI + loopback mock provider, `plan` -> unconsented run (no egress, pending markers) -> `--yes-file` run -> rerun; per class the stages and report fields SPEC prescribes: output classes reach S12 Write, unit-bearing classes S7 Lookup (miss then cached, 0 provider calls) / S9 Approve (consent == plan_hash) / S10 Transcribe, report-only classes publish nothing and never reach Assemble/Write. Registers its extra class x stage cells with `@pytest.mark.cells` (literal list, asserted equal to the sweep's per-class table). Known engine gaps are `xfail(strict=True, raises=KnownEngineGap, reason="M2-H: ...")`. |
+| T-GEN-85 | REQ-GEN-07, REQ-GEN-08, REQ-LKP-01, REQ-APR-02, REQ-WRT-01 | M2-H class sweep (`stage_io/test_class_sweep.py`, one parametrized case per class K01..K20): real isolated CLI + loopback mock provider, `plan` -> unconsented run (no egress, pending markers) -> `--yes-file` run -> rerun; per class the stages and report fields SPEC prescribes: output classes reach S12 Write, unit-bearing classes S7 Lookup (miss then cached, 0 provider calls) / S9 Approve (consent == plan_hash) / S10 Transcribe, report-only classes publish nothing and never reach Assemble/Write. M3-H adds explicit Select/Render assertions: ordered `approved.units` (id, kind, page, status) for K05 (`image`), K06 (`f1,f2`), K08/K09/K14-member media, K04 (`p1..p1000`, never `p1001`; all rendered within `--max-units 1000`, all `oversize` and unrendered at the default 200), raster hash/mime/size present exactly for eligible units. Registers its extra class x stage cells with `@pytest.mark.cells` (literal list incl. S4:K04 K05 K06 K08 K09 K14 and S6:K04, asserted equal to the sweep's per-class table). Known engine gaps are `xfail(strict=True, raises=KnownEngineGap, reason="M2-H: ...")`. |
 
 | T-RND-83 | REQ-CLS-05, REQ-RND-03, REQ-ASM-06 | M2 Core unsupported-media fact reaches actual HWPX preparation/Render: decodable disguised bytes remain pending, no requests, retained placement. |
 | T-GEN-86 | REQ-PKG-08, REQ-GEN-03, REQ-PKG-17 | Missing/failed/skipped/wrong-commit installed runtime and nine smoke receipts block final release acceptance; synthetic positive/negative controls only. |
@@ -467,6 +467,18 @@ Every REQ id defined in `10_SPEC.md` (incl. new REQ-SNF-09), `20_SHELL.md` (SHL-
 | T-GEN-87 | REQ-PKG-06, REQ-GEN-02 | X-14: unavailable/malformed/empty Core versions block package admission with a Core-range diagnostic rather than raising. |
 | T-GEN-88 | REQ-PKG-09, REQ-PKG-06 | X-11: FX-71 records current 2.0.0, matches host/manifest and exact admission verdict plus hash/derivation verification; experimental 3.15 and unavailable Core are derived, blocked variants. An unsupported recording host is diagnosed, not relabelled; supported-host release recording remains PT-06's prerequisite. |
 | T-GEN-89 | REQ-PKG-09, REQ-PKG-01 | X-11: recorder strips source injection and uses the selected interpreter's installed wheel. |
+
+| T-CLS-90 | REQ-CLS-01, REQ-GEN-07 | M3: malformed HWP payload-kind containers fall back without aborting siblings. |
+| T-RND-90 | REQ-RND-04 | M3: fractional PDF allocation, 200/300 dpi and rotation, refused before render; allowed boundary control. |
+| T-ASM-90 | REQ-ASM-01, REQ-ASM-04, REQ-ASM-06, REQ-GEN-07 | M3: independently expected OCR IDs and pending reasons/counts through publication and warm rerun. |
+| T-ASM-91 | REQ-ASM-04, REQ-CLS-06, REQ-RND-01 | M3: 1001 capped PDF anchors, exactly 1000 inspected OCR placements. |
+| T-TRI-90 | REQ-CTR-03, REQ-TRI-02, REQ-GEN-07 | M3: corrupt inner Office relationship report retained; valid sibling completes. |
+| T-META-90 | REQ-PKG-10, REQ-PKG-17, REQ-PKG-08 | M3: every collected parameter identity required, no omission/duplication/substitution/stale registry. |
+| T-GEN-90 | REQ-PKG-06 | M3: package admission requires nonempty platform. |
+| T-META-91 | REQ-PKG-02, REQ-PKG-03, REQ-GEN-01 | M3: reference Core 0.3.6, DRAFT-3.5, actual three direct dependencies. |
+| T-META-92 | REQ-PKG-10, REQ-PLN-01 | M3: handoff and class-specific Plan catalog reflect current ownership. |
+| T-META-94 | REQ-PKG-03, REQ-GEN-10 | M3: lower compatible Core endpoint checks the Core 0.3.6 reference seal without relabelling it. |
+| T-GEN-92 | REQ-PKG-09, REQ-PKG-01 | M3: observe recorder child argv with -I, excluding work-directory modules and source environment injection. |
 
 ## 5. Generated MECE matrices
 
@@ -511,7 +523,7 @@ Rule: step-N code is not merged before its tests exist red; step N+1 does not st
 Open items (DRAFT-3 sync):
 1. The shell code table (20_SHELL 6) now matches SPEC 7.5 by inspection (28 E_, 22 W_); `JT-SHL-19-01` is the authority and was not run.
 2. `SYNC-AFTER-DRAFT-3` markers remain in 20_SHELL/25_PACKAGING; FX-71 fixtures must be regenerated from the real DRAFT-3 engine, and JT-12..17 / PT-06 / PT-08 stay unverified until then.
-3. TODO-VERIFY carried from 20/25, not settleable by tests: actual target installs and generated license review (PT-04; Core 0.3.5 availability established by R27), Windows signal/blocked-request behavior (JT-16 on real Windows runners), attestation eligibility (PT-13), terminal env launch commands per OS (PT-22), Obsidian min/current versions (MAN-04).
+3. TODO-VERIFY carried from 20/25, not settleable by tests: actual target installs and generated license review (PT-04; release/reference baseline Core 0.3.6), Windows signal/blocked-request behavior (JT-16 on real Windows runners), attestation eligibility (PT-13), terminal env launch commands per OS (PT-22), Obsidian min/current versions (MAN-04).
 4. REQ-PKG-18/19/21 describe post-publication procedures; pre-release only their tooling is testable (PT-18/19/21). Real post-deploy evidence goes to the acceptance report, unscored.
 5. Cross-OS `plan_hash` equality holds only for equal raster bytes (SPEC 10.4); T-PLN-02 asserts per-OS goldens, cross-OS equality only for pass-through PNG/JPEG fixtures (FX-09, FX-10).
 

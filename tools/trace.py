@@ -43,8 +43,8 @@ def test_id(name: str) -> str:
 def discover_tests(root: Path) -> list[dict]:
     """Read actual Python decorators, never treating the planned catalog as coverage.
 
-    This is the minimal Python registry. Jest export support belongs to the shell
-    step; shell requirements therefore remain uncovered until it is implemented.
+    This is the Python registration view; discover_shell_tests supplies Jest's
+    separate registration view. Execution uses the collected per-JUnit inventory.
     """
     tests = []
     for path in sorted((root / "engine" / "tests").rglob("test_*.py")):
@@ -296,6 +296,61 @@ def write_registry(root: Path, requirements: dict, tests: list[dict]) -> None:
     path.write_text(json.dumps({"v": 1, "requirements": requirements, "tests": tests}, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
+def execution_registry_path(evidence: Path, junit_name: str) -> Path:
+    """Each JUnit owns its collection inventory; matrix downloads cannot overwrite it."""
+    stem = junit_name.removeprefix('junit-').removesuffix('.xml')
+    return evidence / f'registry-{stem}.json'
+
+
+def write_execution_registry(evidence: Path, junit_name: str, tests: list[dict], commit: str) -> None:
+    evidence.mkdir(parents=True, exist_ok=True)
+    execution_registry_path(evidence, junit_name).write_text(
+        json.dumps(dict(v=2, commit=commit, tests=tests), ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+
+
+def execution_receipt(evidence: Path, junit_name: str, expected_commit: str) -> tuple[list[dict], dict]:
+    """Read a candidate-bound collected inventory and exact, nonduplicated JUnit identities.
+
+    The inventory includes deselected parameters. Consumers select the required
+    source rows, so -k K01 cannot turn a 20-class test into one expected case.
+    """
+    manifest = json.loads(execution_registry_path(evidence, junit_name).read_text(encoding='utf-8'))
+    if not isinstance(manifest, dict) or manifest.get('v') != 2 or not expected_commit or manifest.get('commit') != expected_commit:
+        raise ValueError('collection registry version/commit differs')
+    tests = manifest['tests']
+    if not isinstance(tests, list) or not tests:
+        raise ValueError('empty collection registry')
+    if any(not isinstance(row, dict) or not isinstance(row.get('nodeid'), str) or
+           not isinstance(row.get('tid'), str) for row in tests):
+        raise ValueError('malformed collection identity')
+    ids = [row['nodeid'] for row in tests]
+    if len(ids) != len(set(ids)) or any(not isinstance(row.get('selected'), bool) for row in tests):
+        raise ValueError('duplicate or malformed collection identity')
+    selected = {row['nodeid']: row['tid'] for row in tests if row['selected']}
+    actual = {}
+    for case in ET.parse(evidence / junit_name).iter('testcase'):
+        props = {p.get('name'): p.get('value', '') for p in case.findall('./properties/property')}
+        nodeid = props.get('nodeid')
+        if not nodeid or nodeid in actual or selected.get(nodeid) != props.get('tid'):
+            raise ValueError('missing, duplicate, unexpected or mistagged JUnit identity')
+        actual[nodeid] = not any(case.find(k) is not None for k in ('failure', 'error', 'skipped'))
+    if not actual or set(actual) != set(selected):
+        raise ValueError('JUnit differs from selected collection inventory')
+    return tests, actual
+
+
+def rows_passed(rows: list[dict], receipt: tuple[list[dict], dict]) -> bool:
+    """Every collected parameter of each required source callable must pass."""
+    tests, actual = receipt
+    for row in rows:
+        base = row['nodeid']
+        expected = [t for t in tests if t['tid'] == row['tid'] and (
+            t['nodeid'] == base or t['nodeid'].startswith(base + '['))]
+        if not expected or not all(t['selected'] and actual.get(t['nodeid']) is True for t in expected):
+            return False
+    return bool(rows)
+
+
 def discover_shell_tests(root: Path) -> list[dict]:
     """Read real req() registrations; JUnit, separately, proves execution."""
     records = []
@@ -399,17 +454,21 @@ def report(root: Path, destination: Path) -> dict:
 def required_executions(evidence: Path, expected_commit: str) -> list[str]:
     """Release prerequisite receipts: real installed endpoints and all nine smokes."""
     problems = []
+    source_rows = discover_tests(ROOT)
     for runner in ('windows-2022', 'ubuntu-24.04', 'macos-15-intel'):
         for py in ('3.10', '3.14'):
             path = evidence / f'junit-engine-{runner}-py{py}.xml'
             try:
-                cases = list(ET.parse(path).iter('testcase'))
-                if not cases or any(c.find(k) is not None for c in cases for k in ('failure','error','skipped')):
-                    raise ValueError('empty, failed or skipped engine receipt')
+                platform = 'windows' if runner.startswith('windows') else 'posix'
+                expected = [r for r in source_rows if 'release' not in r['markers'] and (
+                    not marker_values(r, 'plat') or platform in marker_values(r, 'plat'))]
+                receipt = execution_receipt(evidence, path.name, expected_commit)
+                if not rows_passed(expected, receipt) or not all(receipt[1].values()):
+                    raise ValueError('missing, failed, skipped or deselected engine parameter')
                 runtime = json.loads((evidence / f'runtime-{runner}-py{py}.json').read_text(encoding='utf-8'))
                 if runtime.get('commit') != expected_commit or runtime.get('installed') is not True:
                     raise ValueError('installed import/commit receipt differs')
-            except (OSError, ValueError, ET.ParseError) as error:
+            except (OSError, ValueError, KeyError, TypeError, ET.ParseError) as error:
                 problems.append(f'{runner}/py{py}: {error}')
         for py in ('3.11', '3.12', '3.13'):
             try:
@@ -440,14 +499,22 @@ def score(root: Path, evidence: Path, reviews: Path, expected_commit: str) -> di
         oracles = json.loads((evidence / "oracles.json").read_text(encoding="utf-8"))
     except (OSError, ValueError):
         oracles = {}
+    receipts = {}
+    def engine_passed(filename, rows):
+        if filename not in receipts:
+            try:
+                receipts[filename] = execution_receipt(evidence, filename, expected_commit)
+            except (OSError, ValueError, KeyError, TypeError, ET.ParseError):
+                receipts[filename] = None
+        return receipts[filename] is not None and rows_passed(rows, receipts[filename])
+
     def passed(tid):
         rows = [t for t in registry if t["tid"] == tid]
         if not rows:
             return False
         if tid == 'PT-02':
             # R27's hash reproduction is scoped to its single reference target.
-            values = results.get(('junit-reference.xml', tid), [])
-            return len(values) >= len(rows) and all(values)
+            return engine_passed('junit-reference.xml', rows)
         shell = tid.startswith("JT-")
         for runner in ("windows-2022", "ubuntu-24.04", "macos-15-intel"):
             for py in ([None] if shell else ["3.10", "3.14"]):
@@ -457,16 +524,14 @@ def score(root: Path, evidence: Path, reviews: Path, expected_commit: str) -> di
                 if not expected:
                     continue
                 filename = f"junit-shell-{runner}.xml" if shell else f"junit-engine-{runner}-py{py}.xml"
-                packaged = f"junit-pkg-{runner}-py{py}.xml"
                 release = f'junit-release-{runner}-py{py}.xml'
-                if any('release' in row['markers'] for row in rows):
-                    values = results.get((release, tid), [])
-                    if len(values) < len(expected) or not all(values):
+                if not shell:
+                    if not engine_passed(release if any('release' in row['markers'] for row in rows) else filename, expected):
                         return False
                     continue
-                # Source-suite release-mode skips are superseded by actual packaged execution.
-                values = results.get((packaged, tid), []) if tid.startswith("PT-") else []
-                values = values or results.get((filename, tid), [])
+                # Jest retains its own title/registration projection; Python
+                # receipts above always require collected parameter identities.
+                values = results.get((filename, tid), [])
                 if len(values) < len(expected) or not all(values):
                     return False
         return True

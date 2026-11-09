@@ -431,11 +431,8 @@ stages = ["S4"]
 reason = "Sources of these classes carry no OCR candidates (convert_only or report_only), or are directory-level; Select receives an empty list."
 owner = "S3"
 
-[[class_stage]]
-classes = ["K05", "K06", "K08", "K09", "K14"]
-stages = ["S4"]
-reason = "Select acts on the common Candidate contract (id, kind, page, priority) independent of the source class; page and media ordering is asserted on K02 and K07."
-owner = "S4:K02"
+# M3-H: S4:K05 K06 K08 K09 K14 are asserted by the class sweep (T-GEN-85: ordered Select units per class) and
+# S6:K04 likewise (rendered rasters of the inspected pages), so they are no longer listed here.
 
 # ---- S5 Convert: covered K01 K02 K03 K04 K05 K06 K07 K08 K09 K10 K11 K13 K18
 [[class_stage]]
@@ -457,12 +454,6 @@ reason = "A directory tree is discovered at Sniff; each discovered file is conve
 owner = "S1:K20"
 
 # ---- S6 Render: covered K02 K03 K05 K06 K07
-[[class_stage]]
-classes = ["K04"]
-stages = ["S6"]
-reason = "Pages of capped PDFs render by the same page path as K02 (T-RND-01/04/06) and K03 (T-RND-09); capping is decided at Classify and Select (T-SEL-06)."
-owner = "S6:K02"
-
 [[class_stage]]
 classes = ["K08", "K09"]
 stages = ["S6"]

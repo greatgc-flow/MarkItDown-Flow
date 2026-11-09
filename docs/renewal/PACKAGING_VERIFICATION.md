@@ -1,4 +1,6 @@
-# R27/R28 engine packaging verification (2026-11-09)
+# Engine packaging verification (2026-11-09)
+
+Current release/reference baseline: **Core0.3.6**, SPEC DRAFT-3.5. See [M3_ENGINE_FIXES.md](review/M3_ENGINE_FIXES.md) for the current repair and test evidence. R27/R28 and M2 run counts below are historical receipts, not new Core0.3.6 platform/reference results.
 
 R27 replaces the cached universal lock, fifteen-report merger and public
 wheel/license catalog. `tools/lock_engine.py`, `engine/engine.lock` and
@@ -8,7 +10,7 @@ venv. Core remains `markitdown-gc>=0.3.5,<0.4` from PyPI; R27 establishes public
 
 `tools/build_engine.py` builds the pure Python wheel. The candidate CI job on
 Ubuntu x64/Python 3.14 invokes pinned pip-tools 7.6.2 to generate ONE
-`reference-requirements.txt`, with exact Core 0.3.5 closure and local wheel hash.
+`reference-requirements.txt`, with exact Core 0.3.6 closure and local wheel hash.
 The header states its target. A fresh venv installs with hash checking and
 wheel-only mode, then runs pip check, version and selftest outside sources.
 CI retains the standard pip install report, installed metadata, version/selftest
@@ -88,7 +90,7 @@ The wheel now explicitly declares its direct renderer/Pillow imports:
 `pypdfium2>=5,<6` and `Pillow>=11,<14`, alongside the unchanged Core range.
 These match the shell admission ranges. Core constraints can tighten them;
 pip check and selftest still apply. The reference compiler resolves the declared
-runtime constraints with exact Core0.3.5. Python3.15 remains experimental-only.
+runtime constraints with exact Core0.3.6. Python3.15 remains experimental-only.
 
 Required behavior CI disables source injection, checks the selected installed
 package identity and preserves six endpoint import/execution receipts plus all

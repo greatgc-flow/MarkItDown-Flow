@@ -218,7 +218,7 @@ def test_T_SEC_09_cache_files_private_and_cache_clear_empties_dir(tmp_path, gen)
             assert stat.S_IMODE(directory.stat().st_mode) == 0o700, directory
     (cache / "units" / "ab" / f"{key_id}.json.tmp-1-1").write_bytes(b"stale")
     (cache / "base").mkdir()
-    (cache / "base" / "abc-0.3.5.md").write_bytes(b"cached body")
+    (cache / "base" / "abc-0.3.6.md").write_bytes(b"cached body")
 
     write.clear_cache(cache)
 
