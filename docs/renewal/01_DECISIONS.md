@@ -64,3 +64,11 @@ Votes: cx APPROVE-TDD (88/100, 8 fix-during-TDD items, review/R7_cx_ratify.md); 
 | R28 | `fx("all")` credits class_stage cells only for tests that genuinely iterate every class (S0-S3, S13); not S8/S11. trace.py must enforce; resulting gaps get dedicated tests. | ag M1 horizontal, cc proposal |
 
 Core baseline amendment (orchestrator instruction, 2026-11-09): release/reference Core is **0.3.6**. Runtime compatibility remains `>=0.3.5,<0.4`; 0.3.5 is still the minimum endpoint. R18's archived 0.3.5 guide/source retain their stable line references; see [the reference note](ref/README.md). Earlier publication/verification statements are historical evidence, not a current 0.3.5 release pin.
+
+## Owner directives (2026-11-09, user)
+| ID | Resolution |
+|---|---|
+| R29 | markitdown-gc's own LLM features (`llm_client`/`llm_model`/LLM captioning) are permanently OFF: the engine never passes LLM arguments to MarkItDown; settings/docs expose none; a test pins it. (Our OCR providers are unaffected.) |
+| R30 | Priority = the no-OCR path: T-class (born-digital) classification accuracy and conversion quality first (all G1/G2 formats incl. HWP/HWPX, Office, PDF text, CSV/HTML/EPUB...). |
+| R31 | Use exiftool fully: detect via `EXIFTOOL_PATH`/PATH (>= 12.24), pass to markitdown-gc so image/audio metadata is extracted; surface exiftool status in diagnostics; works without it (graceful). |
+| R32 | Shell UI polish: clean, consistent Obsidian-native look (settings grouping, consent modal, progress/cancel, history), en/ko. |
