@@ -258,6 +258,7 @@ def local_soffice():
 
 
 @pytest.mark.integration
+@pytest.mark.soffice
 @pytest.mark.req('REQ-CNV-07', 'REQ-ASM-03')
 @pytest.mark.cov('S5', 'FM0')
 @pytest.mark.fx('FX-35', 'FX-36')

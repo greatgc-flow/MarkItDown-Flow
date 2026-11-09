@@ -94,8 +94,9 @@ def pytest_collection_modifyitems(config, items):
         }
         tid = trace.test_id(item.originalname or item.name)
         nodeid = item.path.relative_to(REPO_ROOT).as_posix() + '::' + item.nodeid.split('::', 1)[1]
-        if item.get_closest_marker('release'):
-            markers['release'] = [[]]
+        for name in ('release', 'soffice'):
+            if item.get_closest_marker(name):
+                markers[name] = [[]]
         # Direct properties also work with JUnit xunit2 (no record_property warning).
         item.user_properties.extend([
             ("tid", tid),
