@@ -36,3 +36,31 @@ def test_T_CLS_91_m4_numeric_candidate_id_refuses_without_losing_sibling(
     assert sibling['outputs'] == ['b.txt.md']
     assert 'Independent sibling' in (flow.out / 'b.txt.md').read_text(encoding='utf-8')
     assert raw == before
+
+
+@pytest.mark.req('REQ-RPT-01', 'REQ-RPT-02', 'REQ-GEN-07')
+@pytest.mark.cov('S13', 'FM0')
+@pytest.mark.fx('FX-09')
+def test_T_RPT_91_m4_plan_and_replay_progress_have_independent_literal_counts(flow, gen, mock_provider, capsys):
+    flow.put('a.png', gen.png_noise(seed=91))
+    provider = mock_provider(egress=True)
+    plans = []
+    first = flow.run(provider=provider, progress='jsonl', _plan_only=True, _on_plan=plans.append)
+    first_lines = capsys.readouterr().err.splitlines()
+    assert first['exit'] == 3 and provider.calls == [] and len(plans) == 1
+    second = flow.run(provider=provider, progress='jsonl', yes_hashes=[plans[0]['plan_hash']])
+    second_lines = capsys.readouterr().err.splitlines()
+    assert second['exit'] == 0 and len(provider.calls) == 1
+    # A literal per-invocation oracle, independent of the shell's summarizer.
+    for lines, units, exit_code, calls in [
+        (first_lines, dict(total=1, done=0, pending=1, failed=0), 3, 0),
+        (second_lines, dict(total=1, done=1, pending=0, failed=0), 0, 1),
+    ]:
+        assert all(len(line.encode('utf-8')) < 65536 for line in lines)
+        events = [json.loads(line) for line in lines]
+        starts = [e for e in events if e['ev'] == 'run_start']
+        ends = [e for e in events if e['ev'] == 'file_end']
+        terminal = [e for e in events if e['ev'] == 'run_end']
+        assert len(starts) == len(ends) == len(terminal) == 1
+        assert starts[0]['files'] == 1 and ends[0]['units'] == units
+        assert terminal[0]['exit'] == exit_code and terminal[0]['provider_calls'] == calls

@@ -1,5 +1,7 @@
 # M4 cross-cutting MECE audit (Fable)
 
+Engine repair follow-up: [M4_ENGINE_FIXES.md](M4_ENGINE_FIXES.md) records the engine/package/documentation dispositions and external evidence obligations; this review's findings and scores retain their original snapshot. Protected shell work remains with its owner.
+
 Reviewer: cc.fable. Date: 2026-11-09. Workspace = repo at `cadfe1f` (clean tree). Read-only: file reads, greps and one independent `npx jest --json` run from `shell/` (25 suites, **266/266 passed**, 0 failed). Engine 536 pass, `tsc --noEmit` clean and `npm run build` OK are taken from the orchestrator and `M3_ENGINE_FIXES.md`; tsc/build were not re-run here (sandbox). No code edits, no git.
 
 Inputs read: all of `shell/src/**` after the M3 fix commit `9038074` (launcher, setup, coordinator, main, dom-picker, node-apis, node-spawner, spool-fs, spool, settings, settings-tab, entry-points, log, progress, version-gate, paths, env, engine-process, output-path, types), `esbuild.config.mjs`, `package.json`, FX-71 manifest and `version*.json`, JT-09/12/17 test sources, `20_SHELL.md`, `25_PACKAGING.md` sections 2-3, `HANDOFF.md`, `README.md`, `CHANGELOG.md`, `PACKAGING_VERIFICATION.md`, `engine/BOOTSTRAP.md`, `.github/workflows/ci.yml` jest job, engine `cli.py` parser, `orchestrate.py` run_end/temp dir/signals, `openai_compat.canonical_destination`, `tests/packaging/test_pt_release.py::gate`, `tests/matrix.toml` heading, the staged recording `build/trace/redgreen/m3-fx71-py314/manifest.json`, and the three M3 review files.

@@ -322,7 +322,7 @@ class Recorder:
         if proc.returncode not in ({expect} if isinstance(expect, int) else set(expect)):
             raise SystemExit(f"{label}: exit {proc.returncode}, expected {expect}\n"
                              f"stdout={proc.stdout[:400]!r}\nstderr={proc.stderr[:2000]!r}")
-        shown, names = ["python", "-m", "mdflow", *map(str, args)], sorted((env or {}).keys())
+        shown, names = ["python", "-I", "-m", "mdflow", *map(str, args)], sorted((env or {}).keys())
         for stream, name, data in (("stdout", stdout, proc.stdout), ("stderr", progress, proc.stderr)):
             if name:
                 self.save(name, data, argv=shown, exit_code=proc.returncode, stream=stream, env_names=names, note=note)

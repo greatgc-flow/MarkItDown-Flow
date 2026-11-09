@@ -38,3 +38,17 @@ def test_T_GEN_96_m4_package_version_oracle_checks_full_syntax(field, value, ena
     base = dict(mdflow='2.0.0', **{'markitdown-gc': '0.3.6'}, python='3.14.10', platform='test',
                 protocol=1, triage_schema=1, pypdfium2='5.15.1', pillow='13.0.0')
     assert (release.gate(dict(base, **{field: value})) == []) is enabled
+
+
+@pytest.mark.req('REQ-PKG-09', 'REQ-PKG-01')
+@pytest.mark.cov('S0', 'FM10')
+def test_T_GEN_97_m4_recorded_argv_label_includes_the_actual_isolated_prefix(tmp_path, monkeypatch):
+    from types import SimpleNamespace
+    from _support import load_py
+    recorder = load_py(REPO / 'tools/record_protocol.py', 'm4_recorder')
+    subject = recorder.Recorder(tmp_path / 'out', tmp_path / 'work')
+    saved = []
+    monkeypatch.setattr(recorder.subprocess, 'run', lambda *a, **kw: SimpleNamespace(returncode=0, stdout=b'{}', stderr=b''))
+    monkeypatch.setattr(subject, 'save', lambda name, data, **kw: saved.append(kw))
+    subject.record('version', ['version'], expect=0, stdout='version.json')
+    assert saved[0]['argv'] == ['python', '-I', '-m', 'mdflow', 'version']

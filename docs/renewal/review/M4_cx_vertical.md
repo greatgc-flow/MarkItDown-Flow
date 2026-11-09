@@ -1,5 +1,7 @@
 # M4 recursive MECE audit — vertical, oracles, docs ↔ code, simplicity
 
+Repair follow-up: [M4_ENGINE_FIXES.md](M4_ENGINE_FIXES.md) records engine repairs, red-first evidence, excluded shell/horizontal handoffs and the external-evidence acceptance inventory. Findings and scores below retain the original audit snapshot.
+
 Date: 2026-11-09. Workspace: repository. Authority: current SPEC DRAFT-3.5 and SHELL/PACKAGING/TESTPLAN/ACCEPTANCE. Inputs: all three M3 reviews, `M3_ENGINE_FIXES.md`, current implementation, test assertions and local receipts. Historical reviews retain their historical verdicts.
 
 **Verdict: improved engine boundaries; vertical and evidence closure remain incomplete.** M3's eight primary findings are **4 CLOSED / 4 OPEN**: V01, V02, H01 and O01 close; V03, V04, V05 and D01 remain open, with repaired portions identified below. Four newly demonstrated findings are M4-V01 (admission after Cancel/unload), M4-O01 (truncated collection accepted), M4-V02 (oversized numeric candidate ID crashes validation), and M4-V03 (shell/engine Base URL disagreement). M4-O01 is the remaining mechanism of M3-V05, not a second independent count of the same evidence defect.

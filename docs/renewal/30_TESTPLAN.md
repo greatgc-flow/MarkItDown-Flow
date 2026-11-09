@@ -487,6 +487,8 @@ Every REQ id defined in `10_SPEC.md` (incl. new REQ-SNF-09), `20_SHELL.md` (SHL-
 | T-META-95 | REQ-PKG-05, REQ-PKG-17 | M4: all bootstrap engine probes are isolated and evidence is explicit. |
 | T-META-96 | REQ-PKG-10, REQ-PKG-17 | M4: a restricted collection cannot define the complete inventory. |
 | T-GEN-96 | REQ-PKG-06 | M4: all five package version fields require full syntax; malformed tails/leading whitespace refuse, documented prerelease/post/local controls admit. |
+| T-GEN-97 | REQ-PKG-09, REQ-PKG-01 | M4: recorder manifest argv label faithfully includes the actual isolated interpreter flag. |
+| T-RPT-91 | REQ-RPT-01, REQ-RPT-02, REQ-GEN-07 | M4: literal per-invocation Plan/Run progress counters, one start/end/file-end per stream, bounded JSONL; no producer-side Plan/Run accumulation. |
 
 ## 5. Generated MECE matrices
 
