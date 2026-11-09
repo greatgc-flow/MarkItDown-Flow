@@ -98,6 +98,8 @@ export class ShellCoordinator {
   private isActive = false;
   /** Synchronous admission reservation held across the awaits of `submit` (REQ-SHL-09; M3 N-01). */
   private reserved = false;
+  /** True while this admission has opened the status item (`check` phase) and no job has taken it over yet. */
+  private checking = false;
   /** Set by `cancel()`/`dispose()`; a pending admission re-checks it after each await and never launches (M4-V01). */
   private admissionCancelled = false;
   private cancelled = false;
@@ -146,10 +148,17 @@ export class ShellCoordinator {
     if (this.isActive || this.reserved) return this.refuse('shell.BUSY');
     this.reserved = true;
     this.admissionCancelled = false;
+    this.checking = false;
+    let admitted = false;
     try {
-      return await this.admit(selection, entry);
+      const result = await this.admit(selection, entry);
+      admitted = result.accepted;
+      return result;
     } finally {
       this.reserved = false;
+      // A refused admission owns the status item it opened while waiting on the gate; an admitted job's own end() closes it.
+      if (this.checking && !admitted) this.deps.progress?.end();
+      this.checking = false;
     }
   }
 
@@ -167,6 +176,9 @@ export class ShellCoordinator {
     // settings (hand-edited or synced data.json) is a runtime configuration problem, not a destination one (M4 P-04).
     if (!settings.enginePython || !isAbsolutePath(settings.enginePython)) return this.refuse('shell.RUNTIME');
     if (selection.paths.length === 0) return this.refuse('shell.DESTINATION');
+    // M7-02: a re-probe after a transient failure can take about 11 s; show the item and its Cancel while we wait.
+    this.deps.progress?.begin('check');
+    this.checking = true;
     const gate = await this.deps.gate();
     const afterGate = this.admissionInterrupted();
     if (afterGate) return afterGate;

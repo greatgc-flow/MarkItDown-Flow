@@ -57,7 +57,9 @@ section for the rollback snapshot `data.v1.json` and the removals below.
   conversion checks again), and the setup window says "no answer in time" instead
   of "blocked" for it. The copyable setup commands quote a migrated interpreter
   path with spaces and use POSIX quoting for macOS/Linux; the README now discloses
-  the optional exiftool and LibreOffice programs.
+  the optional exiftool and LibreOffice programs. The status item with Cancel now
+  appears while a conversion waits for the engine check, and the copied Windows
+  commands also protect typographic quotes in folder names.
 
 ### Removed
 

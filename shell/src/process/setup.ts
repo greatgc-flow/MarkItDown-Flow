@@ -80,9 +80,13 @@ const DEFAULT_PATHS: Record<HostPlatform, BootstrapPaths> = {
   posix: { downloadDir: '/path/to/mdflow-2.0.0', venvDir: '/path/to/mdflow-venvs/2.0.0', bootstrapPython: 'python3.14' },
 };
 
-/** PowerShell single-quoted literal: a single quote is doubled. */
+/**
+ * PowerShell single-quoted literal: every single-quote character is doubled. PowerShell treats the typographic
+ * U+2018, U+2019, U+201A and U+201B as quotes too (about_Quoting_Rules), so a name typed in a word processor
+ * must not close the literal (M7-01).
+ */
 function quote(value: string): string {
-  return `'${value.replace(/'/g, "''")}'`;
+  return `'${value.replace(/['‘’‚‛]/g, (c) => c + c)}'`;
 }
 
 /** POSIX `sh` single-quoted literal: a single quote closes, escapes and reopens the quote (M6-03). */
