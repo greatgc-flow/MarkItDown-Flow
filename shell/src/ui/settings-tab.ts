@@ -7,7 +7,7 @@
  */
 import { type App, type Plugin, PluginSettingTab, Setting } from 'obsidian';
 import { formatMessage, type UiLocale } from '../pure/i18n';
-import { isSafeVaultRelativePath, type RunOptions, type SettingsV2 } from '../pure/settings';
+import { isAcceptableBaseUrl, isSafeVaultRelativePath, type RunOptions, type SettingsV2 } from '../pure/settings';
 import { isAbsolutePath } from '../process/launcher';
 
 export interface SettingsTabDeps {
@@ -88,20 +88,24 @@ export class ShellSettingsTab extends PluginSettingTab {
         if (isSafeVaultRelativePath(value)) void update({ outputPath: value });
       });
     });
-    const toggles: [keyof Pick<SettingsV2, 'enableBatchProgress' | 'enableContextMenu' | 'enableRecursiveConversion' | 'enableDragDrop'>, string][] = [
-      ['enableBatchProgress', 'shell.settings.enableBatchProgress'],
-      ['enableContextMenu', 'shell.settings.enableContextMenu'],
-      ['enableRecursiveConversion', 'shell.settings.enableRecursiveConversion'],
-      ['enableDragDrop', 'shell.settings.enableDragDrop'],
+    // Registrations made once at load (context menu, drop listener, command names) apply after a reload (M3 N-09);
+    // the drop toggle also states its trade-off: every local-file drop converts instead of attaching (M3 N-08).
+    const toggles: [keyof Pick<SettingsV2, 'enableBatchProgress' | 'enableContextMenu' | 'enableRecursiveConversion' | 'enableDragDrop'>, string, string[]][] = [
+      ['enableBatchProgress', 'shell.settings.enableBatchProgress', []],
+      ['enableContextMenu', 'shell.settings.enableContextMenu', ['shell.settings.reloadNote']],
+      ['enableRecursiveConversion', 'shell.settings.enableRecursiveConversion', []],
+      ['enableDragDrop', 'shell.settings.enableDragDrop', ['shell.settings.enableDragDropNote', 'shell.settings.reloadNote']],
     ];
-    for (const [key, labelKey] of toggles) {
-      new Setting(containerEl).setName(t(labelKey)).addToggle((toggle) => {
+    for (const [key, labelKey, descKeys] of toggles) {
+      const setting = new Setting(containerEl).setName(t(labelKey));
+      if (descKeys.length > 0) setting.setDesc(descKeys.map(t).join(' '));
+      setting.addToggle((toggle) => {
         toggle.setValue(current[key]).onChange((value) => {
           void update({ [key]: value } as Partial<SettingsV2>);
         });
       });
     }
-    new Setting(containerEl).setName(t('shell.settings.locale')).addDropdown((dropdown) => {
+    new Setting(containerEl).setName(t('shell.settings.locale')).setDesc(t('shell.settings.reloadNote')).addDropdown((dropdown) => {
       dropdown.addOptions({ auto: 'auto', en: 'English', ko: '한국어' }).setValue(current.locale).onChange((value) => {
         if (value === 'auto' || value === 'en' || value === 'ko') void update({ locale: value });
       });
@@ -120,12 +124,10 @@ export class ShellSettingsTab extends PluginSettingTab {
     new Setting(containerEl).setName(t('shell.settings.baseUrl')).setDesc(t('shell.settings.baseUrlNote')).addText((text) => {
       text.setValue(current.provider.baseUrl);
       this.committed(text, current.provider.baseUrl, (value) => {
-        try {
-          const url = new URL(value.trim());
-          if (url.protocol === 'https:' || url.protocol === 'http:') void update({ provider: { ...this.deps.settings().provider, baseUrl: value.trim() } });
-        } catch {
-          // Keep the previous value until the URL parses.
-        }
+        // The engine's rule (https, or http for loopback only; no credentials/query/fragment) is applied here, so a
+        // value the engine would refuse at job time with E_PROVIDER_CONFIG is never persisted (M3 N-07).
+        const trimmed = value.trim();
+        if (isAcceptableBaseUrl(trimmed)) void update({ provider: { ...this.deps.settings().provider, baseUrl: trimmed } });
       });
     });
 

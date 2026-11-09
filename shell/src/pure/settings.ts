@@ -144,14 +144,30 @@ export function isSafeVaultRelativePath(value: string): boolean {
   return true;
 }
 
-function isHttpUrl(value: unknown): value is string {
-  if (typeof value !== 'string') return false;
+/** Hosts for which the engine accepts plain `http` (openai_compat.canonical_destination `_LOCAL_HOSTS`). */
+const LOOPBACK_HOSTS: ReadonlySet<string> = new Set(['localhost', '127.0.0.1', '[::1]']);
+
+/**
+ * The engine's Base URL rule, applied before persisting (M3 N-07): `https`, or
+ * `http` for loopback hosts only; no credentials, query or fragment. A value the
+ * engine would refuse at startup (`E_PROVIDER_CONFIG`) is never saved.
+ */
+export function isAcceptableBaseUrl(value: string): boolean {
+  if (value.trim() !== value || value.length === 0 || /[\u0000- \u007f]/.test(value)) return false;
+  let url: URL;
   try {
-    const url = new URL(value);
-    return url.protocol === 'http:' || url.protocol === 'https:';
+    url = new URL(value);
   } catch {
     return false;
   }
+  if (url.username || url.password || url.search || url.hash || value.includes('?') || value.includes('#')) return false;
+  if (url.hostname.length === 0) return false;
+  if (url.protocol === 'https:') return true;
+  return url.protocol === 'http:' && LOOPBACK_HOSTS.has(url.hostname.toLowerCase());
+}
+
+function isHttpUrl(value: unknown): value is string {
+  return typeof value === 'string' && isAcceptableBaseUrl(value);
 }
 
 class ItemCollector {

@@ -2,7 +2,13 @@
  * Scripted child processes replaying FX-71 streams (no OS process). Each spawn
  * is recorded so tests can snapshot every invocation the shell makes.
  */
+import { engineSubcommand } from '../../src/process/launcher';
 import type { ChildHandle, ExitStatus, Spawner, SpawnRequest } from '../../src/process/types';
+
+/** SPEC 10.1 subcommand of a spawned request (the token after the fixed `-I -X utf8 -m mdflow` prefix). */
+export function subcommandOf(request: SpawnRequest): string | undefined {
+  return engineSubcommand(request.args);
+}
 
 export interface ScriptedChild {
   /** stderr chunks delivered in order (progress JSON lines). */
@@ -121,9 +127,9 @@ export class FakeSpawner implements Spawner {
     return child;
   }
 
-  /** Subcommand of each spawn (`args[2]` after `-m mdflow`). */
+  /** Subcommand of each spawn (the token after the fixed `-I -X utf8 -m mdflow` prefix). */
   get commands(): string[] {
-    return this.requests.map((r) => r.args[2] ?? '<none>');
+    return this.requests.map((r) => subcommandOf(r) ?? '<none>');
   }
 }
 

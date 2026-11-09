@@ -191,6 +191,8 @@ export function captureProbe(
     let errBytes = 0;
     const decoder = new TextDecoder('utf-8');
     const errDecoder = new TextDecoder('utf-8');
+    // Assigned after the spawn succeeds; a synchronous spawn failure finishes before any timer exists (no TDZ access).
+    let cancelTimer: () => void = () => undefined;
     const finish = (): void => {
       if (settled) return;
       settled = true;
@@ -205,7 +207,7 @@ export function captureProbe(
       finish();
       return;
     }
-    const cancelTimer = clock.setTimeout(() => {
+    cancelTimer = clock.setTimeout(() => {
       capture.timedOut = true;
       child.terminate();
       // Resolve once the child reports its exit; a child that never exits still releases the caller.

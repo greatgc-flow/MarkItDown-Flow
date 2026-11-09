@@ -5,12 +5,42 @@
  * verbatim for `plan` and the authorized `run` replay.
  */
 import { type Env, scrubEngineEnv } from '../pure/env';
+import { parentPath } from '../pure/paths';
 import type { ProviderSettings, RunOptions, SettingsV2 } from '../pure/settings';
-import type { SpawnRequest } from './types';
+import type { HostPlatform, SpawnRequest } from './types';
 
 export type EngineCommand = 'plan' | 'run' | 'version' | 'selftest';
 
 export const APPROVED_BY_MODAL = 'plugin:modal';
+
+/**
+ * Fixed interpreter prefix of every engine spawn (REQ-SHL-12; M3 N-02):
+ * `-I` isolated mode (the working directory is not `sys.path[0]`, `PYTHON*`
+ * variables and the user site are ignored, so vault or plugin-folder content
+ * can never supply `mdflow`, `PIL` or a stdlib shadow); `-X utf8` because `-I`
+ * implies `-E` and therefore drops `PYTHONUTF8`/`PYTHONIOENCODING`; then the
+ * SPEC 10 module entry point. `-P` alone is not used (absent before 3.11).
+ */
+export const ENGINE_ARGV_PREFIX: readonly string[] = Object.freeze(['-I', '-X', 'utf8', '-m', 'mdflow']);
+
+/** Index of the SPEC 10.1 subcommand in every engine argv. */
+export const SUBCOMMAND_INDEX = ENGINE_ARGV_PREFIX.length;
+
+/** The SPEC 10.1 subcommand of an engine argv built by this module, or undefined when the prefix is absent. */
+export function engineSubcommand(args: readonly string[]): string | undefined {
+  for (const [i, token] of ENGINE_ARGV_PREFIX.entries()) if (args[i] !== token) return undefined;
+  return args[SUBCOMMAND_INDEX];
+}
+
+/**
+ * Fixed working directory for every engine spawn: the venv root of the selected
+ * interpreter (`<venv>/bin/python` or `<venv>\Scripts\python.exe` -> `<venv>`).
+ * It exists, is user-owned and is not vault content, so even an interpreter
+ * launched without `-I` would not see the vault on `sys.path` (M3 N-02).
+ */
+export function engineWorkingDirectory(platform: HostPlatform, enginePython: string): string {
+  return parentPath(platform, parentPath(platform, enginePython));
+}
 
 export interface JobSnapshot {
   /** Absolute venv interpreter. */
@@ -94,7 +124,7 @@ export function engineEnvFor(snapshot: Pick<JobSnapshot, 'provider'>, hostEnv: E
 }
 
 /**
- * `<enginePython> -m mdflow <command> <inputs...> [-o OUT] --cache CACHE ...`
+ * `<enginePython> -I -X utf8 -m mdflow <command> <inputs...> [-o OUT] --cache CACHE ...`
  * with the SPEC-baseline scrubbed environment. `plan` and `run` differ only in
  * the subcommand, `-o`, and the authorization arguments.
  */
@@ -105,7 +135,7 @@ export function buildSpawnRequest(
   authorization?: Authorization | null,
 ): SpawnRequest {
   const { provider, runOptions } = snapshot;
-  const args: string[] = ['-m', 'mdflow', command, ...snapshot.inputs];
+  const args: string[] = [...ENGINE_ARGV_PREFIX, command, ...snapshot.inputs];
   if (command === 'run') args.push('-o', snapshot.outDir);
   args.push('--cache', snapshot.cacheDir);
   args.push('--provider', provider.name);
@@ -130,11 +160,11 @@ export function buildSpawnRequest(
   };
 }
 
-/** `<python> -m mdflow version` / `selftest` with the baseline environment and a fixed cwd. */
+/** `<python> -I -X utf8 -m mdflow version` / `selftest` with the baseline environment and a fixed cwd outside the vault. */
 export function buildUtilityRequest(enginePython: string, command: 'version' | 'selftest', hostEnv: Env, cwd: string): SpawnRequest {
   return {
     command: enginePython,
-    args: ['-m', 'mdflow', command],
+    args: [...ENGINE_ARGV_PREFIX, command],
     cwd,
     env: scrubEngineEnv(hostEnv, 'none'),
     shell: false,

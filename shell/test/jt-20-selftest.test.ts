@@ -9,7 +9,7 @@ import { runSelftest, type SelftestDeps } from '../src/process/selftest';
 import { RELEASE_LOCK, type VersionPolicy } from '../src/process/version-gate';
 import type { SpawnRequest } from '../src/process/types';
 import { FakeClock } from './fixtures/fake-clock';
-import { FakeSpawner, type ScriptedChild } from './fixtures/fake-spawner';
+import { FakeSpawner, type ScriptedChild, subcommandOf } from './fixtures/fake-spawner';
 import { fx71Bytes, fx71Exit } from './fixtures/fx71';
 import { ENGINE_PYTHON, HOST_ENV, KEY_VALUE, PLUGIN_DIR } from './fixtures/shell-settings';
 
@@ -18,8 +18,8 @@ const POLICY: VersionPolicy = { ...RELEASE_LOCK, pythonMaxExclusive: [3, 16, 0] 
 
 function script(selftestExit = fx71Exit('selftest.json')): (request: SpawnRequest) => ScriptedChild {
   return (request) => {
-    if (request.args[2] === 'version') return { stdout: [fx71Bytes('version.json')], exit: { code: 0, signal: null } };
-    if (request.args[2] === 'selftest') return { stdout: [fx71Bytes('selftest.json')], exit: { code: selftestExit, signal: null } };
+    if (subcommandOf(request) === 'version') return { stdout: [fx71Bytes('version.json')], exit: { code: 0, signal: null } };
+    if (subcommandOf(request) === 'selftest') return { stdout: [fx71Bytes('selftest.json')], exit: { code: selftestExit, signal: null } };
     return { spawnError: new Error(`unexpected spawn ${request.args.join(' ')}`), exit: { code: null, signal: null } };
   };
 }
@@ -34,8 +34,8 @@ it(R('JT-20 the command spawns exactly `version` then `selftest`, nothing else, 
   const spawner = new FakeSpawner(script());
   const outcome = await runSelftest(deps(spawner));
   expect(spawner.requests.map((r) => r.args)).toEqual([
-    ['-m', 'mdflow', 'version'],
-    ['-m', 'mdflow', 'selftest'],
+    ['-I', '-X', 'utf8', '-m', 'mdflow', 'version'],
+    ['-I', '-X', 'utf8', '-m', 'mdflow', 'selftest'],
   ]);
   for (const request of spawner.requests) {
     expect(request.command).toBe(ENGINE_PYTHON);
@@ -59,9 +59,9 @@ it(R('JT-20 a failing selftest or version gate is reported through localized dia
   expect(outcome.selftestExit).toBe(2);
   expect(outcome.diagnostics.length).toBeGreaterThan(0);
   for (const key of outcome.diagnostics) expect(key).toMatch(/^(shell|engine)\./);
-  const gated = new FakeSpawner((request) => (request.args[2] === 'version' ? { stdout: [fx71Bytes('version.protocol-2.json')], exit: { code: 0, signal: null } } : script()(request)));
+  const gated = new FakeSpawner((request) => (subcommandOf(request) === 'version' ? { stdout: [fx71Bytes('version.protocol-2.json')], exit: { code: 0, signal: null } } : script()(request)));
   const blocked = await runSelftest(deps(gated));
-  expect(gated.requests.map((r) => r.args[2])).toEqual(['version']);
+  expect(gated.commands).toEqual(['version']);
   expect(blocked.ok).toBe(false);
   expect(blocked.selftestExit).toBeNull();
   expect(blocked.diagnostics).toContain('shell.RUNTIME');

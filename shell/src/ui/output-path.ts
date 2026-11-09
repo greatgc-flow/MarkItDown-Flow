@@ -6,8 +6,6 @@
 import { comparablePath, joinPath } from '../pure/paths';
 import type { FileSystemOps, HostPlatform } from '../process/types';
 
-export { comparablePath, joinPath, separatorFor } from '../pure/paths';
-
 export type DestinationRejection = 'absolute' | 'traversal' | 'escape' | 'symlink' | 'invalid' | 'not_directory';
 
 export type DestinationResult =

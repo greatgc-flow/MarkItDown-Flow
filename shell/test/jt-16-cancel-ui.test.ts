@@ -17,7 +17,7 @@ import { type CoordinatorDeps, type JobReport, ShellCoordinator } from '../src/u
 import { JobStatusBar, type ProgressSink, summarizeProgress } from '../src/ui/progress';
 import { FakeClock, flush } from './fixtures/fake-clock';
 import { FakeFs, FakeSpoolFs } from './fixtures/fake-fs';
-import { chunksOf, FakeSpawner, type ScriptedChild } from './fixtures/fake-spawner';
+import { chunksOf, FakeSpawner, type ScriptedChild, subcommandOf } from './fixtures/fake-spawner';
 import { fx71Bytes, fx71Exit, fx71Lines } from './fixtures/fx71';
 import { defaultScript, fakeApis, loadPluginWith, tick } from './fixtures/plugin-harness';
 import { abs, HOST_ENV, OPENAI_PROVIDER, PLUGIN_DIR, settingsV2, VAULT_ROOT } from './fixtures/shell-settings';
@@ -80,7 +80,6 @@ function harness(
     platform: process.platform === 'win32' ? 'win32' : 'posix',
     vaultRoot: VAULT_ROOT,
     pluginDir: PLUGIN_DIR,
-    locale: 'en',
     settings: () => settings,
     gate: () => ({ enabled: true, info: { mdflow: '2.0.0', 'markitdown-gc': '0.3.5', pypdfium2: '5.15.1', pillow: '13.0.0', python: '3.14.0', platform: 'test', protocol: 1, triage_schema: 1 } }),
     consent,
@@ -129,7 +128,7 @@ it(R16('JT-16 Cancel is visible while the consent modal is open and prevents the
   let release: ((d: ConsentDecision) => void) | null = null;
   const h = harness(
     settingsV2({ provider: { ...OPENAI_PROVIDER } }),
-    (request) => (request.args[2] === 'plan'
+    (request) => (subcommandOf(request) === 'plan'
       ? { stdout: chunksOf(fx71Bytes('plan-mixed.stdout.json'), 4096), exit: { code: fx71Exit('plan-mixed.stdout.json'), signal: null } }
       : recordedRun('consent-5-approved')),
     () => new Promise<ConsentDecision>((resolve) => {
@@ -188,7 +187,7 @@ it(R9('JT-09 progress details render engine stage, file counts and unit outcomes
 });
 
 it(R16('JT-16 the loaded plugin owns one status-bar Cancel control wired to its coordinator'), async () => {
-  const apis = fakeApis((request) => (request.args[2] === 'run' ? { blocked: true, exit: { code: 0, signal: null } } : defaultScript(request)));
+  const apis = fakeApis((request) => (subcommandOf(request) === 'run' ? { blocked: true, exit: { code: 0, signal: null } } : defaultScript(request)));
   const { plugin } = await loadPluginWith(jest.mocked(loadNodeApis), settingsV2(), apis);
   await tick();
   const coordinator = plugin.coordinator;

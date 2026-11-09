@@ -39,8 +39,8 @@ function fakeApis(): FakeApis {
     },
     writeClipboard: async () => undefined,
     pickerAvailable: true,
-    pickFiles: async () => null,
-    pickFolder: async () => null,
+    pickFiles: async () => ({ kind: 'cancelled' }),
+    pickFolder: async () => ({ kind: 'cancelled' }),
     filePath: () => null,
     homeDir: () => HOME,
     platform: process.platform === 'win32' ? 'win32' : 'posix',
@@ -162,6 +162,8 @@ it(R('JT-02 history and log commands work without any Python interpreter and sta
   expect(opened.startsWith(VAULT_ROOT.replace(/\\/g, '/'))).toBe(true);
   expect(opened).toContain('/plugins/markitdown-flow/');
   expect(opened.endsWith('/logs')).toBe(true);
+  // Fresh install: no log line was ever written, yet the folder exists before the OS file manager is asked to show it (M3 N-11).
+  expect(await apis.fs.isDirectory(apis.openedFolders[0])).toBe(true);
   expect(apis.spawner.requests).toEqual([]);
   expect(mockState.network).toEqual([]);
   plugin.onunload();

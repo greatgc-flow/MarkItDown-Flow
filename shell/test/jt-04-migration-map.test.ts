@@ -4,8 +4,8 @@
  * no template/tag/media-toggle effects. Fixture FX-70.
  */
 import { req } from './req';
-import { migrateSettings, type SettingsV2 } from '../src/pure/settings';
-import { buildSpawnRequest, snapshotJob } from '../src/process/launcher';
+import { isAcceptableBaseUrl, migrateSettings, type SettingsV2 } from '../src/pure/settings';
+import { buildSpawnRequest, snapshotJob, SUBCOMMAND_INDEX } from '../src/process/launcher';
 import { ENGINE_PYTHON, HOST_ENV } from './fixtures/shell-settings';
 import {
   ALL_SENTINELS,
@@ -199,6 +199,26 @@ it(R('JT-04 provider object never retains secret-looking fields'), () => {
   expect(JSON.stringify(result)).not.toContain(SENTINELS.llmApiKey);
 });
 
+it(R('JT-04 a persisted Base URL follows the engine rule (https, or http for loopback only); a non-loopback http value resets the provider block with a notice (M3 N-07)'), () => {
+  const loopbackHttp = ['http://127.0.0.1:11434/v1', 'http://localhost:8080/v1', 'http://[::1]:11434/v1'];
+  for (const baseUrl of loopbackHttp) {
+    const kept = migrateSettings({ schemaVersion: 2, provider: { name: 'openai-compatible', model: 'm', baseUrl } });
+    expect(kept.settings?.provider.baseUrl).toBe(baseUrl);
+    expect(kept.items.filter((i) => i.key === 'provider')).toEqual([]);
+  }
+  const https = migrateSettings({ schemaVersion: 2, provider: { name: 'openai-compatible', model: 'm', baseUrl: 'https://proxy.example/v1' } });
+  expect(https.settings?.provider.baseUrl).toBe('https://proxy.example/v1');
+  for (const bad of ['http://proxy.example/v1', 'http://10.0.0.5/v1', 'https://user:pw@api.openai.com/v1', 'https://api.openai.com/v1?x=1', 'https://api.openai.com/v1#frag', 'ftp://api.openai.com/v1']) {
+    const reset = migrateSettings({ schemaVersion: 2, provider: { name: 'openai-compatible', model: 'm', baseUrl: bad } });
+    expect({ bad, baseUrl: reset.settings?.provider.baseUrl }).toEqual({ bad, baseUrl: 'https://api.openai.com/v1' });
+    expect(reset.items).toContainEqual({ key: 'provider', action: 'reset', count: 1 });
+    expect(JSON.stringify(reset)).not.toContain('user:pw');
+  }
+  expect(isAcceptableBaseUrl('http://127.0.0.1:11434/v1')).toBe(true);
+  expect(isAcceptableBaseUrl('http://proxy.example/v1')).toBe(false);
+  expect(isAcceptableBaseUrl('not a url')).toBe(false);
+});
+
 it(R('JT-04 runOptions and locale use SPEC 10.2 validation; invalid values reset to defaults'), () => {
   const result = migrateSettings({
     schemaVersion: 2,
@@ -232,10 +252,10 @@ it(R('JT-04 argv snapshot contains no template, tag, media-toggle or OCR-languag
     cacheDir: 'D:\\vault\\.obsidian\\plugins\\markitdown-flow\\cache',
   });
   const argv = buildSpawnRequest(snapshot, 'run', HOST_ENV).args;
-  expect(argv.slice(0, 3)).toEqual(['-m', 'mdflow', 'run']);
+  expect(argv.slice(0, SUBCOMMAND_INDEX + 1)).toEqual(['-I', '-X', 'utf8', '-m', 'mdflow', 'run']);
   expect(argv).toContain('D:\\vault\\inbox\\보고서 3분기.pdf');
   expect(argv).toContain('/home/a/dir with spaces/x$(rm).docx');
-  for (const token of argv.slice(3).filter((t) => t.startsWith("-"))) {
+  for (const token of argv.slice(SUBCOMMAND_INDEX + 1).filter((t) => t.startsWith("-"))) {
     expect(SPEC_10_2_SHELL_OPTIONS.has(token)).toBe(true);
   }
   const joined = argv.join('\u0000');

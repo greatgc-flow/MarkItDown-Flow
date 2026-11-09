@@ -2,7 +2,7 @@
  * Private spool for structured engine stdout (20_SHELL.md REQ-SHL-13).
  * Transport storage only, never publication staging. Filesystem is injected.
  */
-import { decodeReport, type Decoded, type RunReport } from './protocol';
+import type { Decoded } from './protocol';
 
 /** Bounded read size used when draining a spool file. */
 export const SPOOL_READ_BUFFER_BYTES = 65536;
@@ -38,12 +38,10 @@ export class Spool {
     await this.fs.append(this.fileName, chunk);
   }
 
-  /** Drain with bounded reads, decode the 7.4 report, then remove the file whether or not decoding succeeded. */
-  async finish(): Promise<Decoded<RunReport>> {
-    return this.finishWith(decodeReport);
-  }
-
-  /** Same as `finish` with an injected decoder (7.1 Plans for `plan` stdout). */
+  /**
+   * Drain with bounded reads, decode with the injected decoder (7.4 report for
+   * `run`, 7.1 Plans for `plan`), then remove the file whether or not decoding succeeded.
+   */
   async finishWith<T>(decode: (text: string) => Decoded<T>): Promise<Decoded<T>> {
     try {
       if (!this.written) return { ok: false, diagnostic: 'shell.PROTOCOL', reason: 'report missing' };

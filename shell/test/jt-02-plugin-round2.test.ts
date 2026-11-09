@@ -18,8 +18,11 @@ import { dictionary } from '../src/pure/i18n';
 import type { SettingsV2 } from '../src/pure/settings';
 import { DropConfirmModal } from '../src/ui/drop-confirm-modal';
 import { HistoryModal } from '../src/ui/history-modal';
+import { subcommandOf } from './fixtures/fake-spawner';
 import { dataJsonText, defaultScript, fakeApis, loadPluginWith, tick } from './fixtures/plugin-harness';
 import { abs, ENGINE_PYTHON, settingsV2, VAULT_ROOT } from './fixtures/shell-settings';
+
+const ISOLATED_VERSION = ['-I', '-X', 'utf8', '-m', 'mdflow', 'version'];
 
 jest.mock('../src/process/node-apis', () => ({
   loadNodeApis: jest.fn(),
@@ -142,7 +145,7 @@ it(R10('JT-10 the interpreter field never saves or probes while typing; it commi
   const probes = apis.spawner.requests.slice(baselineSpawns);
   expect(probes).toHaveLength(1);
   expect(probes[0].command).toBe(OTHER_PYTHON);
-  expect(probes[0].args).toEqual(['-m', 'mdflow', 'version']);
+  expect(probes[0].args).toEqual(ISOLATED_VERSION);
   // Enter commits too; an unchanged value does not probe again.
   input.dispatchEvent({ type: 'keydown', key: 'Enter' });
   await tick();
@@ -152,7 +155,71 @@ it(R10('JT-10 the interpreter field never saves or probes while typing; it commi
   await tick();
   expect(persisted().enginePython).toBe(ENGINE_PYTHON);
   expect(apis.spawner.requests).toHaveLength(baselineSpawns + 2);
-  for (const request of apis.spawner.requests) expect(request.args).toEqual(['-m', 'mdflow', 'version']);
+  for (const request of apis.spawner.requests) expect(request.args).toEqual(ISOLATED_VERSION);
+  plugin.unload();
+});
+
+it(R4('JT-04 the Base URL field accepts https and loopback http only; a non-loopback http value is refused in the tab instead of failing at job time (M3 N-07)'), async () => {
+  const { plugin } = await loadPluginWith(mocked, settingsV2());
+  const container = displayTab(plugin);
+  const input = controlFor(container, EN['shell.settings.baseUrl']);
+  input.value = 'http://127.0.0.1:11434/v1';
+  input.dispatchEvent({ type: 'blur' });
+  await tick();
+  expect(persisted().provider.baseUrl).toBe('http://127.0.0.1:11434/v1');
+  for (const refused of ['http://proxy.example/v1', 'https://user:pw@api.openai.com/v1', 'https://api.openai.com/v1?x=1', 'ftp://x/v1', 'nonsense']) {
+    input.value = refused;
+    input.dispatchEvent({ type: 'blur' });
+    await tick();
+    expect({ refused, persisted: persisted().provider.baseUrl }).toEqual({ refused, persisted: 'http://127.0.0.1:11434/v1' });
+  }
+  input.value = 'https://proxy.example/v1';
+  input.dispatchEvent({ type: 'blur' });
+  await tick();
+  expect(persisted().provider.baseUrl).toBe('https://proxy.example/v1');
+  plugin.unload();
+});
+
+it(R4('JT-04 the context-menu, drop and language settings say they take effect after reload, and the drop toggle states its trade-off (M3 N-08/N-09)'), async () => {
+  const { plugin } = await loadPluginWith(mocked, settingsV2());
+  const container = displayTab(plugin);
+  const descriptionOf = (label: string): string => {
+    const item = container.findAll((e) => e.hasClass('setting-item') && e.findAll((n) => n.hasClass('setting-item-name') && n.textContent === label).length > 0)[0];
+    return item?.findAll((e) => e.hasClass('setting-item-description'))[0]?.textContent ?? '';
+  };
+  expect(descriptionOf(EN['shell.settings.enableContextMenu'])).toContain(EN['shell.settings.reloadNote']);
+  expect(descriptionOf(EN['shell.settings.locale'])).toContain(EN['shell.settings.reloadNote']);
+  const drop = descriptionOf(EN['shell.settings.enableDragDrop']);
+  expect(drop).toContain(EN['shell.settings.enableDragDropNote']);
+  expect(drop).toContain(EN['shell.settings.reloadNote']);
+  // Settings that apply immediately carry no reload note.
+  expect(descriptionOf(EN['shell.settings.enableBatchProgress'])).not.toContain(EN['shell.settings.reloadNote']);
+  expect(descriptionOf(EN['shell.settings.outputPath'])).not.toContain(EN['shell.settings.reloadNote']);
+  for (const key of ['shell.settings.reloadNote', 'shell.settings.enableDragDropNote']) {
+    expect(dictionary('en')[key]?.length).toBeGreaterThan(0);
+    expect(dictionary('ko')[key]?.length).toBeGreaterThan(0);
+  }
+  plugin.unload();
+});
+
+it(R8('JT-08 an empty or unresolvable folder pick is reported, and a pick without user activation reports the picker as unavailable; neither is a silent no-op (M3 N-05/N-06)'), async () => {
+  const apis = fakeApis(defaultScript, {
+    pickFolder: async () => ({ kind: 'empty' }),
+    pickFiles: async () => ({ kind: 'blocked' }),
+  });
+  const { plugin } = await loadPluginWith(mocked, settingsV2(), apis);
+  await tick();
+  const before = apis.spawner.requests.length;
+  const mock = asMockPlugin(plugin);
+  expect(mock.runCommand('convert-folder')).toBe(true);
+  await tick();
+  expect(mockState.notices.filter((n) => n === EN['shell.notice.pickerEmpty'])).toHaveLength(1);
+  expect(mock.runCommand('convert-file')).toBe(true);
+  await tick();
+  expect(mockState.notices.filter((n) => n === EN['shell.notice.pickerUnavailable'])).toHaveLength(1);
+  expect(apis.spawner.requests).toHaveLength(before);
+  expect(plugin.coordinator?.active).toBe(false);
+  expect(dictionary('ko')['shell.notice.pickerEmpty']?.length).toBeGreaterThan(0);
   plugin.unload();
 });
 
@@ -248,12 +315,12 @@ it(R2('JT-02 the selftest command explains the router retirement before invoking
 });
 
 it(R2('JT-02 onload completes and registers every command while the version probe is still running'), async () => {
-  const apis = fakeApis((request) => (request.args[2] === 'version' ? { blocked: true, cooperative: 'ignore', exit: { code: 0, signal: null } } : defaultScript(request)));
+  const apis = fakeApis((request) => (subcommandOf(request) === 'version' ? { blocked: true, cooperative: 'ignore', exit: { code: 0, signal: null } } : defaultScript(request)));
   const started = Date.now();
   const { plugin } = await loadPluginWith(mocked, settingsV2(), apis);
   expect(Date.now() - started).toBeLessThan(1000);
   expect(asMockPlugin(plugin).commands).toHaveLength(6);
-  expect(apis.spawner.requests.map((r) => r.args[2])).toEqual(['version']);
+  expect(apis.spawner.commands).toEqual(['version']);
   expect(apis.spawner.children[0].alive).toBe(true);
   apis.spawner.children[0].terminate();
   await tick();
@@ -275,7 +342,7 @@ it(R8('JT-08 a local-file drop opens the confirmation modal and submits only aft
   expect(apis.spawner.requests).toHaveLength(before);
   asFake(modal.contentEl).findAll((e) => e.tagName === 'button' && e.textContent === EN['shell.drop.convert'])[0]?.click();
   await tick();
-  expect(apis.spawner.requests.slice(before).map((r) => r.args[2])).toEqual(['run']);
+  expect(apis.spawner.requests.slice(before).map((r) => subcommandOf(r))).toEqual(['run']);
   expect(apis.spawner.requests[before].args).toContain(file);
   await plugin.coordinator?.current;
   plugin.unload();

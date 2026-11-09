@@ -19,6 +19,10 @@ export class FakeFs implements FileSystemOps {
   readonly directories = new Set<string>();
   readonly links = new Map<string, string>();
   readonly mutations: string[] = [];
+  /** Every `readRange` call as `[offset, length]` (bounded-read oracle, JT-13). */
+  readonly readRanges: [number, number][] = [];
+  /** Every whole-file `readFile` path. */
+  readonly wholeFileReads: string[] = [];
   readonly platform: HostPlatform;
 
   constructor(options: FakeFsOptions = {}) {
@@ -50,7 +54,15 @@ export class FakeFs implements FileSystemOps {
   }
 
   async readFile(path: string): Promise<Uint8Array | null> {
+    this.wholeFileReads.push(path);
     return this.files.get(this.key(path)) ?? null;
+  }
+
+  async readRange(path: string, offset: number, length: number): Promise<Uint8Array> {
+    this.readRanges.push([offset, length]);
+    const data = this.files.get(this.key(path));
+    if (!data) throw new Error(`ENOENT: ${path}`);
+    return data.slice(offset, offset + length);
   }
 
   async writeFile(path: string, data: Uint8Array): Promise<void> {

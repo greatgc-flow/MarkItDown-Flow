@@ -7,7 +7,7 @@
  * the removed `electron.remote` dialog; absolute paths come from Electron's
  * `webUtils.getPathForFile` with the legacy `File.path` as fallback.
  */
-import { pickWithDomInput, type PickerDocument } from './dom-picker';
+import { type PickOutcome, pickWithDomInput, type PickerDocument, type PickerInput } from './dom-picker';
 import { NodeSpawner } from './node-spawner';
 import type { FileSystemOps, Spawner } from './types';
 
@@ -20,9 +20,10 @@ export interface NodeApis {
   writeClipboard(text: string): Promise<void>;
   /** False when the host offers no file input at all; callers must notify instead of silently doing nothing. */
   pickerAvailable: boolean;
-  /** Native-looking open dialogs through the DOM file input; null when the user cancels. */
-  pickFiles(): Promise<string[] | null>;
-  pickFolder(): Promise<string | null>;
+  /** Native-looking open dialogs through the DOM file input; every outcome is distinguishable (cancelled, empty, blocked). */
+  pickFiles(): Promise<PickOutcome>;
+  /** Folder mode: `selected.paths` holds the one chosen folder root. */
+  pickFolder(): Promise<PickOutcome>;
   /** Absolute path of a `File` (drops/pickers); null when the host cannot provide one. */
   filePath(file: unknown): string | null;
   homeDir(): string;
@@ -55,6 +56,18 @@ class NodeFs implements FileSystemOps {
       return new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
     } catch {
       return null;
+    }
+  }
+
+  /** Bounded positional read: `length` bytes at `offset`, fewer at the tail, empty at EOF; rejects for a missing file. */
+  async readRange(path: string, offset: number, length: number): Promise<Uint8Array> {
+    const handle = await this.fsp.open(path, 'r');
+    try {
+      const buffer = new Uint8Array(length);
+      const { bytesRead } = await handle.read(buffer, 0, length, offset);
+      return buffer.subarray(0, bytesRead);
+    } finally {
+      await handle.close();
     }
   }
 
@@ -137,7 +150,16 @@ export function loadNodeApis(): NodeApis {
     const legacy = (file as { path?: unknown }).path;
     return typeof legacy === 'string' && legacy.length > 0 ? legacy : null;
   };
-  const doc: PickerDocument | null = typeof document !== 'undefined' ? (document as unknown as PickerDocument) : null;
+  const doc: PickerDocument | null = typeof document !== 'undefined'
+    ? {
+        createElement: (tag) => document.createElement(tag) as unknown as PickerInput,
+        // Chromium ignores `input.click()` without transient user activation; report it instead of hanging (M3 N-06).
+        hasUserActivation: () => {
+          const activation = typeof navigator !== 'undefined' ? (navigator as { userActivation?: { isActive?: boolean } }).userActivation : undefined;
+          return activation?.isActive ?? true;
+        },
+      }
+    : null;
   cached = {
     spawner: new NodeSpawner(),
     fs: new NodeFs(fsp),
@@ -149,8 +171,8 @@ export function loadNodeApis(): NodeApis {
       else if (typeof navigator !== 'undefined' && navigator.clipboard) await navigator.clipboard.writeText(text);
     },
     pickerAvailable: doc !== null,
-    pickFiles: () => (doc ? pickWithDomInput(doc, 'files', filePath) : Promise.resolve(null)),
-    pickFolder: async () => (doc ? (await pickWithDomInput(doc, 'folder', filePath))?.[0] ?? null : null),
+    pickFiles: () => (doc ? pickWithDomInput(doc, 'files', filePath) : Promise.resolve({ kind: 'blocked' })),
+    pickFolder: () => (doc ? pickWithDomInput(doc, 'folder', filePath) : Promise.resolve({ kind: 'blocked' })),
     filePath,
     homeDir: () => os.homedir(),
     platform: process.platform === 'win32' ? 'win32' : 'posix',

@@ -9,8 +9,11 @@
  */
 import { req } from './req';
 import { decodeEvent, type FrameResult, JsonLinesFramer, MAX_LINE_BYTES, type ProgressEvent } from '../src/pure/framing';
-import { approvableHashes, decodeReport, parsePlanOutput } from '../src/pure/protocol';
+import { decodeReport, parsePlanOutput } from '../src/pure/protocol';
 import { recoverableSpools, Spool, SPOOL_NAME_PATTERN, SPOOL_READ_BUFFER_BYTES, type SpoolFs } from '../src/pure/spool';
+import { DirectorySpoolFs } from '../src/process/spool-fs';
+import { FakeFs } from './fixtures/fake-fs';
+import { abs, PLUGIN_DIR } from './fixtures/shell-settings';
 import {
   bytes,
   CORE_TRIAGE_CORRUPT,
@@ -178,7 +181,6 @@ it(R('JT-13 full Plans come from plan stdout: a 300-unit Plan is decoded whole a
   expect(decoded.value[1].approved.units).toHaveLength(300);
   expect(decoded.value[1].approved.file.path).toBe('sub/큰 문서.pdf');
   expect(decoded.value.map((p) => p.plan_hash)).toEqual([HEX64_A, HEX64_B]);
-  expect(approvableHashes(decoded.value)).toEqual([HEX64_A, HEX64_B]);
 });
 
 it(R('JT-13 a truncated or inconsistent Plan output yields no approvable hash'), () => {
@@ -256,7 +258,7 @@ it(R('JT-13 stdout spool is drained with bounded reads, validated after exit and
   const text = JSON.stringify(report());
   const buf = bytes(text);
   for (const chunk of splitAt(buf, [10, 1000, 5000])) await spool.write(chunk);
-  const decoded = await spool.finish();
+  const decoded = await spool.finishWith(decodeReport);
   expect(decoded.ok).toBe(true);
   expect(fs.maxRead).toBeGreaterThan(0);
   expect(fs.maxRead).toBeLessThanOrEqual(SPOOL_READ_BUFFER_BYTES);
@@ -264,11 +266,33 @@ it(R('JT-13 stdout spool is drained with bounded reads, validated after exit and
   expect(fs.removed).toEqual([spool.name]);
 });
 
+it(R('JT-13 the plugin spool directory reads each 64 KiB window exactly once through a ranged read, never the whole file per window (M3 N-10)'), async () => {
+  const platform = process.platform === 'win32' ? 'win32' : 'posix';
+  const fs = new FakeFs({ directories: [PLUGIN_DIR] });
+  const spoolFs = new DirectorySpoolFs(fs, abs(PLUGIN_DIR, 'spool'), platform);
+  const spool = new Spool(spoolFs, NONCE);
+  // A report larger than three windows plus a partial one.
+  const big = report({ skipped: Array.from({ length: 6000 }, (_, i) => ({ path: `skipped-${i}.tmp`, code: 'W_SKIPPED_HIDDEN' })) });
+  const buf = bytes(JSON.stringify(big));
+  expect(buf.length).toBeGreaterThan(3 * SPOOL_READ_BUFFER_BYTES);
+  for (const chunk of splitAt(buf, [4096, 70000, 140000])) await spool.write(chunk);
+  const decoded = await spool.finishWith(decodeReport);
+  expect(decoded.ok).toBe(true);
+  expect(fs.readRanges.length).toBe(Math.ceil(buf.length / SPOOL_READ_BUFFER_BYTES) + 1);
+  for (const [, length] of fs.readRanges) expect(length).toBeLessThanOrEqual(SPOOL_READ_BUFFER_BYTES);
+  // Consecutive windows cover the file exactly once; the final probe at EOF returns nothing. Linear I/O, not quadratic.
+  const offsets = fs.readRanges.map(([offset]) => offset);
+  const windows = Math.ceil(buf.length / SPOOL_READ_BUFFER_BYTES);
+  expect(offsets).toEqual([...Array.from({ length: windows }, (_, i) => i * SPOOL_READ_BUFFER_BYTES), buf.length]);
+  expect(fs.wholeFileReads.filter((p) => p.includes('mdflow-spool-'))).toEqual([]);
+  expect(await spoolFs.list()).toEqual([]);
+});
+
 it(R('JT-13 an invalid spooled report is removed after the handled failure; discard removes without decoding'), async () => {
   const fs = new FakeSpoolFs();
   const spool = new Spool(fs, NONCE);
   await spool.write(bytes('{"v":1,"truncated":'));
-  const decoded = await spool.finish();
+  const decoded = await spool.finishWith(decodeReport);
   expect(decoded).toMatchObject({ ok: false, diagnostic: 'shell.PROTOCOL' });
   expect(await fs.list()).toEqual([]);
   const fs2 = new FakeSpoolFs();

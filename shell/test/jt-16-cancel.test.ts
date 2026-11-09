@@ -12,6 +12,7 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import { req } from './req';
 import { CANCEL_GRACE_MS, COOPERATIVE_EXIT, EngineRun, type EngineResult, recoverStaleSpools } from '../src/process/engine-process';
+import { ENGINE_ARGV_PREFIX } from '../src/process/launcher';
 import { NodeSpawner, systemClock } from '../src/process/node-spawner';
 import type { SpawnRequest } from '../src/process/types';
 import type { RunReport } from '../src/pure/protocol';
@@ -33,7 +34,7 @@ const REPORT_130 = {
 const REPORT_0 = { ...REPORT_130, exit: 0 };
 
 function fakeRequest(): SpawnRequest {
-  return { command: ENGINE_PYTHON, args: ['-m', 'mdflow', 'run', 'x', '-o', 'y'], cwd: PLUGIN_DIR, env: { PATH: HOST_ENV.PATH }, shell: false, windowsHide: true };
+  return { command: ENGINE_PYTHON, args: [...ENGINE_ARGV_PREFIX, 'run', 'x', '-o', 'y'], cwd: PLUGIN_DIR, env: { PATH: HOST_ENV.PATH }, shell: false, windowsHide: true };
 }
 
 function setup(script: ScriptedChild, graceMs?: number): { run: EngineRun<'report'>; spawner: FakeSpawner; clock: FakeClock; spoolFs: FakeSpoolFs } {

@@ -24,8 +24,8 @@ const POLICY: VersionPolicy = { ...RELEASE_LOCK, pythonMaxExclusive: [3, 16, 0] 
 const FORBIDDEN_TOKENS = ['pip', 'venv', 'install', 'download', 'curl', 'wget', 'Invoke-WebRequest', 'selftest', 'run', 'plan'];
 
 function versionOnly(request: SpawnRequest): boolean {
-  if (request.command === ENGINE_PYTHON) return request.args.join(' ') === '-m mdflow version';
-  return BOOTSTRAP_PROBE_CANDIDATES.some((c) => c.command === request.command && c.args.join(' ') === request.args.join(' '));
+  if (request.command === ENGINE_PYTHON) return request.args.join(' ') === '-I -X utf8 -m mdflow version';
+  return BOOTSTRAP_PROBE_CANDIDATES.some((c) => c.command === request.command && c.args.join(' ') === request.args.join(' ')) && request.args.includes('-I');
 }
 
 function script(request: SpawnRequest): ScriptedChild {
@@ -56,7 +56,7 @@ it(R('JT-10 configured interpreter: exactly one version probe, no bootstrap prob
   const diagnostics = await collectSetupDiagnostics(deps(spawner, new FakeClock(), ENGINE_PYTHON));
   expect(spawner.requests).toHaveLength(1);
   expect(spawner.requests[0].command).toBe(ENGINE_PYTHON);
-  expect(spawner.requests[0].args).toEqual(['-m', 'mdflow', 'version']);
+  expect(spawner.requests[0].args).toEqual(['-I', '-X', 'utf8', '-m', 'mdflow', 'version']);
   expect(diagnostics.gate?.enabled).toBe(true);
   expect(diagnostics.bootstrapProbes).toEqual([]);
   expect(diagnostics.jobsEnabled).toBe(true);
@@ -103,13 +103,16 @@ it(R('JT-10 bootstrap instructions are the R27 25_PACKAGING section 2 commands w
   expect(text.windows).toContain("py -3.14 -m venv 'C:\\mdflow-venvs\\2.0.0'");
   expect(text.windows).toContain(`-m pip install --only-binary=:all: '.\\${ENGINE_WHEEL}' '${CORE_REQUIREMENT}'`);
   expect(text.windows).toContain('-m pip check');
-  expect(text.windows).toContain('-m mdflow version');
+  // The recipe's own checks run isolated, like the plugin's spawns (M3 N-02).
+  expect(text.windows).toContain("'C:\\mdflow-venvs\\2.0.0\\Scripts\\python.exe' -I -m mdflow version");
+  expect(text.windows).toContain("'C:\\mdflow-venvs\\2.0.0\\Scripts\\python.exe' -I -m mdflow selftest");
   expect(text.windows).toContain("'C:\\mdflow-venvs\\2.0.0\\Scripts\\python.exe'");
   const posix = renderBootstrapInstructions({ downloadDir: '/path/to/mdflow-2.0.0', venvDir: '/path/to/mdflow-venvs/2.0.0', bootstrapPython: 'python3.14' });
   expect(posix.posix).toContain("cd '/path/to/mdflow-2.0.0'");
   expect(posix.posix).toContain("python3.14 -m venv '/path/to/mdflow-venvs/2.0.0'");
   expect(posix.posix).toContain(`'/path/to/mdflow-venvs/2.0.0/bin/python' -m pip install --only-binary=:all: './${ENGINE_WHEEL}' '${CORE_REQUIREMENT}'`);
-  expect(posix.posix).toContain("'/path/to/mdflow-venvs/2.0.0/bin/python' -m mdflow version");
+  expect(posix.posix).toContain("'/path/to/mdflow-venvs/2.0.0/bin/python' -I -m mdflow version");
+  expect(posix.posix).toContain("'/path/to/mdflow-venvs/2.0.0/bin/python' -I -m mdflow selftest");
   expect(ENGINE_WHEEL).toMatch(/^mdflow-2\.0\.0-py3-none-any\.whl$/);
   expect(CORE_REQUIREMENT).toBe('markitdown-gc>=0.3.5,<0.4');
   for (const block of [text.windows, text.posix, posix.windows, posix.posix]) {

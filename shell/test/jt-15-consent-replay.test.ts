@@ -10,11 +10,11 @@
 import { req } from './req';
 import type { ConsentDecision, ConsentViewModel } from '../src/ui/consent-modal';
 import { ShellCoordinator, type CoordinatorDeps, type JobReport } from '../src/ui/coordinator';
-import { APPROVED_BY_MODAL } from '../src/process/launcher';
+import { APPROVED_BY_MODAL, ENGINE_ARGV_PREFIX, SUBCOMMAND_INDEX } from '../src/process/launcher';
 import type { SpawnRequest } from '../src/process/types';
 import { FakeClock, flush } from './fixtures/fake-clock';
 import { FakeFs, FakeSpoolFs } from './fixtures/fake-fs';
-import { chunksOf, FakeSpawner, type ScriptedChild } from './fixtures/fake-spawner';
+import { chunksOf, FakeSpawner, type ScriptedChild, subcommandOf } from './fixtures/fake-spawner';
 import { fx71Bytes, fx71Exit, fx71PlanObjects, fx71YesFile } from './fixtures/fx71';
 import { approvedHashesIn, bytes, parseYesFile, plan as syntheticPlan, planStdout, replayInvariantArgs } from './fixtures/protocol';
 import { abs, HOST_ENV, KEY_VALUE, OPENAI_PROVIDER, PLUGIN_DIR, settingsV2, VAULT_ROOT } from './fixtures/shell-settings';
@@ -82,7 +82,6 @@ function harness(
     platform: process.platform === 'win32' ? 'win32' : 'posix',
     vaultRoot: VAULT_ROOT,
     pluginDir: PLUGIN_DIR,
-    locale: 'en',
     settings: () => settings,
     gate: () => ({ enabled: true, info: { mdflow: '2.0.0', 'markitdown-gc': '0.3.5', pypdfium2: '5.15.1', pillow: '13.0.0', python: '3.14.0', platform: 'test', protocol: 1, triage_schema: 1 } }),
     consent: async (view) => {
@@ -116,7 +115,7 @@ function normalized(p: string): string {
 const remoteSettings = settingsV2({ provider: { ...OPENAI_PROVIDER } });
 
 it(R('JT-15 remote work: plan on the original selection, then one run replay with an owned --yes-file of the displayed hashes and --approved-by plugin:modal'), async () => {
-  const h = harness(remoteSettings, (request) => (request.args[2] === 'plan' ? recordedPlan('plan-mixed.stdout.json') : recordedRun('consent-5-approved')));
+  const h = harness(remoteSettings, (request) => (subcommandOf(request) === 'plan' ? recordedPlan('plan-mixed.stdout.json') : recordedRun('consent-5-approved')));
   const report = await runJob(h);
   expect(h.spawner.commands).toEqual(['plan', 'run']);
   const [plan, run] = h.spawner.requests;
@@ -156,7 +155,7 @@ it(R('JT-15 fifty files yield one modal and one approved run; the directory root
   const fifty = Array.from({ length: 50 }, (_, i) => syntheticPlan(`sub/file-${i}.pdf`, i.toString(16).padStart(64, '0'), 2));
   const stdout = bytes(planStdout(fifty));
   const h = harness(remoteSettings, (request) =>
-    request.args[2] === 'plan' ? { stdout: chunksOf(stdout, 8192), exit: { code: 3, signal: null } } : recordedRun('consent-5-approved'),
+    subcommandOf(request) === 'plan' ? { stdout: chunksOf(stdout, 8192), exit: { code: 3, signal: null } } : recordedRun('consent-5-approved'),
   );
   await runJob(h);
   expect(h.spawner.commands).toEqual(['plan', 'run']);
@@ -166,7 +165,7 @@ it(R('JT-15 fifty files yield one modal and one approved run; the directory root
   expect(h.yesFiles).toHaveLength(1);
   expect(parseYesFile(h.yesFiles[0].text ?? '')).toEqual(fifty.map((p) => p.plan_hash));
   expect(run.args.filter((t) => t === '--yes-file')).toHaveLength(1);
-  expect(run.args.slice(3, 4)).toEqual([INPUT_ROOT]);
+  expect(run.args.slice(SUBCOMMAND_INDEX + 1, SUBCOMMAND_INDEX + 2)).toEqual([INPUT_ROOT]);
   expect(run.args.some((t) => t.endsWith('file-7.pdf'))).toBe(false);
 });
 
@@ -185,7 +184,7 @@ it(R('JT-15 provider none runs without a consent modal and without any authoriza
 });
 
 it(R('JT-15 Keep pending / dismissal: the plan ran, no run is launched, no yes-file is written, outcome pending consent'), async () => {
-  const h = harness(remoteSettings, (request) => (request.args[2] === 'plan' ? recordedPlan('plan-mixed.stdout.json') : recordedRun('consent-5-approved')), async () => ({ approved: false }));
+  const h = harness(remoteSettings, (request) => (subcommandOf(request) === 'plan' ? recordedPlan('plan-mixed.stdout.json') : recordedRun('consent-5-approved')), async () => ({ approved: false }));
   const report = await runJob(h);
   expect(h.spawner.commands).toEqual(['plan']);
   expect(h.yesFiles).toEqual([]);
@@ -208,11 +207,43 @@ it(R('JT-15 cache warming leaves the per-file hash stable: cold and warm Plans p
   expect(fx71YesFile('consent-yes-2.txt')).toEqual(approvable(cold));
   const text = `# approved\n\n${approvable(warm).join('\n')}\n`;
   expect(parseYesFile(text)).toEqual(approvable(cold));
-  expect(approvedHashesIn(['-m', 'mdflow', 'run', INPUT_ROOT, '-o', OUT, '--yes-file', 'x.txt', '--approved-by', APPROVED_BY_MODAL], () => text)).toEqual(approvable(cold));
+  expect(approvedHashesIn([...ENGINE_ARGV_PREFIX, 'run', INPUT_ROOT, '-o', OUT, '--yes-file', 'x.txt', '--approved-by', APPROVED_BY_MODAL], () => text)).toEqual(approvable(cold));
+});
+
+it(R('JT-15 a well-formed exit-1 startup error on plan is reported by its code only, never as shell.PROTOCOL; a truncated plan is a protocol failure once (M3 N-03)'), async () => {
+  const usage = harness(remoteSettings, (request) => (subcommandOf(request) === 'plan'
+    ? { stderr: [fx71Bytes('usage-error.stderr.json')], stdout: [], exit: { code: 1, signal: null } }
+    : recordedRun('consent-5-approved')));
+  const report = await runJob(usage);
+  expect(usage.spawner.commands).toEqual(['plan']);
+  expect(report.plan?.startupError).toEqual({ code: 'E_USAGE' });
+  expect(usage.notices).toContain('engine.E_USAGE');
+  expect(usage.notices).not.toContain('shell.PROTOCOL');
+  expect(usage.consentCalls).toEqual([]);
+  expect(usage.history).toEqual(['partial_failure']);
+
+  const truncated = harness(remoteSettings, (request) => (subcommandOf(request) === 'plan'
+    ? { stdout: [fx71Bytes('plan-mixed.truncated.stdout.json')], exit: { code: 3, signal: null } }
+    : recordedRun('consent-5-approved')));
+  await runJob(truncated);
+  expect(truncated.spawner.commands).toEqual(['plan']);
+  expect(truncated.notices.filter((n) => n === 'shell.PROTOCOL')).toHaveLength(1);
+  expect(truncated.consentCalls).toEqual([]);
+
+  // A plan child that dies from a signal is a forced/native termination: one honest "interrupted" notice
+  // (shell.CANCELLED, SPEC 10.3 forced path), no PROTOCOL claim about its absent output, no consent, no run.
+  const died = harness(remoteSettings, (request) => (subcommandOf(request) === 'plan'
+    ? { stdout: [], exit: { code: null, signal: 'SIGSEGV' } }
+    : recordedRun('consent-5-approved')));
+  await runJob(died);
+  expect(died.spawner.commands).toEqual(['plan']);
+  expect(died.notices).toEqual(['shell.CANCELLED']);
+  expect(died.consentCalls).toEqual([]);
+  expect(died.history).toEqual(['partial_failure']);
 });
 
 it(R('JT-15 consent is asked only for files with requests to send: a warm plan lists cached files as informational and the yes-file holds exactly the hashes that need consent'), async () => {
-  const h = harness(remoteSettings, (request) => (request.args[2] === 'plan' ? recordedPlan('consent-4-plan-warm.stdout.json') : recordedRun('consent-6-warm')));
+  const h = harness(remoteSettings, (request) => (subcommandOf(request) === 'plan' ? recordedPlan('consent-4-plan-warm.stdout.json') : recordedRun('consent-6-warm')));
   const report = await runJob(h);
   expect(h.spawner.commands).toEqual(['plan', 'run']);
   expect(h.consentCalls).toHaveLength(1);
@@ -231,7 +262,7 @@ it(R('JT-15 a plan with nothing left to send opens no modal and runs without any
   cached.status.units = { ...cached.status.units, eligible: 0, cached: 2 };
   cached.status.requests_to_send = 0;
   const h = harness(remoteSettings, (request) =>
-    request.args[2] === 'plan' ? { stdout: chunksOf(bytes(planStdout([cached])), 4096), exit: { code: 0, signal: null } } : recordedRun('consent-6-warm'),
+    subcommandOf(request) === 'plan' ? { stdout: chunksOf(bytes(planStdout([cached])), 4096), exit: { code: 0, signal: null } } : recordedRun('consent-6-warm'),
   );
   await runJob(h);
   expect(h.spawner.commands).toEqual(['plan', 'run']);
@@ -246,7 +277,7 @@ it(R9('JT-09 the destination is revalidated immediately before the run spawn: a 
   const h: { current: Harness | null } = { current: null };
   h.current = harness(
     remoteSettings,
-    (request) => (request.args[2] === 'plan' ? recordedPlan('plan-mixed.stdout.json') : recordedRun('consent-5-approved')),
+    (request) => (subcommandOf(request) === 'plan' ? recordedPlan('plan-mixed.stdout.json') : recordedRun('consent-5-approved')),
     async (view) => {
       const fs = (h.current as Harness).fs;
       fs.directories.add(fs.norm(sibling));
@@ -266,7 +297,7 @@ it(R9('JT-09 the destination is revalidated immediately before the run spawn: a 
 
 it(R('JT-15 changed approved content or engine denial is displayed as pending for fresh review, never auto-approved or retried'), async () => {
   // The engine answers the authorized run with approve_required for a new hash (source changed between plan and run).
-  const h = harness(remoteSettings, (request) => (request.args[2] === 'plan' ? recordedPlan('plan-mixed.stdout.json') : recordedRun('approve-required')));
+  const h = harness(remoteSettings, (request) => (subcommandOf(request) === 'plan' ? recordedPlan('plan-mixed.stdout.json') : recordedRun('approve-required')));
   const report = await runJob(h);
   expect(h.spawner.commands).toEqual(['plan', 'run']);
   expect(h.consentCalls).toHaveLength(1);
@@ -278,7 +309,7 @@ it(R('JT-15 changed approved content or engine denial is displayed as pending fo
   expect(h.yesFiles).toHaveLength(1);
   expect(h.fs.text(h.yesFiles[0].path)).toBeUndefined();
   const denied = harness(remoteSettings, (request) =>
-    request.args[2] === 'plan'
+    subcommandOf(request) === 'plan'
       ? recordedPlan('plan-mixed.stdout.json')
       : {
           stderr: [bytes(JSON.stringify({ v: 1, ev: 'error', ts: 't', file: 'b c.docx', code: 'E_APPROVAL_DENIED', message: 'redacted' }) + '\n')],
@@ -294,7 +325,7 @@ it(R('JT-15 changed approved content or engine denial is displayed as pending fo
 
 it(R('JT-15 cancel while the modal is open prevents the replay; unload behaves the same'), async () => {
   let release: ((d: ConsentDecision) => void) | null = null;
-  const h = harness(remoteSettings, (request) => (request.args[2] === 'plan' ? recordedPlan('plan-mixed.stdout.json') : recordedRun('consent-5-approved')), () =>
+  const h = harness(remoteSettings, (request) => (subcommandOf(request) === 'plan' ? recordedPlan('plan-mixed.stdout.json') : recordedRun('consent-5-approved')), () =>
     new Promise<ConsentDecision>((resolve) => {
       release = resolve;
     }),
@@ -312,7 +343,7 @@ it(R('JT-15 cancel while the modal is open prevents the replay; unload behaves t
   expect(h.history).toEqual(['cancelled']);
   expect(h.notices).toContain('shell.CANCELLED');
 
-  const unloaded = harness(remoteSettings, (request) => (request.args[2] === 'plan' ? recordedPlan('plan-mixed.stdout.json') : recordedRun('consent-5-approved')), () =>
+  const unloaded = harness(remoteSettings, (request) => (subcommandOf(request) === 'plan' ? recordedPlan('plan-mixed.stdout.json') : recordedRun('consent-5-approved')), () =>
     new Promise<ConsentDecision>((resolve) => {
       release = resolve;
     }),
@@ -327,7 +358,7 @@ it(R('JT-15 cancel while the modal is open prevents the replay; unload behaves t
 });
 
 it(R('JT-15 no authorization survives reload: a new coordinator plans again and asks again'), async () => {
-  const script = (request: SpawnRequest): ScriptedChild => (request.args[2] === 'plan' ? recordedPlan('plan-mixed.stdout.json') : recordedRun('consent-5-approved'));
+  const script = (request: SpawnRequest): ScriptedChild => (subcommandOf(request) === 'plan' ? recordedPlan('plan-mixed.stdout.json') : recordedRun('consent-5-approved'));
   const first = harness(remoteSettings, script);
   await runJob(first);
   expect(first.consentCalls).toHaveLength(1);
@@ -340,7 +371,7 @@ it(R('JT-15 no authorization survives reload: a new coordinator plans again and 
 });
 
 it(R('JT-15 the modal is only ever fed decoded full Plans from plan stdout, never approve_required summaries'), async () => {
-  const h = harness(remoteSettings, (request) => (request.args[2] === 'plan' ? recordedPlan('plan-mixed.stdout.json') : recordedRun('consent-5-approved')));
+  const h = harness(remoteSettings, (request) => (subcommandOf(request) === 'plan' ? recordedPlan('plan-mixed.stdout.json') : recordedRun('consent-5-approved')));
   const report = await runJob(h);
   expect(report.plan?.stdout?.ok).toBe(true);
   expect(report.plan?.events).toEqual([]);

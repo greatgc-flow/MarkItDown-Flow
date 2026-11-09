@@ -9,11 +9,11 @@ import { diagnosticsCopy } from './log';
 import type { Clock, HostPlatform, Spawner, SpawnRequest } from './types';
 import { captureProbe, probeVersion, RELEASE_LOCK, VERSION_PROBE_TIMEOUT_MS, type VersionGate, type VersionPolicy } from './version-gate';
 
-/** Optional bootstrap probes when `enginePython` is unset; they only prefill instructions. */
+/** Optional bootstrap probes when `enginePython` is unset; they only prefill instructions. Isolated like every spawn (M3 N-02). */
 export const BOOTSTRAP_PROBE_CANDIDATES: readonly { command: string; args: readonly string[] }[] = [
-  { command: 'python3', args: ['--version'] },
-  { command: 'python', args: ['--version'] },
-  { command: 'py', args: ['-3', '--version'] },
+  { command: 'python3', args: ['-I', '--version'] },
+  { command: 'python', args: ['-I', '--version'] },
+  { command: 'py', args: ['-3', '-I', '--version'] },
 ];
 
 export interface BootstrapProbe {
@@ -57,6 +57,7 @@ export interface SetupDeps {
   clock: Clock;
   hostEnv: Env;
   platform: HostPlatform;
+  /** Probe working directory: an existing user-owned directory that is not vault content (M3 N-02). */
   cwd: string;
   enginePython: string | null;
   bootstrapPythonHint?: string;
@@ -88,8 +89,8 @@ export function renderBootstrapInstructions(paths: BootstrapPaths): { windows: s
     `${paths.bootstrapPython} -m venv ${quote(paths.venvDir)}`,
     `${winPython} -m pip install --only-binary=:all: ${quote(`.\\${ENGINE_WHEEL}`)} ${quote(CORE_REQUIREMENT)}`,
     `${winPython} -m pip check`,
-    `${winPython} -m mdflow version`,
-    `${winPython} -m mdflow selftest`,
+    `${winPython} -I -m mdflow version`,
+    `${winPython} -I -m mdflow selftest`,
   ].join('\n');
   const posixPython = quote(`${venv}/bin/python`);
   const posix = [
@@ -97,8 +98,8 @@ export function renderBootstrapInstructions(paths: BootstrapPaths): { windows: s
     `${paths.bootstrapPython} -m venv ${quote(paths.venvDir)}`,
     `${posixPython} -m pip install --only-binary=:all: ${quote(`./${ENGINE_WHEEL}`)} ${quote(CORE_REQUIREMENT)}`,
     `${posixPython} -m pip check`,
-    `${posixPython} -m mdflow version`,
-    `${posixPython} -m mdflow selftest`,
+    `${posixPython} -I -m mdflow version`,
+    `${posixPython} -I -m mdflow selftest`,
   ].join('\n');
   return { windows, posix };
 }
@@ -145,7 +146,7 @@ export async function collectSetupDiagnostics(deps: SetupDeps): Promise<SetupDia
   }
   const defaults = DEFAULT_PATHS[deps.platform];
   const detected = probes.find((p) => p.result === 'ok');
-  const bootstrapPython = deps.paths?.bootstrapPython ?? (detected ? [detected.command, ...detected.args.filter((a) => a !== '--version')].join(' ') : deps.bootstrapPythonHint ?? defaults.bootstrapPython);
+  const bootstrapPython = deps.paths?.bootstrapPython ?? (detected ? [detected.command, ...detected.args.filter((a) => a !== '--version' && a !== '-I')].join(' ') : deps.bootstrapPythonHint ?? defaults.bootstrapPython);
   const paths: BootstrapPaths = {
     downloadDir: deps.paths?.downloadDir ?? defaults.downloadDir,
     venvDir: deps.paths?.venvDir ?? defaults.venvDir,

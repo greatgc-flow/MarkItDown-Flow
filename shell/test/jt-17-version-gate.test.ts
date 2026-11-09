@@ -121,11 +121,11 @@ async function probe(script: ScriptedChild, advanceMs = 0): Promise<{ gate: Vers
   return { gate, spawner, clock };
 }
 
-it(R('JT-17 the version probe spawns exactly `-m mdflow version`, decodes stdout and times out after five seconds'), async () => {
+it(R('JT-17 the version probe spawns exactly `-I -X utf8 -m mdflow version`, decodes stdout and times out after five seconds'), async () => {
   const good = await probe({ stdout: [fx71Bytes('version.json')], exit: { code: 0, signal: null } });
   expect(good.spawner.requests).toHaveLength(1);
   expect(good.spawner.requests[0].command).toBe(ENGINE_PYTHON);
-  expect(good.spawner.requests[0].args).toEqual(['-m', 'mdflow', 'version']);
+  expect(good.spawner.requests[0].args).toEqual(['-I', '-X', 'utf8', '-m', 'mdflow', 'version']);
   expect(good.spawner.requests[0].shell).toBe(false);
   expect(good.gate.enabled).toBe(true);
   expect(VERSION_PROBE_TIMEOUT_MS).toBe(5000);
@@ -151,7 +151,6 @@ it(R('JT-17 a blocked gate yields zero conversions: submit is refused with shell
     platform: process.platform === 'win32' ? 'win32' : 'posix',
     vaultRoot: VAULT_ROOT,
     pluginDir: PLUGIN_DIR,
-    locale: 'en',
     settings: () => settingsV2(),
     gate: () => evaluateVersionResponse(fx71Text('version.protocol-2.json'), RECORDING_HOST_POLICY),
     consent: async () => ({ approved: false }),

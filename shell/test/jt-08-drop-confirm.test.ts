@@ -68,9 +68,10 @@ interface FakeInput extends PickerInput {
   fire(type: 'change' | 'cancel'): void;
 }
 
-function fakeDocument(files: { path?: string; name: string; webkitRelativePath?: string }[]): { doc: PickerDocument; inputs: FakeInput[] } {
+function fakeDocument(files: { path?: string; name: string; webkitRelativePath?: string }[], userActivation: boolean | undefined = undefined): { doc: PickerDocument; inputs: FakeInput[] } {
   const inputs: FakeInput[] = [];
   const doc: PickerDocument = {
+    hasUserActivation: userActivation === undefined ? undefined : () => userActivation,
     createElement: () => {
       const listeners = new Map<string, (() => void)[]>();
       const input: FakeInput = {
@@ -115,17 +116,29 @@ it(R('JT-08 the DOM file picker opens a hidden multi-file input and resolves abs
   expect(inputs[0].attributes.webkitdirectory).toBeUndefined();
   expect(inputs[0].clicked).toBe(1);
   inputs[0].fire('change');
-  await expect(pending).resolves.toEqual([FILE_A, FILE_B]);
+  await expect(pending).resolves.toEqual({ kind: 'selected', paths: [FILE_A, FILE_B] });
   expect(inputs[0].removed).toBe(true);
   const cancelled = fakeDocument([]);
   const none = pickWithDomInput(cancelled.doc, 'files', pathOf);
   cancelled.inputs[0].fire('cancel');
-  await expect(none).resolves.toBeNull();
-  // Files whose path cannot be resolved never become inputs.
+  await expect(none).resolves.toEqual({ kind: 'cancelled' });
+  // Files whose path cannot be resolved never become inputs; the outcome is distinguishable from a cancel (M3 N-05).
   const unresolved = fakeDocument([{ name: 'remote.pdf' }]);
   const empty = pickWithDomInput(unresolved.doc, 'files', pathOf);
   unresolved.inputs[0].fire('change');
-  await expect(empty).resolves.toBeNull();
+  await expect(empty).resolves.toEqual({ kind: 'empty' });
+});
+
+it(R('JT-08 without Chromium user activation the picker settles immediately as blocked instead of leaking an input whose promise never settles (M3 N-06)'), async () => {
+  const blocked = fakeDocument([{ path: FILE_A, name: 'a.pdf' }], false);
+  await expect(pickWithDomInput(blocked.doc, 'files', pathOf)).resolves.toEqual({ kind: 'blocked' });
+  expect(blocked.inputs).toEqual([]);
+  // With activation (or without the API at all) the dialog opens as before.
+  const active = fakeDocument([{ path: FILE_A, name: 'a.pdf' }], true);
+  const pending = pickWithDomInput(active.doc, 'files', pathOf);
+  expect(active.inputs[0].clicked).toBe(1);
+  active.inputs[0].fire('change');
+  await expect(pending).resolves.toEqual({ kind: 'selected', paths: [FILE_A] });
 });
 
 it(R('JT-08 the DOM folder picker uses webkitdirectory and derives the selected folder root from the relative paths'), async () => {
@@ -139,15 +152,16 @@ it(R('JT-08 the DOM folder picker uses webkitdirectory and derives the selected 
   const pending = pickWithDomInput(doc, 'folder', pathOf);
   expect(inputs[0].attributes.webkitdirectory).toBeDefined();
   inputs[0].fire('change');
-  await expect(pending).resolves.toEqual([root]);
+  await expect(pending).resolves.toEqual({ kind: 'selected', paths: [root] });
   expect(folderRootOf(`${root}${sep}sub${sep}a.pdf`, 'inbox/sub/a.pdf')).toBe(root);
   expect(folderRootOf(`${root}${sep}memo.txt`, 'inbox/memo.txt')).toBe(root);
   expect(folderRootOf(`${root}${sep}memo.txt`, '')).toBeNull();
   expect(folderRootOf(`${root}${sep}memo.txt`, 'elsewhere/x.txt')).toBeNull();
+  // An empty folder (or one holding only subfolders) yields `empty`, which the plugin reports instead of doing nothing (M3 N-05).
   const emptyFolder = fakeDocument([]);
   const none = pickWithDomInput(emptyFolder.doc, 'folder', pathOf);
   emptyFolder.inputs[0].fire('change');
-  await expect(none).resolves.toBeNull();
+  await expect(none).resolves.toEqual({ kind: 'empty' });
 });
 
 it(R('JT-08 dropped files resolve their path through the injected resolver (webUtils) and fall back to File.path'), () => {
@@ -157,8 +171,9 @@ it(R('JT-08 dropped files resolve their path through the injected resolver (webU
     stopPropagation() {},
     dataTransfer: { files: [{ name: 'a.pdf' }], types: ['Files'] },
   } as unknown as DragEvent;
-  expect(selectionFromDrop(event)).toBeNull();
+  expect(selectionFromDrop(event, pathOf)).toBeNull();
   expect(selectionFromDrop(event, () => FILE_A)).toEqual({ kind: 'files', paths: [FILE_A] });
+  // node-apis.filePath is the single resolver (webUtils, then legacy File.path); the entry point has no fallback of its own (S-20).
   const legacy = { ...event, dataTransfer: { files: [{ name: 'b.docx', path: FILE_B }], types: ['Files'] } } as unknown as DragEvent;
-  expect(selectionFromDrop(legacy)).toEqual({ kind: 'files', paths: [FILE_B] });
+  expect(selectionFromDrop(legacy, pathOf)).toEqual({ kind: 'files', paths: [FILE_B] });
 });

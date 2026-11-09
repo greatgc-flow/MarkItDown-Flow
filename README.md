@@ -2,7 +2,7 @@
 
 MarkItDown Flow converts local documents to Markdown and plans selective OCR for
 pages and images. The engine (`mdflow`, a Python CLI) uses `markitdown-gc`
-0.3.5. The desktop Obsidian shell drives an engine installed separately in a
+0.3.6. The desktop Obsidian shell drives an engine installed separately in a
 virtual environment. Release verification is still pending; see
 [packaging verification](docs/renewal/PACKAGING_VERIFICATION.md).
 
@@ -16,6 +16,13 @@ terminal, then enter the absolute venv Python path in the plugin settings
 Enter). The plugin never installs Python or dependencies and never probes a
 partially typed path. Keep the venv at its original location.
 
+The plugin always launches that interpreter in isolated mode
+(`python -I -X utf8 -m mdflow ...`) with the venv directory as working
+directory, never the vault. Isolated mode ignores `PYTHONPATH`, the user
+site-packages and the current directory, so files inside a vault (including a
+synced or downloaded vault) can never be imported in place of the engine or its
+libraries. Use the same `-I` form in your own scripts.
+
 ## Network services and purpose
 
 The default provider `none` performs local conversion and sends no document data.
@@ -28,8 +35,9 @@ setting wins over a value in the launch environment) with the model from the
 Other endpoints must actually implement this protocol. Native Azure OpenAI,
 Gemini and Anthropic APIs are not configured automatically; using a compatible
 proxy or Ollama (for example `http://127.0.0.1:11434/v1`; plain `http` is
-accepted for loopback addresses only) requires validating its protocol,
-destination and model before approval. No compatibility test for those services
+accepted for `localhost`, `127.0.0.1` and `[::1]` only, and the settings tab
+refuses other `http` values, credentials, query strings and fragments up front)
+requires validating its protocol, destination and model before approval. No compatibility test for those services
 is claimed here. Provider privacy and retention follow the configured service's
 policies; consult
 [OpenAI's data controls](https://platform.openai.com/docs/guides/your-data) when
@@ -84,9 +92,15 @@ notices. Files with nothing left to send (already cached) are listed as
 informational and need no approval. These are planning limits, not a billing
 cap. Interrupted requests, retry, force and concurrent cache misses can incur
 additional charges. A Cancel button stays visible in the status bar for the
-whole job (planning, approval, conversion); forced cancellation may leave the
-provider processing a request. CLI commands run with your user privileges.
-Review the selected rasters, endpoint, model and costs before approving.
+whole job (planning, approval, conversion). On macOS and Linux, Cancel first
+asks the engine to stop cooperatively and forces termination after five
+seconds; on Windows every Cancel is a forced termination, because the plugin
+cannot deliver a console control event to the engine. A forced termination may
+leave the provider processing a request, produces no conversion report, and can
+leave the engine's temporary raster folder (`mdflow-*` under the OS temporary
+directory) behind; delete such folders if they accumulate. CLI commands run
+with your user privileges. Review the selected rasters, endpoint, model and
+costs before approving.
 
 ## Migration and operation
 
@@ -99,10 +113,14 @@ old image-pipeline router was retired and runs the engine's offline self-test.
 Audio/YouTube, Azure fallback routing, and inherited wrapper behavior are
 removed. Command providers are CLI-only. Outputs use the fixed document
 Markdown/media naming defined in the v2 spec. File and folder selection uses the
-standard file dialog of the desktop app; a drop of local files shows the list
-for confirmation before any work. Run options (render DPI, minimum OCR
-priority, maximum units per file, approval threshold, sensitive path globs) are
-editable in the settings tab.
+standard file dialog of the desktop app; an empty selection is reported rather
+than ignored. The optional drop handler is off by default: when enabled, every
+local file dropped anywhere in the workspace is converted instead of being
+attached to the note, after a confirmation that lists the files. The
+context-menu, drop and language settings take effect after the plugin is
+reloaded. Run options (render DPI, minimum OCR priority, maximum units per
+file, approval threshold, sensitive path globs) are editable in the settings
+tab.
 
 Migration drops removed settings and credentials and keeps a sanitized rollback
 snapshot `data.v1.json` next to `data.json`. Old external backups can retain
@@ -119,14 +137,15 @@ immutable; public defects require a higher patch version.
 ## Command-line usage
 
 The engine works without Obsidian from the venv created in Setup
-(`<venv>/bin/python -m mdflow ...`, or `<venv>\Scripts\python.exe -m mdflow ...`
-on Windows). The authoritative contract is [10_SPEC section 10](docs/renewal/10_SPEC.md#10-cli-surface).
+(`<venv>/bin/python -I -m mdflow ...`, or `<venv>\Scripts\python.exe -I -m mdflow ...`
+on Windows; `-I` keeps the current directory off the import path). The
+authoritative contract is [10_SPEC section 10](docs/renewal/10_SPEC.md#10-cli-surface).
 
 ```text
-python -m mdflow run  <PATH>... -o OUT_DIR [--provider none|openai-compatible|command] [--model NAME] [--progress jsonl]
-python -m mdflow plan <PATH>... [options]          # prints one Plan JSON per file; no provider call, nothing written
-python -m mdflow classify <PATH>                   # sniff/triage/classification only
-python -m mdflow version | selftest | providers | cache (stats|clear) [--cache DIR]
+python -I -m mdflow run  <PATH>... -o OUT_DIR [--provider none|openai-compatible|command] [--model NAME] [--progress jsonl]
+python -I -m mdflow plan <PATH>... [options]          # prints one Plan JSON per file; no provider call, nothing written
+python -I -m mdflow classify <PATH>                   # sniff/triage/classification only
+python -I -m mdflow version | selftest | providers | cache (stats|clear) [--cache DIR]
 ```
 
 Remote OCR needs consent per file: `run` stops with exit 3 and an

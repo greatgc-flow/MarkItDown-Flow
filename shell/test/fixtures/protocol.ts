@@ -6,6 +6,7 @@
  * against FX-71 in step 9. No golden is hand-written here: these are inputs.
  */
 import type { Plan, PlanUnit, RunReport } from '../../src/pure/protocol';
+import { ENGINE_ARGV_PREFIX, SUBCOMMAND_INDEX } from '../../src/process/launcher';
 import type { SpawnRequest } from '../../src/process/types';
 
 // ---------------------------------------------------------------------------- SPEC 10 invocation oracles (tests only)
@@ -32,16 +33,20 @@ export interface InvocationViolation {
   token: string;
 }
 
-/** REQ-SHL-11 oracle: every shell invocation is `-m mdflow <SPEC command>` with SPEC 10.2 options only. */
+/**
+ * REQ-SHL-11/12 oracle: every shell invocation is `-I -X utf8 -m mdflow <SPEC command>` (isolated
+ * interpreter, UTF-8 stdio, module entry point) with SPEC 10.2 options only.
+ */
 export function invocationViolations(request: SpawnRequest): InvocationViolation[] {
   const violations: InvocationViolation[] = [];
   const { args } = request;
   if ((request.shell as boolean) !== false) violations.push({ kind: 'shell', token: String(request.shell) });
-  if (args[0] !== '-m') violations.push({ kind: 'module', token: args[0] ?? '<missing -m>' });
-  if (args[1] !== 'mdflow') violations.push({ kind: 'module', token: args[1] ?? '<missing module>' });
-  const command = args[2];
+  for (const [i, expected] of ENGINE_ARGV_PREFIX.entries()) {
+    if (args[i] !== expected) violations.push({ kind: 'module', token: args[i] ?? `<missing ${expected}>` });
+  }
+  const command = args[SUBCOMMAND_INDEX];
   if (!SPEC_COMMANDS.includes(command)) violations.push({ kind: 'command', token: command ?? '<missing command>' });
-  for (let i = 3; i < args.length; i++) {
+  for (let i = SUBCOMMAND_INDEX + 1; i < args.length; i++) {
     const token = args[i];
     if (!token.startsWith('-')) continue;
     if (!SPEC_OPTIONS.includes(token)) {
@@ -53,10 +58,10 @@ export function invocationViolations(request: SpawnRequest): InvocationViolation
   return violations;
 }
 
-/** Arguments after `-m mdflow <command>` minus `-o X`, `--yes X`, `--yes-file X`, `--approved-by X`. */
+/** Arguments after `-I -X utf8 -m mdflow <command>` minus `-o X`, `--yes X`, `--yes-file X`, `--approved-by X`. */
 export function replayInvariantArgs(args: readonly string[]): string[] {
   const out: string[] = [];
-  for (let i = 3; i < args.length; i++) {
+  for (let i = SUBCOMMAND_INDEX + 1; i < args.length; i++) {
     const token = args[i];
     if (REPLAY_VARIANT_OPTIONS.has(token)) {
       if (i + 1 < args.length && !args[i + 1].startsWith('-')) i += 1;
@@ -78,7 +83,7 @@ export function parseYesFile(text: string): string[] {
 /** The approved hash list of an invocation: `--yes` values plus the `--yes-file` content when a reader is given. */
 export function approvedHashesIn(args: readonly string[], readFile?: (path: string) => string | null): string[] {
   const hashes: string[] = [];
-  for (let i = 3; i < args.length; i++) {
+  for (let i = SUBCOMMAND_INDEX + 1; i < args.length; i++) {
     const token = args[i];
     const value = args[i + 1];
     if (token === '--yes' && value !== undefined && /^[0-9a-f]{64}$/.test(value)) {

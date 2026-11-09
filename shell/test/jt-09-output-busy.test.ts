@@ -8,6 +8,7 @@
  */
 import { req } from './req';
 import { JsonLinesFramer, type ProgressEvent } from '../src/pure/framing';
+import type { VersionGate } from '../src/process/version-gate';
 import { ShellCoordinator, type CoordinatorDeps } from '../src/ui/coordinator';
 import { resolveDestination, selectImmediateFiles, type DirEntry } from '../src/ui/output-path';
 import { summarizeProgress } from '../src/ui/progress';
@@ -111,7 +112,9 @@ it(R('JT-09 nonrecursive folder selection keeps immediate regular files only and
   expect(win).toEqual(['C:\\Vault\\Inbox\\A.PDF']);
 });
 
-function coordinator(spawner: FakeSpawner, outputPath = 'markitdown-output'): { coordinator: ShellCoordinator; notices: string[] } {
+const ENABLED_GATE: VersionGate = { enabled: true, info: { mdflow: '2.0.0', 'markitdown-gc': '0.3.5', pypdfium2: '5.15.1', pillow: '13.0.0', python: '3.14.0', platform: 'test', protocol: 1, triage_schema: 1 } };
+
+function coordinator(spawner: FakeSpawner, outputPath = 'markitdown-output', gate?: CoordinatorDeps['gate']): { coordinator: ShellCoordinator; notices: string[] } {
   const fs = new FakeFs({ directories: [VAULT_ROOT, abs(VAULT_ROOT, 'markitdown-output'), abs(VAULT_ROOT, 'inbox'), PLUGIN_DIR, abs(PLUGIN_DIR, 'cache')] });
   const notices: string[] = [];
   const deps: CoordinatorDeps = {
@@ -123,9 +126,8 @@ function coordinator(spawner: FakeSpawner, outputPath = 'markitdown-output'): { 
     platform: process.platform === 'win32' ? 'win32' : 'posix',
     vaultRoot: VAULT_ROOT,
     pluginDir: PLUGIN_DIR,
-    locale: 'en',
     settings: () => settingsV2({ outputPath }),
-    gate: () => ({ enabled: true, info: { mdflow: '2.0.0', 'markitdown-gc': '0.3.5', pypdfium2: '5.15.1', pillow: '13.0.0', python: '3.14.0', platform: 'test', protocol: 1, triage_schema: 1 } }),
+    gate: gate ?? (() => ENABLED_GATE),
     consent: async () => ({ approved: false }),
     notify: (key) => {
       notices.push(key);
@@ -151,6 +153,60 @@ it(R('JT-09 a second request while one conversion is active reports busy and lau
   c.cancel();
   await c.current;
   expect(c.active).toBe(false);
+});
+
+it(R('JT-09 busy admission is atomic: two submits in the same tick while the version gate is still pending start one engine and refuse the other with shell.BUSY (M3 N-01)'), async () => {
+  let releaseGate: ((gate: VersionGate) => void) | null = null;
+  const pendingGate = new Promise<VersionGate>((resolve) => {
+    releaseGate = resolve;
+  });
+  const spawner = new FakeSpawner(() => ({ blocked: true, exit: { code: 0, signal: null } }));
+  const { coordinator: c, notices } = coordinator(spawner, 'markitdown-output', () => pendingGate);
+  // Both requests pass the synchronous checks before either has awaited the gate (first job after load: probe of up to 5 s).
+  const first = c.submit({ kind: 'files', paths: [abs(VAULT_ROOT, 'inbox', 'a.pdf')] }, 'context-menu');
+  const second = c.submit({ kind: 'files', paths: [abs(VAULT_ROOT, 'inbox', 'b.pdf')] }, 'drop');
+  await flush();
+  expect(spawner.requests).toEqual([]);
+  (releaseGate as unknown as ((gate: VersionGate) => void) | null)?.(ENABLED_GATE);
+  const results = await Promise.all([first, second]);
+  await flush();
+  expect(results.map((r) => r.accepted)).toEqual([true, false]);
+  expect(results[1]).toEqual({ accepted: false, diagnostic: 'shell.BUSY' });
+  expect(notices.filter((n) => n === 'shell.BUSY')).toHaveLength(1);
+  expect(spawner.requests).toHaveLength(1);
+  expect(spawner.requests[0].args).toContain(abs(VAULT_ROOT, 'inbox', 'a.pdf'));
+  expect(c.active).toBe(true);
+  // Cancel stops the one owned engine and the coordinator becomes free again.
+  c.cancel();
+  await c.current;
+  expect(c.active).toBe(false);
+  expect(spawner.children.every((child) => !child.alive)).toBe(true);
+  const third = await c.submit({ kind: 'files', paths: [abs(VAULT_ROOT, 'inbox', 'c.pdf')] }, 'command');
+  expect(third.accepted).toBe(true);
+  c.cancel();
+  await c.current;
+});
+
+it(R('JT-09 a refused submission releases the reservation: a destination refusal is followed by an accepted request, never a stale busy'), async () => {
+  const spawner = new FakeSpawner(() => ({ blocked: true, exit: { code: 0, signal: null } }));
+  const { coordinator: c, notices } = coordinator(spawner, '../outside');
+  const refusedTogether = await Promise.all([
+    c.submit({ kind: 'files', paths: [abs(VAULT_ROOT, 'inbox', 'a.pdf')] }, 'command'),
+    c.submit({ kind: 'files', paths: [abs(VAULT_ROOT, 'inbox', 'b.pdf')] }, 'ribbon'),
+  ]);
+  expect(refusedTogether[0]).toEqual({ accepted: false, diagnostic: 'shell.DESTINATION' });
+  expect(refusedTogether[1]).toEqual({ accepted: false, diagnostic: 'shell.BUSY' });
+  expect(spawner.requests).toEqual([]);
+  expect(c.active).toBe(false);
+  const empty = await c.submit({ kind: 'files', paths: [] }, 'command');
+  expect(empty).toEqual({ accepted: false, diagnostic: 'shell.DESTINATION' });
+  expect(notices.filter((n) => n === 'shell.BUSY')).toHaveLength(1);
+  // The reservation is gone: a fresh coordinator state accepts the next valid request.
+  const ok = coordinator(spawner);
+  const accepted = await ok.coordinator.submit({ kind: 'files', paths: [abs(VAULT_ROOT, 'inbox', 'a.pdf')] }, 'command');
+  expect(accepted.accepted).toBe(true);
+  ok.coordinator.cancel();
+  await ok.coordinator.current;
 });
 
 it(R('JT-09 an unsafe destination refuses the request before any spawn'), async () => {

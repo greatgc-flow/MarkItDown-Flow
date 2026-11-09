@@ -9,7 +9,7 @@ import type { SettingsV2 } from '../../src/pure/settings';
 import MarkItDownFlowPlugin from '../../src/main';
 import { createApp, mockState, testManifest } from '../__mocks__/obsidian';
 import { FakeFs } from './fake-fs';
-import { FakeSpawner, type ScriptedChild } from './fake-spawner';
+import { FakeSpawner, type ScriptedChild, subcommandOf } from './fake-spawner';
 import { fx71Text } from './fx71';
 import { HOME, VAULT_ROOT } from './shell-settings';
 
@@ -28,7 +28,7 @@ export function versionWithinPolicy(): Uint8Array {
 
 /** `version` -> policy-admitted response; anything else exits 0 without output unless overridden. */
 export function defaultScript(request: SpawnRequest): ScriptedChild {
-  if (request.args[2] === 'version') return { stdout: [versionWithinPolicy()], exit: { code: 0, signal: null } };
+  if (subcommandOf(request) === 'version') return { stdout: [versionWithinPolicy()], exit: { code: 0, signal: null } };
   return { exit: { code: 0, signal: null } };
 }
 
@@ -42,8 +42,8 @@ export function fakeApis(script: (request: SpawnRequest, index: number) => Scrip
     },
     writeClipboard: async () => undefined,
     pickerAvailable: true,
-    pickFiles: async () => null,
-    pickFolder: async () => null,
+    pickFiles: async () => ({ kind: 'cancelled' }),
+    pickFolder: async () => ({ kind: 'cancelled' }),
     filePath: (file) => (typeof (file as { path?: unknown }).path === 'string' ? ((file as { path: string }).path) : null),
     homeDir: () => HOME,
     platform: process.platform === 'win32' ? 'win32' : 'posix',

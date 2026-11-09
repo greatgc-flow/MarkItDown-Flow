@@ -6,17 +6,17 @@
  */
 import { type Env, providerAvailability } from '../pure/env';
 import { type HistoryEntry, type HistoryOutcome } from '../pure/history';
-import type { UiLocale } from '../pure/i18n';
+import { joinPath } from '../pure/paths';
 import type { Plan, RunReport } from '../pure/protocol';
 import { defaultSettings, type SettingsV2 } from '../pure/settings';
 import type { SpoolFs } from '../pure/spool';
 import { EngineRun, type EngineResult } from '../process/engine-process';
-import { APPROVED_BY_MODAL, type Authorization, buildSpawnRequest, type JobSnapshot, renderYesFile, snapshotJob } from '../process/launcher';
+import { APPROVED_BY_MODAL, type Authorization, buildSpawnRequest, engineWorkingDirectory, type JobSnapshot, renderYesFile, snapshotJob } from '../process/launcher';
 import type { RotatingLog } from '../process/log';
 import type { Clock, FileSystemOps, HostPlatform, Spawner } from '../process/types';
 import type { VersionGate } from '../process/version-gate';
 import { buildConsentView, type ConsentDecision, type ConsentViewModel } from './consent-modal';
-import { type DirEntry, joinPath, resolveDestination, selectImmediateFiles } from './output-path';
+import { type DirEntry, resolveDestination, selectImmediateFiles } from './output-path';
 import type { ProgressSink } from './progress';
 
 export type EntryPoint = 'command' | 'ribbon' | 'context-menu' | 'drop';
@@ -49,7 +49,6 @@ export interface CoordinatorDeps {
   platform: HostPlatform;
   vaultRoot: string;
   pluginDir: string;
-  locale: UiLocale;
   settings: () => SettingsV2;
   /** Result of the version gate taken before jobs (may be probed lazily); null blocks with `shell.RUNTIME`. */
   gate: () => VersionGate | null | Promise<VersionGate | null>;
@@ -94,6 +93,8 @@ export function historyInputLabel(inputs: readonly string[]): string {
 export class ShellCoordinator {
   private job: Promise<JobReport> | null = null;
   private isActive = false;
+  /** Synchronous admission reservation held across the awaits of `submit` (REQ-SHL-09; M3 N-01). */
+  private reserved = false;
   private cancelled = false;
   private disposed = false;
   private engine: EngineRun<'plan'> | EngineRun<'report'> | null = null;
@@ -101,12 +102,12 @@ export class ShellCoordinator {
 
   constructor(private readonly deps: CoordinatorDeps) {}
 
-  /** Pure projection used by every entry point before any work. */
+  /** Pure projection used by every entry point before any work. The cwd is the engine venv root, never the vault (M3 N-02). */
   buildRequest(selection: Selection): CoordinatorRequest {
     const settings = this.deps.settings();
     return {
       inputs: [...selection.paths],
-      cwd: this.deps.vaultRoot,
+      cwd: settings.enginePython ? engineWorkingDirectory(this.deps.platform, settings.enginePython) : '',
       outDir: joinPath(this.deps.platform, this.deps.vaultRoot, settings.outputPath),
       cacheDir: joinPath(this.deps.platform, this.deps.pluginDir, CACHE_DIR_NAME),
       recursive: selection.kind === 'folder' ? settings.enableRecursiveConversion : true,
@@ -129,16 +130,28 @@ export class ShellCoordinator {
     return destination.ok ? destination.absolute : null;
   }
 
-  /** Busy check, version gate, destination validation, snapshot; then starts the job (not awaited). */
+  /**
+   * Busy check, version gate, destination validation, snapshot; then starts the job (not awaited).
+   * Admission is atomic: the reservation is taken synchronously before the first await and
+   * released on every refusal path, so two overlapping submissions never both pass (M3 N-01).
+   */
   async submit(selection: Selection, entry: EntryPoint): Promise<SubmitResult> {
-    if (this.isActive) return this.refuse('shell.BUSY');
+    if (this.isActive || this.reserved) return this.refuse('shell.BUSY');
+    this.reserved = true;
+    try {
+      return await this.admit(selection, entry);
+    } finally {
+      this.reserved = false;
+    }
+  }
+
+  private async admit(selection: Selection, entry: EntryPoint): Promise<SubmitResult> {
     if (this.disposed) return this.refuse('shell.RUNTIME');
     const settings = this.deps.settings();
     if (!settings.enginePython) return this.refuse('shell.RUNTIME');
     if (selection.paths.length === 0) return this.refuse('shell.DESTINATION');
     const gate = await this.deps.gate();
     if (!gate || !gate.enabled) return this.refuse('shell.RUNTIME');
-    if (this.isActive) return this.refuse('shell.BUSY');
 
     const { fs, platform } = this.deps;
     const outDir = await this.validateDestination(settings.outputPath);
@@ -264,8 +277,10 @@ export class ShellCoordinator {
         return report;
       }
       if (!plan.stdout || !plan.stdout.ok) {
+        // EngineRun already names decode/framing failures `shell.PROTOCOL` and startup errors by their SPEC 7.5
+        // code; the coordinator adds PROTOCOL only when the engine left no visible diagnostic at all (M3 N-03).
         for (const key of plan.diagnostics) this.deps.notify(key);
-        if (!plan.diagnostics.includes('shell.PROTOCOL')) this.deps.notify('shell.PROTOCOL');
+        if (plan.diagnostics.length === 0) this.deps.notify('shell.PROTOCOL');
         await this.log({ stage: 'plan', code: plan.startupError?.code, status: 'failed' });
         await this.record(snapshot, 'partial_failure');
         return report;

@@ -22,7 +22,7 @@ const context = await esbuild.context({
   sourcemap: production ? false : 'inline',
   treeShaking: true,
   minify: false,
-  external: ['obsidian', 'electron', '@electron/remote', ...builtinModules, ...builtinModules.map((name) => `node:${name}`)],
+  external: ['obsidian', 'electron', ...builtinModules, ...builtinModules.map((name) => `node:${name}`)],
   banner: { js: '/* MarkItDown Flow 2.0.0 shell: clean-room build from shell/src (MIT). */' },
 });
 

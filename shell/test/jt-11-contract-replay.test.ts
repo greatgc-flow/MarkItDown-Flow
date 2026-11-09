@@ -8,7 +8,7 @@ import type { ApproveRequiredEvent, FrameResult, ProgressEvent } from '../src/pu
 import { JsonLinesFramer, MAX_LINE_BYTES } from '../src/pure/framing';
 import type { Plan, RunReport } from '../src/pure/protocol';
 import { EngineRun, type EngineResult } from '../src/process/engine-process';
-import { APPROVED_BY_MODAL, buildSpawnRequest, buildUtilityRequest, snapshotJob } from '../src/process/launcher';
+import { APPROVED_BY_MODAL, buildSpawnRequest, buildUtilityRequest, ENGINE_ARGV_PREFIX, snapshotJob, SUBCOMMAND_INDEX } from '../src/process/launcher';
 import type { SpawnRequest } from '../src/process/types';
 import { FakeClock } from './fixtures/fake-clock';
 import { FakeFs, FakeSpoolFs } from './fixtures/fake-fs';
@@ -98,7 +98,7 @@ it(R('JT-11 every recorded FX-71 invocation and every shell-built invocation use
     buildUtilityRequest(ENGINE_PYTHON, 'selftest', HOST_ENV, CWD),
   ]) {
     expect(invocationViolations(request)).toEqual([]);
-    expect(SPEC_COMMANDS).toContain(request.args[2]);
+    expect(SPEC_COMMANDS).toContain(request.args[SUBCOMMAND_INDEX]);
   }
 });
 
@@ -106,16 +106,21 @@ it(R('JT-11 an invented command, option, module or shell string is a contract vi
   const base = buildUtilityRequest(ENGINE_PYTHON, 'version', HOST_ENV, CWD);
   const violations = (args: string[], extra: Partial<SpawnRequest> = {}): string[] =>
     invocationViolations({ ...base, args, ...extra } as SpawnRequest).map((v) => `${v.kind}:${v.token}`);
-  expect(violations(['-m', 'mdflow', 'handshake'])).toContain('command:handshake');
-  expect(violations(['-m', 'mdflow', 'run', 'x', '-o', 'y', '--staging-dir', 'z'])).toContain('option:--staging-dir');
-  expect(violations(['-m', 'mdflow', 'run', 'x', '-o', 'y', '--api-key', 'sk-x'])).toContain('option:--api-key');
-  expect(violations(['-m', 'mdflow', 'run', 'x', '-o', 'y', '--tag', 'ocr'])).toContain('option:--tag');
-  expect(violations(['-m', 'mdflow', 'run', 'x', '-o', 'y', '--no-media'])).toContain('option:--no-media');
-  expect(violations(['-m', 'other_module', 'run'])).toContain('module:other_module');
+  const P = [...ENGINE_ARGV_PREFIX];
+  expect(violations([...P, 'handshake'])).toContain('command:handshake');
+  expect(violations([...P, 'run', 'x', '-o', 'y', '--staging-dir', 'z'])).toContain('option:--staging-dir');
+  expect(violations([...P, 'run', 'x', '-o', 'y', '--api-key', 'sk-x'])).toContain('option:--api-key');
+  expect(violations([...P, 'run', 'x', '-o', 'y', '--tag', 'ocr'])).toContain('option:--tag');
+  expect(violations([...P, 'run', 'x', '-o', 'y', '--no-media'])).toContain('option:--no-media');
+  expect(violations(['-I', '-X', 'utf8', '-m', 'other_module', 'run'])).toContain('module:other_module');
   expect(violations(['mdflow', 'run', 'x'])).not.toEqual([]);
-  expect(violations(['-m', 'mdflow', 'run', 'x', '-o', 'y'], { shell: true as unknown as false })).toContain('shell:true');
+  // An interpreter launched without isolation (M3 N-02) or without UTF-8 stdio is a contract violation too.
+  expect(violations(['-m', 'mdflow', 'run', 'x', '-o', 'y'])).toContain('module:-m');
+  expect(violations(['-X', 'utf8', '-m', 'mdflow', 'run', 'x', '-o', 'y'])).toContain('module:-X');
+  expect(violations(['-I', '-m', 'mdflow', 'run', 'x', '-o', 'y'])).toContain('module:-m');
+  expect(violations([...P, 'run', 'x', '-o', 'y'], { shell: true as unknown as false })).toContain('shell:true');
   // Legitimate SPEC options are not violations, including repeatable ones.
-  expect(violations(['-m', 'mdflow', 'run', 'x', '-o', 'y', '--yes', 'a'.repeat(64), '--yes', 'b'.repeat(64), '--approved-by', 'plugin:modal', '--sensitive', '*/hr/*', '--sensitive', '*.key'])).toEqual([]);
+  expect(violations([...P, 'run', 'x', '-o', 'y', '--yes', 'a'.repeat(64), '--yes', 'b'.repeat(64), '--approved-by', 'plugin:modal', '--sensitive', '*/hr/*', '--sensitive', '*.key'])).toEqual([]);
 });
 
 it(R('JT-11 run-mixed replays into 7.3 events and a 7.4 report whose values match the recording (provider none, exit 2)'), async () => {

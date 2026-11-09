@@ -1,14 +1,21 @@
-# HANDOFF (2026-11-09, MECE round 2 in progress)
+# HANDOFF — MECE round 3 (2026-11-09)
 
-Branch `renewal/v2-zero-base` (local; pushing needs the user's permission: `git push -u origin renewal/v2-zero-base`).
+The engine release/reference baseline is **Core 0.3.6**; runtime compatibility remains `>=0.3.5,<0.4`. The orchestrator regenerated the golden corpus with unchanged triage bytes. Engine repair status and exact local test receipts belong to [M3_ENGINE_FIXES.md](review/M3_ENGINE_FIXES.md); the audit snapshot is [M3_cx_vertical.md](review/M3_cx_vertical.md).
 
-## State
-- Design ratified (01_DECISIONS R1-R28). Engine suite green at `f9d3d14` (446 passed); cx engine round 2 (M2_cx_vertical) in flight in the same tree.
-- Shell: MECE round-2 fixes applied (Fable M2 X-01..X-20, S-01..S-13; see `docs/renewal/review/M2_fable_cross.md` and the disposition rows at the end of `20_SHELL.md` section 7). Jest 255/255 (`build/trace/redgreen/m2-shell.red.log` -> `m2-shell.green.json`). `tsc --noEmit` and `npm run build` are verified by the orchestrator after each round.
-- Open engine/tools items from the shell round: X-11 re-record FX-71 on Python 3.14 from the 2.0.0 wheel; X-14 `version` must not fail when Core is missing; SPEC 7.3 `file: string|null` for run-level events; SPEC 8.2 `docs/providers/*.md` reference (absent); S-14/S-15 (`_provider_list` meta, `report.publish(report_path)`).
+The M2 version-with-missing-Core, run-level file:null, command-provider recipe, provider metadata and stdout publisher repairs are implemented. See [M2_ENGINE_FOLLOWUP.md](review/M2_ENGINE_FOLLOWUP.md) for their historical receipt. Shell's reported M2 baseline was 255 Jest tests; M3 engine work does not claim a new shell build or desktop rehearsal.
 
-## Next steps
-1. `git status`; run `python -I -m pytest engine/tests -q` and `cd shell && npx jest && npx tsc --noEmit -p . && npm run build`; commit the round-2 results.
-2. Re-run the R16 README review (MAN-02) against the corrected README; MAN-04 rehearsal must include the file picker, drop confirmation and status-bar Cancel in the real app.
-3. MECE round 3 if any BLOCKER/MAJOR remains; otherwise run the orchestrator-runnable gates (90_ACCEPTANCE G-*).
-4. Push (needs user permission), 3-OS CI, manual MAN-01..04 (named human), release 2.0.0, cleanup worktrees/temp.
+Engine ownership: malformed HWP V1 validation, conservative pre-render pixel cap, full Python parameter receipt matching, independent publication/member-continuation oracles, reference pins and documentation. Protected horizontal files (`test_class_sweep.py` and class_stage TOML) and shell production/tests/FX-71 remain with their existing owners. No git operation is part of this task.
+
+Pending release evidence remains explicit: the Linux x64/Python3.14 Core0.3.6 hash-mode reference install; required supported endpoint and intermediate smoke CI receipts; supported-host FX-71 publication by its owner; real desktop cancellation/picker/drop rehearsal; provenance and MAN-01..04 named reviews. Local passing tests are not those receipts. Engine-staged recordings and any remaining owner-specific findings are linked from the M3 fix report.
+
+## Shell (MECE round 3, Fable, same day)
+
+Every shell-side finding of [M3_fable_cross.md](review/M3_fable_cross.md) is fixed; dispositions are the M3 rows at the end of [20_SHELL.md](20_SHELL.md) section 7.
+
+- **N-02 BLOCKER**: every engine spawn is `<python> -I -X utf8 -m mdflow <cmd>` (`ENGINE_ARGV_PREFIX` in `shell/src/process/launcher.ts`); the cwd is the engine venv root (`engineWorkingDirectory`), or the home directory for bootstrap probes, never the vault or the plugin folder; bootstrap probes run `-I --version`; the SetupModal recipe checks with `-I -m mdflow version|selftest`. JT-12 proves `argv[0..2]` and the cwd for the coordinator, version probe, selftest and setup diagnostics; the JT-11 invocation oracle rejects a missing prefix.
+- **N-01 MAJOR**: atomic busy admission (`reserved` flag held across the awaits of `ShellCoordinator.submit`, released in `finally`); JT-09 same-tick double submit with a pending gate -> one spawn, one `shell.BUSY`.
+- **N-03/05/06/07/08/09/10/11 MINOR, S-16..S-21**: PROTOCOL only when a failed plan left no diagnostic; picker outcomes `selected|cancelled|empty|blocked` with `shell.notice.pickerEmpty` and a user-activation check; Base URL loopback rule in the tab and the migration; reload/drop-trade-off notes; `DirectorySpoolFs` (`process/spool-fs.ts`) ranged reads through `FileSystemOps.readRange`; `open-log-folder` creates the folder first; `@electron/remote` external, `approvableHashes`, `Spool.finish`, `CoordinatorDeps.locale`, `legacyFilePath` and the `ui/output-path` shim removed. Side-finding fixed: `captureProbe` TDZ when `spawn` throws synchronously.
+- Receipts: `build/trace/redgreen/m3-shell.red.log` (43 failed / 238, tests first) -> `m3-shell.green.log` + `.json` (266/266, 25 suites). `npm run build` succeeded in the fix session; `tsc --noEmit` was not runnable in that sandbox and must be re-run by the orchestrator before commit.
+- README refreshed: isolated-mode launch, Base URL rule, Windows forced-cancel and `mdflow-*` temp-dir residue (N-04 disclosure), picker/drop/reload notes, `-I` in the CLI usage block.
+
+Engine/tools handoffs from the shell round (cx): (1) `engine/BOOTSTRAP.md` and 25_PACKAGING section 2 recipes should show `-I -m mdflow version|selftest`; no engine CLI change is needed for `-I` (`cli.main` reconfigures stdio to UTF-8, reads no `PYTHON*` variable, venv site-packages stay importable under `-I`). (2) N-04: clean stale `mdflow-*` temp dirs at engine start, or accept the README disclosure as final. (3) X-11 carried: FX-71 re-recording on a 3.14 release host so JT-17 can drop its widened policy.

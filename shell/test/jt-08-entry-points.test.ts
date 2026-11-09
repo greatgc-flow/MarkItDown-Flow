@@ -34,6 +34,12 @@ interface Harness {
   picker: FilePicker & { confirmations: Selection[]; confirmAnswer: boolean; files: string[] | null; folder: string | null };
 }
 
+/** Test resolver standing in for Electron `webUtils.getPathForFile` (node-apis.filePath is the single production resolver, S-20). */
+const legacyPath = (file: unknown): string | null => {
+  const value = (file as { path?: unknown }).path;
+  return typeof value === 'string' && value.length > 0 ? value : null;
+};
+
 function realCoordinator(): ShellCoordinator {
   const fs = new FakeFs({ directories: [VAULT_ROOT, abs(VAULT_ROOT, 'markitdown-output'), FOLDER, PLUGIN_DIR] });
   const deps: CoordinatorDeps = {
@@ -45,7 +51,6 @@ function realCoordinator(): ShellCoordinator {
     platform: process.platform === 'win32' ? 'win32' : 'posix',
     vaultRoot: VAULT_ROOT,
     pluginDir: PLUGIN_DIR,
-    locale: 'en',
     settings: () => settingsV2(),
     gate: () => null,
     consent: async () => ({ approved: false }),
@@ -85,6 +90,7 @@ function harness(settingsOverrides: Parameters<typeof settingsV2>[0] = {}): Harn
       picker.confirmations.push(selection);
       return picker.confirmAnswer;
     },
+    pathOf: legacyPath,
   };
   const settings = settingsV2(settingsOverrides);
   plugin.load();
@@ -193,13 +199,13 @@ it(R('JT-08 the drop listener exists only when enabled; text and URL drops are n
 });
 
 it(R('JT-08 selectionFromDrop accepts local files only'), () => {
-  expect(selectionFromDrop(dropEvent({ types: ['Files'], files: [{ path: FILE_A, name: 'a.pdf' }, { path: path.join(VAULT_ROOT, 'b.docx'), name: 'b.docx' }] }))).toEqual({
+  expect(selectionFromDrop(dropEvent({ types: ['Files'], files: [{ path: FILE_A, name: 'a.pdf' }, { path: path.join(VAULT_ROOT, 'b.docx'), name: 'b.docx' }] }), legacyPath)).toEqual({
     kind: 'files',
     paths: [FILE_A, path.join(VAULT_ROOT, 'b.docx')],
   });
-  expect(selectionFromDrop(dropEvent({ types: ['text/plain'], text: 'hello' }))).toBeNull();
-  expect(selectionFromDrop(dropEvent({ types: ['text/uri-list'], text: 'https://example.com/x.pdf' }))).toBeNull();
-  expect(selectionFromDrop(dropEvent({ types: ['Files'], files: [{ path: '', name: 'remote.pdf' }] }))).toBeNull();
+  expect(selectionFromDrop(dropEvent({ types: ['text/plain'], text: 'hello' }), legacyPath)).toBeNull();
+  expect(selectionFromDrop(dropEvent({ types: ['text/uri-list'], text: 'https://example.com/x.pdf' }), legacyPath)).toBeNull();
+  expect(selectionFromDrop(dropEvent({ types: ['Files'], files: [{ path: '', name: 'remote.pdf' }] }), legacyPath)).toBeNull();
 });
 
 it(R('JT-08 identical selections through command, ribbon, context menu and drop produce identical coordinator requests'), async () => {

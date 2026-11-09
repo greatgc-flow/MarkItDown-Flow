@@ -18,6 +18,20 @@ export function joinPath(platform: HostPlatform, base: string, ...segments: stri
   return out;
 }
 
+/**
+ * Parent directory of an absolute path (pure string operation). A drive or POSIX
+ * root is its own parent; a bare name without separators is returned unchanged.
+ */
+export function parentPath(platform: HostPlatform, path: string): string {
+  const trimmed = path.replace(/[\\/]+$/, '');
+  if (/^[A-Za-z]:$/.test(trimmed)) return trimmed + separatorFor(platform);
+  const index = Math.max(trimmed.lastIndexOf('/'), trimmed.lastIndexOf('\\'));
+  if (index < 0) return trimmed.length === 0 ? path.slice(0, 1) : trimmed;
+  if (index === 0) return trimmed.slice(0, 1);
+  const parent = trimmed.slice(0, index);
+  return /^[A-Za-z]:$/.test(parent) ? parent + separatorFor(platform) : parent;
+}
+
 /** Comparable form of a real path: forward slashes, no trailing slash, case-folded on Windows. */
 export function comparablePath(platform: HostPlatform, path: string): string {
   const slashed = path.replace(/\\/g, '/').replace(/\/+$/, '');

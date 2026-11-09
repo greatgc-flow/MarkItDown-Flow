@@ -343,8 +343,3 @@ export function decodeReport(stdout: string): Decoded<RunReport> {
     return { ok: false, diagnostic: 'shell.PROTOCOL', reason: error instanceof SchemaError ? error.message : 'report decoding failed' };
   }
 }
-
-/** Hashes eligible for `--yes` from fully decoded Plans only (never from events). */
-export function approvableHashes(plans: readonly Plan[]): string[] {
-  return plans.map((p) => p.plan_hash).filter((h) => HEX64.test(h));
-}

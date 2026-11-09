@@ -54,6 +54,11 @@ export interface Clock {
 
 export interface FileSystemOps {
   readFile(path: string): Promise<Uint8Array | null>;
+  /**
+   * Read at most `length` bytes starting at `offset` (bounded spool drain,
+   * REQ-SHL-13); an empty array at EOF; rejects when the file does not exist.
+   */
+  readRange(path: string, offset: number, length: number): Promise<Uint8Array>;
   writeFile(path: string, data: Uint8Array): Promise<void>;
   appendFile(path: string, data: Uint8Array): Promise<void>;
   remove(path: string): Promise<void>;
