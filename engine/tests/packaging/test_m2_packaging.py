@@ -78,7 +78,8 @@ def test_T_GEN_86_m2_missing_failed_or_wrong_commit_runtime_receipts_block_accep
     evidence.mkdir()
     commit = 'a' * 40
     record = dict(nodeid='engine/tests/synthetic.py::test_T_GEN_00_receipt_control', tid='T-GEN-00', markers={})
-    monkeypatch.setattr(trace_module, 'discover_tests', lambda root: [record])
+    soffice = dict(nodeid='engine/tests/synthetic.py::test_T_CNV_93', tid='T-CNV-93', markers={'soffice': [[]]})
+    monkeypatch.setattr(trace_module, 'discover_tests', lambda root: [record, soffice])
     assert trace_module.required_executions(evidence, commit)
     for target in ('windows-2022', 'ubuntu-24.04', 'macos-26'):
         for py in ('3.10', '3.14'):
@@ -89,8 +90,9 @@ def test_T_GEN_86_m2_missing_failed_or_wrong_commit_runtime_receipts_block_accep
                 ET.SubElement(props, 'property', name=key, value=record[key])
             filename = f'junit-engine-{target}-py{py}.xml'
             ET.ElementTree(suite).write(evidence / filename)
-            trace_module.write_collection(trace_module.collection_path(evidence, filename), [record], commit)
-            trace_module.write_execution_registry(evidence, filename, [dict(record, selected=True)], commit)
+            trace_module.write_collection(trace_module.collection_path(evidence, filename), [record, soffice], commit)
+            trace_module.write_execution_registry(evidence, filename,
+                [dict(record, selected=True), dict(soffice, selected=False)], commit)
             (evidence / f'runtime-{target}-py{py}.json').write_text(json.dumps(dict(installed=True, commit=commit)))
         for py in ('3.11', '3.12', '3.13'):
             (evidence / f'smoke-{target}-py{py}.json').write_text(json.dumps(dict(exit=0, commit=commit)))

@@ -57,8 +57,9 @@ def discover_tests(root: Path) -> list[dict]:
         def visit(node: ast.AST, inherited: dict, scope: str) -> None:
             markers = {key: list(value) for key, value in inherited.items()}
             for decorator in getattr(node, "decorator_list", []):
-                if isinstance(decorator, ast.Attribute) and ast.unparse(decorator) == 'pytest.mark.release':
-                    markers['release'] = [[]]
+                if isinstance(decorator, ast.Attribute) and ast.unparse(decorator) in {
+                        'pytest.mark.release', 'pytest.mark.soffice'}:
+                    markers[decorator.attr] = [[]]
                 if not isinstance(decorator, ast.Call):
                     continue
                 name = ast.unparse(decorator.func)
@@ -638,7 +639,7 @@ def required_executions(evidence: Path, expected_commit: str) -> list[str]:
             path = evidence / f'junit-engine-{runner}-py{py}.xml'
             try:
                 platform = 'windows' if runner.startswith('windows') else 'posix'
-                expected = [r for r in source_rows if 'release' not in r['markers'] and (
+                expected = [r for r in source_rows if not {'release', 'soffice'}.intersection(r['markers']) and (
                     not marker_values(r, 'plat') or platform in marker_values(r, 'plat'))]
                 receipt = execution_receipt(evidence, path.name, expected_commit)
                 if not rows_passed(expected, receipt) or not all(receipt[1].values()):
@@ -678,6 +679,8 @@ def oracle_receipts(root: Path, evidence: Path, expected_commit: str, *, defer_r
         rows = [t for t in registry if t["tid"] == tid]
         if not rows:
             return False
+        if any('soffice' in row['markers'] for row in rows):
+            return engine_passed('junit-legacy-libreoffice-ubuntu-24.04-py3.14.xml', rows)
         if tid == 'PT-02':
             # R27's hash reproduction is scoped to its single reference target.
             return engine_passed('junit-reference.xml', rows)

@@ -6,12 +6,12 @@ import sys
 
 import pytest
 
-from _support import REPO, load_py
+from _support import REPO, load_py, load_workflows, jobs, step_text, transitive_needs
 
 COMMIT = 'a' * 40
 
 
-def candidate_receipts(root, trace):
+def candidate_receipts(root, trace, *, soffice=False):
     docs = root / 'docs/renewal'
     docs.mkdir(parents=True)
     tests = root / 'engine/tests'
@@ -20,13 +20,18 @@ def candidate_receipts(root, trace):
         'def test_PT_17(): pass\ndef test_CT_01(): pass\n'
         '@pytest.mark.release\ndef test_PT_02(): pass\n'
         '@pytest.mark.release\ndef test_PT_04(): pass\n')
+    if soffice:
+        (tests / 'test_soffice.py').write_text(
+            '@pytest.mark.soffice\ndef test_T_CNV_93(): pass\n')
     weights = [5, 7, 9, 6, 8, 7, 8, 6, 5, 6, 5, 5, 5, 4, 4, 2, 1]
     selectors = {4: 'CT-01', 13: 'PT-02', 15: 'PT-04'}
+    if soffice:
+        selectors[2] = 'T-CNV-93`, `CT-01'
     (docs / '90_ACCEPTANCE.md').write_text('\n'.join(
         f'| G-{i:02d} example | {w} | `{selectors.get(i, "PT-17")}` | pytest example | all pass |'
         for i, w in enumerate(weights, 1)))
     (docs / '30_TESTPLAN.md').write_text('## 4. Test catalog\n' + '\n'.join(
-        f'| {tid} | REQ-PKG-17 | A |' for tid in ('PT-17', 'CT-01', 'PT-02', 'PT-04')) + '\n## 5. End\n')
+        f'| {tid} | REQ-PKG-17 | A |' for tid in ('PT-17', 'CT-01', 'PT-02', 'PT-04', *(['T-CNV-93'] if soffice else []))) + '\n## 5. End\n')
     executions = root / 'executions'
     executions.mkdir()
     rows = trace.discover_tests(root)
@@ -34,12 +39,19 @@ def candidate_receipts(root, trace):
     names += [f'junit-{phase}-{runner}-py{py}.xml'
               for phase in ('engine', 'release') for runner in ('windows-2022', 'ubuntu-24.04', 'macos-26')
               for py in ('3.10', '3.14')]
+    if soffice:
+        base = next(r for r in rows if r['tid'] == 'T-CNV-93')
+        rows = [r for r in rows if r is not base] + [
+            dict(base, nodeid=base['nodeid'] + f'[{extension}]') for extension in ('doc', 'rtf')]
+        names.append('junit-legacy-libreoffice-ubuntu-24.04-py3.14.xml')
     for name in names:
+        selected = [dict(r, selected=(r['tid'] == 'T-CNV-93' if 'legacy-libreoffice' in name
+                                     else r['tid'] != 'T-CNV-93')) for r in rows]
         trace.write_collection(trace.collection_path(executions, name), rows, COMMIT, root=root)
-        trace.write_execution_registry(executions, name, [dict(r, selected=True) for r in rows], COMMIT)
+        trace.write_execution_registry(executions, name, selected, COMMIT)
         (executions / name).write_text('<testsuite>' + ''.join(
             '<testcase><properties><property name="nodeid" value="' + r['nodeid'] + '"/>'
-            '<property name="tid" value="' + r['tid'] + '"/></properties></testcase>' for r in rows) + '</testsuite>')
+            '<property name="tid" value="' + r['tid'] + '"/></properties></testcase>' for r in selected if r['selected']) + '</testsuite>')
     return executions
 
 
@@ -98,6 +110,85 @@ def test_PT_30_r36_generator_refuses_incomplete_or_failed_ci(tmp_path, mutation)
         path.write_bytes(path.read_bytes() + b' ')
     with pytest.raises(ValueError):
         tool.generate_oracles(tmp_path, executions, COMMIT, {})
+
+
+@pytest.mark.req('REQ-PKG-08', 'REQ-PKG-17', 'REQ-PKG-22')
+@pytest.mark.cov('S0', 'FM10')
+@pytest.mark.parametrize('mutation', ['none', 'missing', 'skipped', 'failed', 'stale', 'omit_parameter', 'missing_collection'])
+def test_PT_33_soffice_gate_requires_dedicated_complete_ci_receipt(tmp_path, mutation):
+    sys.path.insert(0, str(REPO / 'tools'))
+    tool = load_py(REPO / 'tools/release_evidence.py', 'soffice_evidence')
+    import trace
+    executions = candidate_receipts(tmp_path, trace, soffice=True)
+    filename = 'junit-legacy-libreoffice-ubuntu-24.04-py3.14.xml'
+    record = tool.generate_oracles(tmp_path, executions, COMMIT, {})
+    sources = {s['path'] for s in record['G-02']['sources']}
+    assert {filename, trace.execution_registry_path(executions, filename).name,
+            trace.collection_path(executions, filename).name} <= sources
+    assert record['G-02']['result'] == 'PASS'
+    if mutation == 'none':
+        return
+    path = executions / filename
+    if mutation == 'missing':
+        path.unlink()
+    elif mutation in {'skipped', 'failed'}:
+        path.write_text(path.read_text().replace('</testcase>',
+            '<skipped/></testcase>' if mutation == 'skipped' else '<failure/></testcase>', 1))
+    elif mutation == 'stale':
+        registry = trace.execution_registry_path(executions, filename)
+        registry.write_text(registry.read_text().replace(COMMIT, 'b' * 40))
+    elif mutation == 'missing_collection':
+        trace.collection_path(executions, filename).unlink()
+    else:
+        registry = trace.execution_registry_path(executions, filename)
+        data = json.loads(registry.read_text())
+        data['tests'] = [r for r in data['tests'] if not r['nodeid'].endswith('[rtf]')]
+        registry.write_text(json.dumps(data))
+        import xml.etree.ElementTree as ET
+        tree = ET.parse(path)
+        tree.getroot().remove(tree.getroot()[-1])
+        tree.write(path)
+    with pytest.raises(ValueError):
+        tool.generate_oracles(tmp_path, executions, COMMIT, {})
+
+
+@pytest.mark.req('REQ-PKG-08', 'REQ-PKG-17')
+@pytest.mark.cov('S0', 'FM10')
+def test_PT_34_soffice_ci_executes_installed_wheel_and_rejects_skips(test_registry, tmp_path):
+    import subprocess
+    ci = jobs(load_workflows()['.github/workflows/ci.yml'])
+    assert '-m "not release and not soffice"' in step_text(ci['pytest'])
+    job = ci['legacy-libreoffice']
+    assert job['runs-on'] == 'ubuntu-24.04'
+    assert not job.get('continue-on-error', False) and not job.get('strategy')
+    assert job['env']['MDFLOW_TEST_INSTALLED'] == '1'
+    assert 'candidate' in transitive_needs(ci, 'legacy-libreoffice')
+    assert 'legacy-libreoffice' in transitive_needs(ci, 'trace')
+    steps = job['steps']
+    assert any(s.get('with', {}).get('python-version') == '3.14' for s in steps)
+    text = step_text(job)
+    assert 'apt-get install' in text and 'libreoffice-writer-nogui' in text and 'libreoffice-impress-nogui' in text
+    assert 'packaged_check.py install-current' in text and '-m soffice' in text
+    assert 'junit-legacy-libreoffice-ubuntu-24.04-py3.14.xml' in text
+    upload = next(s for s in steps if 'actions/upload-artifact@' in s.get('uses', ''))
+    assert upload['if'] == '${{ always() }}'
+    assert upload['with']['name'] == 'legacy-libreoffice'
+    assert any(s.get('with', {}).get('name') == 'legacy-libreoffice' for s in ci['trace']['steps'])
+    real = [r for r in test_registry if r['tid'] == 'T-CNV-93']
+    assert real and all('soffice' in r['markers'] for r in real)
+    # Execute the workflow's JUnit check against both a pass and a skip.
+    check = next(s['run'] for s in steps if s.get('name') == 'Require zero skipped LibreOffice tests')
+    path = tmp_path / 'build/trace/junit-legacy-libreoffice-ubuntu-24.04-py3.14.xml'
+    path.parent.mkdir(parents=True)
+    import shlex
+    args = shlex.split(check)
+    assert args[:2] == ['python', '-c']
+    for child, expected in [('', 0), ('<skipped/>', 1), ('<failure/>', 1), ('<error/>', 1)]:
+        path.write_text('<testsuite><testcase>' + child + '</testcase></testsuite>')
+        result = subprocess.run([sys.executable, *args[1:]], cwd=tmp_path, capture_output=True)
+        assert result.returncode == expected, result.stderr
+    path.write_text('<testsuite/>')
+    assert subprocess.run([sys.executable, *args[1:]], cwd=tmp_path, capture_output=True).returncode == 1
 
 
 @pytest.mark.req('REQ-PKG-22', 'REQ-PKG-11', 'REQ-PKG-04', 'REQ-PKG-15')

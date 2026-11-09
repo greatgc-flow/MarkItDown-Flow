@@ -14,7 +14,7 @@ Status: DRAFT-2, 2026-11-09. Synced to `10_SPEC.md` DRAFT-3.8 (R34), `20_SHELL.m
 | `MAN-nn` | named manual sign-off (section 7); **never counted as automated coverage** (SHL-21, PKG-10) | | `attest/*.yml` |
 | `S0..S13`, `FM0..FM12`, `K01..K20` | matrix axes (section 5) | | |
 
-Platform rule: a test that cannot run on an OS carries `@pytest.mark.plat("posix"|"windows")`; it is *absent* (not skipped) elsewhere; each REQ still needs a pass on >= 1 required OS. The optional real LibreOffice integration skips only when soffice is absent; fake-soffice coverage always runs. Any other skip/xfail = failure.
+Platform rule: a test that cannot run on an OS carries `@pytest.mark.plat("posix"|"windows")`; it is *absent* (not skipped) elsewhere; each REQ still needs a pass on >= 1 required OS. Real LibreOffice integrations carry the registered `soffice` marker. The six required installed-wheel cells run `-m "not release and not soffice" --runxfail`, requiring zero skipped tests. The single required `legacy-libreoffice (ubuntu-24.04, 3.14)` job installs headless Writer and Impress from apt and runs `-m soffice --runxfail`, enforcing a nonempty JUnit with zero skipped/failed/errored cases. Its JUnit, registry and independent collection are G-02 sources. Local real-tool tests may skip when soffice is absent; fake-soffice coverage always runs in required cells. A skip/xfail in either required CI phase is failure.
 
 ## 1. Repo layout (tests)
 
@@ -454,6 +454,8 @@ R27/R28 added registrations (existing REQs; precise fixture assertions replace b
 | PT-30 | REQ-PKG-22, REQ-PKG-17 (R36: reject missing/failed/stale CI and changed collection hashes) | A |
 | PT-31 | REQ-PKG-22, REQ-PKG-11, REQ-PKG-04, REQ-PKG-15 (R36: reduced action/license reviews; oracle spot-check template; listing review without owner access) | A |
 | PT-32 | REQ-PKG-22, REQ-PKG-17 (R36: CI summaries precede release execution; final scoring still requires release receipts; retain valid endpoint deduplication) | A |
+| PT-33 | REQ-PKG-08, REQ-PKG-17, REQ-PKG-22 (G-02: dedicated candidate-bound soffice receipt and source hashes; missing/skipped/failed/stale/omitted-parameter/collection rejection) | A |
+| PT-34 | REQ-PKG-08, REQ-PKG-17 (G-02: separate real-soffice selection and required installed-wheel CI job; executed JUnit skip/failure/error/empty rejection) | A |
 
 ### 4.5 Coverage statement
 
@@ -540,7 +542,7 @@ Red logs: `build/trace/redgreen/r29-*.red.log` (R29 is green at baseline by audi
 |---|---|---|
 | T-CNV-91 | REQ-CNV-07, REQ-ASM-03 | Installed Core with fake soffice: default OFF even with SOFFICE_PATH, documented opt-in/marker, isolated profile, exact original/returned-Markdown hashes with derived_format=markdown, DERIVED frontmatter and deleted Core workspace; K12 reaches Select/Convert/Render/Lookup/Approve/Transcribe/Assemble/Write. |
 | T-CNV-92 | REQ-CNV-07, REQ-GEN-09 | Absent tool, malformed result, timeout with real descendant; tree death, cleanup, no output, surviving sibling. |
-| T-CNV-93 | REQ-CNV-07, REQ-ASM-03 | integration marker: generate DOCX, use installed soffice to produce DOC and RTF at test time, then real engine conversion; skip only if soffice absent; execute gc-owned isolation helper for fixture generation. Windows local path C:/Program Files/LibreOffice/program/soffice.exe is probed. |
+| T-CNV-93 | REQ-CNV-07, REQ-ASM-03 | integration and soffice markers: generate DOCX, use installed soffice to produce DOC and RTF at test time, then real engine conversion; required in the dedicated Ubuntu 24.04/Python 3.14 job with skipped=0; local runs skip only if soffice absent; execute gc-owned isolation helper for fixture generation. Windows local path C:/Program Files/LibreOffice/program/soffice.com is probed. |
 | T-CNV-94 | REQ-CNV-07, REQ-PLN-01, REQ-APR-01, REQ-ASM-03 | Four enabled legacy filters with embedded media: derived hash-bound approval, exact request/transcription/placement, published media, ledger record and cached warm rerun; concrete K12 execution cells. |
 | T-CLS-93 | REQ-CLS-08 | Independently enumerated nine text extensions: T/NONE, exact warning policy. |
 | T-CLI-83 | REQ-GEN-12 | Temp sys.path fake markitdown dist-info, every CLI and direct entry delegates to Core installation_conflict and refuses before conversion, including warm conversion path. |
