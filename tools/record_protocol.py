@@ -1,7 +1,7 @@
 """Record FX-71 protocol streams from REAL ``python -m mdflow`` runs (stdlib only).
 
-    python tools/record_protocol.py            # record + derive into shell/test/fixtures/fx71/
-    python tools/record_protocol.py --verify   # hashes match manifest; derived == transform(parent)
+    python -I tools/record_protocol.py            # installed wheel; record + derive into shell/test/fixtures/fx71/
+    python -I tools/record_protocol.py --verify   # hashes match manifest; derived == transform(parent)
 
 Provenance rules (30_TESTPLAN FX-71, 90_ACCEPTANCE G-12):
 
@@ -189,6 +189,7 @@ def t_triage_extra(parent: bytes) -> bytes:
 
 VERSION_KEYS = ("mdflow", "markitdown-gc", "pypdfium2", "pillow", "python", "platform", "protocol", "triage_schema")
 VERSION_VARIANTS = ["protocol-2", "schema-2", "wrong-pillow", "wrong-renderer", "core-out-of-range",
+                    "core-unavailable", "python-3.15",
                     "protocol-string", "unknown-optional-field", *[f"missing-{k}" for k in VERSION_KEYS]]
 
 
@@ -209,6 +210,10 @@ def version_variant(name: str, parent: bytes) -> bytes:
         data["pypdfium2"] = _bump_major(data["pypdfium2"])
     elif name == "core-out-of-range":
         data["markitdown-gc"] = "0.4.0"
+    elif name == "core-unavailable":
+        data["markitdown-gc"] = "unavailable"
+    elif name == "python-3.15":
+        data["python"] = "3.15.2"
     elif name == "protocol-string":
         data["protocol"] = str(data["protocol"])
     elif name == "unknown-optional-field":
@@ -268,9 +273,9 @@ class Recorder:
         tmp.mkdir(parents=True, exist_ok=True)
         base = {k: v for k, v in os.environ.items()
                 if not k.upper().startswith("MDFLOW_") and k.upper() not in {"PYTHONPATH", "PYTHONHOME"}}
-        # Workspace-local TEMP: Python 3.15 on Windows cannot use mode=0700 temp dirs in the sandbox.
+        # Use the selected interpreter's installed engine, never a source-tree injection.
         base.update(HOME=str(home), USERPROFILE=str(home), TMP=str(tmp), TEMP=str(tmp),
-                    PYTHONIOENCODING="utf-8", PYTHONUTF8="1", PYTHONPATH=str(REPO / "engine/src"))
+                    PYTHONIOENCODING="utf-8", PYTHONUTF8="1")
         self.env = base
         self.version = None
 

@@ -15,7 +15,7 @@ import { SetupModal } from '../src/ui/setup-modal';
 import { HistoryModal } from '../src/ui/history-modal';
 import { FakeClock, flush } from './fixtures/fake-clock';
 import { FakeSpawner, type ScriptedChild } from './fixtures/fake-spawner';
-import { fx71Bytes } from './fixtures/fx71';
+import { fx71Bytes, fx71Manifest } from './fixtures/fx71';
 import { ENGINE_PYTHON, HOME, HOST_ENV, KEY_VALUE, PLUGIN_DIR, VAULT_ROOT } from './fixtures/shell-settings';
 
 const R = req('REQ-SHL-10');
@@ -144,7 +144,7 @@ it(R('JT-10 SetupModal open and refresh spawn only version probes; nothing is in
   expect(clipboard).toEqual([]);
   const rendered = (setup.contentEl as unknown as { textContent: string }).textContent;
   expect(rendered).toContain(ENGINE_PYTHON);
-  expect(rendered).toContain('2.0.0.dev0');
+  expect(rendered).toContain(fx71Manifest().engine.mdflow);
   expect(rendered).toContain('0.3.5');
   expect(rendered).not.toContain(KEY_VALUE);
   setup.close();
@@ -163,7 +163,7 @@ it(R('JT-10 copy buttons write only the instruction or redacted diagnostics text
   expect(clipboard).toHaveLength(3);
   expect(clipboard[0]).toBe(setup.diagnostics?.instructions.posix);
   expect(clipboard[1]).toBe(setup.diagnostics?.instructions.windows);
-  expect(clipboard[2]).toContain('2.0.0.dev0');
+  expect(clipboard[2]).toContain(fx71Manifest().engine.mdflow);
   expect(clipboard[2]).not.toContain(KEY_VALUE);
   expect(clipboard[2]).not.toContain(HOME);
   expect(spawner.requests).toHaveLength(spawnsBefore);

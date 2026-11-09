@@ -1,5 +1,5 @@
 {
-  "mdflow": "2.0.0.dev0",
+  "mdflow": "2.0.0",
   "markitdown-gc": "0.3.5",
   "pypdfium2": "5.15.1",
   "python": "3.15.2",

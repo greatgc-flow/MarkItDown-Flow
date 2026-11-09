@@ -349,4 +349,5 @@ def progress_events(stderr: str) -> list[dict]:
 
 
 def version_tuple(text: str) -> tuple[int, ...]:
-    return tuple(int(n) for n in re.match(r"\d+(?:\.\d+)*", text)[0].split("."))
+    match = re.match(r"\d+(?:\.\d+)*", text)
+    return tuple(int(n) for n in match[0].split(".")) if match else ()

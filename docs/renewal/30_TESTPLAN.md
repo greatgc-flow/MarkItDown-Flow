@@ -463,6 +463,10 @@ Every REQ id defined in `10_SPEC.md` (incl. new REQ-SNF-09), `20_SHELL.md` (SHL-
 | T-GEN-86 | REQ-PKG-08, REQ-GEN-03, REQ-PKG-17 | Missing/failed/skipped/wrong-commit installed runtime and nine smoke receipts block final release acceptance; synthetic positive/negative controls only. |
 
 | T-CNV-80 | REQ-CNV-03, REQ-RPT-03 | Real GIF/TIFF Core unsupported base conversion is empty text; Render/OCR remain authoritative, actual conversion faults still fail. |
+| T-CLI-80 | REQ-GEN-02, REQ-RPT-03 | X-14: missing/old/new Core still produces all eight version fields, exit 0, empty stderr and no socket calls. |
+| T-GEN-87 | REQ-PKG-06, REQ-GEN-02 | X-14: unavailable/malformed/empty Core versions block package admission with a Core-range diagnostic rather than raising. |
+| T-GEN-88 | REQ-PKG-09, REQ-PKG-06 | X-11: FX-71 records current 2.0.0, matches host/manifest and exact admission verdict plus hash/derivation verification; experimental 3.15 and unavailable Core are derived, blocked variants. An unsupported recording host is diagnosed, not relabelled; supported-host release recording remains PT-06's prerequisite. |
+| T-GEN-89 | REQ-PKG-09, REQ-PKG-01 | X-11: recorder strips source injection and uses the selected interpreter's installed wheel. |
 
 ## 5. Generated MECE matrices
 

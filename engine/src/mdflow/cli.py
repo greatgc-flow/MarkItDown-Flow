@@ -201,14 +201,14 @@ def main(argv: list[str] | None = None) -> int:
             stream.reconfigure(encoding="utf-8")
     try:
         args = _parser().parse_args(argv)
-        try:
-            _check_core()
-        except RuntimeError as exc:
-            return _error("E_CORE_VERSION", str(exc))
         if args.command_name == "version":
             _print(dict(orchestrate.tools(), python=platform.python_version(), platform=platform.platform(),
                         protocol=1, triage_schema=1))
             return 0
+        try:
+            _check_core()
+        except RuntimeError as exc:
+            return _error("E_CORE_VERSION", str(exc))
         if args.command_name == "providers":
             _print(providers.describe())
             return 0

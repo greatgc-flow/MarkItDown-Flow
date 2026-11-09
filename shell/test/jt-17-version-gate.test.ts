@@ -62,8 +62,8 @@ it(R('JT-17 R27 range-resolved renderer/Pillow installs are admitted inside the 
   for (const bad of ['10.4.0', '14.0.0', '15.0.0', '']) expect(blocked(evaluateVersionResponse(withField('pillow', bad), RECORDING_HOST_POLICY))).toEqual({ reason: 'pillow', field: 'pillow' });
 });
 
-it(R('JT-17 the default policy admits Python 3.10-3.14 only; the 3.15 recording host is blocked as unsupported'), () => {
-  expect(blocked(evaluateVersionResponse(fx71Text('version.json')))).toEqual({ reason: 'python', field: 'python' });
+it(R('JT-17 the default policy admits Python 3.10-3.14 only; the derived 3.15 variant is blocked as unsupported'), () => {
+  expect(blocked(evaluateVersionResponse(fx71Text('version.python-3.15.json')))).toEqual({ reason: 'python', field: 'python' });
   const base = JSON.parse(fx71Text('version.json')) as Record<string, unknown>;
   const withPython = (python: string): string => JSON.stringify({ ...base, python });
   for (const good of ['3.10.0', '3.11.9', '3.12.4', '3.13.1', '3.14.2']) expect(evaluateVersionResponse(withPython(good)).enabled).toBe(true);
@@ -88,6 +88,7 @@ it(R('JT-17 protocol 2, schema 2, string protocol, wrong Pillow, wrong renderer 
     ['version.wrong-pillow.json', 'pillow', 'pillow'],
     ['version.wrong-renderer.json', 'pypdfium2', 'pypdfium2'],
     ['version.core-out-of-range.json', 'core', 'markitdown-gc'],
+    ['version.core-unavailable.json', 'core', 'markitdown-gc'],
   ];
   for (const [name, reason, field] of cases) {
     const gate = evaluateVersionResponse(fx71Text(name), RECORDING_HOST_POLICY);
