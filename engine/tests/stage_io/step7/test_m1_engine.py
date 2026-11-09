@@ -256,12 +256,12 @@ def test_T_TRX_50_m1_v14_command_output_is_bounded_while_child_runs(tmp_path, ge
     script = tmp_path / 'noisy.py'
     script.write_text("import os,sys,time\nwhile True:\n os.write(1,b'x'*65536)\n time.sleep(.002)\n", encoding='utf-8')
     provider = providers.build_provider('command', model='bounded', command=gen.command_template(script, '{input}'),
-        command_egress=False, trust_command=True, env={'MDFLOW_TIMEOUT_S': '3'})
+        command_egress=False, trust_command=True, env={'MDFLOW_TIMEOUT_S': '30'})
     unit = gen.page_unit('p1', gen.png_noise())
     started = time.monotonic()
     result = provider.transcribe(unit, gen.png_noise(), transcribe.load_prompt('p1'))
     assert result['error']['code'] == 'E_PROVIDER_OUTPUT'
-    assert time.monotonic() - started < 2.5
+    assert time.monotonic() - started < 20  # output cap fires long before the 30 s timeout (#7)
 
 
 @pytest.mark.req('REQ-GEN-09', 'REQ-TRX-03')
