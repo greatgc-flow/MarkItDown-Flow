@@ -242,3 +242,43 @@ def test_PT_35_install_report_accepts_legacy_pip_archive_hash_form():
     assert module.archive_sha256({"archive_info": {"hashes": {"sha256": digest}}}) == digest
     assert module.archive_sha256({"archive_info": {"hash": "md5=abc"}}) == ""
     assert module.archive_sha256({}) == ""
+
+
+@pytest.mark.req("REQ-PKG-04")
+@pytest.mark.cov("S0", "FM10")
+def test_PT_36_placeholder_scan_excludes_only_pkg04_machine_fields():
+    sys.path.insert(0, str(REPO / "tools"))
+    module = load_py(REPO / "tools/release_evidence.py", "placeholder_scope")
+    download = {"url": "https://files.pythonhosted.org/core.whl",
+                "archive_info": {"hashes": {"sha256": "a" * 64}}}
+    record = dict(
+        reviewer="cx/cx.effort/gpt-6.1-sol", date="2026-11-10", commit=COMMIT,
+        evidence=["artifact license review notes"], verdict="PASS",
+        package="markitdown-gc", version="0.3.7",
+        source="https://pypi.org/pypi/markitdown-gc/0.3.7/json",
+        checks={"artifact_licenses": "PASS"},
+        artifacts=[dict(filename="core.whl", url=download["url"], sha256="a" * 64,
+                        size=123, packagetype="bdist_wheel", yanked=False)],
+        install_reports=[dict(target=target, commit=COMMIT, exit=0, report={"install": [
+            {"metadata": {"name": "markitdown-gc", "version": "0.3.7"}, "download_info": download},
+            {"metadata": {"name": "pypdfium2", "version": "4.30.0"}, "download_info": download},
+        ]}) for target in module.TARGETS],
+    )
+    filename = "pkg04_core_artifacts.json"
+    assert module.validate_extra(filename, record, COMMIT, root=REPO) == []
+    metadata = record["install_reports"][0]["report"]["install"][1]["metadata"]
+    for field, text in (("description", "<!-- TODO: third-party documentation -->"),
+                        ("license", "Copyright <YEAR>, <COPYRIGHT HOLDER>")):
+        metadata[field] = text
+        assert module.validate_extra(filename, record, COMMIT, root=REPO) == []
+        del metadata[field]
+    record["artifacts"][0]["filename"] = "TODO.whl"
+    assert module.validate_extra(filename, record, COMMIT, root=REPO) == []
+    for text in ("TODO", "<REVIEW NOTES>"):
+        peer_placeholder = dict(record, evidence=[text])
+        assert "unfilled evidence placeholders" in module.validate_extra(
+            filename, peer_placeholder, COMMIT, root=REPO)
+    # The same field names in other files remain subject to the placeholder scan.
+    for other in set(module.EXTRA_FILES) - {filename}:
+        assert "unfilled evidence placeholders" in module.validate_extra(
+            other, record, COMMIT, root=REPO)

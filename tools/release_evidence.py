@@ -60,7 +60,11 @@ def validate_extra(filename: str, data, expected_commit: str, *, root: Path, exe
     problems = []
     if filename not in EXTRA_FILES:
         return ['unknown evidence filename']
-    if re.search(r'<[A-Z][A-Z0-9 /_.-]*>|\bTODO\b', json.dumps(data)):
+    placeholder_data = data
+    if filename == 'pkg04_core_artifacts.json' and isinstance(data, dict):
+        # pip/PyPI metadata is machine-enriched and may quote third-party placeholders.
+        placeholder_data = {k: v for k, v in data.items() if k not in {'install_reports', 'artifacts'}}
+    if re.search(r'<[A-Z][A-Z0-9 /_.-]*>|\bTODO\b', json.dumps(placeholder_data)):
         problems.append('unfilled evidence placeholders')
     if not isinstance(data, dict):
         return problems + ['expected an object']
