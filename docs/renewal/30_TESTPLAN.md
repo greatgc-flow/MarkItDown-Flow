@@ -126,6 +126,7 @@ Cell = primary `S<stage>:FM<n>` (section 5).
 | T-META-03 | REQ-CLS-05 (GOLDEN.lock integrity, Core version) | all | S0:FM10 |
 | T-META-04 | REQ-PKG-10 (matrix cells covered-or-N/A) | all | S0:FM10 |
 | T-META-05 | REQ-PKG-10 (no class x stage cell is both covered and declared N/A) | all | S0:FM10 |
+| T-META-06 | REQ-PKG-10 (class x stage header cell count equals the expanded declarations) | all | S0:FM10 |
 | T-GEN-01 | REQ-GEN-01 | - | S0:FM0 |
 | T-GEN-02 | REQ-GEN-02 | - | S0:FM10 |
 | T-GEN-03 | REQ-GEN-03 | - | S0:FM0 |

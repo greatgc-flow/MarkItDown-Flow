@@ -71,3 +71,18 @@ def test_T_META_05_no_stale_class_stage_na(trace_module, repo_root, test_registr
     stale = sorted(f"{k}:{s}" for e in declared.get("class_stage", [])
                    for k in e.get("classes", []) for s in e.get("stages", []) if (k, s) in covered)
     assert not stale, f"stale N/A declarations also covered by tests: {stale}"
+
+
+@pytest.mark.req("REQ-PKG-10")
+@pytest.mark.cov("S0", "FM10")
+@pytest.mark.fx("all")
+@pytest.mark.scope("schema")
+def test_T_META_06_class_stage_header_count_matches_expanded_cells(repo_root):
+    """M4-H: the '(N cells)' header of the class x stage section equals the expanded declarations."""
+    import re
+    import tomllib
+    text = (repo_root / "engine/tests/matrix.toml").read_text(encoding="utf-8")
+    declared = tomllib.loads(text).get("class_stage", [])
+    actual = sum(len(e["classes"]) * len(e["stages"]) for e in declared)
+    found = re.search(r"file class x stage \((\d+) cells\)", text)
+    assert found and int(found.group(1)) == actual, (found and found.group(1), actual)

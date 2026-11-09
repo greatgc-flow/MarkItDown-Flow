@@ -411,7 +411,7 @@ fms = ["FM12"]
 reason = "Report determinism and --report timestamps are asserted by the warm-rerun test (T-GEN-06)."
 owner = "S0:FM12"
 
-# ======================================================================= file class x stage (117 cells)
+# ======================================================================= file class x stage (67 cells)
 # R28: only S0-S3 and S13 may expand fx("all"); other stages need explicit fixture assertions.
 
 [[class_stage]]
