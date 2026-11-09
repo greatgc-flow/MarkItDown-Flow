@@ -80,7 +80,7 @@ def test_T_GEN_86_m2_missing_failed_or_wrong_commit_runtime_receipts_block_accep
     record = dict(nodeid='engine/tests/synthetic.py::test_T_GEN_00_receipt_control', tid='T-GEN-00', markers={})
     monkeypatch.setattr(trace_module, 'discover_tests', lambda root: [record])
     assert trace_module.required_executions(evidence, commit)
-    for target in ('windows-2022', 'ubuntu-24.04', 'macos-15-intel'):
+    for target in ('windows-2022', 'ubuntu-24.04', 'macos-26'):
         for py in ('3.10', '3.14'):
             suite = ET.Element('testsuite')
             case = ET.SubElement(suite, 'testcase', name='explicit synthetic receipt control')

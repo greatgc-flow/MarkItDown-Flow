@@ -29,7 +29,7 @@ import pytest
 
 from _support import (REPO, SHA40, SUBJECTS, json_objects, load_py, load_yaml, progress_events, version_tuple, ASSETS, WHEEL, REFERENCE)
 
-PLATFORMS = ("windows-2022", "ubuntu-24.04", "macos-15-intel")
+PLATFORMS = ("windows-2022", "ubuntu-24.04", "macos-26")
 LOCKED_ASSETS = ASSETS
 FROZEN_COMMANDS = ("convert-file", "convert-folder", "convert-url", "view-conversion-history", "open-log-folder",
                    "run-image-pipeline-selftest")

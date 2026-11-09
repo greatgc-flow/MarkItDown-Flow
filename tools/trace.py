@@ -620,7 +620,7 @@ def required_executions(evidence: Path, expected_commit: str) -> list[str]:
     """Release prerequisite receipts: real installed endpoints and all nine smokes."""
     problems = []
     source_rows = discover_tests(ROOT)
-    for runner in ('windows-2022', 'ubuntu-24.04', 'macos-15-intel'):
+    for runner in ('windows-2022', 'ubuntu-24.04', 'macos-26'):
         for py in ('3.10', '3.14'):
             path = evidence / f'junit-engine-{runner}-py{py}.xml'
             try:
@@ -671,7 +671,7 @@ def score(root: Path, evidence: Path, reviews: Path, expected_commit: str) -> di
             # R27's hash reproduction is scoped to its single reference target.
             return engine_passed('junit-reference.xml', rows)
         shell = tid.startswith("JT-")
-        for runner in ("windows-2022", "ubuntu-24.04", "macos-15-intel"):
+        for runner in ("windows-2022", "ubuntu-24.04", "macos-26"):
             for py in ([None] if shell else ["3.10", "3.14"]):
                 # A platform-restricted test is required only on the matching OS.
                 platform = "windows" if runner.startswith("windows") else "posix"

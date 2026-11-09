@@ -40,7 +40,7 @@ def test_T_META_90_m3_score_requires_each_collected_parameter(trace_module, tmp_
         ET.ElementTree(suite).write(evidence / filename, encoding='utf-8')
         return suite
 
-    for runner in ('windows-2022', 'ubuntu-24.04', 'macos-15-intel'):
+    for runner in ('windows-2022', 'ubuntu-24.04', 'macos-26'):
         for py in ('3.10', '3.14'):
             filename = f'junit-engine-{runner}-py{py}.xml'
             receipt(filename, nodes)

@@ -11,9 +11,10 @@ import pytest
 from _support import (REPO, SHA40, allowed_failure, audit_uses, expand_matrix, jobs, load_workflows, step_text,
                       transitive_needs, triggers, workflow_files)
 
-REQUIRED_OS = ("windows-2022", "ubuntu-24.04", "macos-15-intel")
+REQUIRED_OS = ("windows-2022", "ubuntu-24.04", "macos-26")
 REQUIRED_PY = ("3.10", "3.14")
 EXPERIMENTAL_PY = "3.15"
+ARCHITECTURE = "${{ matrix.os == 'macos-26' && 'arm64' || 'x64' }}"
 
 
 def all_jobs():
@@ -39,6 +40,9 @@ def test_PT_03_core_range_endpoints_are_visible_jobs_and_resolver_failure_fails(
     assert re.search(r"markitdown-gc\s*(>=\s*0\.3\.5\s*,\s*)?<\s*0\.4", text_high), \
         "contract-max must resolve the newest publicly available Core below 0.4"
     for label, job, text in (("contract-min", low, text_low), ("contract-max", high, text_high)):
+        assert job['runs-on'] == 'macos-26', f'{label}: required macOS contracts must use Apple Silicon'
+        setup = next(s for s in job['steps'] if str(s.get('uses', '')).startswith('actions/setup-python@'))
+        assert setup['with']['architecture'] == 'arm64'
         assert "engine/tests/contract" in text and "pytest" in text, f"{label} does not run the contract suite"
         assert re.search(r"importlib\.metadata|pip show|pip freeze", text), f"{label} does not log the resolved Core"
         assert job.get("continue-on-error") in (None, False), f"{label} is allowed to fail"
@@ -50,7 +54,7 @@ def test_PT_03_core_range_endpoints_are_visible_jobs_and_resolver_failure_fails(
 
 @pytest.mark.req("REQ-PKG-07", "REQ-GEN-03")
 @pytest.mark.cov("S0", "FM0")
-def test_PT_07_engine_matrix_has_six_required_three_experimental_cells_and_gates_release():
+def test_PT_07_engine_matrix_has_six_required_four_experimental_cells_and_gates_release():
     engine = [(name, jid, job) for name, jid, job in all_jobs()
               if "pytest" in step_text(job) and EXPERIMENTAL_PY in {c.get("python") for c in expand_matrix(job)}]
     assert engine, "no engine pytest matrix job with the 3.10/3.14/3.15 cells"
@@ -59,8 +63,17 @@ def test_PT_07_engine_matrix_has_six_required_three_experimental_cells_and_gates
         assert (job.get("strategy") or {}).get("fail-fast") is False, f"{jid}: fail-fast must be false"
         cells |= set(runs_on_cells(job))
     expected = {(o, p, p == EXPERIMENTAL_PY) for o in REQUIRED_OS for p in (*REQUIRED_PY, EXPERIMENTAL_PY)}
+    expected.add(('macos-26-intel', '3.12', True))
     assert cells == expected, f"matrix cells differ from 25_PACKAGING 3: {sorted(cells ^ expected)}"
-    assert sum(1 for c in cells if not c[2]) == 6 and sum(1 for c in cells if c[2]) == 3
+    assert sum(1 for c in cells if not c[2]) == 6 and sum(1 for c in cells if c[2]) == 4
+    intel = [(job, cell) for _, _, job in all_jobs() for cell in expand_matrix(job)
+             if cell.get('os') == 'macos-26-intel']
+    assert len(intel) == 1, 'keep exactly one Intel experiment across all workflows'
+    assert intel[0][1]['python'] == '3.12' and allowed_failure(*intel[0])
+    release = job_named('verify-release')
+    assert set(runs_on_cells(release)) == {(o, p, False) for o in REQUIRED_OS for p in REQUIRED_PY}
+    release_setup = next(s for s in release['steps'] if str(s.get('uses', '')).startswith('actions/setup-python@'))
+    assert release_setup['with']['architecture'] == ARCHITECTURE
     candidate = job_named('candidate')
     assert 'tools/build_release.py' in step_text(candidate)
     builder = (REPO / 'tools/build_engine.py').read_text(encoding='utf-8')
@@ -77,7 +90,8 @@ def test_PT_07_engine_matrix_has_six_required_three_experimental_cells_and_gates
         setups = [s for s in job["steps"] if str(s.get("uses", "")).startswith("actions/setup-python@")]
         assert setups, f"{jid}: Python must be set explicitly with setup-python"
         with_ = setups[0].get("with") or {}
-        assert with_.get("python-version") == "${{ matrix.python }}" and with_.get("architecture") == "x64"
+        assert with_.get("python-version") == "${{ matrix.python }}" and with_.get("architecture") == ARCHITECTURE
+        assert 'engine/tests/contract' in text, f'{jid}: installed Core contracts must run on every engine cell'
         for needle in ("sys.version", "platform.machine", "ImageVersion"):
             assert needle in text, f"{jid}: log must record {needle} (resolved patch, architecture, runner image)"
         run_text = "\n".join(str(s.get("run", "")) for s in job["steps"])
@@ -121,6 +135,8 @@ def test_PT_09_shell_jobs_on_three_os_pinned_node_and_python_smokes():
         assert node, f"{jid}: Node must be set up explicitly"
         version = str((node[0].get("with") or {}).get("node-version", ""))
         assert re.fullmatch(r"\d+\.\d+\.\d+", version), f"{jid}: exact Node patch required, got {version!r}"
+        if any(c.get('os') == 'macos-26' for c in expand_matrix(job)):
+            assert node[0]['with']['architecture'] == ARCHITECTURE
         oses |= {c.get("os") for c in expand_matrix(job)}
     assert oses == set(REQUIRED_OS), f"shell jobs must run on the three labels, got {sorted(map(str, oses))}"
     assert any("JT-SHL-19-01" in step_text(job) for _, _, job in all_jobs()), "JT-SHL-19-01 is not run by name"
@@ -130,6 +146,9 @@ def test_PT_09_shell_jobs_on_three_os_pinned_node_and_python_smokes():
              if "mdflow version" in step_text(job) and "classify" in step_text(job) for c in expand_matrix(job)}
     expected = {(o, p) for o in REQUIRED_OS for p in ("3.11", "3.12", "3.13")}
     assert expected <= smoke, f"install/version/classify smokes missing for {sorted(expected - smoke)}"
+    smoke_job = job_named('smoke')
+    smoke_setup = next(s for s in smoke_job['steps'] if str(s.get('uses', '')).startswith('actions/setup-python@'))
+    assert smoke_setup['with']['architecture'] == ARCHITECTURE
 
 
 @pytest.mark.req("REQ-PKG-11")

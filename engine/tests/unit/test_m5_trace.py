@@ -60,7 +60,7 @@ def test_T_META_97_m5_shell_score_requires_complete_bound_unique_identities(trac
                           name=row['nodeid'].split('::')[1])
         ET.ElementTree(suite).write(evidence / filename)
         return suite
-    for runner in ('windows-2022', 'ubuntu-24.04', 'macos-15-intel'):
+    for runner in ('windows-2022', 'ubuntu-24.04', 'macos-26'):
         filename = f'junit-shell-{runner}.xml'
         receipt(filename, nodes)
         trace_module.write_shell_collection(trace_module.collection_path(evidence, filename), nodes, commit, root=tmp_path)

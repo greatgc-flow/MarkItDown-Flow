@@ -42,7 +42,7 @@ def main():
     if retained['tagName'] != '1.0.8' or not {'main.js', 'manifest.json', 'styles.css'} <= names:
         raise ValueError('verified 1.0.8 rollback assets must remain available')
     # These jobs completed in the prerequisite reusable CI; scoring checked the actual per-cell JUnit.
-    platforms = ('windows-2022', 'ubuntu-24.04', 'macos-15-intel')
+    platforms = ('windows-2022', 'ubuntu-24.04', 'macos-26')
     candidate['required_jobs'] = [{'name': f'pytest ({o}, {py})', 'os': o, 'python': py,
                                     'result': 'success', 'run_id': os.environ['GITHUB_RUN_ID']}
                                    for o in platforms for py in ('3.10', '3.14')]

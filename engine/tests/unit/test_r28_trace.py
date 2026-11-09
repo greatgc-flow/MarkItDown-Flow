@@ -96,7 +96,7 @@ def test_T_META_54_r27_reference_score_requires_reference_execution_not_matrix_s
         trace_module.write_collection(trace_module.collection_path(evidence, name), [record], commit, root=tmp_path)
         trace_module.write_execution_registry(evidence, name, [dict(record, selected=True)], commit)
 
-    for os in ('windows-2022', 'ubuntu-24.04', 'macos-15-intel'):
+    for os in ('windows-2022', 'ubuntu-24.04', 'macos-26'):
         for py in ('3.10', '3.14'):
             execution(f'junit-engine-{os}-py{py}.xml')
     score = lambda: trace_module.score(tmp_path, evidence, tmp_path / 'reviews', commit)

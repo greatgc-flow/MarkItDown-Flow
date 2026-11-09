@@ -249,17 +249,18 @@ def expand_matrix(job: dict) -> list[dict]:
     return cells + [dict(i) for i in (matrix.get("include") or [])]
 
 
-_EXPR_EQ = re.compile(r"^\$\{\{\s*matrix\.(\w+)\s*==\s*'([^']*)'\s*\}\}$")
+_EXPR_EQ = re.compile(r"^matrix\.(\w+)\s*==\s*'([^']*)'$")
 
 
 def allowed_failure(job: dict, cell: dict) -> bool:
     value = job.get("continue-on-error", False)
     if isinstance(value, bool):
         return value
-    match = _EXPR_EQ.match(str(value).strip())
-    if not match:
+    expression = re.fullmatch(r'\$\{\{\s*(.*?)\s*\}\}', str(value).strip())
+    clauses = [_EXPR_EQ.fullmatch(c.strip()) for c in expression[1].split('||')] if expression else []
+    if not clauses or not all(clauses):
         raise AssertionError(f"unsupported continue-on-error expression: {value!r}")
-    return cell.get(match[1]) == match[2]
+    return any(cell.get(clause[1]) == clause[2] for clause in clauses)
 
 
 def step_text(job: dict) -> str:

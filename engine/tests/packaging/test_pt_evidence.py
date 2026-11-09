@@ -56,7 +56,8 @@ def assert_validator(validate, sample, mutations):
 
 # ------------------------------------------------------------------- PT-04 (H)
 
-REQUIRED_TARGETS = tuple(f"{o}:x64:py{p}" for o in ("windows-2022", "ubuntu-24.04", "macos-15-intel") for p in ("3.10", "3.14"))
+REQUIRED_TARGETS = tuple(f"{o}:{arch}:py{p}" for o, arch in (
+    ("windows-2022", "x64"), ("ubuntu-24.04", "x64"), ("macos-26", "arm64")) for p in ("3.10", "3.14"))
 
 
 def check_artifacts(data: dict) -> list[str]:
