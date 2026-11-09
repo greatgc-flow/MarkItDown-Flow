@@ -457,6 +457,7 @@ R27/R28 added registrations (existing REQs; precise fixture assertions replace b
 | PT-33 | REQ-PKG-08, REQ-PKG-17, REQ-PKG-22 (G-02: dedicated candidate-bound soffice receipt and source hashes; missing/skipped/failed/stale/omitted-parameter/collection rejection) | A |
 | PT-34 | REQ-PKG-08, REQ-PKG-17 (G-02: separate real-soffice selection and required installed-wheel CI job; executed JUnit skip/failure/error/empty rejection) | A |
 | PT-35 | REQ-PKG-04 (pip report sha256 accepted from hashes{} or legacy archive_info.hash `sha256=<hex>`; other algorithms rejected) | A |
+| PT-36 | REQ-PKG-04 (pkg04 placeholder scan excludes machine-enriched install_reports/artifacts; peer placeholders and other evidence files remain rejected) | A |
 
 ### 4.5 Coverage statement
 
