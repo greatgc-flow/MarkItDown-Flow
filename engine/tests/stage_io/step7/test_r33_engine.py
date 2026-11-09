@@ -24,6 +24,19 @@ def docx_bytes(folder, *, image=None):
     return path.read_bytes()
 
 
+def derived_oracle(tool, fmt, folder):
+    """Independent native extraction of known tool output, plus documented marker."""
+    import io
+    from markitdown import MarkItDown
+
+    folder.mkdir()
+    native = MarkItDown(enable_plugins=False, exiftool_path='').convert_stream(
+        io.BytesIO((tool.parent / 'seed.docx').read_bytes()),
+        file_extension='.pptx' if fmt == 'ppt' else '.docx',
+        extract_media=str(folder / 'media'), media_base_dir=str(folder)).markdown
+    return f'<!-- converted via LibreOffice 25.2.7.2 from .{fmt}; fidelity=DERIVED -->\n\n' + native
+
+
 def fake_soffice(folder, *, hang=False, broken=False, image=None):
     folder.mkdir()
     (folder / 'seed.docx').write_bytes(docx_bytes(folder, image=image))
@@ -60,7 +73,8 @@ target.write_bytes(b'broken' if %r else (root / 'seed.docx').read_bytes())
 @pytest.mark.cov('S0', 'FM10')
 @pytest.mark.parametrize('state', ['missing', 'invalid_override', 'ok', 'malformed', 'timeout'])
 def test_T_CLI_85_libreoffice_version_diagnostics(tmp_path, monkeypatch, capsys, state):
-    from mdflow import cli, preconvert
+    from mdflow import cli
+    from markitdown import _libreoffice as lo
     exe = fake_soffice(tmp_path / 'tool')
     monkeypatch.delenv('SOFFICE_PATH', raising=False)
     if state == 'missing':
@@ -76,7 +90,7 @@ def test_T_CLI_85_libreoffice_version_diagnostics(tmp_path, monkeypatch, capsys,
             if state == 'timeout':
                 raise TimeoutError('injected deadline')
             return 'not a LibreOffice version'
-        monkeypatch.setattr(preconvert, '_execute', probe)
+        monkeypatch.setattr(lo, '_execute', probe)
     assert cli.main(['version']) == 0
     captured = capsys.readouterr()
     assert captured.err == ''
@@ -91,7 +105,7 @@ def test_T_CLI_85_libreoffice_version_diagnostics(tmp_path, monkeypatch, capsys,
 @pytest.mark.cov('S5', 'FM0')
 @pytest.mark.fx('FX-36')
 def test_T_CNV_91_fake_soffice_opt_in_provenance_cleanup(tmp_path, monkeypatch):
-    from mdflow import cli, orchestrate, preconvert
+    from mdflow import cli, convert, orchestrate
     exe = fake_soffice(tmp_path / 'tool')
     monkeypatch.setenv('SOFFICE_PATH', str(exe))
     monkeypatch.setenv('MDFLOW_API_KEY', 'r33-private-value')
@@ -112,7 +126,9 @@ def test_T_CNV_91_fake_soffice_opt_in_provenance_cleanup(tmp_path, monkeypatch):
     assert 'Legacy conversion keeps this sentence.' in text
     assert 'fidelity: "DERIVED"' in text
     assert 'original_sha256: "' + entry['sha256'] + '"' in text
-    assert 'derived_sha256: "' + sha256((exe.parent / 'seed.docx').read_bytes()).hexdigest() + '"' in text
+    derived = derived_oracle(exe, 'rtf', tmp_path / 'oracle')
+    assert 'derived_sha256: "' + sha256(derived.encode('utf-8')).hexdigest() + '"' in text
+    assert 'derived_format: "markdown"' in text
     args = json.loads((exe.parent / 'args.json').read_text())
     assert '--headless' in args and '--norestore' in args
     assert 'MDFLOW_API_KEY' not in json.loads((exe.parent / 'env.json').read_text())
@@ -124,7 +140,7 @@ def test_T_CNV_91_fake_soffice_opt_in_provenance_cleanup(tmp_path, monkeypatch):
     assert not work.exists(), 'derived bytes/profile must be removed before later stages use the snapshot'
     assert cli._classification(source, preconvert_legacy=True)['classification']['label'] == 'T'
     assert cli._parser().parse_args(['plan', str(source), '--preconvert-legacy']).preconvert_legacy is True
-    assert preconvert.TARGETS == {'doc': 'docx', 'ppt': 'pptx', 'rtf': 'docx', 'hwp': 'docx'}
+    assert convert.LEGACY_FORMATS == {'doc', 'ppt', 'rtf', 'hwp'}
 
 
 @pytest.mark.req('REQ-CNV-07', 'REQ-PLN-01', 'REQ-APR-01', 'REQ-ASM-03')
@@ -133,7 +149,7 @@ def test_T_CNV_91_fake_soffice_opt_in_provenance_cleanup(tmp_path, monkeypatch):
 @pytest.mark.cells('K12:S4', 'K12:S6', 'K12:S7', 'K12:S9', 'K12:S11', 'K12:S12')
 @pytest.mark.parametrize('fmt', ['doc', 'ppt', 'rtf', 'hwp'])
 def test_T_CNV_94_enabled_legacy_media_reaches_stages(tmp_path, monkeypatch, gen, fmt, capsys):
-    from mdflow import orchestrate, preconvert, sniff_io
+    from mdflow import orchestrate, sniff_io
     exe = fake_soffice(tmp_path / 'tool', image=gen.png_noise(200, 180))
     monkeypatch.setenv('SOFFICE_PATH', str(exe))
     source = tmp_path / ('legacy.' + fmt)
@@ -161,7 +177,10 @@ def test_T_CNV_94_enabled_legacy_media_reaches_stages(tmp_path, monkeypatch, gen
     approved = plans[0]['approved']
     assert approved['file']['sha256'] == sha256(source.read_bytes()).hexdigest()
     assert approved['preconversion']['fidelity'] == 'DERIVED'
-    assert approved['preconversion']['derived_sha256'] == sha256((exe.parent / 'seed.docx').read_bytes()).hexdigest()
+    assert approved['preconversion']['derived_format'] == 'markdown'
+    assert approved['preconversion']['derived_sha256'] == sha256(
+        derived_oracle(exe, fmt, tmp_path / 'oracle').encode('utf-8')).hexdigest()
+    assert approved['units'][0]['raster_sha256'] == sha256(gen.png_noise(200, 180)).hexdigest()
     result = orchestrate.run([source], dict(opts, _plan_only=False, yes_hashes=[plans[0]['plan_hash']]), provider=provider)
     entry = result['files'][0]
     assert result['exit'] == 0 and len(provider.calls) == 1
@@ -236,7 +255,8 @@ def local_soffice():
 @pytest.mark.fx('FX-35', 'FX-36')
 @pytest.mark.parametrize('extension', ['doc', 'rtf'])
 def test_T_CNV_93_real_libreoffice_generated_legacy(tmp_path, monkeypatch, extension):
-    from mdflow import orchestrate, preconvert, runtime_temp
+    from mdflow import orchestrate, runtime_temp
+    from markitdown import _libreoffice as lo
     soffice = local_soffice()
     if not soffice:
         pytest.skip('LibreOffice soffice absent')
@@ -245,7 +265,7 @@ def test_T_CNV_93_real_libreoffice_generated_legacy(tmp_path, monkeypatch, exten
     legacy = tmp_path / 'legacy'
     legacy.mkdir()
     with runtime_temp.run_directory() as generation:
-        output = preconvert._execute([soffice, '-env:UserInstallation=' + (generation / 'profile').as_uri(),
+        output = lo._execute([soffice, '-env:UserInstallation=' + (generation / 'profile').as_uri(),
             '--headless', '--convert-to', extension, '--outdir', str(legacy), str(tmp_path / 'seed.docx')],
             cwd=generation, timeout_s=60, output=generation / 'generation.log')
     path = legacy / ('seed.' + extension)
@@ -261,7 +281,7 @@ def test_T_CNV_93_real_libreoffice_generated_legacy(tmp_path, monkeypatch, exten
 @pytest.mark.req('REQ-GEN-12')
 @pytest.mark.cov('S0', 'FM10')
 @pytest.mark.parametrize('entry', ['version', 'selftest', 'classify', 'plan', 'run', 'classification', 'orchestrate', 'core', 'convert', 'triage'])
-def test_T_CLI_83_distribution_collision_before_any_core_import(tmp_path, monkeypatch, capsys, entry):
+def test_T_CLI_83_distribution_collision_blocks_all_conversion_entries(tmp_path, monkeypatch, capsys, entry):
     from mdflow import cli, convert, orchestrate, sniff_io, triage
     source = tmp_path / 'source.txt'
     source.write_text('Hello collision.')
@@ -300,4 +320,52 @@ def test_T_CLI_83_distribution_collision_before_any_core_import(tmp_path, monkey
         }
         with pytest.raises(RuntimeError, match='E_CORE_CONFLICT'):
             calls[entry]()
-    assert imports == []
+    assert 'markitdown._installation' in imports
+    assert not any(name.endswith('ocr_triage') for name in imports)
+
+
+@pytest.mark.req('REQ-CNV-07', 'REQ-ASM-03', 'REQ-CNV-05')
+@pytest.mark.cov('S5', 'FM7')
+@pytest.mark.fx('FX-36')
+@pytest.mark.parametrize('body', [
+    'unmarked output',
+    '<!-- converted via LibreOffice unknown from .rtf; fidelity=DERIVED -->\ntext',
+    '<!-- converted via LibreOffice 25.2 from .doc; fidelity=DERIVED -->\ntext',
+    '<!-- converted via LibreOffice 25.2 from .rtf; fidelity=NATIVE -->\ntext',
+    '<!-- converted via LibreOffice 25.2 from .rtf; fidelity=DERIVED -->\n' + 'x' * 100,
+])
+def test_T_CNV_95_public_marker_and_derived_bounds_fail_closed(tmp_path, monkeypatch, body):
+    from mdflow import convert, orchestrate
+
+    source, sibling = tmp_path / 'legacy.rtf', tmp_path / 'ok.txt'
+    source.write_bytes(b'{\\rtf1 legacy}')
+    sibling.write_text('Surviving sibling.')
+    original = convert.core_convert
+    def controlled(data, ext, **kwargs):
+        if ext == '.rtf':
+            assert kwargs['libreoffice_path']
+            assert kwargs['libreoffice_timeout'] == 9
+            return body
+        return original(data, ext, **kwargs)
+    monkeypatch.setattr(convert, 'core_convert', controlled)
+    result = orchestrate.run([source, sibling], dict(out=tmp_path / 'out', cache=tmp_path / 'cache',
+        preconvert_legacy=True, preconvert_timeout_s=9, max_bytes=80))
+    assert result['exit'] == 2
+    assert 'E_PRECONVERT' in {i['code'] for i in result['files'][0]['issues']}
+    assert result['files'][0]['outputs'] == []
+    assert result['files'][1]['outputs'] == ['ok.txt.md']
+
+
+@pytest.mark.req('REQ-GEN-12')
+@pytest.mark.cov('S0', 'FM10')
+def test_T_CLI_86_core_guard_owns_loaded_version_mismatch(monkeypatch, capsys):
+    from markitdown import _installation as installation
+    from mdflow import cli
+
+    monkeypatch.setattr(installation, '__version__', '0.0.0')
+    assert cli.main(['version']) == 1
+    captured = capsys.readouterr()
+    assert not captured.out
+    error = json.loads(captured.err)['error']
+    assert error['code'] == 'E_CORE_CONFLICT'
+    assert 'differs from loaded version' in error['message']

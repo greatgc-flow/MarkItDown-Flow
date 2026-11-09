@@ -27,7 +27,7 @@ def test_T_META_95_m4_all_bootstrap_engine_probes_are_isolated_and_evidence_is_e
 @pytest.mark.parametrize('field,value,enabled', [
     ('python', '3.14garbage', False), ('python', '3.14.0rc1', True),
     ('mdflow', '2.0.0???', False), ('mdflow', '2.0.0.dev0', True),
-    ('markitdown-gc', '0.3.6???', False), ('markitdown-gc', '0.3.6rc1', True),
+    ('markitdown-gc', '0.3.7???', False), ('markitdown-gc', '0.3.7rc1', True),
     ('pypdfium2', '5.15.1???', False), ('pypdfium2', ' 5.15.1', False),
     ('pypdfium2', '5.15.1rc1', True), ('pypdfium2', '5.15.1.post1', True),
     ('pillow', '13.0.0???', False), ('pillow', '13.0.0+local', True),
@@ -35,7 +35,7 @@ def test_T_META_95_m4_all_bootstrap_engine_probes_are_isolated_and_evidence_is_e
 def test_T_GEN_96_m4_package_version_oracle_checks_full_syntax(field, value, enabled):
     from _support import load_py
     release = load_py(REPO / 'engine/tests/packaging/test_pt_release.py', 'm4_gate')
-    base = dict(mdflow='2.0.0', **{'markitdown-gc': '0.3.6'}, python='3.14.10', platform='test',
+    base = dict(mdflow='2.0.0', **{'markitdown-gc': '0.3.7'}, python='3.14.10', platform='test',
                 protocol=1, triage_schema=1, pypdfium2='5.15.1', pillow='13.0.0')
     assert (release.gate(dict(base, **{field: value})) == []) is enabled
 

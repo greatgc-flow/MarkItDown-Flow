@@ -13,8 +13,8 @@ import pytest
 
 from mdflow import convert
 
-# ``exiftool_path`` is the only Core option mdflow sets besides plugins (R31).
-INIT_ALLOWED = {"enable_plugins", "exiftool_path"}
+# R31/R34 allow only local tool settings besides plugins; Core LLM features stay off.
+INIT_ALLOWED = {"enable_plugins", "exiftool_path", "libreoffice_path", "libreoffice_timeout"}
 CONVERT_ALLOWED = {"file_extension", "extract_media", "media_base_dir"}
 FORBIDDEN_PREFIXES = ("llm_", "docintel", "cu_", "azure")
 SRC = Path(__file__).resolve().parents[2] / "src" / "mdflow"

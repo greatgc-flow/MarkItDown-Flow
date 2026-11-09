@@ -9,13 +9,19 @@
   },
   "engine": {
     "mdflow": "2.0.0",
-    "markitdown-gc": "0.3.6",
+    "markitdown-gc": "0.3.7",
     "pypdfium2": "5.15.1",
     "pillow": "13.0.0",
     "python": "3.14.10",
     "platform": "Windows-11-10.0.26300-SP0",
     "protocol": 1,
-    "triage_schema": 1
+    "triage_schema": 1,
+    "exiftool": "13.59",
+    "exiftool_status": "ok",
+    "exiftool_source": "PATH",
+    "libreoffice": "unavailable",
+    "libreoffice_status": "unusable",
+    "libreoffice_source": "PATH"
   },
   "placeholder": {
     "<WORK>": "recording work directory; HOME was set to it, so the engine prints `~/...`; any other absolute spelling was replaced by this token (see `placeholder_replacements` per file)"
@@ -750,16 +756,16 @@
       "derived_from": "version.json",
       "transform": "version_variant:core-out-of-range",
       "description": "version response variant: core-out-of-range",
-      "bytes": 204,
-      "sha256": "6b79749e1e8ab9f493c97048b10f53cfca9457464d6398e44f281b5b8055bb81"
+      "bytes": 383,
+      "sha256": "5c66762c9db5ca06c5627634d4c7360112615c5e2f18b073cc7c81bd98eaba5e"
     },
     "version.core-unavailable.json": {
       "kind": "derived",
       "derived_from": "version.json",
       "transform": "version_variant:core-unavailable",
       "description": "version response variant: core-unavailable",
-      "bytes": 210,
-      "sha256": "0865d5e1b2b4ced0f646b9525cf4461484896ef017ac3c3f79c76139909ecc40"
+      "bytes": 389,
+      "sha256": "13c93bed5ab074dfa95fb3c1ba021fcee70a989f0427d29442203fdc81b1a1b7"
     },
     "version.json": {
       "kind": "recorded",
@@ -773,129 +779,130 @@
       ],
       "exit": 0,
       "env_names": [],
-      "bytes": 187,
-      "sha256": "4500cc82f3ea75e6128f1221799a0576e989fd2bb926bec9858a1b40c89d62fd",
-      "eol": "crlf"
+      "bytes": 354,
+      "sha256": "c4c0d29528f00c26d993a53712cba689e679c1a7056cfe8a693995fcc13731d0",
+      "eol": "crlf",
+      "note": "R34: real isolated version probe refreshed from editable gc 0.3.7; other recorded protocol streams retain their original bytes."
     },
     "version.missing-markitdown-gc.json": {
       "kind": "derived",
       "derived_from": "version.json",
       "transform": "version_variant:missing-markitdown-gc",
       "description": "version response variant: missing-markitdown-gc",
-      "bytes": 176,
-      "sha256": "9d7e284c312308b68fec7574a4e5e1310f11a156ffb7104f7bad9e0f69f6914a"
+      "bytes": 355,
+      "sha256": "d8f31ec05585032db9d3f2a247b2c9724f5fe7023846ca9a6982a4623cfee7aa"
     },
     "version.missing-mdflow.json": {
       "kind": "derived",
       "derived_from": "version.json",
       "transform": "version_variant:missing-mdflow",
       "description": "version response variant: missing-mdflow",
-      "bytes": 183,
-      "sha256": "cb5db0c36dac6a3ada65c4dd7c887764bb671b6989d794858b50c3d95656b9ef"
+      "bytes": 362,
+      "sha256": "59221a12c83e74fb4aeaf0337af86d53d4a84536cd6555f03a8d14dcf44d3f25"
     },
     "version.missing-pillow.json": {
       "kind": "derived",
       "derived_from": "version.json",
       "transform": "version_variant:missing-pillow",
       "description": "version response variant: missing-pillow",
-      "bytes": 182,
-      "sha256": "2429a814ae39f097e19ae0eb999faabac4f7bea7f07534bbd1745ebe40fdc801"
+      "bytes": 361,
+      "sha256": "59cbbc19a9f4a984c0a88cb4d05de85c80f4e1b79ca84c12b78b9d64fd281db2"
     },
     "version.missing-platform.json": {
       "kind": "derived",
       "derived_from": "version.json",
       "transform": "version_variant:missing-platform",
       "description": "version response variant: missing-platform",
-      "bytes": 161,
-      "sha256": "c409cc96b94f0483de4226db493495d1d4088e4d7d0ec7e8fd998dda452d3aa1"
+      "bytes": 340,
+      "sha256": "44b140e8999078d1006b2d984b048557c2c3a479cf0d23c9508f59844f7c2682"
     },
     "version.missing-protocol.json": {
       "kind": "derived",
       "derived_from": "version.json",
       "transform": "version_variant:missing-protocol",
       "description": "version response variant: missing-protocol",
-      "bytes": 187,
-      "sha256": "405d3e338a0a840b5931f4cc6293d7f4abc00f71f66d7b4d70fa4b154e16a5a9"
+      "bytes": 366,
+      "sha256": "0ca1ed31fd7a56ebf7853dea113c7c8b0748db6da4fbebeeb3d78497e286fec7"
     },
     "version.missing-pypdfium2.json": {
       "kind": "derived",
       "derived_from": "version.json",
       "transform": "version_variant:missing-pypdfium2",
       "description": "version response variant: missing-pypdfium2",
-      "bytes": 179,
-      "sha256": "60c3583d442cd21e5aabb9949b924f79f0f3a389cec337f5ecde6159db6dc6ea"
+      "bytes": 358,
+      "sha256": "22aac194ad10d38f9db0206ddb130562407a60aa265a39660952893b7f05a85b"
     },
     "version.missing-python.json": {
       "kind": "derived",
       "derived_from": "version.json",
       "transform": "version_variant:missing-python",
       "description": "version response variant: missing-python",
-      "bytes": 181,
-      "sha256": "187b7220e771d1b09fa5fb1c0b6219f93b4d2f6fdc39622b4d31bd1c262d9b66"
+      "bytes": 360,
+      "sha256": "e93733ff403639492fa67959d17bc2dc4d3f0935e40bbdbb33290f7a5099bf26"
     },
     "version.missing-triage_schema.json": {
       "kind": "derived",
       "derived_from": "version.json",
       "transform": "version_variant:missing-triage_schema",
       "description": "version response variant: missing-triage_schema",
-      "bytes": 182,
-      "sha256": "428d41271704d826587560ebf6011d0ed4a9bb5dc6f81826e7cbde1a089f3a6a"
+      "bytes": 361,
+      "sha256": "72fd05e67560298aa3d8f79dc834735c60753cdc42f634e4dae5b48e44874c59"
     },
     "version.protocol-2.json": {
       "kind": "derived",
       "derived_from": "version.json",
       "transform": "version_variant:protocol-2",
       "description": "version response variant: protocol-2",
-      "bytes": 204,
-      "sha256": "b4f829a7303bd490e4e621050340e300a7fefa296f90a9afb2c42fe93eee5b54"
+      "bytes": 383,
+      "sha256": "490840a13d237dcec2e6a21c549a02303f7dee58cd1553d48fc5469db30b861e"
     },
     "version.protocol-string.json": {
       "kind": "derived",
       "derived_from": "version.json",
       "transform": "version_variant:protocol-string",
       "description": "version response variant: protocol-string",
-      "bytes": 206,
-      "sha256": "d93d9d74bd9731c0d65c7e16a0a3c5d48e93152553f8f28c180cc6add774ce57"
+      "bytes": 385,
+      "sha256": "f9b90df6eede0110aa969d16ad7a3eb7afdda71beb6b35ad59d245580bab950b"
     },
     "version.python-3.15.json": {
       "kind": "derived",
       "derived_from": "version.json",
       "transform": "version_variant:python-3.15",
       "description": "version response variant: python-3.15",
-      "bytes": 203,
-      "sha256": "7014870958d10c17e5825c995b8be36d0f35eb2cbe209dacb20c2dc45c8c4fd5"
+      "bytes": 382,
+      "sha256": "512e629329284a4354663d3f67706d27f96ab1f2de85f465726c37c2f16b9b95"
     },
     "version.schema-2.json": {
       "kind": "derived",
       "derived_from": "version.json",
       "transform": "version_variant:schema-2",
       "description": "version response variant: schema-2",
-      "bytes": 204,
-      "sha256": "0c67af091f50e0a8ec659167be8e761836f8b82bc2b201916b37f249e78828cf"
+      "bytes": 383,
+      "sha256": "4f7590ad15e201bf4a081e6d8361151924ac64bba2cf65693ba88ce41c2b8cdd"
     },
     "version.unknown-optional-field.json": {
       "kind": "derived",
       "derived_from": "version.json",
       "transform": "version_variant:unknown-optional-field",
       "description": "version response variant: unknown-optional-field",
-      "bytes": 252,
-      "sha256": "6b7c3403649b8cc48ec9165b63ad2e70938f7437248a88aa0007357b961d313c"
+      "bytes": 431,
+      "sha256": "4cd4ecd4c01409aac42232f4683388057b0771453a251b4400d4939c4adb2097"
     },
     "version.wrong-pillow.json": {
       "kind": "derived",
       "derived_from": "version.json",
       "transform": "version_variant:wrong-pillow",
       "description": "version response variant: wrong-pillow",
-      "bytes": 204,
-      "sha256": "7dc43e4f51f20190f3f559955e8fc68f517c17360b83e4d04c409761f2f75239"
+      "bytes": 383,
+      "sha256": "87322986ffe5afe082dd04f938e28f21472853afccc4fd2d4a09de45ff874dcf"
     },
     "version.wrong-renderer.json": {
       "kind": "derived",
       "derived_from": "version.json",
       "transform": "version_variant:wrong-renderer",
       "description": "version response variant: wrong-renderer",
-      "bytes": 203,
-      "sha256": "f00d65b0538b71a308733baa38e87322da9fc80a336d9088662427ba7b7e4c98"
+      "bytes": 382,
+      "sha256": "cf6dd4e38e53a5cfd8a45244599c017ef85c657231aa8e360e8163fd939d4379"
     }
   }
 }

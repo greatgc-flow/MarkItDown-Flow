@@ -24,7 +24,7 @@ def install(bundle, venv, current=False):
     report.parent.mkdir(parents=True, exist_ok=True)
     subprocess.run([str(python), '-m', 'pip', 'install', '--only-binary=:all:',
                     '--index-url', 'https://pypi.org/simple', '--report', str(report),
-                    str(bundle / WHEEL), 'markitdown-gc>=0.3.5,<0.4'],
+                    str(bundle / WHEEL), 'markitdown-gc>=0.3.7,<0.4'],
                    cwd=root, check=True)
     subprocess.run([str(python), '-m', 'pip', 'check'], check=True)
     return python

@@ -121,6 +121,7 @@ class PlanClassification(TypedDict):
 class Preconversion(TypedDict):
     original_sha256: str
     derived_sha256: str
+    derived_format: Literal['markdown']
     fidelity: Literal['DERIVED']
     tool: str
     version: str

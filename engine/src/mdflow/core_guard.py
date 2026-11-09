@@ -38,10 +38,14 @@ class CoreConflict(RuntimeError):
 
 
 def check() -> None:
-    # Do not cache: embedded callers can change sys.path during their lifetime.
+    # Core owns both co-install and loaded-code/metadata mismatch detection.
+    # Missing Core remains the version gate's responsibility (including `version`).
     try:
-        metadata.distribution('markitdown')
+        metadata.version('markitdown-gc')
     except metadata.PackageNotFoundError:
         return
-    raise CoreConflict('E_CORE_CONFLICT: upstream markitdown is installed alongside markitdown-gc; '
-                       'remove markitdown or create a dedicated mdflow virtual environment.')
+    with quiet_output():
+        from markitdown._installation import installation_conflict
+        message = installation_conflict()
+    if message:
+        raise CoreConflict('E_CORE_CONFLICT: ' + message)

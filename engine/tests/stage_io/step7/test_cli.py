@@ -70,6 +70,10 @@ def test_T_CLI_02_version_contract_and_rejected_core_before_input_read(tmp_path,
 import importlib.metadata as metadata, builtins, io, os
 _real_version = metadata.version
 metadata.version = lambda name: {bad_version!r} if name == 'markitdown-gc' else _real_version(name)
+from mdflow import core_guard
+with core_guard.quiet_output():
+    import markitdown._installation as installation
+installation.__version__ = {bad_version!r}
 def _track_open(original):
     def tracked(path, *args, **kwargs):
         if isinstance(path, (str, bytes, os.PathLike)) and os.path.realpath(path) == {str(source.resolve())!r}:

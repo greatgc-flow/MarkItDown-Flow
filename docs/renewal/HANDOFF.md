@@ -1,12 +1,12 @@
-# HANDOFF — MECE rounds 3-5 and owner directives R29-R33 (2026-11-09)
+# HANDOFF — MECE rounds 3-5 and owner directives R29-R34 (2026-11-09)
 
-The engine release/reference baseline is **Core 0.3.6**; runtime compatibility remains `>=0.3.5,<0.4`. The orchestrator regenerated the golden corpus with unchanged triage bytes. Engine repair status and exact local test receipts belong to [M3_ENGINE_FIXES.md](review/M3_ENGINE_FIXES.md); the audit snapshot is [M3_cx_vertical.md](review/M3_cx_vertical.md).
+The engine release/reference baseline is **Core 0.3.7** (published on PyPI); runtime compatibility is `>=0.3.7,<0.4`. The orchestrator regenerated GOLDEN.lock with producer 0.3.7 and unchanged triage bytes. Reference compiler input pins the published Core hashes in `engine/requirements-reference.txt`. Engine repair status and exact local test receipts belong to [M3_ENGINE_FIXES.md](review/M3_ENGINE_FIXES.md); the audit snapshot is [M3_cx_vertical.md](review/M3_cx_vertical.md).
 
 The M2 version-with-missing-Core, run-level file:null, command-provider recipe, provider metadata and stdout publisher repairs are implemented. See [M2_ENGINE_FOLLOWUP.md](review/M2_ENGINE_FOLLOWUP.md) for their historical receipt. Shell's reported M2 baseline was 255 Jest tests; M3 engine work does not claim a new shell build or desktop rehearsal.
 
 Engine ownership: malformed HWP V1 validation, conservative pre-render pixel cap, full Python parameter receipt matching, independent publication/member-continuation oracles, reference pins and documentation. Protected horizontal files (`test_class_sweep.py` and class_stage TOML) and shell production/tests/FX-71 remain with their existing owners. No git operation is part of this task.
 
-Pending release evidence remains explicit: the Linux x64/Python3.14 Core0.3.6 hash-mode reference install; required supported endpoint and intermediate smoke CI receipts; supported-host FX-71 publication by its owner; real desktop cancellation/picker/drop rehearsal; provenance and MAN-01..04 named reviews. Local passing tests are not those receipts. Engine-staged recordings and any remaining owner-specific findings are linked from the M3 fix report.
+Pending release evidence remains explicit: the Linux x64/Python3.14 Core0.3.7 hash-mode reference install; required supported endpoint and intermediate smoke CI receipts; supported-host FX-71 publication by its owner; real desktop cancellation/picker/drop rehearsal; provenance and MAN-01..04 named reviews. Local passing tests are not those receipts. Engine-staged recordings and any remaining owner-specific findings are linked from the M3 fix report.
 
 ## Shell (MECE round 3, Fable, same day)
 
@@ -35,3 +35,6 @@ Every shell-owned finding of [M4_fable_cross.md](review/M4_fable_cross.md) (P-01
 - FX-71: the staged supported-host recording `build/trace/redgreen/m4-fx71-py314` (Python 3.14.10, Core 0.3.6, 53 files + manifest) is published to `shell/test/fixtures/fx71` byte for byte (every file verified against the manifest bytes/sha256 before and after the copy); all widened recording-host policies in JT-10/12/17/20 and the harness are gone (`RELEASE_LOCK`); `fx71Args` expects the recorder's `python -I -m mdflow` label. `shell/scripts/publish-fx71.mjs` (`npm run fx71:publish`) is the publication step for future re-recordings.
 - Receipts: red `build/trace/redgreen/m4-shell-resume.red.log` + `.json` (23 failed / 254 passed / 277, tests first) -> green `m4-shell.green.log` + `.json` (**277/277, 25 suites**, `junit-shell.xml` refreshed). Type check: `tsc --noEmit -p tsconfig.json` equivalent through the compiler API, 72 files, **0 diagnostics**; the orchestrator re-ran `npm run typecheck` and it is clean at commit `8303b03`. `npm run build` OK (`main.js` written). No engine/tools/matrix edit, no git.
 - Docs: 20_SHELL REQ-SHL-04/09/16/17 texts and M4 disposition rows; README Base URL spelling and rejected-settings sentences; CHANGELOG line; 90_ACCEPTANCE sections 6/8. Nothing shell-owned remains for 'External evidence pending' beyond what §7 already lists (E-02 3-OS jest, E-03 real-OS JT-16, E-08/E-09 MAN-01..04, E-10 packaged replay).
+
+## Quota rebalance (2026-11-09 evening, peerhub diag quota after refresh)
+F-7D 6% (Fable: STOP), X-7D 27% (cx: essential engine work only), C-7D 37% (cc.effort takes shell work), A-7D 38% (argon: one independent final acceptance review), G-7D 86% (ag: MECE round 6 rescoring, inline <=20 KB per ask, peerhub#309), 3P 0%.

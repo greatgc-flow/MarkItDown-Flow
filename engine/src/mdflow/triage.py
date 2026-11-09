@@ -59,3 +59,16 @@ def run_triage(path: str | Path, sniff: SniffResult) -> TriageOutcome:
     coverage = report.get("coverage")
     state = coverage.get("state") if isinstance(coverage, dict) else None
     return _outcome(True, report, state if isinstance(state, str) else NOT_RUN, [])
+
+
+def run_derived_media(snapshot: Path, sniff: SniffResult, media: dict[str, str]) -> dict:
+    """Keep Core reports verbatim, with separate evidence for each extracted asset."""
+    from . import sniff_io
+
+    outcome = run_triage(snapshot, sniff)
+    assets = []
+    for name, path in media.items():
+        identity = 'media/' + name
+        media_sniff = sniff_io.sniff(path, logical=identity)
+        assets.append(dict(id=identity, sniff=media_sniff, outcome=run_triage(path, media_sniff)))
+    return dict(outcome, derived_media=assets)

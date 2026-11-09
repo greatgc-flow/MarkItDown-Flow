@@ -1,8 +1,8 @@
 """Fixtures for the step 5/6 IO red suite.
 
 FX-61 mock provider, FX-62 mock HTTP server (127.0.0.1 only, behind the socket guard), FX-63 child
-scripts (gen_io.CHILD_SOURCES) and a fake Core. The real Core is never imported by these tests: stages
-must resolve ``markitdown`` / ``markitdown.ocr_triage`` at call time so ``sys.modules`` substitution works.
+scripts (gen_io.CHILD_SOURCES) and a fake conversion/triage Core. The installed Core owns the
+installation guard; conversion stages must resolve ``markitdown`` / ``markitdown.ocr_triage`` at call time so ``sys.modules`` substitution works.
 """
 
 import importlib.util
@@ -78,6 +78,8 @@ class FakeCore:
 
 @pytest.fixture
 def fake_core(monkeypatch):
+    from mdflow import core_guard
+    core_guard.check()
     core = FakeCore()
     package = types.ModuleType("markitdown")
     package.__path__ = []

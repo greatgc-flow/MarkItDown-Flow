@@ -57,6 +57,10 @@ _PRELUDE = '''
 import atexit, builtins, importlib.metadata as md, io, json, os
 _real_version = md.version
 md.version = lambda name, *a, **k: {version!r} if name == "markitdown-gc" else _real_version(name, *a, **k)
+from mdflow import core_guard
+with core_guard.quiet_output():
+    import markitdown._installation as installation
+installation.__version__ = {version!r}
 _opened = []
 def _wrap(real):
     def wrapper(file, *a, **k):
@@ -96,7 +100,7 @@ def test_T_GEN_02_core_outside_range_exits_one_before_any_file_is_read(tmp_path,
         assert done.returncode == 1 and "E_CORE_VERSION" in done.stdout + done.stderr, (version, done.stderr)
         assert wanted not in opened, f"{version}: input was opened before the version gate"
         assert not (tmp_path / f"out-{version}").exists() and not (tmp_path / f"cache-{version}").exists()
-    done, opened = run("0.3.6", "control")  # the spy does see the input when the gate passes
+    done, opened = run("0.3.7", "control")  # the spy does see the input when the gate passes
     assert done.returncode == 0, done.stderr
     assert wanted in opened, "control: the open spy did not observe the input file"
 

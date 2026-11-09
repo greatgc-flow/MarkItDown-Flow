@@ -2,7 +2,7 @@
 
 MarkItDown Flow converts local documents to Markdown and plans selective OCR for
 pages and images. The engine (`mdflow`, a Python CLI) uses `markitdown-gc`
-0.3.6. The desktop Obsidian shell drives an engine installed separately in a
+0.3.7 (published on PyPI). The desktop Obsidian shell drives an engine installed separately in a
 virtual environment. Release verification is still pending; see
 [packaging verification](docs/renewal/PACKAGING_VERIFICATION.md).
 
@@ -176,9 +176,9 @@ Legacy `.doc`, `.ppt`, `.rtf` and pre-5.0 HWP conversion is opt-in: add
 `preconvert_legacy=True`). Install LibreOffice yourself and put `soffice` on
 PATH or set `SOFFICE_PATH` to its executable. Each conversion uses a private
 profile with macros and link updates disabled; the default 60-second deadline
-(`--preconvert-timeout-s`) kills the entire child tree. Derived files are
-re-inspected and deleted after hashing. Markdown retains original and derived
-SHA-256 values and `fidelity: DERIVED`; the report includes `W_PRECONVERTED`
+(`--preconvert-timeout-s`) kills the entire child tree. Core owns conversion, process cleanup and intermediate files. mdflow inspects
+the returned Markdown and extracted media. Markdown retains original and returned-Markdown
+SHA-256 values (`derived_format: markdown`) and `fidelity: DERIVED`; the report includes `W_PRECONVERTED`
 with the LibreOffice version. Failed conversions leave no Markdown and siblings
 continue. Other legacy formats still require manual conversion. In the plugin
 the same option is the "Legacy formats (LibreOffice)" toggle (see "Migration

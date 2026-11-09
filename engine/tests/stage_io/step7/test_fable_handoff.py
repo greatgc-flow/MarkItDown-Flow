@@ -19,6 +19,11 @@ def installed_version(name):
         return value
     return _version(name)
 metadata.version = installed_version
+from mdflow import core_guard
+with core_guard.quiet_output():
+    import markitdown._installation as installation
+installation.__version__ = {core!r}
+
 '''
     proc = cli_probe.run('version', prelude=prelude)
     assert proc.returncode == 0 and proc.stderr == '', (proc.stdout, proc.stderr)
