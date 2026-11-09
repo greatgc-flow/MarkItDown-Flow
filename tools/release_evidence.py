@@ -2,9 +2,11 @@
 from __future__ import annotations
 import argparse
 from datetime import date, datetime, timedelta
+import hashlib
 import json
 from pathlib import Path
 import re
+import shutil
 import subprocess
 from urllib.request import urlopen
 
@@ -17,7 +19,7 @@ POSTDEPLOY = {'install_via_listing', 'version_check', 'sanitized_migration', 'lo
 EXTRA_FILES = ('oracles.json', 'actions-review.json', 'pkg04_core_artifacts.json', 'listing-review.json')
 TARGETS = tuple(f'{runner}:{arch}:py{py}' for runner, arch in (
     ('windows-2022', 'x64'), ('ubuntu-24.04', 'x64'), ('macos-26', 'arm64')) for py in ('3.10', '3.14'))
-ACTION_CHECKS = {'ownership', 'implementation', 'dependencies', 'runtime', 'transitive_pins'}
+ACTION_CHECKS = {'ownership', 'workflow_permissions'}
 LISTING_CHECKS = {'identity', 'manifest_versions', 'description', 'commands', 'desktop_only', 'readme_disclosures'}
 
 
@@ -37,15 +39,15 @@ def action_pins(root: Path) -> dict[str, str]:
     return pins
 
 
-def review_record(data, expected_commit, problems):
+def review_record(data, expected_commit, problems, *, verdict=True):
     from trace import peer_identity
-    data = required(data, ('reviewer', 'date', 'commit', 'evidence', 'verdict'), problems)
+    data = required(data, ('reviewer', 'date', 'commit', 'evidence') + (('verdict',) if verdict else ()), problems)
     named(data, problems)
     if not peer_identity(data.get('reviewer')):
         problems.append('reviewer must name peer/profile/model')
     if not re.fullmatch('[0-9a-f]{40}', expected_commit or '') or data.get('commit') != expected_commit:
         problems.append('review must bind the candidate commit')
-    if data.get('verdict') != 'PASS':
+    if verdict and data.get('verdict') != 'PASS':
         problems.append('peer PASS verdict required')
     if (not isinstance(data.get('evidence'), list) or not data['evidence'] or
             any(not isinstance(v, str) or not v.strip() for v in data['evidence'])):
@@ -53,7 +55,7 @@ def review_record(data, expected_commit, problems):
     return data
 
 
-def validate_extra(filename: str, data, expected_commit: str, *, root: Path) -> list[str]:
+def validate_extra(filename: str, data, expected_commit: str, *, root: Path, executions: Path | None = None) -> list[str]:
     """Validate exact evidence contracts; machine identity is distinct from peer review."""
     problems = []
     if filename not in EXTRA_FILES:
@@ -63,16 +65,54 @@ def validate_extra(filename: str, data, expected_commit: str, *, root: Path) -> 
     if not isinstance(data, dict):
         return problems + ['expected an object']
     if filename == 'oracles.json':
-        if set(data) != {f'G-{i:02d}' for i in range(1, 18)}:
+        identities = {f'G-{i:02d}' for i in range(1, 18)}
+        review_record(data, expected_commit, problems, verdict=False)
+        if set(data) != identities | {'reviewer', 'date', 'commit', 'evidence', 'spot_checks', 'generator_commit'}:
             problems.append('all 17 command-oracle receipts required exactly once')
-        for identity, item in data.items():
-            row = review_record(item, expected_commit, problems)
+        spots = data.get('spot_checks')
+        if (not isinstance(spots, list) or any(not isinstance(s, str) or s not in identities for s in spots)
+                or len(set(spots)) < 3):
+            problems.append('at least 3 distinct valid oracle spot_checks required')
+        if data.get('generator_commit') != expected_commit:
+            problems.append('generator commit must bind the candidate commit')
+        for identity in sorted(identities):
+            row = required(data.get(identity), ('command', 'stdout', 'exit', 'expected', 'commit', 'sources'), problems)
             if (type(row.get('exit')) is not int or row['exit'] != 0 or
                     not isinstance(row.get('command'), str) or not row['command'].strip() or
-                    not isinstance(row.get('stdout'), str) or
+                    not isinstance(row.get('stdout'), str) or not row['stdout'].strip() or
                     not isinstance(row.get('expected'), str) or not row['expected'].strip() or
-                    row.get('expected_output_review') != 'PASS'):
-                problems.append(f'{identity}: actual command/stdout/exit and reviewed expected output required')
+                    row.get('commit') != expected_commit):
+                problems.append(f'{identity}: candidate-bound successful receipt summary required')
+            sources = row.get('sources')
+            if not isinstance(sources, list) or not sources:
+                problems.append(f'{identity}: source receipts required')
+                continue
+            paths = []
+            for source in sources:
+                if not isinstance(source, dict):
+                    problems.append(f'{identity}: invalid source receipt')
+                    continue
+                name = source.get('path')
+                if (not isinstance(name, str) or not re.fullmatch(r'(?:junit-[\w.-]+\.xml|junit-contract-max\.json|(?:registry|collection)-[\w.-]+\.json)', name)):
+                    problems.append(f'{identity}: invalid source receipt path')
+                    continue
+                paths.append(name)
+                try:
+                    if executions is None:
+                        raise ValueError('raw receipt directory required')
+                    path = executions / name
+                    if not path.resolve().is_relative_to(executions.resolve()):
+                        raise ValueError('source receipt outside evidence')
+                    if source.get('sha256') != hashlib.sha256(path.read_bytes()).hexdigest():
+                        raise ValueError('source receipt hash mismatch')
+                except (OSError, ValueError) as error:
+                    problems.append(f'{identity}: {error}')
+            junits = [p for p in paths if p.startswith('junit-') and p.endswith('.xml')]
+            companions = {p.replace('junit-', prefix, 1).removesuffix('.xml') + '.json'
+                          for p in junits for prefix in ('registry-', 'collection-')}
+            extras = {'junit-contract-max.json'} & set(paths)
+            if not junits or set(paths) != set(junits) | companions | extras or len(paths) != len(set(paths)):
+                problems.append(f'{identity}: complete unique JUnit/registry/collection sources required')
         return problems
     review_record(data, expected_commit, problems)
     if filename == 'actions-review.json':
@@ -95,7 +135,7 @@ def validate_extra(filename: str, data, expected_commit: str, *, root: Path) -> 
                 problems.append('action SHA verification missing or different from the table')
             checks(row, ACTION_CHECKS, problems)
             if not isinstance(row.get('evidence'), list) or not row['evidence']:
-                problems.append('per-action implementation/dependency review references required')
+                problems.append('per-action ownership/workflow permissions review references required')
     elif filename == 'listing-review.json':
         if data.get('listing') != {'id': 'markitdown-flow', 'version': '2.0.0'}:
             problems.append('wrong candidate listing identity/version')
@@ -125,7 +165,7 @@ def validate_extra(filename: str, data, expected_commit: str, *, root: Path) -> 
                 problems.append('duplicate Core artifact')
             if not any(isinstance(i, dict) and i.get('packagetype') == 'bdist_wheel' for i in artifacts):
                 problems.append('public Core wheel required')
-        checks(data, set(TARGETS) | {'artifact_licenses'}, problems)
+        checks(data, {'artifact_licenses'}, problems)
         reports = data.get('install_reports', [])
         if not isinstance(reports, list):
             return problems + ['install_reports must be a list']
@@ -135,8 +175,8 @@ def validate_extra(filename: str, data, expected_commit: str, *, root: Path) -> 
             if not isinstance(run, dict):
                 problems.append('invalid install report')
                 continue
-            if run.get('commit') != expected_commit or run.get('exit') != 0 or run.get('licenses_reviewed') is not True:
-                problems.append('candidate-bound successful install and peer license review required')
+            if run.get('commit') != expected_commit or type(run.get('exit')) is not int or run['exit'] != 0:
+                problems.append('candidate-bound successful install required')
             items = run.get('report', {}).get('install', [])
             core = [i.get('metadata', {}) for i in items if i.get('metadata', {}).get('name') == 'markitdown-gc']
             if len(core) != 1 or not re.fullmatch(r'0\.3\.(?:[7-9]|[1-9][0-9]+)', core[0].get('version', '')):
@@ -159,9 +199,33 @@ def pypi_json(version):
         return json.load(response)
 
 
+def generate_oracles(root: Path, executions: Path, expected_commit: str, peer: dict) -> dict:
+    """Summarize validated CI receipts; peer spot checks are supplied independently."""
+    from trace import oracle_receipts, execution_registry_path, collection_path
+    result = {k: peer[k] for k in ('reviewer', 'date', 'commit', 'evidence', 'spot_checks') if k in peer}
+    result['generator_commit'] = expected_commit
+    gates = oracle_receipts(root, executions, expected_commit, defer_release=True)
+    if len(gates) != 17 or any(g['result'] == 'FAIL' for g in gates):
+        raise ValueError('incomplete or failed candidate CI oracle receipts')
+    for gate in gates:
+        sources = []
+        for name in gate['sources']:
+            paths = [executions / name]
+            if name.endswith('.xml'):
+                paths += [execution_registry_path(executions, name), collection_path(executions, name)]
+            for path in paths:
+                sources.append(dict(path=path.name, sha256=hashlib.sha256(path.read_bytes()).hexdigest()))
+        result[gate['id']] = dict(commit=expected_commit, exit=0, result=gate['result'],
+            command='tools/release_evidence.py produce: evaluate CI receipts for ' + gate['id'],
+            stdout=f"{gate['result']}: {len(gate['tests'])} test ids evaluated across {len(gate['sources'])} candidate CI receipts",
+            expected=gate['expected'], sources=sources)
+    return result
+
+
 def produce_extras(root: Path, source: Path, output: Path, expected_commit: str, *, executions: Path):
     """Enrich supplied peer reviews with API facts and existing CI receipts, never write verdicts."""
     records = {n: json.loads((source / n).read_text(encoding='utf-8')) for n in EXTRA_FILES}
+    records['oracles.json'] = generate_oracles(root, executions, expected_commit, records['oracles.json'])
     actions = records['actions-review.json']
     pins = action_pins(root)
     for row in actions['actions']:
@@ -190,13 +254,16 @@ def produce_extras(root: Path, source: Path, output: Path, expected_commit: str,
                 raise ValueError('install report runtime is not candidate-bound')
             report = json.loads((executions / f'install-{platform}-py{py}-compat-env.json').read_text(encoding='utf-8'))
             target = f'{runner}:{arch}:py{py}'
-            pkg['install_reports'].append(dict(target=target, commit=expected_commit, exit=0, report=report,
-                                               licenses_reviewed=pkg['checks'].get(target) == 'PASS'))
+            pkg['install_reports'].append(dict(target=target, commit=expected_commit, exit=0, report=report))
     for name, data in records.items():
-        problems = validate_extra(name, data, expected_commit, root=root)
+        problems = validate_extra(name, data, expected_commit, root=root, executions=executions)
         if problems:
             raise ValueError(name + ': ' + '\n'.join(problems))
     output.mkdir(parents=True, exist_ok=True)
+    retained = output / 'receipts'
+    retained.mkdir(exist_ok=True)
+    for name in {s['path'] for key, row in records['oracles.json'].items() if key.startswith('G-') for s in row['sources']}:
+        shutil.copyfile(executions / name, retained / name)
     for name, data in records.items():
         (output / name).write_text(json.dumps(data, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
 

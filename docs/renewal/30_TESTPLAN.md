@@ -450,6 +450,10 @@ R27/R28 added registrations (existing REQs; precise fixture assertions replace b
 | PT-26 | REQ-PKG-22, REQ-PKG-17 (R35: reviewer peer/profile/model; MAN-01 independent peer, including different profiles of the same peer) | A |
 | PT-27 | REQ-PKG-22, REQ-PKG-04, REQ-PKG-11, REQ-PKG-17 (four extra templates; API-generated Core hashes/action identities; candidate-bound pip receipts; stale/invalid evidence rejection) | A |
 | PT-28 | REQ-PKG-17, REQ-PKG-18, REQ-PKG-20, REQ-PKG-22 (execute gate/publisher offline: seal explicit deferral, reject missing manual state; post-release rollback observation never blocks pre-publication tooling tests) | A |
+| PT-29 | REQ-PKG-22, REQ-PKG-17 (R36: generate candidate CI oracles; source paths/hashes/generator commit; >=3 distinct peer spot checks; raw receipt tampering rejected) | A |
+| PT-30 | REQ-PKG-22, REQ-PKG-17 (R36: reject missing/failed/stale CI and changed collection hashes) | A |
+| PT-31 | REQ-PKG-22, REQ-PKG-11, REQ-PKG-04, REQ-PKG-15 (R36: reduced action/license reviews; oracle spot-check template; listing review without owner access) | A |
+| PT-32 | REQ-PKG-22, REQ-PKG-17 (R36: CI summaries precede release execution; final scoring still requires release receipts; retain valid endpoint deduplication) | A |
 
 ### 4.5 Coverage statement
 

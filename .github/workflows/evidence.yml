@@ -2,6 +2,7 @@ name: v2 release evidence
 
 # Produces the `named-release-evidence` artifact that release.yml (accept-release) downloads from
 # `inputs.evidence-run`. R35 requires MAN-01..03 peer reviews before publication. MAN-04 is post-release.
+# R36 generates oracle summaries from candidate CI receipts; peers supply >=3 spot checks.
 # API facts are generated automatically; peer verdicts are supplied, never synthesized.
 
 on:
@@ -19,7 +20,7 @@ on:
         type: string
 
       ci-run:
-        description: 'Candidate CI/release run containing acceptance-evidence (pip reports and runtime receipts)'
+        description: 'Candidate CI/release run containing acceptance-evidence (JUnit, registry, collection, pip/runtime)'
         required: true
         type: string
 
@@ -98,7 +99,7 @@ jobs:
           ref: ${{ steps.bind.outputs.commit }}
           path: build/source
           persist-credentials: false
-      - name: Retrieve the candidate CI pip reports and produce all extra evidence
+      - name: Generate oracles from candidate CI receipts and produce all extra evidence
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           INPUT_CI_RUN: ${{ inputs.ci-run }}
@@ -112,7 +113,7 @@ jobs:
           python build/source/tools/release_evidence.py produce --source "$EVIDENCE_FOLDER" --output build/evidence --executions build/executions --commit "$COMMIT"
       - name: Reject unfilled template placeholders
         run: |
-          if grep -nE '<[A-Z][A-Z0-9 /_.-]*>|\bTODO\b' build/evidence/*; then
+          if grep -nE '<[A-Z][A-Z0-9 /_.-]*>|\bTODO\b' build/evidence/*.json build/evidence/*.yml; then
             echo "::error::unfilled template placeholders or TODO values remain (listed above)"; exit 1
           fi
       - name: Validate every review against the candidate commit

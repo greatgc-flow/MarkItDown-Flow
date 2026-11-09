@@ -31,7 +31,7 @@ def main():
     # Every extra record has a concrete schema, not just a generic PASS label.
     for filename in EXTRA_FILES:
         record = json.loads((a.manual / filename).read_text(encoding='utf-8'))
-        problems = validate_extra(filename, record, candidate['commit'], root=ROOT)
+        problems = validate_extra(filename, record, candidate['commit'], root=ROOT, executions=a.manual / 'receipts')
         if problems:
             raise ValueError(f'{filename}: ' + '\n'.join(problems))
     shutil.copyfile(a.manual / 'oracles.json', a.evidence / 'oracles.json')
