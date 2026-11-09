@@ -3,8 +3,8 @@
   "approved": {
     "file": {
       "path": "b c.docx",
-      "sha256": "df0040649e78a0e8faa3326ee570ee4660399848908bd9348013f98c9df38d62",
-      "bytes": 276663,
+      "sha256": "4e4cbb1dc698162a53fd655903e4199a6b0aeb81d2896105b6f92e8ff6ffbabc",
+      "bytes": 1071120,
       "format": "docx"
     },
     "classification": {
@@ -35,28 +35,28 @@
         "source_id": "word/media/image1.png",
         "page": null,
         "status": "eligible",
-        "raster_sha256": "f69c00924b35305ae8e33d526021959cd6853c9f5ef6abe8c99c154b2daf83d3",
+        "raster_sha256": "4f9046e3c775980ead34495d37d289b00e9b1eaec64b73d9cd869bf772e5e50b",
         "dpi": 0,
         "mime": "image/png",
-        "bytes": 120366,
+        "bytes": 120273,
         "priority": "low",
         "priority_core": "low",
         "also": [],
-        "media_file": "media/f69c00924b35.png"
+        "media_file": "media/4f9046e3c775.png"
       },
       {
         "kind": "media",
         "source_id": "word/media/image2.png",
         "page": null,
         "status": "eligible",
-        "raster_sha256": "8efec5969d6a70f6ba54ffd7afeb13dc39df081367a73d040e7bffc33059b4c5",
+        "raster_sha256": "59698695caba3aec130b461999eb3b3605d0a0dac0ed76b0cb755e944cdae39a",
         "dpi": 0,
         "mime": "image/png",
-        "bytes": 120364,
+        "bytes": 120273,
         "priority": "low",
         "priority_core": "low",
         "also": [],
-        "media_file": "media/8efec5969d6a.png"
+        "media_file": "media/59698695caba.png"
       }
     ],
     "units_total": 2,
@@ -82,7 +82,7 @@
     "uninspected_pages": 0,
     "frames_total": null
   },
-  "plan_hash": "e12a76d282b1df9da28d1e7cd5dbf7e11d86125845c05d0e67711201485ee4fe"
+  "plan_hash": "ebecfa4252d7761643a5ed5b6c4c2246ae1fe6a3fd49759151a9feb418f68148"
 }
 {
   "v": 1,
