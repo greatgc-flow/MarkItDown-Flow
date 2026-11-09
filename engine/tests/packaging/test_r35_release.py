@@ -88,6 +88,8 @@ def test_PT_27_r35_extra_evidence_has_validated_templates_and_automatic_facts(tm
     sys.path.insert(0, str(REPO / 'tools'))
     tool = load_py(REPO / 'tools/release_evidence.py', 'r35_release_evidence')
     from test_pt_manual_evidence import fill
+    from test_r36_evidence import candidate_receipts
+    import trace
     for filename in tool.EXTRA_FILES:
         template = json.loads((REPO / 'docs/renewal/manual-templates' / filename).read_text())
         assert tool.validate_extra(filename, template, COMMIT, root=REPO)
@@ -96,6 +98,8 @@ def test_PT_27_r35_extra_evidence_has_validated_templates_and_automatic_facts(tm
     # Producer fills only machine facts; it preserves the peer's supplied reviews.
     for filename in tool.EXTRA_FILES:
         data = fill(json.loads((REPO / 'docs/renewal/manual-templates' / filename).read_text()))
+        if filename == 'oracles.json':
+            data['spot_checks'] = ['G-01', 'G-04', 'G-13']
         def bind(node):
             if isinstance(node, dict):
                 return {k: COMMIT if k == 'commit' else 0 if k == 'exit' else bind(v) for k, v in node.items()}
@@ -114,8 +118,10 @@ def test_PT_27_r35_extra_evidence_has_validated_templates_and_automatic_facts(tm
          'digests': {'sha256': 'ab' * 32}, 'packagetype': 'bdist_wheel', 'size': 123, 'yanked': False}]}
     monkeypatch.setattr(tool, 'gh_json', gh_json)
     monkeypatch.setattr(tool, 'pypi_json', lambda version: deepcopy(catalog))
-    executions = tmp_path / 'executions'
-    executions.mkdir()
+    candidate_root = tmp_path / 'source'
+    executions = candidate_receipts(candidate_root, trace)
+    (candidate_root / 'docs/renewal/25_PACKAGING.md').write_text(
+        (REPO / 'docs/renewal/25_PACKAGING.md').read_text(encoding='utf-8'), encoding='utf-8')
     for runner, platform in (('windows-2022', 'win32'), ('ubuntu-24.04', 'linux'), ('macos-26', 'darwin')):
         for py in ('3.10', '3.14'):
             (executions / f'runtime-{runner}-py{py}.json').write_text(json.dumps(dict(commit=COMMIT, installed=True)))
@@ -123,12 +129,12 @@ def test_PT_27_r35_extra_evidence_has_validated_templates_and_automatic_facts(tm
                 {'metadata': {'name': 'markitdown-gc', 'version': '0.3.7'}, 'download_info': {
                     'url': catalog['urls'][0]['url'], 'archive_info': {'hashes': {'sha256': 'ab' * 32}}}}]}))
     output = tmp_path / 'output'
-    tool.produce_extras(REPO, reviews, output, COMMIT, executions=executions)
+    tool.produce_extras(candidate_root, reviews, output, COMMIT, executions=executions)
     assert len(seen) == len(pins)
     for filename in tool.EXTRA_FILES:
         record = json.loads((output / filename).read_text())
-        assert tool.validate_extra(filename, record, COMMIT, root=REPO) == [], filename
-        assert tool.validate_extra(filename, record, 'b' * 40, root=REPO), filename
+        assert tool.validate_extra(filename, record, COMMIT, root=REPO, executions=output / 'receipts') == [], filename
+        assert tool.validate_extra(filename, record, 'b' * 40, root=REPO, executions=output / 'receipts'), filename
         broken = deepcopy(record)
         if filename == 'oracles.json':
             broken['G-01']['exit'] = False  # booleans cannot stand in for command return codes
@@ -138,24 +144,24 @@ def test_PT_27_r35_extra_evidence_has_validated_templates_and_automatic_facts(tm
             broken['artifacts'][0]['sha256'] = 'bad digest'
         else:
             broken['checks']['readme_disclosures'] = 'FAIL'
-        assert tool.validate_extra(filename, broken, COMMIT, root=REPO), filename
+        assert tool.validate_extra(filename, broken, COMMIT, root=REPO, executions=output / 'receipts'), filename
         broken = deepcopy(record)
         if filename == 'oracles.json':
             del broken['G-17']
         elif filename == 'actions-review.json':
-            del broken['actions'][0]['checks']['dependencies']
+            del broken['actions'][0]['checks']['workflow_permissions']
         elif filename == 'pkg04_core_artifacts.json':
             broken['install_reports'].pop()
         else:
             broken['reviewer'] = 'generic reviewer'
-        assert tool.validate_extra(filename, broken, COMMIT, root=REPO), filename
+        assert tool.validate_extra(filename, broken, COMMIT, root=REPO, executions=output / 'receipts'), filename
     generated = json.loads((output / 'pkg04_core_artifacts.json').read_text())
     assert generated['artifacts'][0]['sha256'] == 'ab' * 32
     assert generated['artifacts'][0]['url'] == catalog['urls'][0]['url']
     assert generated['reviewer'] == 'cx/cx.effort/gpt-6.1-sol'
     monkeypatch.setattr(tool, 'gh_json', lambda endpoint: {'sha': '0' * 40})
     with pytest.raises(ValueError, match='SHA'):
-        tool.produce_extras(REPO, reviews, tmp_path / 'bad', COMMIT, executions=executions)
+        tool.produce_extras(candidate_root, reviews, tmp_path / 'bad', COMMIT, executions=executions)
 
 
 @pytest.mark.req('REQ-PKG-17', 'REQ-PKG-18', 'REQ-PKG-20', 'REQ-PKG-22')

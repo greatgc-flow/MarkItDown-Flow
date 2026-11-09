@@ -12,12 +12,6 @@
   "artifacts": [],
   "install_reports": [],
   "checks": {
-    "artifact_licenses": "TODO",
-    "windows-2022:x64:py3.10": "TODO",
-    "windows-2022:x64:py3.14": "TODO",
-    "ubuntu-24.04:x64:py3.10": "TODO",
-    "ubuntu-24.04:x64:py3.14": "TODO",
-    "macos-26:arm64:py3.10": "TODO",
-    "macos-26:arm64:py3.14": "TODO"
+    "artifact_licenses": "TODO"
   }
 }

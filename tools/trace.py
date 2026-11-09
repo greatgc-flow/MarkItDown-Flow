@@ -658,16 +658,14 @@ def required_executions(evidence: Path, expected_commit: str) -> list[str]:
     return problems
 
 
-def score(root: Path, evidence: Path, reviews: Path, expected_commit: str) -> dict:
-    """Score only complete per-cell executions plus separate command-oracle evidence."""
+def oracle_receipts(root: Path, evidence: Path, expected_commit: str, *, defer_release=False) -> list[dict]:
+    """Evaluate gate selectors against candidate CI receipts; retain each source name."""
     registry = discover_tests(root) + discover_shell_tests(root)
     planned = planned_tests(root)
-    try:
-        oracles = json.loads((evidence / "oracles.json").read_text(encoding="utf-8"))
-    except (OSError, ValueError):
-        oracles = {}
     receipts = {}
+    sources = set()
     def engine_passed(filename, rows, *, shell=False):
+        sources.add(filename)
         if filename not in receipts:
             try:
                 receipts[filename] = execution_receipt(evidence, filename, expected_commit, root=root)
@@ -684,6 +682,7 @@ def score(root: Path, evidence: Path, reviews: Path, expected_commit: str) -> di
             # R27's hash reproduction is scoped to its single reference target.
             return engine_passed('junit-reference.xml', rows)
         shell = tid.startswith("JT-")
+        deferred = defer_release and any('release' in row['markers'] for row in rows)
         for runner in ("windows-2022", "ubuntu-24.04", "macos-26"):
             for py in ([None] if shell else ["3.10", "3.14"]):
                 # A platform-restricted test is required only on the matching OS.
@@ -693,13 +692,20 @@ def score(root: Path, evidence: Path, reviews: Path, expected_commit: str) -> di
                     continue
                 filename = f"junit-shell-{runner}.xml" if shell else f"junit-engine-{runner}-py{py}.xml"
                 release = f'junit-release-{runner}-py{py}.xml'
+                if deferred:
+                    # CI collection inventories retain the release tests as deselected.
+                    # Validate their raw inventories without claiming they executed.
+                    engine_passed(filename, [])
+                    if receipts[filename] is None:
+                        return False
+                    continue
                 if not shell:
                     if not engine_passed(release if any('release' in row['markers'] for row in rows) else filename, expected):
                         return False
                     continue
                 if not engine_passed(filename, expected, shell=True):
                     return False
-        return True
+        return None if deferred else True
     gates = []
     text = (root / "docs/renewal/90_ACCEPTANCE.md").read_text(encoding="utf-8")
     for line in text.splitlines():
@@ -713,11 +719,45 @@ def score(root: Path, evidence: Path, reviews: Path, expected_commit: str) -> di
             match = re.fullmatch(r"(.+-)(\d+)\.\.(?:[A-Z]+-)*(\d+)", pattern)
             selectors.extend([f"{match[1]}{n:02d}" for n in range(int(match[2]), int(match[3]) + 1)] if match else [pattern])
         tids = {tid for tid in planned if any(fnmatch.fnmatchcase(tid, p) for p in selectors)}
+        sources.clear()
+        outcomes = [passed(t) for t in sorted(tids)]
+        if identity == 'G-04':
+            contracts = [r for r in registry if r['tid'] in tids and r['tid'].startswith('CT-')]
+            if contracts:
+                outcomes.append(engine_passed('junit-contract-min.xml', contracts))
+                if (evidence / 'junit-contract-max.xml').is_file():
+                    outcomes.append(engine_passed('junit-contract-max.xml', contracts))
+                else:
+                    sources.add('junit-contract-max.json')
+                    try:
+                        dedup = json.loads((evidence / 'junit-contract-max.json').read_text(encoding='utf-8'))
+                        outcomes.append(dedup.get('version') == '0.3.7' and dedup.get('deduplicated_with') == 'contract-min')
+                    except (OSError, ValueError, AttributeError):
+                        outcomes.append(False)
+        result = ('FAIL' if not tids or False in outcomes else
+                  'pending: release execution' if None in outcomes else 'PASS')
+        gates.append(dict(id=identity, weight=int(cells[2]), result=result,
+                          tests=sorted(tids), sources=sorted(sources), command=cells[4].strip(),
+                          expected=line.rsplit('|', 2)[-2].strip()))
+    return gates
+
+
+def score(root: Path, evidence: Path, reviews: Path, expected_commit: str) -> dict:
+    """Score complete per-cell executions plus separate command-oracle evidence."""
+    try:
+        oracles = json.loads((evidence / "oracles.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        oracles = {}
+    gates = oracle_receipts(root, evidence, expected_commit)
+    for gate in gates:
+        identity = gate['id']
         oracle = oracles.get(identity, {})
-        good = bool(tids) and all(passed(t) for t in tids) and oracle.get("exit") == 0 and oracle.get("commit") == expected_commit
-        # A command receipt must preserve its actual stdout and command, not just a PASS flag.
+        good = gate['result'] == 'PASS' and oracle.get("exit") == 0 and oracle.get("commit") == expected_commit
+        # R36 summaries describe receipt evaluation; release parameters are checked above.
         good &= bool(oracle.get("command")) and isinstance(oracle.get("stdout"), str) and bool(expected_commit)
-        gates.append({"id": identity, "weight": int(cells[2]), "result": "PASS" if good else "FAIL", "tests": sorted(tids)})
+        gate['result'] = 'PASS' if good else 'FAIL'
+        for field in ('sources', 'command', 'expected'):
+            del gate[field]
     manual = []
     for identity, weight in zip(MANUAL_FILES, (3, 2, 1, 1)):
         deferred = identity == 'MAN-04' and not (reviews / MANUAL_FILES[identity]).exists()

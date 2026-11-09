@@ -3,7 +3,7 @@
   "date": "<YYYY-MM-DD>",
   "commit": "<CANDIDATE COMMIT SHA 40 HEX>",
   "evidence": [
-    "<REVIEW NOTES OR RECEIPT LINKS>"
+    "<CANDIDATE MANIFEST VERSIONS README REVIEW LINKS>"
   ],
   "verdict": "TODO",
   "listing": {

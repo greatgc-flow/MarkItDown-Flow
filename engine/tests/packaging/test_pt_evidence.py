@@ -66,14 +66,16 @@ def check_artifacts(data: dict) -> list[str]:
         return problems
     if not SHA40.fullmatch(str(data["commit"])):
         problems.append("commit is not a 40-hex SHA")
+    if data.get('checks', {}).get('artifact_licenses') != 'PASS':
+        problems.append('artifact license review missing')
     # Consume standard pip --report objects, not another hand-written catalog.
     for run in data['install_reports']:
         items = run.get('report', {}).get('install', [])
         core = [i['metadata'] for i in items if i.get('metadata', {}).get('name') == 'markitdown-gc']
         if len(core) != 1 or not (0, 3, 7) <= tuple(map(int, core[0]['version'].split('.'))) < (0, 4):
             problems.append('target report lacks compatible markitdown-gc (no upstream substitution)')
-        if not items or run.get('licenses_reviewed') is not True:
-            problems.append('generated metadata/license review missing')
+        if not items:
+            problems.append('generated metadata missing')
         for item in items:
             info = item.get('download_info', {})
             metadata = item.get('metadata', {})
@@ -97,12 +99,13 @@ def test_PT_04_public_artifact_license_and_target_wheel_evidence(attest_dir):
     report = {'version': '1', 'install': [{'metadata': {'name': 'markitdown-gc', 'version': '0.3.7', 'license': 'MIT'},
               'download_info': {'url': 'https://files.pythonhosted.org/x.whl', 'archive_info': {'hashes': {'sha256': HEX}}}}]}
     good = {"checked_by": "Reviewer", "date": "2026-11-09", "commit": "a" * 40,
-            "install_reports": [{"target": t, "exit": 0, 'report': deepcopy(report), 'licenses_reviewed': True}
+            "checks": {"artifact_licenses": "PASS"},
+            "install_reports": [{"target": t, "exit": 0, 'report': deepcopy(report)}
                                 for t in REQUIRED_TARGETS]}
     assert check_artifacts(good) == []
     for broken in (without(good, "install_reports"),
                    changed(good, '0.3.4', 'install_reports', 0, 'report', 'install', 0, 'metadata', 'version'),
-                   changed(good, False, 'install_reports', 0, 'licenses_reviewed'),
+                   changed(good, 'FAIL', 'checks', 'artifact_licenses'),
                    changed(good, [], 'install_reports')):
         assert check_artifacts(broken), "the validator accepted incomplete artifact evidence"
     path = attest_dir / "pkg04_core_artifacts.json"

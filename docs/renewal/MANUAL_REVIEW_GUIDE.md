@@ -1,4 +1,4 @@
-# R35 release review guide
+# R36 release review guide
 
 출시 전에는 자동 검사 93/93과 이름이 명시된 동료의 MAN-01..03 검토가 필요합니다.
 reviewer에는 동료/프로필/모델을 기록합니다(예: `cx/cx.effort/gpt-6.1-sol`). MAN-01의 구현자와
@@ -29,9 +29,13 @@ reviewer에는 동료/프로필/모델을 기록합니다(예: `cx/cx.effort/gpt
    | MAN-02 | `docs/renewal/manual-templates/R16_readme_review.yml` | Match README disclosures to candidate behavior; cite exact anchors. |
    | MAN-03 | `docs/renewal/manual-templates/shell_i18n_review.yml` | Review every en/ko row for meaning, equivalence and parameter preservation. |
 
-5. Complete the peer portions of the four JSON files under the contracts below. Preserve actual command
-   stdout and cite source evidence. Machine identity checks cannot establish action security, license
-   suitability, disclosure accuracy or language meaning.
+5. Complete the peer portions of the four JSON files under the contracts below. For oracles, record
+   reviewer/date/commit/evidence and `spot_checks`: at least three distinct G-01..G-17 ids independently
+   re-verified against raw JUnit/registry/collection receipts. The tool generates summaries, source paths,
+   SHA256 hashes and generator commit; peers do not transcribe seventeen command outputs.
+   For actions, review official `actions` ownership and least privilege in our workflows. For pkg04,
+   review artifact licenses; six install targets come from CI. Listing review uses candidate files and
+   public submission requirements; listing-owner access is reserved for post-release REQ-PKG-19.
 6. Validate MAN-01..03 locally with pinned build tools:
 
    ```sh
@@ -48,8 +52,10 @@ reviewer에는 동료/프로필/모델을 기록합니다(예: `cx/cx.effort/gpt
    ```
 
    It checks folder containment and CI-run commit, checks out candidate tooling separately, downloads
-   `acceptance-evidence`, generates machine facts and validates all peer records/placeholders. Only
-   then does it upload `named-release-evidence` with all seven mandatory files at artifact root.
+   `acceptance-evidence`, generates oracle summaries and machine facts and validates all peer records/placeholders. Only
+   then does it upload `named-release-evidence` with all seven mandatory files at artifact root and
+   the exact referenced raw receipts under `receipts/`. Release validation hashes those retained bytes,
+   rather than comparing an earlier run with newly generated JUnit bytes.
    A supplied MAN-04 is validated/uploaded too. Absent MAN-04 never becomes PASS. The producer
    preserves peer identities, checks and verdicts; it never invents them.
 8. Run the tagged release workflow:
@@ -73,15 +79,16 @@ python tools/release_evidence.py produce --source release-evidence/2.0.0 --outpu
 ```
 
 `validate_extra` is the executable contract. Common peer fields: `reviewer` (peer/profile/model),
-`date` (ISO date), exact candidate `commit`, nonempty `evidence[]` strings, `verdict: PASS`.
+`date` (ISO date), exact candidate `commit`, nonempty `evidence[]` strings. Actions/pkg04/listing also
+require `verdict: PASS`; the oracle peer record instead supplies `spot_checks` (>=3 distinct oracle ids).
 Unfilled placeholders, TODO, failed verdicts and stale commits are rejected.
 
 | File / exact template path | Producer | Required contents |
 |---|---|---|
-| `oracles.json` / `docs/renewal/manual-templates/oracles.json` | Peer using actual receipts | Exactly G-01..G-17 object keys. Each receipt has common peer fields, actual nonempty `command`, unedited string `stdout`, integer `exit: 0`, nonempty `expected` from 90_ACCEPTANCE and peer `expected_output_review: PASS`. For matrix/multi-command oracles link every required run and review the complete output against Expected. One target never substitutes for all targets. |
-| `actions-review.json` / `docs/renewal/manual-templates/actions-review.json` | Automatic identity + peer security review | Common peer fields and `actions[]`, exactly one row per section 4 action: `action`, exact table `sha`, nonempty `evidence[]`, peer PASS `checks` for `ownership`, `implementation`, `dependencies`, `runtime`, `transitive_pins`. The producer rejects workflow/table disagreement; `gh api repos/<action>/commits/<sha>` must return that SHA before it writes `verification: {command, stdout: {sha}, exit: 0}`. Identity lookup is not security review; inspect actual code/runtime/dependencies and nested uses at the SHA. |
-| `pkg04_core_artifacts.json` / `docs/renewal/manual-templates/pkg04_core_artifacts.json` | Automatic PyPI/CI facts + peer license review | Common peer fields; `package: markitdown-gc`, `version: 0.3.7`, official versioned JSON `source`; `artifacts[]` contains every returned file's `filename`, HTTPS files.pythonhosted.org `url`, 64-hex `sha256`, positive integer `size`, `packagetype` (bdist_wheel/sdist), `yanked: false`; at least one wheel. Peer `checks.artifact_licenses` and six target-key checks must PASS. The producer copies actual pip reports into six `install_reports[]` rows: `target`, exact `commit`, `exit: 0`, `licenses_reviewed` derived from the peer check, and `report.install[]` metadata/download URLs/SHA256 hashes. Each target resolves one compatible markitdown-gc. PyPI metadata alone does not establish license suitability. |
-| `listing-review.json` / `docs/renewal/manual-templates/listing-review.json` | Peer | Common peer fields, `listing: {id: markitdown-flow, version: 2.0.0}`, peer PASS `checks`: `identity`, `manifest_versions`, `description`, `commands`, `desktop_only`, `readme_disclosures`. Cite candidate manifest/versions/README and existing listing/owner access. Proposed update review precedes release; actual install-via-listing is post-release REQ-PKG-19. |
+| `oracles.json` / `docs/renewal/manual-templates/oracles.json` | Automatic CI receipt summaries + peer spot checks | Top-level peer fields are reviewer/date/commit/evidence/spot_checks. Generated fields are `generator_commit` (candidate tooling commit) and exactly G-01..G-17 records with candidate `commit`, receipt-evaluation `command`, generated `stdout`, integer `exit: 0`, `result`, acceptance `expected`, and `sources[]` (`path`, SHA256 `sha256`). Paths are relative to the retained `receipts/` directory. Validator rejects missing/changed raw files, hash mismatch, stale commits and fewer than three distinct valid spot checks. |
+| `actions-review.json` / `docs/renewal/manual-templates/actions-review.json` | Automatic identity + peer workflow review | Common peer fields and `actions[]`, exactly one row per section 4 action: `action`, exact table `sha`, nonempty `evidence[]`, peer PASS `checks.ownership` (official actions org) and `checks.workflow_permissions` (least privilege in our workflows). Automatic workflow/table checks and `gh api repos/<action>/commits/<sha>` identity verification remain unchanged. Trust GitHub-owned action implementation/runtime/dependencies under the explicit section 4 assumption; no dist-source audit is required. |
+| `pkg04_core_artifacts.json` / `docs/renewal/manual-templates/pkg04_core_artifacts.json` | Automatic PyPI/CI facts + peer license review | Common peer fields; `package: markitdown-gc`, `version: 0.3.7`, official versioned JSON `source`; unchanged automatic `artifacts[]` inventory (filename, URL, SHA256, size, package type, yanked flag; at least one wheel). The only peer check is `checks.artifact_licenses: PASS`. Six automatic `install_reports[]` rows carry `target`, candidate `commit`, `exit: 0` and unchanged pip `report.install[]` metadata/download URLs/SHA256 hashes. Target keys are derived from successful candidate CI runtime/install reports. Each resolves one compatible Core. |
+| `listing-review.json` / `docs/renewal/manual-templates/listing-review.json` | Peer | Common peer fields, `listing: {id: markitdown-flow, version: 2.0.0}`, unchanged PASS checks: `identity`, `manifest_versions`, `description`, `commands`, `desktop_only`, `readme_disclosures`. Cite candidate manifest/versions/README against public Obsidian submission requirements. No listing-owner access is required. Listing installation and owner-only checks stay post-release REQ-PKG-19. |
 
 Six exact target keys: `windows-2022:x64:py3.10`, `windows-2022:x64:py3.14`,
 `ubuntu-24.04:x64:py3.10`, `ubuntu-24.04:x64:py3.14`, `macos-26:arm64:py3.10`, `macos-26:arm64:py3.14`.
@@ -89,6 +96,15 @@ The producer consumes `runtime-<runner>-py<version>.json` (`installed: true`, ex
 `install-<platform>-py<version>-compat-env.json` (`platform` = win32/linux/darwin). The gate separately
 validates complete JUnit/collection/registry receipts. Automatic fields `verification`, `artifacts` and
 `install_reports` start empty in the templates; APIs/CI fill them while peer fields remain unchanged.
+
+Oracle summaries evaluate the acceptance selectors through the same receipt reader used by scoring.
+They describe CI evidence, not reconstructed original command stdout. Release-only tests remain
+`pending: release execution` in these summaries; `exit: 0` describes successful receipt evaluation.
+Final scoring still requires every release parameter to pass in the actual six release executions.
+Reference PT-02 uses its reference receipt; G-04 retains both contract endpoints (or the existing
+`junit-contract-max.json` deduplication receipt when newest Core equals 0.3.7). No absent, failed,
+skipped or stale required CI parameter is accepted. Every JUnit source includes registry/collection
+companions. Spot-check notes must explain how at least three chosen summaries agree with raw receipts.
 
 API contracts: [PyPI JSON API](https://docs.pypi.org/api/json/), [GitHub CLI API](https://cli.github.com/manual/gh_api).
 
