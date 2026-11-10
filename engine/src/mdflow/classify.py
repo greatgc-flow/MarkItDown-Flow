@@ -38,125 +38,69 @@ DECISIONS = frozenset(("ocr_recommended", "review", "no_candidates", "unknown"))
 STATES = frozenset(("complete", "partial", "none", "not_applicable"))
 
 
+def _matches(value, spec) -> bool:
+    """A V1 type spec is a predicate, a one-item list (every item matches it) or a dict of fields.
+
+    A field must be present and match; a '?key' may be absent. Only `_null` admits None.
+    Records are open: unlisted keys are ignored.
+    """
+    if callable(spec):
+        return spec(value)
+    if isinstance(spec, list):
+        return isinstance(value, list) and all(_matches(item, spec[0]) for item in value)
+    if not isinstance(value, dict):
+        return False
+    for key, field in spec.items():
+        name = key.removeprefix('?')
+        if name in value:
+            if not _matches(value[name], field):
+                return False
+        elif name == key:
+            return False
+    return True
+
+
+def _str(v): return isinstance(v, str)
+def _int(v): return type(v) is int  # bool is not an int here
+def _bool(v): return type(v) is bool
+def _num(v): return type(v) in (int, float)
+def _vec(n): return lambda v: isinstance(v, list) and len(v) == n and all(map(_num, v))
+def _null(spec): return lambda v: v is None or _matches(v, spec)
+def _hex64(v): return isinstance(v, str) and re.fullmatch('[0-9a-f]{64}', v) is not None
+def _payload_kind(v): return isinstance(v, str) and v in {'parser_image_payload', 'stored_ole_stream'}  # str first: [] is unhashable
+def _filter(v): return isinstance(v, str) or _matches(v, [_str])
+def _where(v): return isinstance(v, dict) and all(k == 'slide' and _int(n) for k, n in v.items())
+
+_IMAGE = dict(name=_str, bbox_pt=_vec(4), px=_vec(2), bits=_null(_int), colorspace=[_str], filter=_null(_filter),
+              dpi_xy=_null(_vec(2)), imagemask=_bool, area_ratio=_num)
+_PAGE = {**dict.fromkeys(('n', 'rotation', 'chars', 'nonspace_chars', 'cid_count', 'replacement_count',
+                          'private_use_count', 'vector_objects', 'image_count'), _int),
+         'bbox_pt': _vec(4), 'unresolved_glyph_share': _num, 'image_area_ratio': _num,
+         'images_truncated': _bool, 'images': [_IMAGE], '?text_sample': _str}
+_RASTER = dict(id=_str, frame=_null(_int), px=_null(_vec(2)), mode=_null(_str), dpi_tag=_null(_vec(2)),
+               exif_orientation=_null(_int), bytes=_null(_int))
+_MEDIA = dict(id=_str, where=_null(_where), px=_null(_vec(2)), bytes=_null(_int), ext=_str, decor=_bool,
+              references=[dict(part=_str, id=_str)])  # Office formats only
+_HWP_MEDIA = dict(_MEDIA, stored_bytes=_null(_int), stored_sha256=_null(_hex64), payload_sha256=_hex64,
+                  payload_kind=_payload_kind)
+_COVERAGE = {'?reason': _str, 'pages_total': _null(_int), 'pages_inspected': _int}
+_V1 = dict(decision=_str, rules_version=_str, options=dict(samples=_bool),
+           summary={**dict.fromkeys(('candidates_high', 'candidates_low', 'image_occurrences', 'nonspace_chars',
+                                     'pages_with_text'), _int), 'scope': _str, '?media_small': _int},
+           pages=[_PAGE], rasters=[_RASTER], coverage=dict(_COVERAGE, state=_str),
+           file=dict(sha256=_null(_str), bytes=_int, format=_str),
+           candidates=[{'id': _str, 'kind': _str, 'priority': _str, 'page': _null(_int), 'reasons': [_str],
+                        '?decor': _bool}],
+           issues=[dict(code=_str, detail=_str)])
+
+
 def _well_typed(report: dict, fmt: str) -> bool:
-    if not all(isinstance(report.get(k), v) for k, v in
-               (("decision", str), ("coverage", dict), ("file", dict),
-                ("candidates", list), ("issues", list), ("pages", list),
-                ("rasters", list), ("summary", dict), ("options", dict))):
-        return False
-    if not isinstance(report.get("rules_version"), str):
-        return False
-    if type(report['options'].get('samples')) is not bool:
-        return False
-    summary = report['summary']
-    for name in ('candidates_high', 'candidates_low', 'image_occurrences', 'nonspace_chars', 'pages_with_text'):
-        if type(summary.get(name)) is not int:
-            return False
-    if not isinstance(summary.get('scope'), str) or 'media_small' in summary and type(summary['media_small']) is not int:
-        return False
-    for name in ('pages', 'rasters'):
-        if any(not isinstance(item, dict) for item in report[name]):
-            return False
-    def number(value):
-        return type(value) in (int, float)
-    def vector(value, length):
-        return isinstance(value, list) and len(value) == length and all(number(v) for v in value)
-    for page in report['pages']:
-        integers = ('n', 'rotation', 'chars', 'nonspace_chars', 'cid_count', 'replacement_count',
-                    'private_use_count', 'vector_objects', 'image_count')
-        if not all(type(page.get(k)) is int for k in integers):
-            return False
-        if not vector(page.get('bbox_pt'), 4) or not all(number(page.get(k)) for k in ('unresolved_glyph_share', 'image_area_ratio')):
-            return False
-        if type(page.get('images_truncated')) is not bool or not isinstance(page.get('images'), list) or any(not isinstance(v, dict) for v in page['images']):
-            return False
-        if 'text_sample' in page and not isinstance(page['text_sample'], str):
-            return False
-        for image in page['images']:
-            if not all(k in image for k in ('name', 'bbox_pt', 'px', 'bits', 'colorspace', 'filter', 'dpi_xy', 'imagemask', 'area_ratio')):
-                return False
-            if not isinstance(image['name'], str) or not vector(image['bbox_pt'], 4) or not vector(image['px'], 2):
-                return False
-            if image['bits'] is not None and type(image['bits']) is not int:
-                return False
-            if image['dpi_xy'] is not None and not vector(image['dpi_xy'], 2):
-                return False
-            if type(image['imagemask']) is not bool or not number(image['area_ratio']):
-                return False
-            if not isinstance(image['colorspace'], list) or not all(isinstance(v, str) for v in image['colorspace']):
-                return False
-            if image['filter'] is not None and not isinstance(image['filter'], (str, list)):
-                return False
-            if isinstance(image['filter'], list) and any(not isinstance(v, str) for v in image['filter']):
-                return False
-    for raster in report['rasters']:
-        if not isinstance(raster.get('id'), str) or not {'frame', 'px', 'mode', 'dpi_tag', 'exif_orientation', 'bytes'} <= raster.keys():
-            return False
-        if any(raster[k] is not None and type(raster[k]) is not int for k in ('frame', 'exif_orientation', 'bytes')):
-            return False
-        if raster['px'] is not None and not vector(raster['px'], 2):
-            return False
-        if raster['mode'] is not None and not isinstance(raster['mode'], str):
-            return False
-        if raster['dpi_tag'] is not None and not vector(raster['dpi_tag'], 2):
-            return False
+    spec = dict(_V1)
+    if fmt in G2A | G2B:  # text formats may omit coverage.state
+        spec['coverage'] = {**_COVERAGE, '?state': _str}
     if fmt in OFFICE:
-        media = report.get('media')
-        if not isinstance(media, list) or any(not isinstance(m, dict) or not isinstance(m.get('id'), str) for m in media):
-            return False
-        for m in media:
-            if not {'where', 'px', 'bytes', 'ext', 'decor', 'references'} <= m.keys():
-                return False
-            if not isinstance(m['ext'], str) or type(m['decor']) is not bool or not isinstance(m['references'], list):
-                return False
-            if any(not isinstance(ref, dict) for ref in m['references']):
-                return False
-            if m['where'] is not None and (not isinstance(m['where'], dict) or
-                    any(k != 'slide' or type(v) is not int for k, v in m['where'].items())):
-                return False
-            if any(not isinstance(ref.get('part'), str) or not isinstance(ref.get('id'), str) for ref in m['references']):
-                return False
-            if m['bytes'] is not None and type(m['bytes']) is not int:
-                return False
-            if m['px'] is not None and not vector(m['px'], 2):
-                return False
-            if fmt == 'hwp' and (not {'stored_bytes', 'stored_sha256'} <= m.keys() or
-                    m['stored_bytes'] is not None and type(m['stored_bytes']) is not int or
-                    m['stored_sha256'] is not None and (not isinstance(m['stored_sha256'], str) or
-                        not re.fullmatch('[0-9a-f]{64}', m['stored_sha256']))):
-                return False
-        if fmt == 'hwp' and any(
-            not isinstance(m.get('payload_sha256'), str) or
-            not re.fullmatch('[0-9a-f]{64}', m['payload_sha256']) or
-            not isinstance(m.get('payload_kind'), str) or
-            m.get('payload_kind') not in {'parser_image_payload', 'stored_ole_stream'} for m in media):
-            return False
-    cov, file = report["coverage"], report["file"]
-    if 'reason' in cov and not isinstance(cov['reason'], str):
-        return False
-    if not {"pages_total", "pages_inspected"} <= cov.keys() or not {"sha256", "bytes", "format"} <= file.keys():
-        return False
-    if not isinstance(cov.get("state"), str) and not ("state" not in cov and fmt in G2A | G2B):
-        return False
-    if cov.get("pages_total") is not None and type(cov["pages_total"]) is not int:
-        return False
-    if type(cov.get("pages_inspected")) is not int:
-        return False
-    if not isinstance(file.get("format"), str) or type(file.get("bytes")) is not int:
-        return False
-    if file.get("sha256") is not None and not isinstance(file["sha256"], str):
-        return False
-    for c in report["candidates"]:
-        if not isinstance(c, dict) or not all(isinstance(c.get(k), str) for k in ("id", "kind", "priority")):
-            return False
-        if "page" not in c or c["page"] is not None and type(c["page"]) is not int:
-            return False
-        if not isinstance(c.get("reasons"), list) or not all(isinstance(r, str) for r in c["reasons"]):
-            return False
-        if 'decor' in c and type(c['decor']) is not bool:
-            return False
-    return all(isinstance(i, dict) and isinstance(i.get("code"), str) and isinstance(i.get("detail"), str)
-               for i in report["issues"])
+        spec['media'] = [_HWP_MEDIA if fmt == 'hwp' else _MEDIA]
+    return _matches(report, spec)
 
 
 def _consistent(report: dict, fmt: str) -> bool:
