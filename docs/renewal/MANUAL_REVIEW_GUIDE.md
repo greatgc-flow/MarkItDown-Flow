@@ -157,3 +157,49 @@ Cleanup requires successful post-deploy verification plus the seven-day rollback
 PT-21); retain the dry-run/removal log and protected files. Failed MAN-04 or critical post-deploy checks
 require REQ-PKG-20 rollback: preserve 1.0.8 assets and sanitized v1 snapshot, never feed schema-2 settings
 to v1, validate the rollback record. Missing/failed rehearsal cannot produce 100/100.
+
+### Using the kit
+
+`tools/man04_kit.py` does the mechanical part of one run (one machine, one Obsidian channel). Requires `gh`
+(logged in), Python 3.10-3.14 and `pip install -r engine/requirements-build.txt` (PyYAML, needed whenever a
+new record is started from the YAML template):
+
+```sh
+python tools/man04_kit.py run --channel minimum      # then again with --channel current
+python tools/man04_kit.py validate release_rehearsal.yml --commit <CANDIDATE COMMIT SHA>
+```
+
+`run` downloads the 2.0.0 assets with `gh release download` (add `--repo OWNER/REPO` if `gh` cannot tell the
+repository, or `--assets DIR` for an already downloaded folder), verifies them against `SHA256SUMS`, installs
+the plugin into a throwaway vault `<work>/vault/.obsidian/plugins/markitdown-flow` (`<work>` defaults to
+`~/mdflow-man04/<os>-<channel>`), builds a fresh venv per `BOOTSTRAP.md` (`pip check`, `selftest`, `version`;
+logs under `<work>/logs`) and writes this OS/channel's `python`/`engine`/`core`/`downloads` into
+`./release_rehearsal.yml` (JSON, which is valid YAML; `--record` picks another path). Both channels on one
+machine update the same record; copy it between machines to accumulate the six runs. It stops without
+recording on any mismatch or failed step; rerunning never changes your edits to checks. Close Obsidian before
+rerunning: the venv is rebuilt and Windows refuses to delete it while in use.
+
+You still do everything human: open the vault in Obsidian, set `enginePython` to the printed path, run
+every check in the template, then replace each `TODO`/placeholder (reviewer, date, commit, inputs, evidence,
+`obsidian_version` you actually ran, which for `minimum` must equal the manifest `minAppVersion`, the
+top-level checks, each run's checks and `verdict`). The kit never writes PASS. `validate` runs the real gate,
+`trace.py attest MAN-04` (which includes `validate_rehearsal`); it checks the shape, not that you observed
+anything. It does not verify attestations; do that per `BOOTSTRAP.md`.
+
+Retain the completed `release_rehearsal.yml` with the original candidate evidence:
+
+```sh
+python tools/release_evidence.py rehearsal build/manual/release_rehearsal.yml
+python tools/trace.py attest MAN-04 --attest-dir build/manual --commit <candidate-sha>
+python tools/trace.py score --post-release --evidence build/trace --attest-dir build/manual --commit <candidate-sha>
+python tools/release_evidence.py postdeploy <post-deploy-report.json>
+python tools/release_evidence.py rollback <rollback-rehearsal.json>
+```
+
+Only valid MAN-04 awards the last point:
+`SCORE 100/100 (automated 93/93, manual 7/7); MAN-04 PASS (post-release)`.
+REQ-PKG-19 post-deploy and REQ-PKG-21 cleanup remain separately recorded, unscored validators.
+Cleanup requires successful post-deploy verification plus the seven-day rollback window (`plan_cleanup`,
+PT-21); retain the dry-run/removal log and protected files. Failed MAN-04 or critical post-deploy checks
+require REQ-PKG-20 rollback: preserve 1.0.8 assets and sanitized v1 snapshot, never feed schema-2 settings
+to v1, validate the rollback record. Missing/failed rehearsal cannot produce 100/100.
