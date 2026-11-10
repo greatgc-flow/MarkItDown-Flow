@@ -21,3 +21,9 @@ The 7 flagged calls:
 | d853af5a | Read | `MarkItDown-Flow/esbuild.config.mjs` at the repository root | No: "File does not exist" (root v1 build config was deleted in aac5dac) |
 
 Chronology: v1 `src/`, `styles.css`, tests and root build config were deleted in commit aac5dac (2026-11-09 02:32 +0900) before the shell worktree was created from 20c7853; neither tree contains v1 shell source. Limits: transcripts record what the implementers' tools touched in these sessions; they cannot prove what a model "knows" from training data. Similarity review (cx, MAN-01 first pass) found no copied substantive code.
+
+## Round 9 (2026-11-10): shell changes by cc.deepthink sessions
+
+Command: `python tools/access_record.py D:/Engram2/.engram/claude/projects D--Engram2-workspace-mdf-d7 D--Engram2-workspace-mdf-sec-shell D--Engram2-workspace-mdf-ux D--Engram2-workspace-mdf-fix D--Engram2-workspace-mdf-integ D--Engram2-workspace-mdf-sec-engine D--Engram2-workspace-mdf-11 D--Engram2-workspace-mdf-simp-docs` (the worktrees where R37 Keep pending, security review C1-C5/R38, UI/UX polish, round-9 fixes and their integration were written).
+
+Result: 13 sessions, 1683 tool calls, 0 flagged calls. Implementer for these shell changes: cc/cc.deepthink (Claude Opus 5.5 via Claude Code peer sessions); the orchestrator resolved merge conflicts only.
