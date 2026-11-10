@@ -11,3 +11,5 @@ Round 9 (merged): R37 Keep OCR pending, R38 cache at `~/.mdflow/cache` outside t
 Pending before 2.0.0 ([90_ACCEPTANCE.md](90_ACCEPTANCE.md) §7): freeze the candidate commit and run its CI; G-15 release run (bundle and attestations on the six release targets); named MAN-01..03 reviews bound to that final commit (MAN-01 access record: [MAN01_access_record.md](review/MAN01_access_record.md)); E-07 `python tools/trace.py score` prints the 99/100 line above for that commit. Any fix makes a new candidate and the reviews must name it. Local test passes are not these receipts.
 
 History: round reviews and fix reports (R3..R33, M1..M8, including M3_ENGINE_FIXES.md) are archived in [review/INDEX.md](review/INDEX.md) with commit-pinned links.
+
+Collaboration record (requirements, design index, process, progress, results, next steps): [COLLAB.md](COLLAB.md).
