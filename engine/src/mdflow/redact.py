@@ -24,8 +24,10 @@ def secret_values(env: dict) -> set:
 
 
 def redact(message: str, env: dict, home: str, *, authorization: str = "") -> str:
+    # Only SHORT values are skipped as flags/numbers; a long all-digit value (DB_PASSWORD=12345678) is a secret.
     secrets = {value for value in secret_values(env)
-               if len(value) >= 4 and not value.isdigit() and value.lower() not in NON_SECRET_VALUES}
+               if len(value) >= 4 and value.lower() not in NON_SECRET_VALUES
+               and not (value.isdigit() and len(value) < 6)}
     if authorization:
         secrets.add(authorization)
     replacements = dict.fromkeys(secrets, "***")

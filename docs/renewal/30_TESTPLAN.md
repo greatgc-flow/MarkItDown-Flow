@@ -476,6 +476,7 @@ Every REQ id defined in `10_SPEC.md` (incl. new REQ-SNF-09), `20_SHELL.md` (SHL-
 | ID | REQ | Oracle |
 |---|---|---|
 | T-TRX-80 | REQ-GEN-09, REQ-SEC-04 | M2 regression: inherited_stdout_cannot_block_timeout_or_leave_reader. |
+| T-TRX-81 | REQ-GEN-09, REQ-SEC-04 | Round-12 A4: a command-provider timeout kills the command's whole process tree (no descendant survives). |
 | T-RND-80 | REQ-RND-05, REQ-WRT-02 | M2 regression: render_setup_failure_is_per_unit_and_sibling_continues. |
 | T-RND-81 | REQ-MAP-05, REQ-RND-03, REQ-TRX-01, REQ-ASM-06 | M2 regression: hwp_equal_payloads_keep_stored_refusal_through_pipeline. |
 | T-RND-82 | REQ-MAP-05, REQ-CNV-03, REQ-RND-03 | M2 regression: real_hwp_extraction_renders_parser_payload_only. |
@@ -634,13 +635,13 @@ Real CI round-two regression checks: CT-03 retains complete report, input hash a
 `trace.py attest` validates the schema (`id`, named `reviewer` = peer/profile/model for MAN-01..03, independent of implementer for MAN-01, `date`, `commit` = exact frozen candidate, `inputs[]`, `checks[]` all PASS, `evidence[]`, `verdict: PASS`). A passing schema check is not evidence of authorship, meaning or disclosure accuracy and is reported as MANUAL, outside automated coverage.
 
 Open items (DRAFT-3 sync):
-1. The shell code table (20_SHELL 6) now matches SPEC 7.5 by inspection (30 E_ + 24 W_ = 54 codes); `JT-SHL-19-01` is the authority and was not run.
+1. The shell code table (20_SHELL 6) now matches SPEC 7.5 by inspection (30 E_ + 24 W_ = 54 codes); `JT-SHL-19-01` is the authority and runs in the shell suite (`npx jest --ci`).
 2. FX-71 fixtures are recordings of the real engine (SPEC DRAFT-3.8), all re-recorded at the round-11 candidate under Core 0.3.7 (command-provider destination home-relative; the recorder leak check rejects any absolute path outside ~); re-recording on the release host is tracked as E-10 in 90_ACCEPTANCE section 7 (External evidence pending).
 3. TODO-VERIFY carried from 20/25, not settleable by tests: actual target installs and generated license review (PT-04; release/reference baseline Core 0.3.8, R39; 0.3.7 is published on PyPI, 0.3.8 pending publication), Windows signal/blocked-request behavior (JT-16 on real Windows runners), attestation eligibility (PT-13), terminal env launch commands per OS (PT-22), Obsidian min/current versions (MAN-04).
 4. REQ-PKG-18/19/21 describe post-publication procedures; pre-release only their tooling is testable (PT-18/19/21). R35: pre-publication requires automated 93/93 + MAN-01..03 PASS (99/100), with MAN-04 explicitly `deferred: post-release (R35)`. Actual MAN-04 joins REQ-PKG-19/21 post-release validators and earns the final point only when attested. Failed MAN-04 triggers REQ-PKG-20 rollback; post-deploy/cleanup remain unscored.
 5. Cross-OS `plan_hash` equality holds only for equal raster bytes (SPEC 10.4); T-PLN-02 asserts per-OS goldens, cross-OS equality only for pass-through PNG/JPEG fixtures (FX-09, FX-10).
 
-Vote: APPROVE-TDD. Every one of the 153 spec REQs has a registered, oracle-backed test path, DRAFT-3's cuts removed the untestable inflight/run-hash/5 s claims, and remaining risks (Windows cancellation, public Core artifacts, regenerated shell fixtures) are explicit gates, not silent gaps.
+Vote: APPROVE-TDD. Every one of the 159 spec REQs (153 at the DRAFT-3 vote) has a registered, oracle-backed test path, DRAFT-3's cuts removed the untestable inflight/run-hash/5 s claims, and remaining risks (Windows cancellation, public Core artifacts, regenerated shell fixtures) are explicit gates, not silent gaps.
 
 R34 regression policy: retain content, source identity, timeout/process-tree death, cleanup, sibling-continuation, consent, raster hash, OCR placement and warm-cache oracles. Adapt only the artifact boundary: derived_sha256 hashes Core-returned UTF-8 Markdown including the DERIVED marker, explicitly marked derived_format=markdown; media ids name extracted content. The real-soffice integration remains enabled. Add rejection oracles for missing/malformed provenance and loaded-code/metadata conflicts. The orchestrator regenerated GOLDEN.lock with published Core 0.3.7, retaining all triage bytes. Verify the 0.3.7 producer independently of the installed compatible endpoint; retain report-byte and wrong-producer rejection oracles. T-META-91 also checks the published Core hashes in reference compiler input. R39: the minimum and baseline move to Core 0.3.8; GOLDEN.lock, the reference compiler input and the FX-71 fixtures are regenerated after 0.3.8 is published (T-META-91 stays red on the 0.3.7 reference file until then).
 

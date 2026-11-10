@@ -196,6 +196,28 @@ it(R('JT-16 real child: a quick cooperative-free exit is reported with its nativ
   expect(pidAlive(pid)).toBe(false);
 });
 
+it(R('JT-16 real child: a forced cancel kills the whole process tree, so a grandchild (soffice, a command template) does not survive'), async () => {
+  const pidFile = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'mdflow-jt16-tree-')), 'grandchild.pid');
+  const grandchild = 'process.on("SIGTERM", () => {}); setInterval(() => {}, 1000);';
+  const script = `
+const { spawn } = require("node:child_process");
+const g = spawn(process.execPath, ["-e", ${JSON.stringify(grandchild)}], { stdio: "ignore", windowsHide: true });
+require("node:fs").writeFileSync(${JSON.stringify(pidFile)}, String(g.pid));
+process.on("SIGTERM", () => {}); setInterval(() => {}, 1000);
+`;
+  const { run, result, pid } = await realRun(nodeChild(script), 300);
+  for (let i = 0; i < 50 && !fs.existsSync(pidFile); i += 1) await new Promise<void>((resolve) => setTimeout(resolve, 100));
+  const grandchildPid = Number(fs.readFileSync(pidFile, 'utf8'));
+  expect(grandchildPid).toBeGreaterThan(0);
+  expect(pidAlive(grandchildPid)).toBe(true);
+  run.cancel();
+  const outcome = await result;
+  expect(outcome.termination).toBe('forced');
+  expect(pidAlive(pid)).toBe(false);
+  for (let i = 0; i < 50 && pidAlive(grandchildPid); i += 1) await new Promise<void>((resolve) => setTimeout(resolve, 100));
+  expect(pidAlive(grandchildPid)).toBe(false);
+});
+
 if (POSIX) {
   it(R('JT-16 real POSIX child: cancel during a blocked request -> SIGTERM -> exit 130 with report within the grace period; process gone'), async () => {
     const started = Date.now();

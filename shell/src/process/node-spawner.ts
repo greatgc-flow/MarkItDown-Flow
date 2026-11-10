@@ -63,7 +63,22 @@ class NodeChild implements ChildHandle {
     }
   }
 
+  /** Forced stop kills the whole process tree: the engine's own children (soffice, a command template) must not outlive it. */
   terminate(): void {
+    const pid = this.pid;
+    if (pid !== null) {
+      try {
+        if (process.platform === 'win32') {
+          const result = childProcess().spawnSync('taskkill', ['/PID', String(pid), '/T', '/F'], { windowsHide: true, stdio: 'ignore' });
+          if (result.status === 0) return;
+        } else {
+          process.kill(-pid, 'SIGKILL'); // the child leads its own process group (see spawn)
+          return;
+        }
+      } catch {
+        // Fall back to the direct kill below.
+      }
+    }
     try {
       this.child.kill('SIGKILL');
     } catch {
@@ -79,6 +94,7 @@ export class NodeSpawner implements Spawner {
       env: { ...request.env },
       shell: false,
       windowsHide: true,
+      detached: process.platform !== 'win32', // POSIX: own process group, so terminate() can kill the tree
       stdio: ['ignore', 'pipe', 'pipe'],
     });
     return new NodeChild(child);

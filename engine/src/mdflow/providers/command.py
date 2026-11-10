@@ -61,6 +61,21 @@ def canonical_destination(argv_template: Sequence[str]) -> str:
                                   sort_keys=True, separators=(",", ":"), ensure_ascii=False)
 
 
+def _kill_tree(child: subprocess.Popen) -> None:
+    """Kill the command AND its descendants (a timed-out template must not leave processes running)."""
+    try:
+        if os.name == 'nt':
+            subprocess.run(['taskkill', '/PID', str(child.pid), '/T', '/F'], stdin=subprocess.DEVNULL,
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=10, check=False)
+        else:
+            import signal
+            os.killpg(child.pid, signal.SIGKILL)
+    except (OSError, subprocess.SubprocessError):
+        pass
+    if child.poll() is None:
+        child.kill()
+
+
 def _failed(code: str, message: str, started: float, exit_status: int | None = None) -> UnitResult:
     return {
         "status": "failed", "text": None, "duration_ms": int((time.monotonic() - started) * 1000),
@@ -121,7 +136,8 @@ class CommandProvider:
             return _failed('E_PROVIDER_CONFIG', 'command program was not found on PATH', started)
         try:
             child = subprocess.Popen(argv, shell=False, env=self._child_env(), stdin=subprocess.DEVNULL,
-                                     stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, bufsize=0)
+                                     stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, bufsize=0,
+                                     start_new_session=os.name != 'nt')  # POSIX: own group, killable as a tree
             payload = bytearray()
             while True:
                 remaining = deadline - time.monotonic()
@@ -151,6 +167,6 @@ class CommandProvider:
         finally:
             if child is not None:
                 if child.poll() is None:
-                    child.kill()
+                    _kill_tree(child)
                 child.wait()
                 child.stdout.close()

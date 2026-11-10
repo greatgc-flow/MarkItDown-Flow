@@ -34,6 +34,21 @@ def test_T_TRX_80_m2_inherited_stdout_cannot_block_timeout_or_leave_reader(tmp_p
         time.sleep(max(0, 1.4 - (time.monotonic() - start)))
 
 
+@pytest.mark.req('REQ-GEN-09', 'REQ-SEC-04')
+@pytest.mark.cov('S10', 'FM7')
+@pytest.mark.fx('FX-63')
+def test_T_TRX_81_command_timeout_kills_the_whole_process_tree(tmp_path):
+    marker = tmp_path / 'grandchild-survived.txt'
+    grandchild = f"import time,pathlib; time.sleep(1.5); pathlib.Path({str(marker)!r}).write_text('x')"
+    code = f"import subprocess,sys,time; subprocess.Popen([sys.executable,'-B','-c',{grandchild!r}]); time.sleep(30)"
+    provider = CommandProvider(command='unused', egress=False, model='test', timeout_s=.5)
+    start = time.monotonic()
+    value = provider._capture([sys.executable, '-B', '-c', code], start)
+    assert value['error']['code'] == 'E_PROVIDER_TIMEOUT'
+    time.sleep(2.5)  # past the grandchild's own delay: a surviving descendant would have written the marker
+    assert not marker.exists(), 'a descendant of the timed-out command survived'
+
+
 @pytest.mark.req('REQ-RND-05', 'REQ-WRT-02')
 @pytest.mark.cov('S6', 'FM5')
 @pytest.mark.fx('FX-09', 'FX-65')
