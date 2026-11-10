@@ -10,14 +10,21 @@ R34 publication follow-up, local Windows Python 3.15.2 with published Core 0.3.7
   `engine/tests/golden/**`, `engine/tests/fixtures/**` and `shell/test/fixtures/fx71/**` are `-text`.
   Text files were renormalized to LF. Wheel bytes are unaffected (`canonical_wheel` already wrote LF)
   and the trace suite digests already normalized CRLF.
-- T-CLI-87 measures each optional-tool probe inside the `version` child (deadline 0.5 s, killed at it,
-  far below the stalled tool's sleep). Whole-process time is no longer asserted; the SPEC 10.1 3 s figure
+- T-CLI-87 measures each optional-tool probe inside the `version` child: requested deadline 0.5 s, and
+  a stalled probe must end within [0.9 x deadline, deadline + 1 s] (two stalled probes <= 3 s, inside
+  the shell's 5 s gate budget). A negative control hands Core a deadline 2 s later than requested and
+  must be reported as "killed late". Whole-process time is no longer asserted; the SPEC 10.1 3 s figure
   stays a healthy-machine target.
 - FX-71 recording (PT-40): `python -I tools/record_protocol.py [--engine-src PATH | --installed]`. The
   default imports `mdflow` from this checkout's `engine/src` through an isolated `-c` bootstrap, so a
-  worktree can record without editing any venv `.pth`; the path never enters a recording.
+  worktree can record without editing any venv `.pth`; the path never enters a recording. The manifest's
+  `engine_source` is a path-free digest of the imported `mdflow/**/*.py` (LF-normalized); `--verify`
+  recomputes it from the same `--engine-src`/`--installed` choice and fails on a mismatch. The committed
+  FX-71 predates this field and reports `engine source UNBOUND` until it is re-recorded.
 - Evidence rebinding (PT-41): `tools/rebind_evidence.py` moves named reviews to a new candidate commit
-  only when their attested paths are byte-identical (MANUAL_REVIEW_GUIDE).
+  only when their attested paths are byte-identical (MANUAL_REVIEW_GUIDE). It refuses (exit 1, nothing
+  written) on mode changes, LF -> CRLF under `--ignore-eol`, pathspecs absent in both commits, nested
+  YAML commits bound to OLD, and git failures; JSON records are re-serialized with `indent=2`.
 
 ## Historical R27/R28 verification
 

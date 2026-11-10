@@ -122,10 +122,13 @@ Attested paths: MAN-01 `shell/src` and `shell/styles.css`; MAN-02 `README.md`; M
 `.github/workflows`; listing-review `manifest.json`, `versions.json`, `README.md`; pkg04
 `engine/requirements*.txt` and `engine/pyproject.toml`. The tool rewrites the record's `commit` fields
 and appends `Rebound <date> from <old> to <new>: <paths> byte-identical` to `evidence`, keeping the
-file's line endings. If any attested path changed (or a record is bound to another commit) it exits 1,
-names the records and files, and writes nothing: those reviews must be repeated. `oracles.json` is never
-rebound; the evidence workflow regenerates it at the new commit. `--ignore-eol` also accepts files whose
-only difference is CRLF -> LF (the repository LF renormalization) and names them in the evidence line.
+file's line endings (JSON records are re-serialized with `indent=2`; YAML records are edited in place
+and rebind only their top-level `commit`, so a nested YAML commit naming the old SHA is refused). If any
+attested path changed (content or mode), an attested path exists in neither commit, a record is bound to
+another commit, or git fails, it exits 1, names the records and files, and writes nothing: those reviews
+must be repeated. `oracles.json` is never rebound; the evidence workflow regenerates it at the new
+commit. `--ignore-eol` also accepts files whose only difference is CRLF -> LF (the repository LF
+renormalization; LF -> CRLF is still refused) and names them in the evidence line.
 
 ## After publication: owner MAN-04 and post-release validators
 

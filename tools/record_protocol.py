@@ -3,14 +3,18 @@
     python -I tools/record_protocol.py              # this checkout's engine/src; record + derive into shell/test/fixtures/fx71/
     python -I tools/record_protocol.py --engine-src PATH  # another engine source tree (e.g. a git worktree's engine/src)
     python -I tools/record_protocol.py --installed  # the interpreter's installed mdflow (e.g. the release wheel)
-    python -I tools/record_protocol.py --verify     # hashes match manifest; derived == transform(parent)
+    python -I tools/record_protocol.py --verify [--engine-src PATH | --installed]
+        # hashes match manifest; derived == transform(parent); engine_source digest == that source tree
 
 Engine import: every child is ``python -I``. With ``--engine-src`` (the default) the child runs a short
 ``-c`` bootstrap that puts ONLY that folder first on ``sys.path``, refuses to continue unless ``mdflow``
 was imported from it, then runs ``mdflow`` as ``__main__``. No venv ``.pth``/editable install is
 touched and no ``PYTHONPATH`` is set; ``-I`` still drops PYTHON* variables, user site-packages and the
 work directory. The source path is never recorded (manifest argv label stays ``python -I -m mdflow``;
-``check_recordings`` rejects any recording containing it).
+``check_recordings`` rejects any recording containing it). Instead the manifest's ``engine_source`` holds a
+path-free digest of the imported ``mdflow/**/*.py`` (``source_digest``); ``--verify`` recomputes it from
+the source tree it is given and fails on a mismatch (a manifest recorded before this field reports
+``engine source UNBOUND`` until FX-71 is re-recorded).
 
 Provenance rules (30_TESTPLAN FX-71, 90_ACCEPTANCE G-12):
 
@@ -297,6 +301,31 @@ def child_argv(engine_src: Path | None, args) -> list[str]:
     return [sys.executable, "-I", "-c", bootstrap, *map(str, args)]
 
 
+def package_dir(engine_src: Path | None) -> Path:
+    """The ``mdflow`` package folder the children import (``None``: the interpreter's installed package)."""
+    if engine_src is not None:
+        return Path(engine_src).resolve() / "mdflow"
+    located = subprocess.run([sys.executable, "-I", "-c", "import mdflow, os; print(os.path.dirname(os.path.abspath("
+                              "mdflow.__file__)))"], capture_output=True, text=True, timeout=120)
+    if located.returncode:
+        raise SystemExit(f"installed mdflow not importable: {located.stderr.strip()}")
+    return Path(located.stdout.strip())
+
+
+def source_digest(package: Path) -> dict:
+    """Path-free identity of an ``mdflow`` source tree: sha256 over every ``*.py`` (outside ``__pycache__``)
+    as sorted ``relative/posix/name NUL LF-normalized-bytes NUL``. The location is not part of it."""
+    files = sorted((p.relative_to(package).as_posix(), p) for p in package.rglob("*.py")
+                   if "__pycache__" not in p.relative_to(package).parts)
+    if not files:
+        raise SystemExit("engine source has no mdflow/*.py")
+    digest = hashlib.sha256()
+    for name, path in files:
+        digest.update(name.encode("utf-8") + b"\0" + lf(path.read_bytes()) + b"\0")
+    return {"package": "mdflow", "files": len(files), "sha256": digest.hexdigest(),
+            "scope": "mdflow/**/*.py, sorted relative names + LF-normalized bytes; path not recorded"}
+
+
 class Recorder:
     def __init__(self, out: Path, work: Path, *, engine_src: Path | None = None):
         self.out, self.work = out, work
@@ -520,6 +549,8 @@ class Recorder:
             "engine": self.version,
             "engine_import": ("installed package (--installed)" if self.engine_src is None else
                               "source tree (--engine-src bootstrap; path not recorded)"),
+            # Which source the children ran: --verify recomputes it from the source tree it is given.
+            "engine_source": source_digest(package_dir(self.engine_src)),
             "placeholder": {PLACEHOLDER: "recording work directory; HOME was set to it, so the engine prints `~/...`; "
                                          "any other absolute spelling was replaced by this token (see "
                                          "`placeholder_replacements` per file)"},
@@ -551,9 +582,22 @@ def record(out: Path, work: Path, engine_src: Path | None = ENGINE_SRC_DEFAULT) 
     print(f"recorded={recorded} derived={len(recorder.entries) - recorded} -> {out.relative_to(REPO).as_posix()}")
 
 
-def verify(out: Path) -> int:
+def verify(out: Path, engine_src: Path | None | bool = False) -> int:
+    """Integrity (hashes, leaks, derived == transform(parent)). ``engine_src`` adds the provenance check:
+    a folder (or ``None`` = installed mdflow) whose ``source_digest`` must equal the manifest's
+    ``engine_source``; ``False`` (library default) skips it."""
     manifest = json.loads((out / "manifest.json").read_text(encoding="utf-8"))
-    problems = []
+    problems, unbound = [], ""
+    if engine_src is not False:
+        recorded = manifest.get("engine_source")
+        if recorded is None:
+            unbound = " (engine source UNBOUND: manifest predates engine_source; re-record FX-71 to bind it)"
+        else:
+            actual = source_digest(package_dir(engine_src))
+            if (actual["sha256"], actual["files"]) != (recorded.get("sha256"), recorded.get("files")):
+                problems.append(f"engine source mismatch: recorded {recorded.get('sha256')} ({recorded.get('files')} "
+                                f"files), this source tree {actual['sha256']} ({actual['files']} files); "
+                                "re-record FX-71 from this tree")
     on_disk = {p.name for p in out.iterdir() if p.name != "manifest.json"}
     for name in sorted(on_disk ^ set(manifest["files"])):
         problems.append(f"file/manifest mismatch: {name}")
@@ -575,7 +619,8 @@ def verify(out: Path) -> int:
                 problems.append(f"derived != transform(parent): {name}")
     for problem in problems:
         print(problem)
-    print(f"verify {'FAILED' if problems else 'ok'}: {len(manifest['files'])} files")
+    bound = "" if engine_src is False or unbound else ", engine source bound"
+    print(f"verify {'FAILED' if problems else 'ok'}: {len(manifest['files'])} files{bound}{unbound}")
     return int(bool(problems))
 
 
@@ -583,17 +628,18 @@ def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--out", type=Path, default=OUT_DEFAULT)
     parser.add_argument("--work", type=Path, default=WORK_DEFAULT)
-    parser.add_argument("--verify", action="store_true", help="check manifest hashes and derived == transform(parent)")
+    parser.add_argument("--verify", action="store_true", help="check manifest hashes, derived == transform(parent) "
+                                                              "and the engine_source digest against the engine source")
     engine = parser.add_mutually_exclusive_group()
     engine.add_argument("--engine-src", type=Path, default=ENGINE_SRC_DEFAULT,
                         help="folder containing the mdflow package the -I children import (default: this checkout's "
                              "engine/src); no venv is modified")
     engine.add_argument("--installed", action="store_true", help="children import the interpreter's installed mdflow")
     args = parser.parse_args(argv)
-    if args.verify:
-        return verify(args.out.resolve())
-    record(args.out, args.work, None if args.installed else args.engine_src)
-    return verify(args.out.resolve())
+    engine_src = None if args.installed else args.engine_src
+    if not args.verify:
+        record(args.out, args.work, engine_src)
+    return verify(args.out.resolve(), engine_src)
 
 
 if __name__ == "__main__":
