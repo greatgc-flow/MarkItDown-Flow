@@ -1,0 +1,87 @@
+{
+  "reviewer": "cc/cc.effort/claude-sonnet-5-5",
+  "date": "2026-11-11",
+  "commit": "edc0ca6ba646a5eca990e9583e0197605b347951",
+  "evidence": [
+    "Fresh review of .github/workflows @252f380. git diff --ignore-cr-at-eol ecea3f4 252f380 -- .github/workflows touches only ci.yml; evidence.yml and release.yml are unchanged since ecea3f4 (so the evidence.yml placeholder scope over the peer-authored folder, #9, is as previously reviewed and has not changed).",
+    "ci.yml changes: (1) every upload-artifact step that uploads build/trace/ now uses a two-line `path: |` with `build/trace/` and the exclusion `!build/trace/redgreen/*-tmp/**` (#11); 8 steps (candidate/reference-evidence, engine matrix, legacy-libreoffice, jest, contract-min, contract-max, smoke, trace), and no `path: build/trace/` single-line upload remains. The exclusion pattern matches the PT temp root build/trace/redgreen/pt-tmp used by engine/tests/packaging/conftest.py and test_pt_ci.py. (2) Core pins moved 0.3.7 -> 0.3.9 in contract-min (==0.3.9) and contract-max (>=0.3.9,<0.4). Both are run-script text only.",
+    "No new job, no new action, no SHA change: uses: lines still reference the same six reviewed `actions/*` SHAs (checkout 3d3c42e5, setup-python 6d4fd22b, setup-node 949feb24, upload-artifact cf430e03, download-artifact 9000827c, attest 1e69f48a). ci.yml still declares only top-level `contents: read` and no job-level permissions; no id-token, no write scopes, no secrets. All checkout steps still set persist-credentials: false. Least privilege holds.",
+    "Not verified by me: the GitHub commit-identity check (`gh api repos/<action>/commits/<sha>`; automatic) and the actions' own dist/runtime code (out of scope per the R36 trust assumption); ownership is judged from the `actions/` owner prefix, not a live GitHub query. I did not run the workflows, so I did not observe that the `!` exclusion shrinks the artifact in a real run; I relied on upload-artifact's documented glob negation and the matching packaging test. The candidate will receive one more small commit; the orchestrator rebinds this record afterwards.",
+    "Rebound 2026-11-11 from 252f3807fe1fc7b2825550b40ed26dda74e8451d to edc0ca6ba646a5eca990e9583e0197605b347951: .github/workflows byte-identical"
+  ],
+  "verdict": "PASS",
+  "actions": [
+    {
+      "action": "actions/checkout",
+      "sha": "3d3c42e5aac5ba805825da76410c181273ba90b1",
+      "checks": {
+        "ownership": "PASS",
+        "workflow_permissions": "PASS"
+      },
+      "evidence": [
+        "Owner `actions` (official). Used in ci/evidence/release with contents: read; every use has persist-credentials: false."
+      ],
+      "verification": {}
+    },
+    {
+      "action": "actions/setup-python",
+      "sha": "6d4fd22b20465ccc0f7354476588e8df7c9ca0e0",
+      "checks": {
+        "ownership": "PASS",
+        "workflow_permissions": "PASS"
+      },
+      "evidence": [
+        "Owner `actions` (official). Runs under contents: read only; no token-scoped inputs."
+      ],
+      "verification": {}
+    },
+    {
+      "action": "actions/setup-node",
+      "sha": "949feb2413d6458794dcd2491c4babbbce0c15c1",
+      "checks": {
+        "ownership": "PASS",
+        "workflow_permissions": "PASS"
+      },
+      "evidence": [
+        "Owner `actions` (official). Used only in ci.yml (candidate and jest jobs) under contents: read."
+      ],
+      "verification": {}
+    },
+    {
+      "action": "actions/upload-artifact",
+      "sha": "cf430e030ddbb5b0abf93d22962f4752f3646cd9",
+      "checks": {
+        "ownership": "PASS",
+        "workflow_permissions": "PASS"
+      },
+      "evidence": [
+        "Owner `actions` (official). Needs no token scope beyond the runtime artifact service; runs under contents: read. The new `!build/trace/redgreen/*-tmp/**` exclusion only narrows what is uploaded."
+      ],
+      "verification": {}
+    },
+    {
+      "action": "actions/download-artifact",
+      "sha": "9000827ccba6bdab643e8b6fd33ac0654aef8333",
+      "checks": {
+        "ownership": "PASS",
+        "workflow_permissions": "PASS"
+      },
+      "evidence": [
+        "Owner `actions` (official). Same-run downloads need no extra scope; cross-run downloads (release/evidence) use github-token with the declared `actions: read`, the minimum for that."
+      ],
+      "verification": {}
+    },
+    {
+      "action": "actions/attest",
+      "sha": "1e69f48acb82d1966a394da916b4c1698aa569d6",
+      "checks": {
+        "ownership": "PASS",
+        "workflow_permissions": "PASS"
+      },
+      "evidence": [
+        "Owner `actions` (official). Single use in release.yml `attest` job with job-scoped contents: read, id-token: write, attestations: write; that is the documented minimum for provenance attestations. release.yml unchanged since ecea3f4."
+      ],
+      "verification": {}
+    }
+  ]
+}

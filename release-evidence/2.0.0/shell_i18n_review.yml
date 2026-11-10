@@ -1,0 +1,20 @@
+# MAN-03  English/Korean meaning review of every message-table row.   Validated by: python tools/trace.py attest MAN-03
+id: MAN-03
+reviewer: ag/ag.effort/gemini-3.8-flash-high
+date: 2026-11-10
+commit: edc0ca6ba646a5eca990e9583e0197605b347951
+inputs:
+  - shell/src message tables for en and ko at the candidate commit (dumped via esbuild bundle of shell/src/pure/i18n.ts, dictionary('en') and dictionary('ko'))
+  - docs/renewal/10_SPEC.md section 7.5 code table
+checks:
+  - {id: reviewer_reads_english_and_korean, result: PASS}
+  - {id: english_meaning_correct_for_every_row, result: PASS}
+  - {id: korean_meaning_correct_for_every_row, result: PASS}
+  - {id: korean_equivalent_to_english_for_every_row, result: PASS}
+  - {id: placeholders_and_parameters_preserved_in_both_languages, result: PASS}
+evidence:
+  - "All 292 keys (engine + shell, after the round-9 UI/UX polish) paired as key / EN / KO; 0 keys missing in either language. Reviewed in three chunks (98 + 98 + 96 rows) by ag/ag.effort (peerhub streams mdf-m03r9b-1..3); each chunk returned 'CHUNK n: PASS' with no problem rows."
+  - "Each row checked for (a) English meaning, (b) Korean meaning and naturalness incl. Obsidian Korean UI terms (보관함), (c) EN/KO equivalence, (d) identical {placeholder} sets."
+  - "The orchestrator transcribed the reviewer's chunk verdicts into this record (ag cannot write files headlessly); the reviewer's raw replies are retained in the orchestrator scratch (m03_1..3.out)."
+  - "Rebound 2026-11-11 from 040c61085d1b04144e0cc812ebf5e605b8a8d9c2 to edc0ca6ba646a5eca990e9583e0197605b347951: shell/src/pure/i18n.ts identical apart from line endings (LF policy) and the SPEC 7.5 code table byte-identical; other SPEC sections changed (R39/R41 Core/PDF text, no message code), so tools/rebind_evidence.py refused on the whole-file pathspec. The reviewer ag/ag.effort confirmed: 'MAN-03 HOLDS for edc0ca6ba646a5eca990e9583e0197605b347951' (peerhub stream mdf-m03d)."
+verdict: PASS

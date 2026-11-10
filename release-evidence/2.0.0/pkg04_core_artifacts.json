@@ -1,0 +1,22 @@
+{
+  "reviewer": "cc/cc.effort/claude-sonnet-5-5",
+  "date": "2026-11-11",
+  "commit": "edc0ca6ba646a5eca990e9583e0197605b347951",
+  "evidence": [
+    "Fresh review for Core markitdown-gc 0.3.9 (previous record covered 0.3.7). Facts were fetched by the orchestrator (I have no PyPI access) into build/pkg09/. I read them myself: pypi-markitdown-gc-0.3.9.json (info.name markitdown-gc, info.version 0.3.9, info.license_expression \"MIT\", info.license null, license_files LICENSE and ThirdPartyNotices.md, yanked false, vulnerabilities []; two files, both yanked:false), METADATA-0.3.9.txt (Metadata 2.5; `License-Expression: MIT`; License-File: LICENSE and ThirdPartyNotices.md) and LICENSE-0.3.9.txt (standard MIT text, 'Copyright (c) Microsoft Corporation').",
+    "Artifact hashes: PyPI JSON lists the wheel markitdown_gc-0.3.9-py3-none-any.whl (bdist_wheel) sha256 c6c13487fc3b5f4e52331e2f584a7bf5efb0c38132eb53815e5a69cc035733e6 and the sdist markitdown_gc-0.3.9.tar.gz sha256 4d0fdc6784f6dde250be518a460824967bea25d267d38219691cf9d7df20d251; both equal the --hash pins in engine/requirements-reference.txt at 252f380. I recomputed the sha256 of build/pkg09/markitdown_gc-0.3.9-py3-none-any.whl with sha256sum and it matches c6c13487...5733e6.",
+    "Consistency: engine/requirements-reference.txt (==0.3.9), the ci.yml contract-min pin (==0.3.9) and contract-max range (>=0.3.9,<0.4), and shell CORE_REQUIREMENT (>=0.3.9,<0.4) all name 0.3.9 or newer within <0.4, as read from git diff ecea3f4 252f380. The PyPI project owner role is user greatgc.",
+    "Result: wheel metadata, the PyPI record and the LICENSE text agree on MIT, so artifact_licenses is PASS for markitdown-gc 0.3.9.",
+    "Limits: I did not extract METADATA/LICENSE from the wheel myself (I trust the orchestrator's extraction, tied to the wheel hash I confirmed). I did not hash or unpack the sdist (its license rests on PyPI's license_expression, which covers the release). I did not read ThirdPartyNotices.md or audit transitive dependency licenses; only markitdown-gc's own license was reviewed. Automatic artifacts[]/install_reports[] are left empty for evidence.yml.",
+    "Rebound 2026-11-11 from 252f3807fe1fc7b2825550b40ed26dda74e8451d to edc0ca6ba646a5eca990e9583e0197605b347951: engine/requirements*.txt, engine/pyproject.toml byte-identical"
+  ],
+  "verdict": "PASS",
+  "package": "markitdown-gc",
+  "version": "0.3.9",
+  "source": "https://pypi.org/pypi/markitdown-gc/0.3.9/json",
+  "artifacts": [],
+  "install_reports": [],
+  "checks": {
+    "artifact_licenses": "PASS"
+  }
+}

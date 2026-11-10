@@ -1,0 +1,25 @@
+{
+  "reviewer": "cc/cc.effort/claude-sonnet-5-5",
+  "date": "2026-11-11",
+  "commit": "edc0ca6ba646a5eca990e9583e0197605b347951",
+  "evidence": [
+    "Fresh review of what changed: git diff --ignore-cr-at-eol ecea3f4 252f380 for manifest.json, versions.json and LICENSE is empty (byte-identical to the previously reviewed content). manifest.json: id=markitdown-flow, version=2.0.0, minAppVersion=1.14.4, isDesktopOnly=true (line 9), description unchanged (single sentence, <=250 chars). versions.json key '2.0.0' -> '1.14.4' still equals manifest minAppVersion.",
+    "README.md changed substantially. Disclosures required for the listing remain and were updated accurately: network services (OCR endpoint, bootstrap downloads), outside-vault access (the cache now lives outside the vault at ~/.mdflow/cache and is not synced; spool/consent/logs stay in the plugin folder and the sync note is retained; the startup version check starts `exiftool -ver` and `soffice --version`), account/API key/cost (billing caveats for interrupted or unstored requests, `--command-egress` is a declaration), telemetry (none). New sections: Classification (T/S/M) and Known limitations. Core stated as 0.3.9 or newer. No ads or paid tier appear; LICENSE (MIT) present.",
+    "Command ids: shell/src/ui/commands.ts COMMAND_IDS still exists; the diff to shell/src (main.ts, node-spawner.ts, setup.ts, ui/*) changes locale detection (getLanguage with fallbacks), homeDir for history, whole-tree forced termination (taskkill /T, detached POSIX group) and CORE_REQUIREMENT 0.3.9; main.ts registers no new command and the guard for isDesktopOnly is unchanged. I did not re-diff ui/commands.ts line by line because it is absent from the diff stat (unchanged).",
+    "Limits: I compared against the public Obsidian plugin submission/developer-policy requirements as I know them; I did not fetch the live Obsidian docs or run the community-plugin validator. Not re-executed: the desktop-only guard and the UI. Listing install is post-release (REQ-PKG-19). The candidate will receive one more small commit (README/doc lines); the orchestrator rebinds this record afterwards.",
+    "Delta re-review 252f380..edc0ca6: git diff --ignore-cr-at-eol for README.md, manifest.json, versions.json shows only README.md changed (one Known limitations bullet): the PDF-headings limitation now says bookmarks reach the output when Core 0.3.9 converts the PDF whole and its page breaks match the real pages, otherwise the engine falls back to page-by-page and headings can be plain paragraphs. Wording only, consistent with the Core 0.3.9 requirement already disclosed; manifest.json and versions.json are unchanged, so identity, version, minAppVersion, isDesktopOnly and the other checks stand. Not re-executed: UI or desktop-only guard."
+  ],
+  "verdict": "PASS",
+  "listing": {
+    "id": "markitdown-flow",
+    "version": "2.0.0"
+  },
+  "checks": {
+    "identity": "PASS",
+    "manifest_versions": "PASS",
+    "description": "PASS",
+    "commands": "PASS",
+    "desktop_only": "PASS",
+    "readme_disclosures": "PASS"
+  }
+}

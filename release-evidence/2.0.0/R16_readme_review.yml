@@ -1,0 +1,23 @@
+id: MAN-02
+reviewer: ag/ag.argon/argon
+date: 2026-11-10
+commit: edc0ca6ba646a5eca990e9583e0197605b347951
+inputs:
+  - README.md at the candidate commit
+  - SPEC/code behavior facts supplied by orchestrator (below)
+checks:
+  - {id: network_services_and_purpose, readme_anchor: "Network services and purpose", result: PASS}
+  - {id: outside_vault_access, readme_anchor: "Outside-vault access", result: PASS}
+  - {id: no_client_telemetry, readme_anchor: "Telemetry", result: PASS}
+  - {id: account_key_cost, readme_anchor: "Account, API key and cost", result: PASS}
+  - {id: migration_and_operation, readme_anchor: "Migration and operation", result: PASS}
+  - {id: setup_and_provider_ui_link_to_disclosures, readme_anchor: "Setup", result: PASS}
+evidence:
+  - "Network services and purpose (plus Classification (T, S, M) and Command-line usage) accurately discloses that default provider `none` performs local conversion with zero network egress, optional `openai-compatible` defaults to `https://api.openai.com/v1` (`<Base URL>/chat/completions`) with strict URL validation, the CLI-only `command` provider is never configured or executed by the plugin shell, and remote OCR happens only after per-file plan approval (`--yes` / `--yes-file` or approval dialog)."
+  - "Outside-vault access accurately discloses reading the external venv and selected source files, writing temporary rasters in the OS temp directory while keeping plugin outputs inside the vault, sharing one outside-vault cache at `~/.mdflow/cache` (storing converted Markdown, media, and OCR transcriptions, retained after note deletion, not synced by Obsidian Sync, and clearable via `mdflow cache clear` with potential paid retranscription), keeping `spool/`, `consent/`, and redacted `logs/` under `.obsidian/plugins/markitdown-flow/`, recording home paths as `~` in `data.json`, and running `exiftool` (standalone png/jpg/jpeg only) and `soffice` (only when 'Legacy formats (LibreOffice)' is enabled, plus startup `exiftool -ver` and `soffice --version` checks) resolved solely from absolute PATH directories."
+  - "Telemetry and Setup accurately disclose that there is no client telemetry or analytics, local logs stay local, provider `none` requires no account or key, and the plugin never installs Python or dependencies or probes partially typed paths."
+  - "Account, API key and cost (with Command-line usage) accurately discloses that `MDFLOW_API_KEY` is supplied only via the launch environment and never persisted in `data.json`, credential-bearing `--command` templates are refused in favor of `--command-env`, `mdflow plan` displays per-file budget and cost estimates prior to consent, the default 'Keep OCR pending' button converts non-OCR content without contacting the provider while closing the dialog converts nothing, estimates are planning limits rather than a billing cap (interrupted, timed-out, unusable, or uncached responses may still be billed and resent on subsequent approved runs), and `--command-egress` is an unverified user declaration still subject to `max_requests`."
+  - "Migration and operation, Classification (T, S, M), and Known limitations accurately disclose v1 settings migration that strips secrets from `data.json` and writes a sanitized `data.v1.json` snapshot, preservation of the six v1 command IDs (`convert-file`, `convert-folder`, `convert-url`, `view-conversion-history`, `open-log-folder`, `run-image-pipeline-selftest`), opt-in LibreOffice legacy conversion with `fidelity: DERIVED` and `W_PRECONVERTED`, `E_CORE_CONFLICT` refusal when upstream `markitdown` is present alongside `markitdown-gc`, T/S/M/U/C/L/P/X classification behavior, and remaining `markitdown-gc` 0.3.9 limitations (PDF page-by-page fallback losing bookmark headings, XML emitted as raw text, exiftool limited to standalone png/jpg/jpeg)."
+  - "Setup (along with Network services and purpose and Account, API key and cost) links directly to `engine/BOOTSTRAP.md`, `engine/BOOTSTRAP.md#optional-remote-ocr`, `docs/renewal/PACKAGING_VERIFICATION.md`, and OpenAI data controls, and explains isolated execution (`python -I -X utf8 -m mdflow ...`) and how plugin settings and approval UI surface interpreter, Base URL, proxy, and consent disclosures."
+  - "Rebound 2026-11-11 from 29d1bd52e9b6a113042bcad1943776b44028707b to edc0ca6ba646a5eca990e9583e0197605b347951: README.md byte-identical"
+verdict: PASS
