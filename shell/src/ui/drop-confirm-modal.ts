@@ -56,11 +56,13 @@ export class DropConfirmModal extends Modal {
     contentEl.createEl('p', { text: this.t('shell.drop.confirm', { count: String(this.selection.paths.length) }) });
     const list = contentEl.createEl('ul', { cls: 'mdflow-drop-files' });
     for (const path of this.selection.paths) list.createEl('li', { text: path });
-    const buttons = contentEl.createDiv({ cls: 'mdflow-drop-buttons' });
-    const cancel = buttons.createEl('button', { text: this.t('shell.drop.cancel'), cls: 'mod-cta' });
-    cancel.addEventListener('click', () => this.cancel());
-    const convert = buttons.createEl('button', { text: this.t('shell.drop.convert') });
+    // Same layout as the other dialogs: the default (Cancel, mod-cta) on the right and focused, so Enter declines.
+    const buttons = contentEl.createDiv({ cls: 'mdflow-buttons mdflow-drop-buttons' });
+    const convert = buttons.createEl('button', { text: this.t('shell.drop.convert'), attr: { type: 'button' } });
     convert.addEventListener('click', () => this.confirm());
+    const cancel = buttons.createEl('button', { text: this.t('shell.drop.cancel'), cls: 'mod-cta', attr: { type: 'button' } });
+    cancel.addEventListener('click', () => this.cancel());
+    cancel.focus();
   }
 
   override onClose(): void {

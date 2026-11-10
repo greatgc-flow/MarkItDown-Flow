@@ -4,6 +4,7 @@
  * returns without registrations or engine work. The version probe runs in the
  * background and is awaited lazily by the first job, never by `onload`.
  */
+import * as obsidianApi from 'obsidian';
 import { FileSystemAdapter, Notice, Platform, Plugin } from 'obsidian';
 import { clearHistory, insertHistory, type HistoryEntry } from './pure/history';
 import { formatMessage, resolveLocale, type UiLocale } from './pure/i18n';
@@ -37,7 +38,27 @@ function randomNonce(): string {
   return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
 }
 
+/**
+ * `locale: auto` follows Obsidian's own display language (REQ-SHL-19 "host language"), not the OS: Korean Obsidian on
+ * English Windows is Korean. `getLanguage()` is looked up at run time so an API without it falls back to the stored
+ * Obsidian language (absent = English) and, outside Obsidian, to the renderer language.
+ */
 function hostLanguage(): string | undefined {
+  const api = obsidianApi as unknown as { getLanguage?: () => string };
+  if (typeof api.getLanguage === 'function') {
+    try {
+      const language = api.getLanguage();
+      if (typeof language === 'string' && language.length > 0) return language;
+    } catch {
+      // Fall through to the stored language.
+    }
+  }
+  try {
+    const storage = (globalThis as { localStorage?: { getItem?: (key: string) => string | null } }).localStorage;
+    if (storage && typeof storage.getItem === 'function') return storage.getItem('language') ?? 'en';
+  } catch {
+    // Storage unavailable: use the renderer language.
+  }
   return typeof navigator !== 'undefined' ? navigator.language : undefined;
 }
 

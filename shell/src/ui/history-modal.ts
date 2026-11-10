@@ -31,6 +31,7 @@ export class HistoryModal extends Modal {
     const { contentEl, titleEl } = this;
     const t = (key: string, params?: Record<string, string>): string => formatMessage(this.locale, key, params);
     titleEl.setText(t('shell.history.title'));
+    this.modalEl.addClass('mdflow-modal-wide');
     contentEl.empty();
     contentEl.addClass('mdflow-history');
     if (this.entries.length === 0) {
@@ -52,9 +53,16 @@ export class HistoryModal extends Modal {
       }
     }
     const buttons = contentEl.createDiv({ cls: 'mdflow-buttons mdflow-history-buttons' });
-    // Clear stays the first button (destructive, secondary styling); Close is the primary action.
+    // Clear stays the first button (destructive, secondary styling); Close is the primary action. Clearing takes two
+    // clicks: the first only asks for confirmation by relabelling the button, the second clears.
     const clear = buttons.createEl('button', { text: t('shell.history.clear'), cls: 'mod-warning', attr: { type: 'button' } });
+    let armed = false;
     clear.addEventListener('click', () => {
+      if (!armed) {
+        armed = true;
+        clear.setText(t('shell.history.clearConfirm'));
+        return;
+      }
       void this.onClear().then(() => this.close());
     });
     const close = buttons.createEl('button', { text: t('shell.history.close'), cls: 'mod-cta', attr: { type: 'button' } });

@@ -104,7 +104,11 @@ dialog for the whole selection: per file the destination, model, selected
 units, DPI, the per-file maximum request budget and estimated maximum cost (or
 unknown cost when pricing is unavailable), threshold and sensitive-pattern
 notices. Files with nothing left to send (already cached) are listed as
-informational and need no approval. These are planning limits, not a billing
+informational and need no approval. The default button, "Keep OCR pending",
+converts everything that needs no OCR right away and leaves the OCR parts as
+pending markers without contacting the provider; convert the same files again
+later to review and approve them. Closing the dialog converts nothing. These
+are planning limits, not a billing
 cap. Interrupted requests, retry, force and concurrent cache misses can incur
 additional charges. A Cancel button stays visible in the status bar for the
 whole job (planning, approval, conversion). On macOS and Linux, Cancel first
