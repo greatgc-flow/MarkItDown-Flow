@@ -111,7 +111,9 @@ def test_PT_04_public_artifact_license_and_target_wheel_evidence(attest_dir):
     path = attest_dir / "pkg04_core_artifacts.json"
     if not path.is_file():
         pytest.skip(f"human evidence absent: {path.as_posix()} (generated install/license evidence requires named review; mode H)")
-    from release_evidence import validate_extra
+    import sys
+    sys.path.insert(0, str(REPO / "tools"))  # release_evidence lazily imports trace
+    validate_extra = load_py(REPO / "tools/release_evidence.py", "release_evidence_pt04").validate_extra
     problems = validate_extra(path.name, json.loads(path.read_text(encoding='utf-8')),
                               os.environ.get('GITHUB_SHA', ''), root=REPO)
     assert not problems, "\n".join(problems)
