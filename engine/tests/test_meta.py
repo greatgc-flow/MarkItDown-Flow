@@ -46,9 +46,21 @@ def test_T_META_03_golden_integrity_and_core_provenance(trace_module, repo_root)
 @pytest.mark.cov("S0", "FM10")
 @pytest.mark.fx("all")
 @pytest.mark.scope("schema")
-def test_T_META_04_matrix_cells_covered_or_reasoned_na(trace_module, repo_root, test_registry):
+def test_T_META_04_matrix_cells_covered_or_reasoned_na(trace_module, repo_root, test_registry, tmp_path):
     problems = trace_module.matrix_problems(repo_root, test_registry)
     assert not problems, problems
+    # Round 10: a cell both covered and declared N/A is a stale declaration and is reported, never accepted.
+    (tmp_path / "docs/renewal").mkdir(parents=True)
+    (tmp_path / "engine/tests").mkdir(parents=True)
+    plan = (repo_root / "docs/renewal/30_TESTPLAN.md").read_bytes()
+    (tmp_path / "docs/renewal/30_TESTPLAN.md").write_bytes(plan)
+    matrix = (repo_root / "engine/tests/matrix.toml").read_text(encoding="utf-8")
+    stale = ('\n[[stage_fm]]\nstages = ["S5"]\nfms = ["FM9"]\nreason = "stale"\nowner = "S1:FM9"\n'
+             '\n[[class_stage]]\nclasses = ["K01"]\nstages = ["S12"]\nreason = "stale"\nowner = "S3"\n')
+    (tmp_path / "engine/tests/matrix.toml").write_text(matrix + stale, encoding="utf-8")
+    assert sorted(trace_module.matrix_problems(tmp_path, test_registry)) == [
+        "class x stage cell both covered and declared N/A: K01:S12",
+        "stage x failure-mode cell both covered and declared N/A: S5:FM9"]
 
 
 @pytest.mark.req("REQ-PKG-10")

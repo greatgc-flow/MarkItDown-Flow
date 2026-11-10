@@ -16,7 +16,7 @@ import { FakeClock, flush } from './fixtures/fake-clock';
 import { FakeFs, FakeSpoolFs } from './fixtures/fake-fs';
 import { FakeSpawner } from './fixtures/fake-spawner';
 import { fx71Bytes } from './fixtures/fx71';
-import { abs, HOST_ENV, PLUGIN_DIR, settingsV2, VAULT_ROOT } from './fixtures/shell-settings';
+import { abs, HOME, HOST_ENV, PLUGIN_DIR, settingsV2, VAULT_ROOT } from './fixtures/shell-settings';
 
 const R = req('REQ-SHL-09');
 
@@ -112,9 +112,9 @@ it(R('JT-09 nonrecursive folder selection keeps immediate regular files only and
   expect(win).toEqual(['C:\\Vault\\Inbox\\A.PDF']);
 });
 
-const ENABLED_GATE: VersionGate = { enabled: true, info: { mdflow: '2.0.0', 'markitdown-gc': '0.3.7', pypdfium2: '5.15.1', pillow: '13.0.0', python: '3.14.0', platform: 'test', protocol: 1, triage_schema: 1 } };
+const ENABLED_GATE: VersionGate = { enabled: true, info: { mdflow: '2.0.0', 'markitdown-gc': '0.3.8', pypdfium2: '5.15.1', pillow: '13.0.0', python: '3.14.0', platform: 'test', protocol: 1, triage_schema: 1 } };
 
-function coordinator(spawner: FakeSpawner, outputPath = 'markitdown-output', gate?: CoordinatorDeps['gate']): { coordinator: ShellCoordinator; notices: string[] } {
+function coordinator(spawner: FakeSpawner, outputPath = 'markitdown-output', gate?: CoordinatorDeps['gate'], extra: Parameters<typeof settingsV2>[0] = {}): { coordinator: ShellCoordinator; notices: string[] } {
   const fs = new FakeFs({ directories: [VAULT_ROOT, abs(VAULT_ROOT, 'markitdown-output'), abs(VAULT_ROOT, 'inbox'), PLUGIN_DIR, abs(PLUGIN_DIR, 'cache')] });
   const notices: string[] = [];
   const deps: CoordinatorDeps = {
@@ -126,7 +126,8 @@ function coordinator(spawner: FakeSpawner, outputPath = 'markitdown-output', gat
     platform: process.platform === 'win32' ? 'win32' : 'posix',
     vaultRoot: VAULT_ROOT,
     pluginDir: PLUGIN_DIR,
-    settings: () => settingsV2({ outputPath }),
+    homeDir: HOME,
+    settings: () => settingsV2({ outputPath, ...extra }),
     gate: gate ?? (() => ENABLED_GATE),
     consent: async () => ({ approved: false }),
     notify: (key) => {
@@ -201,12 +202,26 @@ it(R('JT-09 a refused submission releases the reservation: a destination refusal
   const empty = await c.submit({ kind: 'files', paths: [] }, 'command');
   expect(empty).toEqual({ accepted: false, diagnostic: 'shell.DESTINATION' });
   expect(notices.filter((n) => n === 'shell.BUSY')).toHaveLength(1);
+  // An empty selection is reported as empty (REQ-SHL-08), not as a destination problem: DESTINATION was notified once,
+  // for the unsafe output folder only.
+  expect(notices.filter((n) => n === 'shell.notice.pickerEmpty')).toHaveLength(1);
+  expect(notices.filter((n) => n === 'shell.DESTINATION')).toHaveLength(1);
   // The reservation is gone: a fresh coordinator state accepts the next valid request.
   const ok = coordinator(spawner);
   const accepted = await ok.coordinator.submit({ kind: 'files', paths: [abs(VAULT_ROOT, 'inbox', 'a.pdf')] }, 'command');
   expect(accepted.accepted).toBe(true);
   ok.coordinator.cancel();
   await ok.coordinator.current;
+});
+
+it(R('JT-09 a non-recursive folder without files is refused before any spawn with the empty-selection notice, not the destination notice'), async () => {
+  const spawner = new FakeSpawner(() => ({ exit: { code: 0, signal: null } }));
+  const { coordinator: c, notices } = coordinator(spawner, 'markitdown-output', undefined, { enableRecursiveConversion: false });
+  const result = await c.submit({ kind: 'folder', paths: [abs(VAULT_ROOT, 'inbox')] }, 'command');
+  expect(result).toEqual({ accepted: false, diagnostic: 'shell.DESTINATION' });
+  expect(notices).toEqual(['shell.notice.pickerEmpty']);
+  expect(spawner.requests).toEqual([]);
+  expect(c.active).toBe(false);
 });
 
 it(R('JT-09 an unsafe destination refuses the request before any spawn'), async () => {
@@ -292,6 +307,7 @@ it(R('JT-09 a relative enginePython is refused as shell.RUNTIME before any spawn
     platform: process.platform === 'win32' ? 'win32' : 'posix',
     vaultRoot: VAULT_ROOT,
     pluginDir: PLUGIN_DIR,
+    homeDir: HOME,
     settings: () => settingsV2({ enginePython: 'venv/bin/python' }),
     gate: () => ENABLED_GATE,
     consent: async () => ({ approved: false }),

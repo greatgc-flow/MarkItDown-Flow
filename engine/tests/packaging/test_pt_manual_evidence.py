@@ -207,7 +207,7 @@ def check_rehearsal_template(template):
         assert [d["asset"] for d in run["downloads"]] == list(SUBJECTS)
         assert set(run["checks"]) == set(tool.REHEARSAL), "template must list exactly the required rehearsal checks"
         assert set(run["checks"].values()) == {"TODO"}
-        assert run["engine"] == "2.0.0" and run["core"] == "0.3.7"
+        assert run["engine"] == "2.0.0" and run["core"] == "0.3.9"
     assert {template[k] for k in ("candidate_tag", "manifest_version", "versions_json_entry")} == {"2.0.0"}
     assert tool.validate_rehearsal(template), "the unfilled rehearsal must fail the schema validator"
     assert tool.validate_rehearsal(fill(deepcopy(template))) == []

@@ -2,7 +2,7 @@
 
 MarkItDown Flow converts local documents to Markdown and plans selective OCR for
 pages and images. The engine (`mdflow`, a Python CLI) uses `markitdown-gc`
-0.3.7 (published on PyPI). The desktop Obsidian shell drives an engine installed separately in a
+0.3.9 or newer (published on PyPI). The desktop Obsidian shell drives an engine installed separately in a
 virtual environment. Release verification is still pending; see
 [packaging verification](docs/renewal/PACKAGING_VERIFICATION.md).
 
@@ -24,6 +24,21 @@ the import path). Isolated mode ignores `PYTHONPATH`, the user site-packages
 and the current directory, so files inside a vault (including a synced or
 downloaded vault) can never be imported in place of the engine or its
 libraries. Use the same `-I` form in your own scripts.
+
+## Classification (T, S, M)
+
+Each document is classified before anything is converted. `T` (text) needs no
+OCR: its text is extracted directly. `S` (scanned) needs OCR for every page
+(or is a single image). `M` (mixed) has text plus some pages or images that
+need OCR. For `T`, `S` and `M` files, text content is converted locally without
+approval; in the plugin, once you choose "Keep OCR pending" or approve.
+Closing the dialog converts nothing. `P`, `X`, `L` (unless "Legacy formats
+(LibreOffice)" is on) and some `U`/`C` files are only reported. Remote OCR (a
+provider that sends data) happens only after you approve the per-file plan;
+until then the parts that need OCR stay as pending markers in the note. With
+provider `none` they stay pending. Other labels: `U` (need unknown), `C`
+(archive), `L` (legacy format), `P` (protected) and `X` (unsupported). Run
+`python -I -m mdflow classify <PATH>` to see a file's label.
 
 ## Network services and purpose
 
@@ -68,17 +83,26 @@ you turn on "Legacy formats (LibreOffice)", the engine runs your own LibreOffice
 (`soffice` on PATH or `SOFFICE_PATH`) in a private profile with macros and link
 updates disabled to convert legacy `.doc`, `.ppt`, `.rtf` and HWP sources; it
 reads the source and writes a temporary converted copy that is not kept. The
-plugin itself never runs either program.
+engine's version check, which the plugin runs at startup, starts `exiftool -ver`
+and `soffice --version` to report them, whatever the "Legacy formats" setting;
+the plugin does not start either program itself. The engine looks exiftool and
+soffice up only in absolute PATH folders, never in the current folder.
 
-The CLI cache defaults to `~/.mdflow/cache`. The plugin keeps its cache,
-transient report spool, one-run consent files and redacted logs inside the
-vault under `.obsidian/plugins/markitdown-flow/` (`cache/`, `spool/`,
-`consent/`, `logs/`). The cache contains OCR transcriptions and is retained by
-default; if your vault or its plugin folder is synchronized (Obsidian Sync with
-installed community plugins enabled, or a cloud-synced vault), those
-transcriptions and logs are replicated too. Exclude the folder from sync or
-clear the cache (`mdflow cache clear --cache <plugin-dir>/cache`) if that is not
-acceptable. Explicit clearing can cause paid retranscription.
+The CLI and the plugin share one local cache outside the vault, the engine
+default `~/.mdflow/cache` (`%USERPROFILE%\.mdflow\cache` on Windows). It holds
+the converted Markdown and extracted media of every converted document (also
+with provider `none` and for files picked from outside the vault) and the OCR
+transcriptions, and it is kept after you delete the notes. It is not inside
+the vault, so Obsidian Sync or a cloud-synced vault does not replicate it; a
+second device converts again and pays again for remote OCR. Clear it with
+`mdflow cache clear`; explicit clearing can cause paid retranscription. The
+plugin keeps its transient report spool, one-run consent files and redacted
+logs inside the vault under `.obsidian/plugins/markitdown-flow/` (`spool/`,
+`consent/`, `logs/`); if your vault or its plugin folder is synchronized
+(Obsidian Sync with installed community plugins enabled, or a cloud-synced
+vault), those logs are replicated too. Exclude the folder from sync if that is
+not acceptable. Conversion history in `data.json` records paths under your
+home folder as `~`.
 
 ## Telemetry
 
@@ -104,10 +128,17 @@ dialog for the whole selection: per file the destination, model, selected
 units, DPI, the per-file maximum request budget and estimated maximum cost (or
 unknown cost when pricing is unavailable), threshold and sensitive-pattern
 notices. Files with nothing left to send (already cached) are listed as
-informational and need no approval. These are planning limits, not a billing
-cap. Interrupted requests, retry, force and concurrent cache misses can incur
-additional charges. A Cancel button stays visible in the status bar for the
-whole job (planning, approval, conversion). On macOS and Linux, Cancel first
+informational and need no approval. The default button, "Keep OCR pending",
+converts everything that needs no OCR right away and leaves the OCR parts as
+pending markers without contacting the provider; convert the same files again
+later to review and approve them. Closing the dialog converts nothing.
+These are planning limits, not a billing
+cap. A remote request can be billed even if its result is never stored: when
+the run is killed or cancelled, the connection drops or times out, the reply is
+unusable, or the cache write fails. Such units are sent and billed again on the
+next approved run; `--force`, cache clearing and concurrent runs can also
+resend. `--command-egress` is your declaration, not verified. A Cancel button
+stays visible in the status bar for the whole job (planning, approval, conversion). On macOS and Linux, Cancel first
 asks the engine to stop cooperatively and forces termination after five
 seconds; on Windows every Cancel is a forced termination, because the plugin
 cannot deliver a console control event to the engine. A forced termination may
@@ -208,15 +239,41 @@ Remote OCR needs consent per file: `run` stops with exit 3 and an
 `--approved-by TEXT`. Hashes exclude cache state, so an approval stays valid
 while other files fill the cache. The `command` provider requires
 `--command "<template>" --command-egress true|false --trust-command --model <label>`
-and runs the program with your privileges on every unit.
+and runs the program with your privileges on every unit. `--command-egress false`
+is your declaration; mdflow does not sandbox or verify it. `false` skips the
+approval step; the plan's per-file request limit (`max_requests`) still
+applies. A bare program name is resolved to its
+absolute path in an absolute PATH folder (never the current folder), and that
+path is part of the approved destination. A template containing the value of a
+credential-like variable (`*_KEY`, `*_TOKEN`, `*_SECRET`, `*_PASSWORD`, `*_PASS`,
+`*_AUTH`, `*_CREDENTIAL`, `*_PAT`) is refused; pass it with `--command-env NAME`.
+`--sensitive` globs match the logical path and the absolute source path with `/`
+separators (zip members as `<container>/<member>`).
+
+## Known limitations
+
+`markitdown-gc` 0.3.8 fixed DOCX Title headings, the empty DOCX table header
+row, XLSX empty cells and whole numbers, and TSV tables (markitdown-gc issues
+#68, #69, #70, #71). These output gaps remain:
+
+- PDF headings (bookmarks) reach the output when Core 0.3.9 converts the PDF as
+  a whole and its page breaks match the real pages. When they do not match, the
+  engine falls back to one page at a time and the headings can come out as
+  plain paragraphs.
+- XML content is emitted as raw text, not as structure.
+
+exiftool metadata (R31) is added only for standalone `png`, `jpg` and `jpeg`
+files. Images inside PDF, Office, HWP or archive files get no exiftool
+metadata, and exiftool is never started for them.
 
 ## Development and license
 
 See [25_PACKAGING](docs/renewal/25_PACKAGING.md) for release gates. Build with
 `python tools/build_engine.py` and `python tools/build_release.py`; dependencies
 are explicitly pinned, and missing wheel or review evidence blocks release.
-Required CI targets are Windows x64, Ubuntu x64 and macOS Intel, Python 3.10 and
-3.14; Python 3.15 is experimental. Python 3.11-3.13 need the install/classify
+Required CI targets are Windows x64, Ubuntu x64 and macOS arm64, Python 3.10 and
+3.14; Python 3.15 and macOS Intel (Python 3.12) are experimental
+allowed-failure cells. Python 3.11-3.13 need the install/classify
 smokes before being advertised as verified. Shell: `cd shell && npm ci && npm run typecheck && npm test && npm run build`.
 
 MIT license; see [LICENSE](LICENSE). Historical MarkItDown Flow contributors and

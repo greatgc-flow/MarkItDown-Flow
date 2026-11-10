@@ -1,3 +1,5 @@
+Superseded by R35 (owner decision): MAN-04 is post-release. 2.0.0 may be released at `SCORE 99/100 (automated 93/93, manual 6/7); MAN-04 deferred: post-release (R35)` (90_ACCEPTANCE §4); the 100/100 threshold below is historical, and the "do not convert M-01..M-04 into post-release checks" recommendation is historical only for MAN-04: MAN-01..03 are still required before publication.
+
 (1) SUFFICIENCY TO TAG AND PUBLISH 2.0.0 NOW: NO.
 Under 90_ACCEPTANCE.md (§1, §3, §4, §6, §7), release requires `SCORE 100/100 (automated 93/93, manual 7/7)` produced by `python tools/trace.py score` on the frozen candidate commit. AI peer reviews (ag/cx/cc MECE 100s) and PR test passes do not substitute for candidate-bound release artifacts, cryptographic attestations, or named human sign-offs.
 

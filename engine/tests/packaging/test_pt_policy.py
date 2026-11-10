@@ -67,7 +67,7 @@ def test_PT_10_mutations_fail_trace_check_and_manual_results_are_reported_separa
 
 DISCLOSURES = {
     "network services and purpose": (r"network", [r"provider\s+`?none`?", r"openai-compatible", r"release host|package index"]),
-    "outside-vault access": (r"outside[- ](the[- ])?vault", [r"~/\.mdflow/cache", r"<plugin-dir>/cache", r"cache"]),
+    "outside-vault access": (r"outside[- ](the[- ])?vault", [r"~/\.mdflow/cache", r"cache"]),
     "telemetry": (r"telemetry", [r"\bno (client )?telemetry"]),
     "account, key and cost": (r"(account|api key).*(cost|key)|cost", [r"MDFLOW_API_KEY", r"charge|cost"]),
     "migration and operation": (r"migration|operation", [r"venv|virtual environment", r"snapshot"]),

@@ -18,6 +18,8 @@ import time
 from typing import Sequence
 
 from ..contracts import ProviderMeta, UnitResult
+from ..executable import resolve_executable
+from ..report import home_relative
 from ._errors import ProviderConfigError
 
 ALLOWED_ENV = frozenset(
@@ -55,7 +57,29 @@ def _read_ready(pipe) -> bytes | None:
 
 
 def canonical_destination(argv_template: Sequence[str]) -> str:
-    return "command:" + json.dumps(list(argv_template), sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+    return "command:" + json.dumps([home_relative(word) for word in argv_template],
+                                  sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+
+
+def _taskkill_path() -> str:
+    """Absolute System32 path: a bare name would search the current folder first on Windows."""
+    root = os.environ.get('SystemRoot') or os.environ.get('windir') or 'C:\\Windows'
+    return os.path.join(root, 'System32', 'taskkill.exe')
+
+
+def _kill_tree(child: subprocess.Popen) -> None:
+    """Kill the command AND its descendants (a timed-out template must not leave processes running)."""
+    try:
+        if os.name == 'nt':
+            subprocess.run([_taskkill_path(), '/PID', str(child.pid), '/T', '/F'], stdin=subprocess.DEVNULL,
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=10, check=False)
+        else:
+            import signal
+            os.killpg(child.pid, signal.SIGKILL)
+    except (OSError, subprocess.SubprocessError):
+        pass
+    if child.poll() is None:
+        child.kill()
 
 
 def _failed(code: str, message: str, started: float, exit_status: int | None = None) -> UnitResult:
@@ -78,6 +102,10 @@ class CommandProvider:
             raise ProviderConfigError("command template cannot be parsed") from None
         if not template:
             raise ProviderConfigError("command template is empty")
+        if not os.path.dirname(template[0]):
+            # Pin the vouched-for program; destination shortens only its home prefix, retaining program identity
+            # in the plan hash/cache fingerprint. Unresolved names are refused in _capture (never a cwd lookup).
+            template[0] = resolve_executable(template[0], os.environ.get("PATH", "")) or template[0]
         self._template = template
         self._env_names = sorted(set(env_names))
         self._timeout_s = timeout_s
@@ -110,9 +138,12 @@ class CommandProvider:
     def _capture(self, argv, started) -> UnitResult:
         child = None
         deadline = started + self._timeout_s
+        if not os.path.dirname(argv[0]):
+            return _failed('E_PROVIDER_CONFIG', 'command program was not found on PATH', started)
         try:
             child = subprocess.Popen(argv, shell=False, env=self._child_env(), stdin=subprocess.DEVNULL,
-                                     stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, bufsize=0)
+                                     stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, bufsize=0,
+                                     start_new_session=os.name != 'nt')  # POSIX: own group, killable as a tree
             payload = bytearray()
             while True:
                 remaining = deadline - time.monotonic()
@@ -142,6 +173,6 @@ class CommandProvider:
         finally:
             if child is not None:
                 if child.poll() is None:
-                    child.kill()
+                    _kill_tree(child)
                 child.wait()
                 child.stdout.close()

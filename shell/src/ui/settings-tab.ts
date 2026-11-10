@@ -10,7 +10,7 @@
  * descriptions: Engine, Conversion, OCR provider, Consent & privacy, Advanced.
  * No markitdown LLM settings exist (R29).
  */
-import { type App, type Plugin, PluginSettingTab, Setting } from 'obsidian';
+import { type App, Platform, type Plugin, PluginSettingTab, Setting } from 'obsidian';
 import { formatMessage, type UiLocale } from '../pure/i18n';
 import { isAbsolutePath } from '../pure/paths';
 import { isAcceptableBaseUrl, isSafeVaultRelativePath, type RunOptions, type SettingsV2 } from '../pure/settings';
@@ -122,7 +122,9 @@ export class ShellSettingsTab extends PluginSettingTab {
 
     // --- Engine -------------------------------------------------------------------------------------------
     section('engine');
-    new Setting(containerEl).setName(t('shell.settings.enginePython')).setDesc(t('shell.settings.commitNote')).addText((text) => {
+    new Setting(containerEl).setName(t('shell.settings.enginePython')).setDesc(t('shell.settings.enginePythonNote')).addText((text) => {
+      // Example path in the user's OS form, matching the SetupModal's bootstrap recipe.
+      text.setPlaceholder(Platform.isWin ? 'C:\\mdflow-venvs\\2.0.0\\Scripts\\python.exe' : '/path/to/mdflow-venvs/2.0.0/bin/python');
       text.setValue(current.enginePython ?? '');
       this.committed(text, () => saved().enginePython ?? '', (value) => {
         const trimmed = value.trim();
@@ -141,7 +143,8 @@ export class ShellSettingsTab extends PluginSettingTab {
 
     // --- Conversion ---------------------------------------------------------------------------------------
     section('conversion');
-    new Setting(containerEl).setName(t('shell.settings.outputPath')).setDesc(t('shell.settings.commitNote')).addText((text) => {
+    new Setting(containerEl).setName(t('shell.settings.outputPath')).setDesc(t('shell.settings.outputPathNote')).addText((text) => {
+      text.setPlaceholder('markitdown-output');
       text.setValue(current.outputPath);
       this.committed(text, () => saved().outputPath, (value) => {
         if (!isSafeVaultRelativePath(value)) return false;
@@ -161,15 +164,16 @@ export class ShellSettingsTab extends PluginSettingTab {
     toggle('enableDragDrop', ['shell.settings.enableDragDropNote', 'shell.settings.reloadNote']);
     toggle('enableBatchProgress');
     new Setting(containerEl).setName(t('shell.settings.locale')).setDesc(t('shell.settings.reloadNote')).addDropdown((dropdown) => {
-      dropdown.addOptions({ auto: 'auto', en: 'English', ko: '한국어' }).setValue(current.locale).onChange((value) => {
-        if (value === 'auto' || value === 'en' || value === 'ko') void update({ locale: value });
+      dropdown.addOptions({ auto: t('shell.settings.locale.auto'), en: 'English', ko: '한국어' }).setValue(current.locale).onChange((value) => {
+        // The tab itself follows the new language at once (other registrations still need the reload noted above).
+        if (value === 'auto' || value === 'en' || value === 'ko') void update({ locale: value }).then(() => this.display());
       });
     });
 
     // --- OCR provider -------------------------------------------------------------------------------------
     section('provider');
     new Setting(containerEl).setName(t('shell.settings.provider')).setDesc(t('shell.settings.keyNote')).addDropdown((dropdown) => {
-      dropdown.addOptions({ none: 'none', 'openai-compatible': 'openai-compatible' }).setValue(current.provider.name).onChange((value) => {
+      dropdown.addOptions({ none: t('shell.settings.provider.none'), 'openai-compatible': t('shell.settings.provider.openai') }).setValue(current.provider.name).onChange((value) => {
         if (value === 'none' || value === 'openai-compatible') void update({ provider: { ...this.deps.settings().provider, name: value } });
       });
     });
@@ -194,7 +198,7 @@ export class ShellSettingsTab extends PluginSettingTab {
 
     // --- Consent & privacy (SPEC 10.2 bounds; REQ-SHL-04) -------------------------------------------------
     section('consent');
-    new Setting(containerEl).setName(t('shell.settings.approveThreshold')).setDesc(t('shell.settings.commitNote')).addText((text) => {
+    new Setting(containerEl).setName(t('shell.settings.approveThreshold')).setDesc(`${t('shell.settings.approveThresholdNote')} ${t('shell.settings.commitNote')}`).addText((text) => {
       text.setValue(String(current.runOptions.approveThreshold));
       this.committed(text, () => String(saved().runOptions.approveThreshold), (value) => {
         const parsed = parseBoundedInteger(value, 0);
@@ -213,17 +217,17 @@ export class ShellSettingsTab extends PluginSettingTab {
 
     // --- Advanced -----------------------------------------------------------------------------------------
     section('advanced');
-    new Setting(containerEl).setName(t('shell.settings.dpi')).addDropdown((dropdown) => {
+    new Setting(containerEl).setName(t('shell.settings.dpi')).setDesc(t('shell.settings.dpiNote')).addDropdown((dropdown) => {
       dropdown.addOptions({ '200': '200', '300': '300' }).setValue(String(current.runOptions.dpi)).onChange((value) => {
         if (value === '200' || value === '300') void updateRun({ dpi: Number(value) as RunOptions['dpi'] });
       });
     });
-    new Setting(containerEl).setName(t('shell.settings.minPriority')).addDropdown((dropdown) => {
-      dropdown.addOptions({ low: 'low', normal: 'normal' }).setValue(current.runOptions.minPriority).onChange((value) => {
+    new Setting(containerEl).setName(t('shell.settings.minPriority')).setDesc(t('shell.settings.minPriorityNote')).addDropdown((dropdown) => {
+      dropdown.addOptions({ low: t('shell.settings.minPriority.low'), normal: t('shell.settings.minPriority.normal') }).setValue(current.runOptions.minPriority).onChange((value) => {
         if (value === 'low' || value === 'normal') void updateRun({ minPriority: value });
       });
     });
-    new Setting(containerEl).setName(t('shell.settings.maxUnits')).setDesc(t('shell.settings.commitNote')).addText((text) => {
+    new Setting(containerEl).setName(t('shell.settings.maxUnits')).setDesc(`${t('shell.settings.maxUnitsNote')} ${t('shell.settings.commitNote')}`).addText((text) => {
       text.setValue(String(current.runOptions.maxUnits));
       this.committed(text, () => String(saved().runOptions.maxUnits), (value) => {
         const parsed = parseBoundedInteger(value, 1);

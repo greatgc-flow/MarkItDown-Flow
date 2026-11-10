@@ -42,6 +42,11 @@ it(R('JT-08 the drop confirmation lists every dropped path literally and resolve
   expect(convert).toBeDefined();
   expect(cancel).toBeDefined();
   expect(cancel?.hasClass('mod-cta')).toBe(true);
+  // Same button row as the other dialogs: default (Cancel) last, on the right; both are plain buttons.
+  const row = content.findAll((e) => e.hasClass('mdflow-buttons'));
+  expect(row).toHaveLength(1);
+  expect(row[0].children.map((b) => b.textContent)).toEqual([EN['shell.drop.convert'], EN['shell.drop.cancel']]);
+  for (const button of row[0].children) expect(button.getAttribute('type')).toBe('button');
   convert?.click();
   await expect(modal.decision).resolves.toBe(true);
   expect(mockState.openModals).toEqual([]);

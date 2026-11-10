@@ -15,8 +15,12 @@ import tempfile
 import zlib
 
 from . import approve, assemble, classify, convert, core_guard, exiftool, orchestrate, providers, report, runtime_temp, sniff_io, transcribe, triage, write
+from .executable import resolve_executable, resolve_override
 
-_DISCLOSURE = ("Duplicate remote charges are possible if a run dies between a response and its ledger write. "
+_DISCLOSURE = ("A remote request can be billed even if its result is never stored: when the run is killed or "
+               "cancelled, the connection drops or times out, the reply is unusable, or the cache write fails. Such "
+               "units are sent and billed again on the next approved run (a duplicate charge); --force, cache clearing "
+               "and concurrent runs can also resend. --command-egress is your declaration, not verified. "
                "A trusted command runs with your privileges on every OCR unit.")
 
 
@@ -66,7 +70,9 @@ def _parser() -> argparse.ArgumentParser:
         cmd.add_argument("--progress", choices=("none", "jsonl"), default="none")
         cmd.add_argument("--report", type=Path)
         cmd.add_argument("--command")
-        cmd.add_argument("--command-egress", choices=("true", "false"))
+        cmd.add_argument("--command-egress", choices=("true", "false"),
+                         help="false is your declaration; mdflow does not sandbox or verify it. false skips the "
+                              "approval step; the plan's per-file request limit (max_requests) still applies.")
         cmd.add_argument("--command-env", action="append", default=[])
         cmd.add_argument("--trust-command", action="store_true",
                          help="The command runs with your privileges on every OCR unit.")
@@ -89,9 +95,9 @@ def _check_core() -> None:
     except metadata.PackageNotFoundError:
         raise RuntimeError("markitdown-gc is not installed") from None
     match = re.fullmatch(r"0\.3\.(\d+)(.*)", version)
-    if not match or int(match[1]) < 7 or (int(match[1]) == 7 and match[2] and
+    if not match or int(match[1]) < 9 or (int(match[1]) == 9 and match[2] and
                                         not match[2].startswith((".post", "+"))):
-        raise RuntimeError("markitdown-gc must be >=0.3.7,<0.4")
+        raise RuntimeError("markitdown-gc must be >=0.3.9,<0.4")
 
 
 def _print(value: object, *, pretty: bool = False) -> None:
@@ -207,7 +213,7 @@ def _exiftool_versions() -> dict:
 
 
 def _libreoffice_versions() -> dict:
-    """Informational probe using Core's resolver and contained execution helper."""
+    """Informational probe via Core's public ``markitdown.tools.probe_libreoffice``."""
     explicit = os.environ.get('SOFFICE_PATH', '').strip()
     return dict(_probe_libreoffice(explicit, os.environ.get('PATH', '')))
 
@@ -217,21 +223,19 @@ def _probe_libreoffice(explicit: str, search_path: str) -> dict:
     # Cache successes and failures per process/environment, as exiftool does.
     found = dict(libreoffice='unavailable', libreoffice_status='not_found', libreoffice_source=None)
     try:
-        with core_guard.quiet_output():
-            from markitdown import _libreoffice as lo
-        executable = lo._resolve(explicit or 'soffice')
+        # soffice, or a bare SOFFICE_PATH name, is looked up in absolute PATH folders only (security review C1);
+        # Core's probe only ever receives that absolute path, never None (its own default lookup).
+        executable = resolve_override(explicit, search_path) if explicit else resolve_executable('soffice', search_path)
         found.update(libreoffice_status='unusable' if explicit or executable else 'not_found',
                      libreoffice_source='SOFFICE_PATH' if explicit else 'PATH' if executable else None)
         if executable:
-            with runtime_temp.run_directory() as work:
-                profile = work / 'profile'
-                lo._write_profile(profile)
-                text = lo._execute([executable, '-env:UserInstallation=' + profile.as_uri(),
-                                    '--headless', '--norestore', '--nofirststartwizard', '--version'],
-                                   cwd=work, timeout_s=0.5, output=work / 'version.log')
-                match = re.search(r'LibreOffice\s+(\d+(?:\.\d+)+)', text)
-                if match:
-                    found.update(libreoffice=match[1], libreoffice_status='ok')
+            with core_guard.quiet_output():
+                from markitdown import tools
+            # Stable Core probe: soffice.exe -> soffice.com, throwaway macro-disabled profile, contained run.
+            probe = tools.probe_libreoffice(executable, timeout=exiftool.VERSION_TIMEOUT_S)
+            version = probe.get('version')
+            if probe.get('status') == 'ok' and isinstance(version, str) and re.fullmatch(r'\d+(?:\.\d+)+', version):
+                found.update(libreoffice=version, libreoffice_status='ok')
     except Exception:
         found.update(libreoffice_status='unusable')
     return found

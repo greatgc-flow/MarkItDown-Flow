@@ -145,9 +145,9 @@ def validate_extra(filename: str, data, expected_commit: str, *, root: Path, exe
             problems.append('wrong candidate listing identity/version')
         checks(data, LISTING_CHECKS, problems)
     else:
-        if data.get('package') != 'markitdown-gc' or data.get('version') != '0.3.7':
-            problems.append('exact reference Core 0.3.7 required')
-        if data.get('source') != 'https://pypi.org/pypi/markitdown-gc/0.3.7/json':
+        if data.get('package') != 'markitdown-gc' or data.get('version') != '0.3.9':
+            problems.append('exact reference Core 0.3.9 required')
+        if data.get('source') != 'https://pypi.org/pypi/markitdown-gc/0.3.9/json':
             problems.append('official PyPI JSON source required')
         artifacts = data.get('artifacts')
         if not isinstance(artifacts, list) or not artifacts:
@@ -252,10 +252,10 @@ def produce_extras(root: Path, source: Path, output: Path, expected_commit: str,
             raise ValueError(f'GitHub action SHA differs: {action}')
         row['verification'] = dict(command=f'gh api {endpoint}', stdout={'sha': actual['sha']}, exit=0)
     pkg = records['pkg04_core_artifacts.json']
-    catalog = pypi_json('0.3.7')
-    if catalog['info']['name'] != 'markitdown-gc' or catalog['info']['version'] != '0.3.7':
+    catalog = pypi_json('0.3.9')
+    if catalog['info']['name'] != 'markitdown-gc' or catalog['info']['version'] != '0.3.9':
         raise ValueError('PyPI returned another Core')
-    pkg.update(package='markitdown-gc', version='0.3.7', source='https://pypi.org/pypi/markitdown-gc/0.3.7/json',
+    pkg.update(package='markitdown-gc', version='0.3.9', source='https://pypi.org/pypi/markitdown-gc/0.3.9/json',
                artifacts=[dict(filename=i['filename'], url=i['url'], sha256=i['digests']['sha256'],
                                size=i['size'], packagetype=i['packagetype'], yanked=i['yanked']) for i in catalog['urls']])
     pkg['install_reports'] = []
@@ -355,7 +355,7 @@ def validate_rehearsal(data: dict, *, minimum_version=None) -> list[str]:
         cells.append((run.get('os'), run.get('obsidian_channel')))
         if minimum_version and run.get('obsidian_channel') == 'minimum' and run.get('obsidian_version') != minimum_version:
             problems.append('MAN-04 minimum Obsidian version differs from candidate manifest')
-        if run.get('engine') != '2.0.0' or run.get('core') != '0.3.7':
+        if run.get('engine') != '2.0.0' or run.get('core') != '0.3.9':
             problems.append('rehearsal must use the exact engine/Core')
         assets(run.get('downloads'), SUBJECTS, problems)
         checks(run, REHEARSAL, problems)

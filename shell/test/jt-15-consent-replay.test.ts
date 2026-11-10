@@ -17,8 +17,9 @@ import { FakeFs, FakeSpoolFs } from './fixtures/fake-fs';
 import { chunksOf, FakeSpawner, type ScriptedChild, subcommandOf } from './fixtures/fake-spawner';
 import { fx71Bytes, fx71Exit, fx71PlanObjects, fx71YesFile } from './fixtures/fx71';
 import { approvedHashesIn, bytes, parseYesFile, plan as syntheticPlan, planStdout, replayInvariantArgs } from './fixtures/protocol';
-import { abs, HOST_ENV, KEY_VALUE, OPENAI_PROVIDER, PLUGIN_DIR, settingsV2, VAULT_ROOT } from './fixtures/shell-settings';
+import { abs, HOME, HOST_ENV, KEY_VALUE, OPENAI_PROVIDER, PLUGIN_DIR, settingsV2, VAULT_ROOT } from './fixtures/shell-settings';
 import type { SettingsV2 } from '../src/pure/settings';
+import type { ResultsViewModel } from '../src/ui/results-modal';
 
 const R = req('REQ-SHL-15');
 const R9 = req('REQ-SHL-09');
@@ -82,8 +83,9 @@ function harness(
     platform: process.platform === 'win32' ? 'win32' : 'posix',
     vaultRoot: VAULT_ROOT,
     pluginDir: PLUGIN_DIR,
+    homeDir: HOME,
     settings: () => settings,
-    gate: () => ({ enabled: true, info: { mdflow: '2.0.0', 'markitdown-gc': '0.3.7', pypdfium2: '5.15.1', pillow: '13.0.0', python: '3.14.0', platform: 'test', protocol: 1, triage_schema: 1 } }),
+    gate: () => ({ enabled: true, info: { mdflow: '2.0.0', 'markitdown-gc': '0.3.8', pypdfium2: '5.15.1', pillow: '13.0.0', python: '3.14.0', platform: 'test', protocol: 1, triage_schema: 1 } }),
     consent: async (view) => {
       consentCalls.push(view);
       return decide(view);
@@ -183,7 +185,79 @@ it(R('JT-15 provider none runs without a consent modal and without any authoriza
   expect(h.history).toEqual(['partial_failure']);
 });
 
-it(R('JT-15 Keep pending / dismissal: the plan ran, no run is launched, no yes-file is written, outcome pending consent'), async () => {
+it(R('JT-15 Keep pending (R37): one unauthorized run converts every no-OCR part now, OCR units stay pending with zero provider calls, and the pending result is shown with the kept-pending notice instead of the approval request'), async () => {
+  // FX-71 consent series: the Plan, then the same invocation run without any --yes/--yes-file (REQ-APR-03).
+  const h = harness(
+    remoteSettings,
+    (request) => (subcommandOf(request) === 'plan' ? recordedPlan('consent-1-plan.stdout.json') : recordedRun('consent-2-pending')),
+    async () => ({ approved: false, keepPending: true }),
+  );
+  const shown: ResultsViewModel[] = [];
+  h.deps.results = (view) => {
+    shown.push(view);
+  };
+  const report = await runJob(h);
+  expect(h.consentCalls).toHaveLength(1);
+  expect(h.spawner.commands).toEqual(['plan', 'run']);
+  const [plan, run] = h.spawner.requests;
+  // The exact original invocation, with no authorization argument of any kind: the engine cannot egress (SPEC 8.4).
+  expect(replayInvariantArgs(run.args)).toEqual(replayInvariantArgs(plan.args));
+  expect(run.cwd).toBe(plan.cwd);
+  for (const flag of ['--yes', '--yes-file', '--approved-by']) expect(run.args).not.toContain(flag);
+  expect(h.yesFiles).toEqual([]);
+  expect(h.fs.mutations.filter((m) => /yes/i.test(m))).toEqual([]);
+  expect(report.decision).toEqual({ approved: false, keepPending: true });
+  // Engine result: exit 3 pending consent, nothing sent, the T file converted, M/S files written with pending markers.
+  expect(report.run?.status.code).toBe(3);
+  expect(report.run?.outcome).toBe('pending_consent');
+  expect(report.pendingShown).toBe(true);
+  const files = report.run?.stdout?.ok ? report.run.stdout.value.files : [];
+  expect(files.map((f) => [f.path, f.label, f.requests.sent, f.units.pending, f.outputs.length])).toEqual([
+    ['b c.docx', 'M', 0, 2, 1],
+    ['memo.txt', 'T', 0, 0, 1],
+    ['sub/a.pdf', 'M', 0, 2, 1],
+    ['보고서/3분기 결산.pdf', 'S', 0, 3, 1],
+  ]);
+  expect(files.reduce((sum, f) => sum + f.requests.sent, 0)).toBe(0);
+  // The user sees the pending result: one notice saying the no-OCR part was converted and how to approve later (not the
+  // engine's "review the Plan" request, which contradicts the choice just made), and one result list where pending OCR
+  // is not a failure.
+  expect(h.notices).not.toContain('engine.E_APPROVAL_REQUIRED');
+  expect(h.notices.filter((n) => n === 'shell.notice.keptPending')).toHaveLength(1);
+  expect(h.notices).not.toContain('shell.notice.jobDone');
+  expect(shown).toHaveLength(1);
+  expect(shown[0].outcome).toBe('pending_consent');
+  expect(shown[0].rows.map((r) => [r.path, r.status])).toEqual([
+    ['b c.docx', 'pending'],
+    ['memo.txt', 'ok'],
+    ['sub/a.pdf', 'pending'],
+    ['보고서/3분기 결산.pdf', 'pending'],
+  ]);
+  expect(h.history).toEqual(['pending_consent']);
+  expect(h.coordinator.active).toBe(false);
+});
+
+it(R('JT-15 Keep pending revalidates the destination before its run: a destination swapped during consent refuses the run'), async () => {
+  const sibling = abs(`${VAULT_ROOT}2`, 'out');
+  const h: { current: Harness | null } = { current: null };
+  h.current = harness(
+    remoteSettings,
+    (request) => (subcommandOf(request) === 'plan' ? recordedPlan('consent-1-plan.stdout.json') : recordedRun('consent-2-pending')),
+    async () => {
+      const fs = (h.current as Harness).fs;
+      fs.directories.add(fs.norm(sibling));
+      fs.links.set(fs.norm(OUT), fs.norm(sibling));
+      return { approved: false, keepPending: true };
+    },
+  );
+  const report = await runJob(h.current);
+  expect(h.current.spawner.commands).toEqual(['plan']);
+  expect(report.run).toBeNull();
+  expect(h.current.notices).toContain('shell.DESTINATION');
+  expect(h.current.history).toEqual(['partial_failure']);
+});
+
+it(R('JT-15 Escape/close (dismissal): the plan ran, no run is launched, no yes-file is written, the user is told nothing was converted and history records cancelled, not pending'), async () => {
   const h = harness(remoteSettings, (request) => (subcommandOf(request) === 'plan' ? recordedPlan('plan-mixed.stdout.json') : recordedRun('consent-5-approved')), async () => ({ approved: false }));
   const report = await runJob(h);
   expect(h.spawner.commands).toEqual(['plan']);
@@ -191,7 +265,10 @@ it(R('JT-15 Keep pending / dismissal: the plan ran, no run is launched, no yes-f
   expect(h.fs.mutations.filter((m) => /yes/i.test(m))).toEqual([]);
   expect(report.decision).toEqual({ approved: false });
   expect(report.run).toBeNull();
-  expect(h.history).toEqual(['pending_consent']);
+  expect(h.notices.filter((n) => n === 'shell.notice.consentDismissed')).toHaveLength(1);
+  expect(h.notices.filter((n) => n.startsWith('engine.') || n === 'shell.notice.keptPending')).toEqual([]);
+  // Distinct from Keep pending (which converted the no-OCR part and records pending_consent).
+  expect(h.history).toEqual(['cancelled']);
   expect(h.coordinator.active).toBe(false);
 });
 

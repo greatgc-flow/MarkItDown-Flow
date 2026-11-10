@@ -21,8 +21,8 @@ def installed_version(name):
 metadata.version = installed_version
 from mdflow import core_guard
 with core_guard.quiet_output():
-    import markitdown._installation as installation
-installation.__version__ = {core!r}
+    from markitdown import tools
+tools.installation_conflict = lambda: None  # the faked metadata is missing/out of range, not a broken install
 
 '''
     proc = cli_probe.run('version', prelude=prelude)

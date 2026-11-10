@@ -41,6 +41,7 @@ it(R('JT-14 per-file fields are copied from the engine Plans: hash, provider, mo
     provider: 'openai-compatible',
     model: 'gpt-4.1-mini',
     destination: 'https://api.openai.com/v1/chat/completions',
+    proxy: null,
     selectedUnits: 2,
     dpi: 200,
     pendingLowPriority: 0,
@@ -138,7 +139,7 @@ it(R('JT-14 fifty files produce one modal listing every file; the 200-unit Plan 
   largeModal.close();
 });
 
-it(R('JT-14 Keep pending is the default: closing or Escape yields no authorization; approve returns exactly the displayed hashes'), async () => {
+it(R('JT-14 Keep pending is the default: it grants nothing but asks for the no-OCR run (R37); closing or Escape yields no authorization and no run; approve returns exactly the displayed hashes'), async () => {
   const view = buildConsentView(plans('plan-mixed.stdout.json'), DEST);
   const closed = new ConsentModal(createApp(), view, 'en');
   closed.open();
@@ -147,8 +148,20 @@ it(R('JT-14 Keep pending is the default: closing or Escape yields no authorizati
   const kept = new ConsentModal(createApp(), view, 'en');
   kept.open();
   kept.keepPending();
-  await expect(kept.decision).resolves.toEqual({ approved: false });
+  await expect(kept.decision).resolves.toEqual({ approved: false, keepPending: true });
   expect(mockState.openModals).not.toContain(kept);
+  // A later close or approve does not change the Keep pending decision.
+  kept.close();
+  kept.approve();
+  await expect(kept.decision).resolves.toEqual({ approved: false, keepPending: true });
+  // The modal states what Keep pending does, in both languages.
+  for (const locale of ['en', 'ko'] as const) {
+    const hinted = new ConsentModal(createApp(), view, locale);
+    hinted.open();
+    expect(dictionary(locale)['shell.consent.keepPendingHint']?.length).toBeGreaterThan(0);
+    expect(text(hinted)).toContain(dictionary(locale)['shell.consent.keepPendingHint']);
+    hinted.close();
+  }
   const approved = new ConsentModal(createApp(), view, 'en');
   approved.open();
   approved.approve();

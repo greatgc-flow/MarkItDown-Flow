@@ -1,7 +1,8 @@
 /**
  * One consent modal for the complete original selection (20_SHELL.md
  * REQ-SHL-14; SPEC 7.1/8.4 by reference). Fields are rendered as literal text;
- * the default is Keep pending; Escape/close grants nothing.
+ * the default is Keep pending (no authorization; the no-OCR part still runs, R37);
+ * Escape/close grants nothing and runs nothing.
  *
  * Layout (R32): a compact per-file summary table (file, class, units,
  * destination, est. max cost, status) followed by collapsible full Plan details
@@ -23,6 +24,8 @@ export interface ConsentFileView {
   provider: string;
   model: string;
   destination: string | null;
+  /** `approved.provider.proxy` (`MDFLOW_PROXY`; hashed into the Plan): the hop requests pass through, or null. */
+  proxy: string | null;
   /** `approved.units` with status `eligible`. */
   selectedUnits: number;
   dpi: number;
@@ -54,7 +57,12 @@ export interface ConsentViewModel {
   requiresAcknowledgement: boolean;
 }
 
-export type ConsentDecision = { approved: false } | { approved: true; hashes: string[] };
+/**
+ * `approved: false` grants nothing. `keepPending: true` (the explicit default button, owner decision R37) still asks
+ * for the original invocation to run without any authorization, so every no-OCR part is converted now and OCR units
+ * stay pending (SPEC REQ-APR-03: no egress); a dismissal (Escape/close, no flag) launches nothing.
+ */
+export type ConsentDecision = { approved: false; keepPending?: true } | { approved: true; hashes: string[] };
 
 /** SPEC 3.2 labels with a legend string (`shell.label.<L>`); anything else is shown as its literal letter(s). */
 const KNOWN_LABELS: ReadonlySet<string> = new Set(['T', 'S', 'M', 'U', 'C', 'L', 'P', 'X']);
@@ -77,6 +85,7 @@ export function buildConsentView(plans: readonly Plan[], destinationDir: string)
       provider: approved.provider.name,
       model: approved.provider.model,
       destination: approved.provider.destination,
+      proxy: approved.provider.proxy,
       selectedUnits: approved.units.filter((u) => u.status === 'eligible').length,
       dpi: approved.dpi,
       pendingLowPriority: status.units.skipped_low_priority,
@@ -102,6 +111,9 @@ export function buildConsentView(plans: readonly Plan[], destinationDir: string)
 
 type Resolver = (decision: ConsentDecision) => void;
 
+/** Element id of the fixed Keep pending hint; the button names it in `aria-describedby` (one consent modal at a time). */
+const KEEP_HINT_ID = 'mdflow-consent-keep-hint';
+
 export class ConsentModal extends Modal {
   private resolveDecision!: Resolver;
   private readonly decisionPromise: Promise<ConsentDecision>;
@@ -118,7 +130,7 @@ export class ConsentModal extends Modal {
     });
   }
 
-  /** Resolves once: approve -> displayed hashes; keep pending / close / Escape -> no authorization. */
+  /** Resolves once: approve -> displayed hashes; keep pending -> no authorization, no-OCR run (R37); close / Escape -> no authorization, no run. */
   get decision(): Promise<ConsentDecision> {
     return this.decisionPromise;
   }
@@ -136,9 +148,9 @@ export class ConsentModal extends Modal {
     this.close();
   }
 
-  /** Default action. */
+  /** Default action: convert everything that needs no OCR now and leave the OCR units pending (R37). */
   keepPending(): void {
-    this.settle({ approved: false });
+    this.settle({ approved: false, keepPending: true });
     this.close();
   }
 
@@ -150,8 +162,16 @@ export class ConsentModal extends Modal {
     return file.unknownCost ? this.t('shell.consent.unknownCost') : file.estMaxCost;
   }
 
+  /** Destination plus the proxy every request passes through, when one is configured (P3). */
+  private destinationText(file: ConsentFileView): string {
+    const destination = file.destination ?? '-';
+    return file.proxy ? `${destination} (${this.t('shell.consent.proxy')}: ${file.proxy})` : destination;
+  }
+
   private renderSummary(parent: HTMLElement): void {
-    const table = parent.createEl('table', { cls: 'mdflow-table mdflow-consent-summary' });
+    // Bounded, scrollable table: 50 files never push the decision buttons off-screen.
+    const wrap = parent.createDiv({ cls: 'mdflow-table-scroll mdflow-consent-summary-scroll' });
+    const table = wrap.createEl('table', { cls: 'mdflow-table mdflow-consent-summary' });
     const head = table.createEl('thead').createEl('tr');
     for (const column of ['file', 'label', 'units', 'destination', 'cost', 'status']) {
       head.createEl('th', { text: this.t(`shell.consent.col.${column}`), attr: { scope: 'col' } });
@@ -164,7 +184,7 @@ export class ConsentModal extends Modal {
       const labelCell = row.createEl('td', { cls: 'mdflow-cell-label', text: file.label });
       if (legend) labelCell.setAttr('title', this.t(legend));
       row.createEl('td', { cls: 'mdflow-cell-number', text: String(file.selectedUnits) });
-      row.createEl('td', { cls: 'mdflow-cell-path', text: file.destination ?? '-' });
+      row.createEl('td', { cls: 'mdflow-cell-path', text: this.destinationText(file) });
       row.createEl('td', { cls: 'mdflow-cell-number', text: this.costText(file) });
       row.createEl('td', {
         cls: `mdflow-badge ${file.needsConsent ? 'mdflow-badge-attention' : 'mdflow-badge-muted'}`,
@@ -182,7 +202,10 @@ export class ConsentModal extends Modal {
   }
 
   private renderDetails(parent: HTMLElement): void {
-    const list = parent.createDiv({ cls: 'mdflow-consent-files' });
+    // One outer, collapsed group holds every per-file Plan, so the dialog has a single secondary scroll area.
+    const all = parent.createEl('details', { cls: 'mdflow-consent-details-all' });
+    all.createEl('summary', { text: this.t('shell.consent.detailsAll', { count: String(this.view.files.length) }) });
+    const list = all.createDiv({ cls: 'mdflow-consent-files' });
     for (const file of this.view.files) {
       const section = list.createEl('details', { cls: 'mdflow-consent-file' });
       const summary = section.createEl('summary');
@@ -200,6 +223,7 @@ export class ConsentModal extends Modal {
       row(this.t('shell.consent.planHash'), file.planHash);
       row(this.t('shell.consent.provider'), `${file.provider} / ${file.model}`);
       row(this.t('shell.consent.destination'), file.destination ?? '-');
+      if (file.proxy) row(this.t('shell.consent.proxy'), file.proxy);
       row(this.t('shell.consent.selectedUnits'), String(file.selectedUnits));
       row(this.t('shell.consent.dpi'), String(file.dpi));
       row(this.t('shell.consent.pendingLowPriority'), String(file.pendingLowPriority));
@@ -216,6 +240,7 @@ export class ConsentModal extends Modal {
   override onOpen(): void {
     const { contentEl, titleEl } = this;
     titleEl.setText(this.t('shell.consent.title'));
+    this.modalEl.addClass('mdflow-modal-wide');
     contentEl.empty();
     contentEl.addClass('mdflow-consent');
     contentEl.createEl('p', {
@@ -228,10 +253,15 @@ export class ConsentModal extends Modal {
     contentEl.createEl('p', { cls: 'mdflow-consent-billing', text: this.t(this.view.billingNoticeKey) });
     if (this.view.requiresAcknowledgement) contentEl.createEl('p', { cls: 'mdflow-consent-ack', text: this.t('shell.consent.acknowledge') });
     this.renderDetails(contentEl);
+    contentEl.createEl('p', { cls: 'mdflow-muted mdflow-consent-keep-hint', text: this.t('shell.consent.keepPendingHint'), attr: { id: KEEP_HINT_ID } });
     const buttons = contentEl.createDiv({ cls: 'mdflow-buttons mdflow-consent-buttons' });
     const approve = buttons.createEl('button', { text: this.t('shell.consent.approve'), cls: 'mdflow-consent-approve', attr: { type: 'button' } });
     approve.addEventListener('click', () => this.approve());
-    const keep = buttons.createEl('button', { text: this.t('shell.consent.keepPending'), cls: 'mod-cta mdflow-consent-keep', attr: { type: 'button' } });
+    const keep = buttons.createEl('button', {
+      text: this.t('shell.consent.keepPending'),
+      cls: 'mod-cta mdflow-consent-keep',
+      attr: { type: 'button', 'aria-describedby': KEEP_HINT_ID },
+    });
     keep.addEventListener('click', () => this.keepPending());
     keep.focus();
   }

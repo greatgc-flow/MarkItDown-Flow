@@ -15,13 +15,13 @@ import type { SpawnRequest } from '../src/process/types';
 import type { VersionGate } from '../src/process/version-gate';
 import type { ConsentDecision } from '../src/ui/consent-modal';
 import { type CoordinatorDeps, type JobReport, ShellCoordinator } from '../src/ui/coordinator';
-import { JobStatusBar, type ProgressSink, summarizeProgress } from '../src/ui/progress';
+import { JobStatusBar, type ProgressSink, stageText, summarizeProgress } from '../src/ui/progress';
 import { FakeClock, flush } from './fixtures/fake-clock';
 import { FakeFs, FakeSpoolFs } from './fixtures/fake-fs';
 import { chunksOf, FakeSpawner, type ScriptedChild, subcommandOf } from './fixtures/fake-spawner';
 import { fx71Bytes, fx71Exit, fx71Lines } from './fixtures/fx71';
 import { defaultScript, fakeApis, loadPluginWith, tick } from './fixtures/plugin-harness';
-import { abs, HOST_ENV, OPENAI_PROVIDER, PLUGIN_DIR, settingsV2, VAULT_ROOT } from './fixtures/shell-settings';
+import { abs, HOME, HOST_ENV, OPENAI_PROVIDER, PLUGIN_DIR, settingsV2, VAULT_ROOT } from './fixtures/shell-settings';
 import { loadNodeApis } from '../src/process/node-apis';
 
 jest.mock('../src/process/node-apis', () => ({
@@ -55,7 +55,7 @@ function recordedRun(stem: string, blocked = false): ScriptedChild {
   };
 }
 
-const ENABLED_GATE: VersionGate = { enabled: true, info: { mdflow: '2.0.0', 'markitdown-gc': '0.3.7', pypdfium2: '5.15.1', pillow: '13.0.0', python: '3.14.0', platform: 'test', protocol: 1, triage_schema: 1 } };
+const ENABLED_GATE: VersionGate = { enabled: true, info: { mdflow: '2.0.0', 'markitdown-gc': '0.3.8', pypdfium2: '5.15.1', pillow: '13.0.0', python: '3.14.0', platform: 'test', protocol: 1, triage_schema: 1 } };
 
 function harness(
   settings = settingsV2(),
@@ -84,6 +84,7 @@ function harness(
     platform: process.platform === 'win32' ? 'win32' : 'posix',
     vaultRoot: VAULT_ROOT,
     pluginDir: PLUGIN_DIR,
+    homeDir: HOME,
     settings: () => settings,
     gate,
     consent,
@@ -185,9 +186,33 @@ it(R9('JT-09 progress details render engine stage, file counts and unit outcomes
   expect(text).toContain(String(summary.filesTotal));
   expect(text).toContain(String(summary.unitsDone));
   expect(text).toContain(String(summary.unitsPending));
-  expect(text).toContain(summary.stage as string);
+  // The engine stage is shown as localized text, never as the raw engine token.
+  if (summary.stage === null) throw new Error('a stage event was expected');
+  expect(text).toContain(EN[`shell.progress.stage.${summary.stage}`]);
+  expect(text).toContain(stageText('en', summary.stage));
   h.coordinator.cancel();
   await h.coordinator.current;
+});
+
+it(R9('JT-09 every engine stage has a localized status-bar label in en and ko, so no raw stage token reaches the Korean status bar'), () => {
+  const stages = ['sniff', 'triage', 'classify', 'select', 'convert', 'render', 'lookup', 'plan', 'approve', 'transcribe', 'assemble', 'write'] as const;
+  const KO = dictionary('ko');
+  for (const stage of stages) {
+    expect(EN[`shell.progress.stage.${stage}`]?.length).toBeGreaterThan(0);
+    expect(KO[`shell.progress.stage.${stage}`]?.length).toBeGreaterThan(0);
+    expect(stageText('en', stage)).toBe(EN[`shell.progress.stage.${stage}`]);
+    expect(stageText('ko', stage)).toBe(KO[`shell.progress.stage.${stage}`]);
+    expect(stageText('ko', stage)).not.toContain(stage);
+  }
+  // The rendered Korean line carries the translated stage.
+  const el = asFake(fakeEl('div'));
+  const bar = new JobStatusBar(el as unknown as HTMLElement, { locale: () => 'ko', showDetails: () => true, onCancel: () => undefined });
+  bar.begin('run');
+  bar.event({ v: 1, ev: 'stage', ts: '2026-11-09T00:00:00+00:00', file: 'a.pdf', stage: 'transcribe', state: 'start' });
+  const details = el.findAll((e) => e.hasClass('mdflow-status-details'))[0].textContent;
+  expect(details).toContain(KO['shell.progress.stage.transcribe']);
+  expect(details).not.toContain('transcribe');
+  bar.end();
 });
 
 /** Progress a `plan` child reports on stderr before the job's `run` starts (distinctive counts: 7 files, 9 pending units). */
@@ -231,7 +256,7 @@ it(R9('JT-09 the status bar shows the current run only: Plan file_end units are 
   const run = summarizeProgress(runEvents);
   expect(run).toMatchObject({ filesTotal: 4, filesEnded: 4, unitsPending: 0 });
   const expectedText = formatMessage('en', 'shell.progress.details', {
-    stage: run.stage ?? '-',
+    stage: run.stage ? stageText('en', run.stage) : EN['shell.progress.starting'],
     filesEnded: String(run.filesEnded),
     filesTotal: String(run.filesTotal),
     done: String(run.unitsDone),
@@ -342,18 +367,21 @@ it(R7('JT-07 a multi-input job records one history entry with the input count an
   const first = abs(INPUT_ROOT, 'a.pdf');
   const second = abs(INPUT_ROOT, 'b.docx');
   const third = abs(INPUT_ROOT, 'c.pdf');
+  // P4: the vault lies under HOME, so history shows the home-relative `~` form of each path.
+  const shownFirst = abs('~', 'Vault', 'inbox', 'a.pdf');
   await h.coordinator.submit({ kind: 'files', paths: [first, second, third] }, 'command');
   await h.coordinator.current;
   expect(h.history).toHaveLength(1);
-  expect(h.history[0].inputFile.startsWith(first)).toBe(true);
+  expect(h.history[0].inputFile.startsWith(shownFirst)).toBe(true);
   expect(h.history[0].inputFile).toContain('+2');
-  expect(h.history[0].inputFile).not.toContain(second);
-  expect(h.history[0].inputFile).not.toContain(third);
-  expect(h.history[0].outputFile).toBe(OUT);
+  expect(h.history[0].inputFile).not.toContain('b.docx');
+  expect(h.history[0].inputFile).not.toContain('c.pdf');
+  expect(h.history[0].outputFile).toBe(abs('~', 'Vault', 'markitdown-output'));
+  expect(second.startsWith(HOME) && OUT.startsWith(HOME)).toBe(true);
   const single = harness(settingsV2(), () => recordedRun('run-mixed'));
   await single.coordinator.submit({ kind: 'files', paths: [first] }, 'command');
   await single.coordinator.current;
-  expect(single.history[0].inputFile).toBe(first);
+  expect(single.history[0].inputFile).toBe(shownFirst);
 });
 
 // ProgressSink is the seam main.ts wires; keep its shape explicit so a future refactor cannot drop Cancel silently.

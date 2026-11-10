@@ -94,7 +94,10 @@ it(R3('JT-03 clearing history while a newer schema is on disk refuses with shell
   const modal = mockState.openModals[0];
   expect(modal).toBeInstanceOf(HistoryModal);
   const before = noticesWith('shell.SETTINGS').length;
-  asFake(modal.contentEl).findAll((e) => e.tagName === 'button')[0]?.click();
+  // Clear history is two-step: the first click only asks for confirmation.
+  const clear = asFake(modal.contentEl).findAll((e) => e.tagName === 'button')[0];
+  clear?.click();
+  clear?.click();
   await tick();
   expect(dataJsonText()).toBe(future);
   expect(noticesWith('shell.SETTINGS')).toHaveLength(before + 1);
@@ -110,7 +113,9 @@ it(R5('JT-05 an unparseable settings file is never overwritten by a later settin
   expect(container.findAll((e) => e.tagName === 'input' || e.tagName === 'select')).toEqual([]);
   expect(asMockPlugin(plugin).runCommand('view-conversion-history')).toBe(true);
   await tick();
-  asFake(mockState.openModals[0].contentEl).findAll((e) => e.tagName === 'button')[0]?.click();
+  const clear = asFake(mockState.openModals[0].contentEl).findAll((e) => e.tagName === 'button')[0];
+  clear?.click();
+  clear?.click();
   await tick();
   expect(dataJsonText()).toBe(broken);
   expect(noticesWith('shell.SETTINGS')).toHaveLength(2);

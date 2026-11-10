@@ -9,6 +9,12 @@ from typing import Mapping, TextIO
 from . import redact
 
 
+def home_relative(path: str) -> str:
+    """Shorten only a complete home prefix, preserving the rest of the path."""
+    home = str(Path.home())
+    return "~" + path[len(home):] if path == home or path.startswith(home + os.sep) else path
+
+
 def diagnostics(value: object, *, env: Mapping[str, str] | None = None,
                 home: str | None = None) -> object:
     """Copy diagnostics, leaving document data and Core's triage subtree verbatim."""

@@ -116,16 +116,25 @@ def test_T_CNV_87_absent_old_or_broken_exiftool_never_fails_the_conversion(tmp_p
 
     absent = convert_png()
     assert absent["issues"] == [] and "tools" not in absent and "ImageSize" not in absent["body"]
+    unusable = ["W_EXIFTOOL_UNUSABLE"]  # configured/found but unusable: a warning (exit 0), never an error
     clean_env.setenv("EXIFTOOL_PATH", str(tmp_path / "missing"))  # baseline: Core read this itself and raised
     junk = convert_png()
-    assert junk["issues"] == [] and "tools" not in junk
+    assert [i["code"] for i in junk["issues"]] == unusable and "tools" not in junk
     clean_env.setenv("EXIFTOOL_PATH", str(fake_exiftool(tmp_path / "old", "12.23")))
     old = convert_png()
-    assert old["issues"] == [] and "tools" not in old and "ImageSize" not in old["body"]
+    assert [i["code"] for i in old["issues"]] == unusable and "tools" not in old and "ImageSize" not in old["body"]
     clean_env.setenv("EXIFTOOL_PATH", str(fake_exiftool(tmp_path / "bad", "13.59", fail_json=True)))
     failing = convert_png()
     assert failing["issues"] == [], "a tool that fails on the file falls back to a plain conversion"
     assert "tools" not in failing
+
+    def broken_core(*args, **kwargs):
+        raise ValueError("core failed")
+
+    clean_env.setenv("EXIFTOOL_PATH", str(tmp_path / "missing"))
+    clean_env.setattr(convert, "core_convert", broken_core)
+    failed = convert_png()
+    assert [i["code"] for i in failed["issues"]] == ["E_CONVERT_FAIL"], "the warning describes converted images only"
 
 
 @pytest.mark.req("REQ-CNV-06", "REQ-CNV-04")
@@ -162,6 +171,73 @@ def test_T_CNV_88_image_cache_is_keyed_by_the_exiftool_version_and_restores_the_
     assert fifth["tools"] == {"exiftool": "13.60"} and len(fake_core.convert_calls) == 4, "new executable: reconvert"
     run("f")
     assert len(fake_core.convert_calls) == 4, "same executable and version: reuse"
+
+
+@pytest.mark.req("REQ-CNV-06")
+@pytest.mark.cov("S5", "FM3")
+@pytest.mark.fx("FX-09")
+def test_T_CNV_98_a_slow_starting_exiftool_within_the_conversion_budget_still_enriches_images(tmp_path, gen, run_temp,
+                                                                                               clean_env, fake_exiftool):
+    """Perl exiftool's cold start (notably on Windows) can exceed the 0.5 s `version` diagnostic deadline. Conversion
+    detection uses the bounded CONVERT_TIMEOUT_S budget, so a slow but healthy tool is not dropped for the process."""
+    assert exiftool.VERSION_TIMEOUT_S == 0.5 and exiftool.CONVERT_TIMEOUT_S == 3.0
+    clean_env.setenv("EXIFTOOL_PATH", str(fake_exiftool(tmp_path / "slow", "13.59", ver_delay_s=1.0)))
+    exiftool.reset()
+    png = gen.png_noise()
+    result = convert.convert_source(png, sniff=image_sniff(gen, png), action="convert_and_ocr", run_temp=run_temp)
+    assert result["issues"] == [], "a 1 s probe is within the conversion budget"
+    assert result["tools"] == {"exiftool": "13.59"} and "ImageSize: 32x32" in result["body"]
+    # The `version` diagnostic keeps its own 0.5 s deadline (SPEC 10.1 M6 budget, T-CLI-87/88) and its own cache entry.
+    assert exiftool.detect()["status"] == "unusable"
+    assert exiftool.for_extension(".png")["version"] == "13.59"
+
+
+@pytest.mark.req("REQ-CNV-06", "REQ-RPT-03")
+@pytest.mark.cov("S5", "FM10")
+@pytest.mark.fx("FX-09")
+def test_T_CNV_99_present_but_unusable_exiftool_is_reported_as_W_EXIFTOOL_UNUSABLE(tmp_path, gen, clean_env,
+                                                                                   fake_exiftool):
+    """A configured/found exiftool that fails its probe no longer drops image metadata silently: each image file
+    records W_EXIFTOOL_UNUSABLE (exit 0, output still written, path-free message), also on a warm cache rerun (no
+    Core call for the image).
+    Non-images and an absent tool (`not_found`, a normal state) record nothing."""
+    from mdflow import orchestrate
+
+    root = tmp_path / "input"
+    root.mkdir()
+    (root / "pic.png").write_bytes(gen.png_noise())
+    (root / "note.txt").write_text("plain text\n", encoding="utf-8")
+
+    def run(label, cache="cache"):
+        report = orchestrate.run([root], dict(out=tmp_path / f"out-{label}", cache=tmp_path / cache))
+        files = {f["path"].rsplit("/", 1)[-1]: f for f in report["files"]}
+        return report, files
+
+    def warnings(entry):
+        return [i for i in entry["issues"] if i["code"] == "W_EXIFTOOL_UNUSABLE"]
+
+    baseline, files = run("absent", cache="cache-absent")
+    assert not any(warnings(f) for f in files.values()), "an absent tool is a normal state"
+    clean_env.setenv("EXIFTOOL_PATH", str(fake_exiftool(tmp_path / "bad", "not-a-version")))
+    exiftool.reset()
+    core_exts = []
+    real_core_convert = convert.core_convert
+
+    def counting_core_convert(data, ext, **kwargs):
+        core_exts.append(ext)
+        return real_core_convert(data, ext, **kwargs)
+
+    clean_env.setattr(convert, "core_convert", counting_core_convert)
+    for label in ("cold", "warm"):
+        before = len(core_exts)
+        report, files = run(label)
+        converted_png = ".png" in core_exts[before:]
+        assert converted_png == (label == "cold"), f"{label}: the warm run must reuse the cached image conversion"
+        assert report["exit"] == baseline["exit"], "a warning never changes the exit code"
+        assert all(f["outputs"] for f in files.values()), label
+        (warning,) = warnings(files["pic.png"])
+        assert "EXIFTOOL_PATH" in warning["message"] and str(tmp_path) not in warning["message"], label
+        assert warnings(files["note.txt"]) == [], "exiftool is never used for non-images"
 
 
 @pytest.mark.req("REQ-CNV-06", "REQ-ASM-04")

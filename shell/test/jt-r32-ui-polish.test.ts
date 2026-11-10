@@ -118,6 +118,30 @@ it(R4('JT-04 the settings tab groups every control under five headings (Engine, 
   plugin.unload();
 });
 
+it(R4('JT-04 every path and numeric setting says what it does, not only when it is saved'), async () => {
+  const { plugin } = await loadPluginWith(mocked, settingsV2());
+  const tab = asMockPlugin(plugin).settingTabs[0];
+  tab.display();
+  const items = asFake(tab.containerEl).findAll((e) => e.hasClass('setting-item'));
+  const descOf = (label: string): string => {
+    const item = items.find((i) => i.findAll((n) => n.hasClass('setting-item-name'))[0]?.textContent === label);
+    return item?.findAll((n) => n.hasClass('setting-item-description'))[0]?.textContent ?? '';
+  };
+  const notes: [string, string][] = [
+    ['enginePython', 'enginePythonNote'], ['outputPath', 'outputPathNote'], ['dpi', 'dpiNote'],
+    ['minPriority', 'minPriorityNote'], ['maxUnits', 'maxUnitsNote'], ['approveThreshold', 'approveThresholdNote'],
+  ];
+  for (const [setting, note] of notes) {
+    expect({ setting, desc: descOf(EN[`shell.settings.${setting}`]).includes(EN[`shell.settings.${note}`]) }).toEqual({ setting, desc: true });
+    expect(KO[`shell.settings.${note}`]?.length).toBeGreaterThan(0);
+  }
+  for (const key of ['locale.auto', 'provider.none', 'provider.openai', 'minPriority.low', 'minPriority.normal']) {
+    expect(EN[`shell.settings.${key}`]?.length).toBeGreaterThan(0);
+    expect(KO[`shell.settings.${key}`]?.length).toBeGreaterThan(0);
+  }
+  plugin.unload();
+});
+
 // ----------------------------------------------------------------------------- JT-14 consent summary table
 
 it(R14('JT-14 the consent modal opens with a compact per-file summary table (file, class, units, destination, est. cost, status) and a Keep-pending primary / Approve secondary pair (R32)'), () => {
@@ -139,8 +163,16 @@ it(R14('JT-14 the consent modal opens with a compact per-file summary table (fil
   expect(cells[1][5]).toBe(EN['shell.consent.status.informational']);
   expect(cells[3][1]).toBe('S');
   expect(content.textContent).toContain(formatMessage('en', 'shell.consent.scope', { consent: '3', count: '4' }));
-  // Full per-file Plan fields (hashes, DPI, budget) remain available inside collapsible details.
-  expect(content.findAll((e) => e.tagName === 'details')).toHaveLength(4);
+  // Full per-file Plan fields (hashes, DPI, budget) remain available inside collapsible details: one per file, all
+  // inside a single outer group, so the dialog has one secondary scroll area however many files there are.
+  const outer = content.findAll((e) => e.tagName === 'details' && e.hasClass('mdflow-consent-details-all'));
+  expect(outer).toHaveLength(1);
+  expect(outer[0].children[0].textContent).toBe(formatMessage('en', 'shell.consent.detailsAll', { count: '4' }));
+  expect(outer[0].findAll((e) => e.tagName === 'details' && e.hasClass('mdflow-consent-file'))).toHaveLength(4);
+  expect(content.findAll((e) => e.tagName === 'details')).toHaveLength(5);
+  // The summary table scrolls inside its own bounded wrapper; the dialog is the wide variant.
+  expect(tables[0].parent?.hasClass('mdflow-table-scroll')).toBe(true);
+  expect(asFake(modal.modalEl).hasClass('mdflow-modal-wide')).toBe(true);
   for (const file of view.files) {
     expect(content.textContent).toContain(file.planHash);
     expect(content.textContent).toContain(file.sha256);
@@ -152,6 +184,12 @@ it(R14('JT-14 the consent modal opens with a compact per-file summary table (fil
   expect(keep.hasClass('mod-cta')).toBe(true);
   expect(approve.hasClass('mod-cta')).toBe(false);
   expect(approve.hasClass('mdflow-consent-approve')).toBe(true);
+  // The default button is described by the fixed hint that says what it does (R37).
+  const hintId = keep.getAttribute('aria-describedby');
+  expect(hintId).not.toBeNull();
+  const hint = content.findAll((e) => e.getAttribute('id') === hintId);
+  expect(hint).toHaveLength(1);
+  expect(hint[0].textContent).toBe(EN['shell.consent.keepPendingHint']);
   // Class legend covers every SPEC 3.2 label in both languages.
   for (const label of ['T', 'S', 'M', 'U', 'C', 'L', 'P', 'X']) {
     expect(EN[`shell.label.${label}`]?.length).toBeGreaterThan(0);
@@ -188,6 +226,7 @@ function coordinatorWith(script: (request: SpawnRequest) => ScriptedChild, resul
     platform: process.platform === 'win32' ? 'win32' : 'posix',
     vaultRoot: VAULT_ROOT,
     pluginDir: PLUGIN_DIR,
+    homeDir: HOME,
     settings: () => settingsV2(),
     gate: () => ENABLED_GATE,
     consent: async () => ({ approved: false }),
@@ -246,6 +285,13 @@ it(R9('JT-09 a finished run presents one concise per-file result list from the d
   expect(cells[1][2]).toBe(EN['shell.results.status.ok']);
   expect(cells[6][2]).toBe(EN['shell.results.status.failed']);
   expect(cells[6][4]).toContain('E_CONVERT_FAIL');
+  // Issues: one line per SPEC 7.5 code with its localized message (never the raw engine message).
+  const issueLines = table.findAll((e) => e.tagName === 'td' && e.hasClass('mdflow-cell-codes'))[6].findAll((e) => e.hasClass('mdflow-issue'));
+  expect(issueLines.map((l) => l.textContent)).toEqual(view.rows[6].issueCodes.map((code) => `${code} – ${EN[`engine.${code}`]}`));
+  // The outcome appears once, as the badge; the summary sentence only counts files.
+  expect(content.textContent).toContain(formatMessage('en', 'shell.results.summary', { files: '7' }));
+  expect(content.textContent.split(EN['shell.history.outcome.partial_failure'])).toHaveLength(2);
+  expect(asFake(modal.modalEl).hasClass('mdflow-modal-wide')).toBe(true);
   expect(content.textContent).toContain(EN['shell.history.outcome.partial_failure']);
   expect(content.textContent).toContain(formatMessage('en', 'shell.results.skipped', { count: '1' }));
   // Status is an outcome word, never a markup or a raw engine message; Korean strings exist.
@@ -306,6 +352,21 @@ it(R7('JT-07 the history modal renders one row per entry with time, outcome, inp
   close.click();
   expect(mockState.openModals).not.toContain(modal);
   expect(cleared).toBe(0);
+  // Clear is two-step: the first click only relabels the button, the second clears and closes.
+  const again = new HistoryModal(createApp(), entries, 'en', async () => {
+    cleared += 1;
+  });
+  again.open();
+  const clear = asFake(again.contentEl).findAll((e) => e.tagName === 'button')[0];
+  clear.click();
+  await flush();
+  expect(cleared).toBe(0);
+  expect(clear.textContent).toBe(EN['shell.history.clearConfirm']);
+  expect(mockState.openModals).toContain(again);
+  clear.click();
+  await flush();
+  expect(cleared).toBe(1);
+  expect(mockState.openModals).not.toContain(again);
   for (const key of ['shell.history.col.time', 'shell.history.col.outcome', 'shell.history.col.input', 'shell.history.col.output', 'shell.history.close', 'shell.history.count']) {
     expect(KO[key]?.length).toBeGreaterThan(0);
   }
@@ -346,7 +407,7 @@ it(R17('JT-17 an optional `exiftool` field of the version response is admitted a
   if (odd.enabled) expect(odd.info).not.toHaveProperty('exiftool');
 });
 
-function setupModalWith(stdout: string, clipboard: string[]): { modal: SetupModal; spawner: FakeSpawner } {
+function setupModalWith(stdout: string, clipboard: string[], locale: 'en' | 'ko' = 'en'): { modal: SetupModal; spawner: FakeSpawner } {
   const spawner = new FakeSpawner((request) => (request.command === ENGINE_PYTHON
     ? { stdout: [Buffer.from(stdout, 'utf8')], exit: { code: 0, signal: null } }
     : { spawnError: new Error('ENOENT'), exit: { code: null, signal: null } }));
@@ -362,10 +423,45 @@ function setupModalWith(stdout: string, clipboard: string[]): { modal: SetupModa
     writeClipboard: async (text) => {
       clipboard.push(text);
     },
-    locale: 'en',
+    locale,
   });
   return { modal, spawner };
 }
+
+it(R10('JT-10 setup diagnostics show variable presence as localized words, say when a check is running with Refresh disabled, and confirm every copy'), async () => {
+  const clipboard: string[] = [];
+  const { modal } = setupModalWith(versionResponse({ exiftool: '13.10' }), clipboard, 'ko');
+  modal.open();
+  const content = asFake(modal.contentEl);
+  const refreshButton = (): FakeElement | undefined => content.findAll((e) => e.tagName === 'button' && e.textContent === KO['shell.setup.refresh'])[0];
+  // The first check starts on open: the modal says so and Refresh cannot start a second one.
+  expect(modal.checking).toBe(true);
+  expect(content.textContent).toContain(KO['shell.setup.checking']);
+  expect(refreshButton()?.disabled).toBe(true);
+  await modal.refresh();
+  expect(modal.checking).toBe(false);
+  expect(content.textContent).not.toContain(KO['shell.setup.checking']);
+  expect(refreshButton()?.disabled).toBe(false);
+  // Presence is shown in the UI language, never as the raw `present`/`absent` tokens.
+  const words = [KO['shell.setup.presence.present'], KO['shell.setup.presence.absent']];
+  const values = content.findAll((e) => e.hasClass('mdflow-setup-env')).flatMap((list) => list.findAll((e) => e.hasClass('mdflow-kv-value')).map((v) => v.textContent));
+  expect(values.length).toBeGreaterThan(0);
+  for (const value of values) expect(words).toContain(value);
+  const apiKey = modal.diagnostics?.apiKey;
+  if (!apiKey) throw new Error('diagnostics expected');
+  expect(content.textContent).toContain(formatMessage('ko', 'shell.setup.apiKey', { presence: KO[`shell.setup.presence.${apiKey}`] }));
+  expect(content.textContent).not.toMatch(/\b(present|absent)\b/);
+  // Every copy is confirmed with one notice.
+  await modal.copyDiagnostics();
+  await modal.copyInstructions('posix');
+  expect(clipboard).toHaveLength(2);
+  expect(mockState.notices).toEqual([KO['shell.setup.copied'], KO['shell.setup.copied']]);
+  for (const key of ['shell.setup.copied', 'shell.setup.checking', 'shell.setup.presence.present', 'shell.setup.presence.absent', 'shell.setup.probeResult.ok', 'shell.setup.probeResult.failed', 'shell.setup.probeResult.timeout']) {
+    expect(EN[key]?.length).toBeGreaterThan(0);
+    expect(KO[key]?.length).toBeGreaterThan(0);
+  }
+  modal.close();
+});
 
 it(R10('JT-10 setup diagnostics surface the exiftool status reported by the engine: found with its version, missing (graceful), or not reported; still version probes only (R31/R32)'), async () => {
   const cases: [string, string][] = [
@@ -393,6 +489,11 @@ it(R10('JT-10 setup diagnostics surface the exiftool status reported by the engi
   expect(KO['shell.setup.exiftool']?.length).toBeGreaterThan(0);
   expect(KO['shell.setup.exiftoolMissing']?.length).toBeGreaterThan(0);
   expect(KO['shell.setup.exiftoolUnknown']?.length).toBeGreaterThan(0);
+  // The engine runs exiftool only for standalone png/jpg/jpeg images, so the hint never promises audio metadata.
+  expect(EN['shell.setup.exiftoolMissing']).toContain('image metadata');
+  expect(EN['shell.setup.exiftoolMissing']).not.toMatch(/audio/i);
+  expect(KO['shell.setup.exiftoolMissing']).toContain('이미지 메타데이터');
+  expect(KO['shell.setup.exiftoolMissing']).not.toContain('오디오');
 });
 
 // ----------------------------------------------------------------------------- JT-01 styles

@@ -6,10 +6,10 @@
   "platform": "Windows-11-10.0.26300-SP0",
   "protocol": 1,
   "triage_schema": 1,
-  "exiftool": "unavailable",
-  "exiftool_status": "unusable",
+  "exiftool": "13.59",
+  "exiftool_status": "ok",
   "exiftool_source": "PATH",
-  "libreoffice": "unavailable",
-  "libreoffice_status": "unusable",
+  "libreoffice": "26.8.2.2",
+  "libreoffice_status": "ok",
   "libreoffice_source": "PATH"
 }

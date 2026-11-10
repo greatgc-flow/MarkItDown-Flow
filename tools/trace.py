@@ -220,7 +220,7 @@ def matrix_problems(root: Path, tests: list[dict]) -> list[str]:
 
     Coverage is derived from the markers only: a test covers its single `cov` cell, and the class x stage
     cell of every class of its `fx` ids (`fx("all")` expands only at S0-S3 and S13). `engine/tests/matrix.toml` supplies
-    applicability only; floor cells can never be declared N/A. An N/A that is covered is not a problem.
+    applicability only; floor cells can never be declared N/A, and an N/A that is also covered is a stale declaration.
     """
     try:
         import tomllib
@@ -283,6 +283,8 @@ def matrix_problems(root: Path, tests: list[dict]) -> list[str]:
                 problems.append(f"floor cell declared N/A: {stage}:{mode}")
             if cell not in covered_fm and cell not in na_fm:
                 problems.append(f"stage x failure-mode cell neither covered nor N/A: {stage}:{mode}")
+            if cell in covered_fm and cell in na_fm:
+                problems.append(f"stage x failure-mode cell both covered and declared N/A: {stage}:{mode}")
     for klass in MATRIX_CLASSES:
         for stage in MATRIX_STAGES:
             cell = (klass, stage)
@@ -292,6 +294,8 @@ def matrix_problems(root: Path, tests: list[dict]) -> list[str]:
                 problems.append(f"floor class cell declared N/A: {klass}:{stage}")
             if cell not in covered_class and cell not in na_class:
                 problems.append(f"class x stage cell neither covered nor N/A: {klass}:{stage}")
+            if cell in covered_class and cell in na_class:
+                problems.append(f"class x stage cell both covered and declared N/A: {klass}:{stage}")
     return problems
 
 
@@ -734,7 +738,7 @@ def oracle_receipts(root: Path, evidence: Path, expected_commit: str, *, defer_r
                     sources.add('junit-contract-max.json')
                     try:
                         dedup = json.loads((evidence / 'junit-contract-max.json').read_text(encoding='utf-8'))
-                        outcomes.append(dedup.get('version') == '0.3.7' and dedup.get('deduplicated_with') == 'contract-min')
+                        outcomes.append(dedup.get('version') == '0.3.9' and dedup.get('deduplicated_with') == 'contract-min')
                     except (OSError, ValueError, AttributeError):
                         outcomes.append(False)
         result = ('FAIL' if not tids or False in outcomes else

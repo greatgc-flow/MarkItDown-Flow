@@ -113,7 +113,7 @@ def packaged_venv(bootstrap_root, pt_temps) -> SimpleNamespace:
     subprocess.run([sys.executable, "-m", "venv", str(venv)], check=True, timeout=600)
     python = venv_python(venv)
     install = [str(python), "-m", "pip", "install", "--only-binary=:all:",
-               '--index-url', 'https://pypi.org/simple', './' + _support.WHEEL, 'markitdown-gc>=0.3.7,<0.4']
+               '--index-url', 'https://pypi.org/simple', './' + _support.WHEEL, 'markitdown-gc>=0.3.9,<0.4']
     env = dict(os.environ, PYTHONUTF8="1")
     done = subprocess.run(install, cwd=bootstrap_root, env=env, capture_output=True,
                           text=True, encoding="utf-8", timeout=1800)

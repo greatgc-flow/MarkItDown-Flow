@@ -1,285 +1,285 @@
-{"v":1,"ev":"run_start","ts":"2026-11-09T13:30:30+00:00","files":5,"provider":"openai-compatible"}
-{"v":1,"ev":"file_start","ts":"2026-11-09T13:30:30+00:00","file":"b c.docx","index":1,"total":5}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:30+00:00","file":"b c.docx","stage":"sniff","state":"end","ms":0}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:30+00:00","file":"b c.docx","stage":"triage","state":"end","ms":139}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:30+00:00","file":"b c.docx","stage":"classify","state":"end","ms":0}
-{"v":1,"ev":"warning","ts":"2026-11-09T13:30:30+00:00","file":"b c.docx","code":"W_REVIEW_PRIORITY","message":"W review priority."}
-{"v":1,"ev":"classified","ts":"2026-11-09T13:30:30+00:00","file":"b c.docx","route":"NATIVE","need":"PARTIAL","label":"M","action":"convert_and_ocr"}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:30+00:00","file":"b c.docx","stage":"select","state":"end","ms":0}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:30+00:00","file":"b c.docx","stage":"convert","state":"end","ms":245}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:30+00:00","file":"b c.docx","stage":"render","state":"end","ms":1}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:30+00:00","file":"b c.docx","stage":"lookup","state":"end","ms":0}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:30+00:00","file":"b c.docx","stage":"plan","state":"end","ms":0}
-{"v":1,"ev":"error","ts":"2026-11-09T13:30:30+00:00","file":"b c.docx","code":"E_APPROVAL_REQUIRED","message":"This file requires approval of its Plan."}
-{"v":1,"ev":"approve_required","ts":"2026-11-09T13:30:30+00:00","file":"b c.docx","plan_hash":"e81c750520319e685f3483f10caaca33856e78dd8afb348a9e447a4b2f89695f","destination":"https://api.openai.com/v1/chat/completions","model":"gpt-4.1-mini","requests_to_send":2,"keys_unique":2,"max_requests":6,"est_max_cost":null,"cost_known":false,"threshold_exceeded":false,"sensitive_hits":[]}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:30+00:00","file":"b c.docx","unit":"word/media/image1.png","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:30+00:00","file":"b c.docx","unit":"word/media/image2.png","state":"pending","code":null}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:30+00:00","file":"b c.docx","stage":"assemble","state":"end","ms":0}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:30+00:00","file":"b c.docx","stage":"write","state":"end","ms":9}
-{"v":1,"ev":"file_end","ts":"2026-11-09T13:30:30+00:00","file":"b c.docx","outputs":["b c.docx.md"],"units":{"total":2,"done":0,"pending":2,"failed":0}}
-{"v":1,"ev":"file_start","ts":"2026-11-09T13:30:30+00:00","file":"memo.txt","index":2,"total":5}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:30+00:00","file":"memo.txt","stage":"sniff","state":"end","ms":0}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:30+00:00","file":"memo.txt","stage":"triage","state":"end","ms":3}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:30+00:00","file":"memo.txt","stage":"classify","state":"end","ms":0}
-{"v":1,"ev":"classified","ts":"2026-11-09T13:30:30+00:00","file":"memo.txt","route":"NATIVE","need":"NONE","label":"T","action":"convert_only"}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:30+00:00","file":"memo.txt","stage":"select","state":"end","ms":0}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:30+00:00","file":"memo.txt","stage":"convert","state":"end","ms":45}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:30+00:00","file":"memo.txt","stage":"render","state":"end","ms":0}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:30+00:00","file":"memo.txt","stage":"lookup","state":"end","ms":0}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:30+00:00","file":"memo.txt","stage":"plan","state":"end","ms":0}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:30+00:00","file":"memo.txt","stage":"approve","state":"end","ms":0}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:30+00:00","file":"memo.txt","stage":"transcribe","state":"end","ms":0}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:30+00:00","file":"memo.txt","stage":"assemble","state":"end","ms":0}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:30+00:00","file":"memo.txt","stage":"write","state":"end","ms":7}
-{"v":1,"ev":"file_end","ts":"2026-11-09T13:30:30+00:00","file":"memo.txt","outputs":["memo.txt.md"],"units":{"total":0,"done":0,"pending":0,"failed":0}}
-{"v":1,"ev":"file_start","ts":"2026-11-09T13:30:30+00:00","file":"sub/a.pdf","index":3,"total":5}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:30+00:00","file":"sub/a.pdf","stage":"sniff","state":"end","ms":0}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:30+00:00","file":"sub/a.pdf","stage":"triage","state":"end","ms":29}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:30+00:00","file":"sub/a.pdf","stage":"classify","state":"end","ms":0}
-{"v":1,"ev":"classified","ts":"2026-11-09T13:30:30+00:00","file":"sub/a.pdf","route":"NATIVE","need":"PARTIAL","label":"M","action":"convert_and_ocr"}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:30+00:00","file":"sub/a.pdf","stage":"select","state":"end","ms":0}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:31+00:00","file":"sub/a.pdf","stage":"convert","state":"end","ms":198}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:31+00:00","file":"sub/a.pdf","stage":"render","state":"end","ms":79}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:31+00:00","file":"sub/a.pdf","stage":"lookup","state":"end","ms":0}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:31+00:00","file":"sub/a.pdf","stage":"plan","state":"end","ms":0}
-{"v":1,"ev":"error","ts":"2026-11-09T13:30:31+00:00","file":"sub/a.pdf","code":"E_APPROVAL_REQUIRED","message":"This file requires approval of its Plan."}
-{"v":1,"ev":"approve_required","ts":"2026-11-09T13:30:31+00:00","file":"sub/a.pdf","plan_hash":"f918a5c781905fce7e7eca0c08f41192e0e2d475f2867c9ad1f1e1514eb14e84","destination":"https://api.openai.com/v1/chat/completions","model":"gpt-4.1-mini","requests_to_send":1,"keys_unique":1,"max_requests":3,"est_max_cost":null,"cost_known":false,"threshold_exceeded":false,"sensitive_hits":[]}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:31+00:00","file":"sub/a.pdf","unit":"p2","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:31+00:00","file":"sub/a.pdf","unit":"p4","state":"pending","code":null}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:31+00:00","file":"sub/a.pdf","stage":"assemble","state":"end","ms":0}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:31+00:00","file":"sub/a.pdf","stage":"write","state":"end","ms":3}
-{"v":1,"ev":"file_end","ts":"2026-11-09T13:30:31+00:00","file":"sub/a.pdf","outputs":["sub/a.pdf.md"],"units":{"total":2,"done":0,"pending":2,"failed":0}}
-{"v":1,"ev":"file_start","ts":"2026-11-09T13:30:31+00:00","file":"보고서/3분기 결산.pdf","index":4,"total":5}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:31+00:00","file":"보고서/3분기 결산.pdf","stage":"sniff","state":"end","ms":0}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:31+00:00","file":"보고서/3분기 결산.pdf","stage":"triage","state":"end","ms":10}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:31+00:00","file":"보고서/3분기 결산.pdf","stage":"classify","state":"end","ms":0}
-{"v":1,"ev":"classified","ts":"2026-11-09T13:30:31+00:00","file":"보고서/3분기 결산.pdf","route":"NATIVE","need":"FULL","label":"S","action":"convert_and_ocr"}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:31+00:00","file":"보고서/3분기 결산.pdf","stage":"select","state":"end","ms":0}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:31+00:00","file":"보고서/3분기 결산.pdf","stage":"convert","state":"end","ms":136}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:31+00:00","file":"보고서/3분기 결산.pdf","stage":"render","state":"end","ms":92}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:31+00:00","file":"보고서/3분기 결산.pdf","stage":"lookup","state":"end","ms":0}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:31+00:00","file":"보고서/3분기 결산.pdf","stage":"plan","state":"end","ms":0}
-{"v":1,"ev":"error","ts":"2026-11-09T13:30:31+00:00","file":"보고서/3분기 결산.pdf","code":"E_APPROVAL_REQUIRED","message":"This file requires approval of its Plan."}
-{"v":1,"ev":"approve_required","ts":"2026-11-09T13:30:31+00:00","file":"보고서/3분기 결산.pdf","plan_hash":"6133451859ec053ea36b28fbd4f687d320512b7d34345822f6a937fc5c8e1df0","destination":"https://api.openai.com/v1/chat/completions","model":"gpt-4.1-mini","requests_to_send":1,"keys_unique":1,"max_requests":3,"est_max_cost":null,"cost_known":false,"threshold_exceeded":false,"sensitive_hits":[]}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:31+00:00","file":"보고서/3분기 결산.pdf","unit":"p1","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:31+00:00","file":"보고서/3분기 결산.pdf","unit":"p2","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:31+00:00","file":"보고서/3분기 결산.pdf","unit":"p3","state":"pending","code":null}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:31+00:00","file":"보고서/3분기 결산.pdf","stage":"assemble","state":"end","ms":0}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:31+00:00","file":"보고서/3분기 결산.pdf","stage":"write","state":"end","ms":4}
-{"v":1,"ev":"file_end","ts":"2026-11-09T13:30:31+00:00","file":"보고서/3분기 결산.pdf","outputs":["보고서/3분기 결산.pdf.md"],"units":{"total":3,"done":0,"pending":3,"failed":0}}
-{"v":1,"ev":"file_start","ts":"2026-11-09T13:30:31+00:00","file":"긴 문서.pdf","index":5,"total":5}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:31+00:00","file":"긴 문서.pdf","stage":"sniff","state":"end","ms":0}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:31+00:00","file":"긴 문서.pdf","stage":"triage","state":"end","ms":85}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:31+00:00","file":"긴 문서.pdf","stage":"classify","state":"end","ms":1}
-{"v":1,"ev":"classified","ts":"2026-11-09T13:30:31+00:00","file":"긴 문서.pdf","route":"NATIVE","need":"FULL","label":"S","action":"convert_and_ocr"}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:31+00:00","file":"긴 문서.pdf","stage":"select","state":"end","ms":0}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:39+00:00","file":"긴 문서.pdf","stage":"convert","state":"end","ms":7862}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","stage":"render","state":"end","ms":6108}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","stage":"lookup","state":"end","ms":11}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","stage":"plan","state":"end","ms":3}
-{"v":1,"ev":"error","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","code":"E_APPROVAL_REQUIRED","message":"This file requires approval of its Plan."}
-{"v":1,"ev":"approve_required","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","plan_hash":"db0aa7f4df621dd64131ea420bd8fd8f24222b482212edd3b1deaad49ab8be41","destination":"https://api.openai.com/v1/chat/completions","model":"gpt-4.1-mini","requests_to_send":1,"keys_unique":1,"max_requests":3,"est_max_cost":null,"cost_known":false,"threshold_exceeded":false,"sensitive_hits":[]}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p1","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p2","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p3","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p4","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p5","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p6","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p7","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p8","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p9","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p10","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p11","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p12","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p13","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p14","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p15","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p16","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p17","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p18","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p19","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p20","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p21","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p22","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p23","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p24","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p25","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p26","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p27","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p28","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p29","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p30","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p31","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p32","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p33","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p34","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p35","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p36","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p37","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p38","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p39","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p40","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p41","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p42","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p43","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p44","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p45","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p46","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p47","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p48","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p49","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p50","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p51","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p52","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p53","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p54","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p55","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p56","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p57","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p58","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p59","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p60","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p61","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p62","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p63","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p64","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p65","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p66","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p67","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p68","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p69","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p70","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p71","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p72","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p73","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p74","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p75","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p76","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p77","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p78","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p79","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p80","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p81","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p82","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p83","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p84","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p85","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p86","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p87","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p88","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p89","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p90","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p91","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p92","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p93","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p94","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p95","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p96","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p97","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p98","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p99","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p100","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p101","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p102","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p103","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p104","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p105","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p106","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p107","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p108","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p109","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p110","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p111","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p112","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p113","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p114","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p115","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p116","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p117","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p118","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p119","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p120","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p121","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p122","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p123","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p124","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p125","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p126","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p127","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p128","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p129","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p130","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p131","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p132","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p133","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p134","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p135","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p136","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p137","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p138","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p139","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p140","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p141","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p142","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p143","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p144","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p145","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p146","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p147","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p148","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p149","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p150","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p151","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p152","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p153","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p154","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p155","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p156","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p157","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p158","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p159","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p160","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p161","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p162","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p163","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p164","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p165","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p166","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p167","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p168","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p169","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p170","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p171","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p172","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p173","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p174","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p175","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p176","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p177","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p178","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p179","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p180","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p181","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p182","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p183","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p184","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p185","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p186","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p187","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p188","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p189","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p190","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p191","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p192","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p193","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p194","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p195","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p196","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p197","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p198","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p199","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","unit":"p200","state":"pending","code":null}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","stage":"assemble","state":"end","ms":2}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","stage":"write","state":"end","ms":4}
-{"v":1,"ev":"file_end","ts":"2026-11-09T13:30:45+00:00","file":"긴 문서.pdf","outputs":["긴 문서.pdf.md"],"units":{"total":200,"done":0,"pending":200,"failed":0}}
-{"v":1,"ev":"run_end","ts":"2026-11-09T13:30:45+00:00","exit":3,"files_ok":1,"files_failed":4,"provider_calls":0}
+{"v":1,"ev":"run_start","ts":"2026-11-10T17:42:32+00:00","files":5,"provider":"openai-compatible"}
+{"v":1,"ev":"file_start","ts":"2026-11-10T17:42:32+00:00","file":"b c.docx","index":1,"total":5}
+{"v":1,"ev":"stage","ts":"2026-11-10T17:42:32+00:00","file":"b c.docx","stage":"sniff","state":"end","ms":0}
+{"v":1,"ev":"stage","ts":"2026-11-10T17:42:32+00:00","file":"b c.docx","stage":"triage","state":"end","ms":137}
+{"v":1,"ev":"stage","ts":"2026-11-10T17:42:32+00:00","file":"b c.docx","stage":"classify","state":"end","ms":0}
+{"v":1,"ev":"warning","ts":"2026-11-10T17:42:32+00:00","file":"b c.docx","code":"W_REVIEW_PRIORITY","message":"W review priority."}
+{"v":1,"ev":"classified","ts":"2026-11-10T17:42:32+00:00","file":"b c.docx","route":"NATIVE","need":"PARTIAL","label":"M","action":"convert_and_ocr"}
+{"v":1,"ev":"stage","ts":"2026-11-10T17:42:32+00:00","file":"b c.docx","stage":"select","state":"end","ms":0}
+{"v":1,"ev":"stage","ts":"2026-11-10T17:42:33+00:00","file":"b c.docx","stage":"convert","state":"end","ms":313}
+{"v":1,"ev":"stage","ts":"2026-11-10T17:42:33+00:00","file":"b c.docx","stage":"render","state":"end","ms":1}
+{"v":1,"ev":"stage","ts":"2026-11-10T17:42:33+00:00","file":"b c.docx","stage":"lookup","state":"end","ms":0}
+{"v":1,"ev":"stage","ts":"2026-11-10T17:42:33+00:00","file":"b c.docx","stage":"plan","state":"end","ms":0}
+{"v":1,"ev":"error","ts":"2026-11-10T17:42:33+00:00","file":"b c.docx","code":"E_APPROVAL_REQUIRED","message":"This file requires approval of its Plan."}
+{"v":1,"ev":"approve_required","ts":"2026-11-10T17:42:33+00:00","file":"b c.docx","plan_hash":"e81c750520319e685f3483f10caaca33856e78dd8afb348a9e447a4b2f89695f","destination":"https://api.openai.com/v1/chat/completions","model":"gpt-4.1-mini","requests_to_send":2,"keys_unique":2,"max_requests":6,"est_max_cost":null,"cost_known":false,"threshold_exceeded":false,"sensitive_hits":[]}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:33+00:00","file":"b c.docx","unit":"word/media/image1.png","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:33+00:00","file":"b c.docx","unit":"word/media/image2.png","state":"pending","code":null}
+{"v":1,"ev":"stage","ts":"2026-11-10T17:42:33+00:00","file":"b c.docx","stage":"assemble","state":"end","ms":0}
+{"v":1,"ev":"stage","ts":"2026-11-10T17:42:33+00:00","file":"b c.docx","stage":"write","state":"end","ms":9}
+{"v":1,"ev":"file_end","ts":"2026-11-10T17:42:33+00:00","file":"b c.docx","outputs":["b c.docx.md"],"units":{"total":2,"done":0,"pending":2,"failed":0}}
+{"v":1,"ev":"file_start","ts":"2026-11-10T17:42:33+00:00","file":"memo.txt","index":2,"total":5}
+{"v":1,"ev":"stage","ts":"2026-11-10T17:42:33+00:00","file":"memo.txt","stage":"sniff","state":"end","ms":0}
+{"v":1,"ev":"stage","ts":"2026-11-10T17:42:33+00:00","file":"memo.txt","stage":"triage","state":"end","ms":3}
+{"v":1,"ev":"stage","ts":"2026-11-10T17:42:33+00:00","file":"memo.txt","stage":"classify","state":"end","ms":0}
+{"v":1,"ev":"classified","ts":"2026-11-10T17:42:33+00:00","file":"memo.txt","route":"NATIVE","need":"NONE","label":"T","action":"convert_only"}
+{"v":1,"ev":"stage","ts":"2026-11-10T17:42:33+00:00","file":"memo.txt","stage":"select","state":"end","ms":0}
+{"v":1,"ev":"stage","ts":"2026-11-10T17:42:33+00:00","file":"memo.txt","stage":"convert","state":"end","ms":45}
+{"v":1,"ev":"stage","ts":"2026-11-10T17:42:33+00:00","file":"memo.txt","stage":"render","state":"end","ms":0}
+{"v":1,"ev":"stage","ts":"2026-11-10T17:42:33+00:00","file":"memo.txt","stage":"lookup","state":"end","ms":0}
+{"v":1,"ev":"stage","ts":"2026-11-10T17:42:33+00:00","file":"memo.txt","stage":"plan","state":"end","ms":0}
+{"v":1,"ev":"stage","ts":"2026-11-10T17:42:33+00:00","file":"memo.txt","stage":"approve","state":"end","ms":0}
+{"v":1,"ev":"stage","ts":"2026-11-10T17:42:33+00:00","file":"memo.txt","stage":"transcribe","state":"end","ms":0}
+{"v":1,"ev":"stage","ts":"2026-11-10T17:42:33+00:00","file":"memo.txt","stage":"assemble","state":"end","ms":0}
+{"v":1,"ev":"stage","ts":"2026-11-10T17:42:33+00:00","file":"memo.txt","stage":"write","state":"end","ms":5}
+{"v":1,"ev":"file_end","ts":"2026-11-10T17:42:33+00:00","file":"memo.txt","outputs":["memo.txt.md"],"units":{"total":0,"done":0,"pending":0,"failed":0}}
+{"v":1,"ev":"file_start","ts":"2026-11-10T17:42:33+00:00","file":"sub/a.pdf","index":3,"total":5}
+{"v":1,"ev":"stage","ts":"2026-11-10T17:42:33+00:00","file":"sub/a.pdf","stage":"sniff","state":"end","ms":0}
+{"v":1,"ev":"stage","ts":"2026-11-10T17:42:33+00:00","file":"sub/a.pdf","stage":"triage","state":"end","ms":31}
+{"v":1,"ev":"stage","ts":"2026-11-10T17:42:33+00:00","file":"sub/a.pdf","stage":"classify","state":"end","ms":0}
+{"v":1,"ev":"classified","ts":"2026-11-10T17:42:33+00:00","file":"sub/a.pdf","route":"NATIVE","need":"PARTIAL","label":"M","action":"convert_and_ocr"}
+{"v":1,"ev":"stage","ts":"2026-11-10T17:42:33+00:00","file":"sub/a.pdf","stage":"select","state":"end","ms":0}
+{"v":1,"ev":"stage","ts":"2026-11-10T17:42:33+00:00","file":"sub/a.pdf","stage":"convert","state":"end","ms":185}
+{"v":1,"ev":"stage","ts":"2026-11-10T17:42:33+00:00","file":"sub/a.pdf","stage":"render","state":"end","ms":65}
+{"v":1,"ev":"stage","ts":"2026-11-10T17:42:33+00:00","file":"sub/a.pdf","stage":"lookup","state":"end","ms":0}
+{"v":1,"ev":"stage","ts":"2026-11-10T17:42:33+00:00","file":"sub/a.pdf","stage":"plan","state":"end","ms":0}
+{"v":1,"ev":"error","ts":"2026-11-10T17:42:33+00:00","file":"sub/a.pdf","code":"E_APPROVAL_REQUIRED","message":"This file requires approval of its Plan."}
+{"v":1,"ev":"approve_required","ts":"2026-11-10T17:42:33+00:00","file":"sub/a.pdf","plan_hash":"f918a5c781905fce7e7eca0c08f41192e0e2d475f2867c9ad1f1e1514eb14e84","destination":"https://api.openai.com/v1/chat/completions","model":"gpt-4.1-mini","requests_to_send":1,"keys_unique":1,"max_requests":3,"est_max_cost":null,"cost_known":false,"threshold_exceeded":false,"sensitive_hits":[]}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:33+00:00","file":"sub/a.pdf","unit":"p2","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:33+00:00","file":"sub/a.pdf","unit":"p4","state":"pending","code":null}
+{"v":1,"ev":"stage","ts":"2026-11-10T17:42:33+00:00","file":"sub/a.pdf","stage":"assemble","state":"end","ms":0}
+{"v":1,"ev":"stage","ts":"2026-11-10T17:42:33+00:00","file":"sub/a.pdf","stage":"write","state":"end","ms":3}
+{"v":1,"ev":"file_end","ts":"2026-11-10T17:42:33+00:00","file":"sub/a.pdf","outputs":["sub/a.pdf.md"],"units":{"total":2,"done":0,"pending":2,"failed":0}}
+{"v":1,"ev":"file_start","ts":"2026-11-10T17:42:33+00:00","file":"보고서/3분기 결산.pdf","index":4,"total":5}
+{"v":1,"ev":"stage","ts":"2026-11-10T17:42:33+00:00","file":"보고서/3분기 결산.pdf","stage":"sniff","state":"end","ms":0}
+{"v":1,"ev":"stage","ts":"2026-11-10T17:42:33+00:00","file":"보고서/3분기 결산.pdf","stage":"triage","state":"end","ms":9}
+{"v":1,"ev":"stage","ts":"2026-11-10T17:42:33+00:00","file":"보고서/3분기 결산.pdf","stage":"classify","state":"end","ms":0}
+{"v":1,"ev":"classified","ts":"2026-11-10T17:42:33+00:00","file":"보고서/3분기 결산.pdf","route":"NATIVE","need":"FULL","label":"S","action":"convert_and_ocr"}
+{"v":1,"ev":"stage","ts":"2026-11-10T17:42:33+00:00","file":"보고서/3분기 결산.pdf","stage":"select","state":"end","ms":0}
+{"v":1,"ev":"stage","ts":"2026-11-10T17:42:33+00:00","file":"보고서/3분기 결산.pdf","stage":"convert","state":"end","ms":111}
+{"v":1,"ev":"stage","ts":"2026-11-10T17:42:33+00:00","file":"보고서/3분기 결산.pdf","stage":"render","state":"end","ms":82}
+{"v":1,"ev":"stage","ts":"2026-11-10T17:42:33+00:00","file":"보고서/3분기 결산.pdf","stage":"lookup","state":"end","ms":0}
+{"v":1,"ev":"stage","ts":"2026-11-10T17:42:33+00:00","file":"보고서/3분기 결산.pdf","stage":"plan","state":"end","ms":0}
+{"v":1,"ev":"error","ts":"2026-11-10T17:42:33+00:00","file":"보고서/3분기 결산.pdf","code":"E_APPROVAL_REQUIRED","message":"This file requires approval of its Plan."}
+{"v":1,"ev":"approve_required","ts":"2026-11-10T17:42:33+00:00","file":"보고서/3분기 결산.pdf","plan_hash":"6133451859ec053ea36b28fbd4f687d320512b7d34345822f6a937fc5c8e1df0","destination":"https://api.openai.com/v1/chat/completions","model":"gpt-4.1-mini","requests_to_send":1,"keys_unique":1,"max_requests":3,"est_max_cost":null,"cost_known":false,"threshold_exceeded":false,"sensitive_hits":[]}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:33+00:00","file":"보고서/3분기 결산.pdf","unit":"p1","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:33+00:00","file":"보고서/3분기 결산.pdf","unit":"p2","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:33+00:00","file":"보고서/3분기 결산.pdf","unit":"p3","state":"pending","code":null}
+{"v":1,"ev":"stage","ts":"2026-11-10T17:42:33+00:00","file":"보고서/3분기 결산.pdf","stage":"assemble","state":"end","ms":0}
+{"v":1,"ev":"stage","ts":"2026-11-10T17:42:33+00:00","file":"보고서/3분기 결산.pdf","stage":"write","state":"end","ms":3}
+{"v":1,"ev":"file_end","ts":"2026-11-10T17:42:33+00:00","file":"보고서/3분기 결산.pdf","outputs":["보고서/3분기 결산.pdf.md"],"units":{"total":3,"done":0,"pending":3,"failed":0}}
+{"v":1,"ev":"file_start","ts":"2026-11-10T17:42:33+00:00","file":"긴 문서.pdf","index":5,"total":5}
+{"v":1,"ev":"stage","ts":"2026-11-10T17:42:33+00:00","file":"긴 문서.pdf","stage":"sniff","state":"end","ms":0}
+{"v":1,"ev":"stage","ts":"2026-11-10T17:42:33+00:00","file":"긴 문서.pdf","stage":"triage","state":"end","ms":82}
+{"v":1,"ev":"stage","ts":"2026-11-10T17:42:33+00:00","file":"긴 문서.pdf","stage":"classify","state":"end","ms":1}
+{"v":1,"ev":"classified","ts":"2026-11-10T17:42:33+00:00","file":"긴 문서.pdf","route":"NATIVE","need":"FULL","label":"S","action":"convert_and_ocr"}
+{"v":1,"ev":"stage","ts":"2026-11-10T17:42:33+00:00","file":"긴 문서.pdf","stage":"select","state":"end","ms":0}
+{"v":1,"ev":"stage","ts":"2026-11-10T17:42:41+00:00","file":"긴 문서.pdf","stage":"convert","state":"end","ms":7705}
+{"v":1,"ev":"stage","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","stage":"render","state":"end","ms":5550}
+{"v":1,"ev":"stage","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","stage":"lookup","state":"end","ms":15}
+{"v":1,"ev":"stage","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","stage":"plan","state":"end","ms":5}
+{"v":1,"ev":"error","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","code":"E_APPROVAL_REQUIRED","message":"This file requires approval of its Plan."}
+{"v":1,"ev":"approve_required","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","plan_hash":"db0aa7f4df621dd64131ea420bd8fd8f24222b482212edd3b1deaad49ab8be41","destination":"https://api.openai.com/v1/chat/completions","model":"gpt-4.1-mini","requests_to_send":1,"keys_unique":1,"max_requests":3,"est_max_cost":null,"cost_known":false,"threshold_exceeded":false,"sensitive_hits":[]}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p1","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p2","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p3","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p4","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p5","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p6","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p7","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p8","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p9","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p10","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p11","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p12","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p13","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p14","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p15","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p16","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p17","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p18","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p19","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p20","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p21","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p22","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p23","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p24","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p25","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p26","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p27","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p28","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p29","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p30","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p31","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p32","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p33","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p34","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p35","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p36","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p37","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p38","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p39","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p40","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p41","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p42","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p43","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p44","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p45","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p46","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p47","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p48","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p49","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p50","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p51","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p52","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p53","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p54","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p55","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p56","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p57","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p58","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p59","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p60","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p61","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p62","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p63","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p64","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p65","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p66","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p67","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p68","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p69","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p70","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p71","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p72","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p73","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p74","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p75","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p76","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p77","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p78","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p79","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p80","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p81","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p82","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p83","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p84","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p85","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p86","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p87","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p88","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p89","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p90","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p91","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p92","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p93","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p94","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p95","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p96","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p97","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p98","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p99","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p100","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p101","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p102","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p103","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p104","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p105","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p106","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p107","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p108","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p109","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p110","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p111","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p112","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p113","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p114","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p115","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p116","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p117","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p118","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p119","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p120","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p121","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p122","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p123","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p124","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p125","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p126","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p127","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p128","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p129","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p130","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p131","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p132","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p133","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p134","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p135","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p136","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p137","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p138","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p139","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p140","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p141","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p142","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p143","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p144","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p145","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p146","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p147","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p148","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p149","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p150","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p151","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p152","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p153","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p154","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p155","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p156","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p157","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p158","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p159","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p160","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p161","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p162","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p163","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p164","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p165","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p166","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p167","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p168","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p169","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p170","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p171","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p172","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p173","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p174","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p175","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p176","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p177","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p178","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p179","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p180","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p181","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p182","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p183","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p184","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p185","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p186","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p187","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p188","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p189","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p190","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p191","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p192","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p193","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p194","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p195","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p196","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p197","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p198","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p199","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","unit":"p200","state":"pending","code":null}
+{"v":1,"ev":"stage","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","stage":"assemble","state":"end","ms":2}
+{"v":1,"ev":"stage","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","stage":"write","state":"end","ms":4}
+{"v":1,"ev":"file_end","ts":"2026-11-10T17:42:47+00:00","file":"긴 문서.pdf","outputs":["긴 문서.pdf.md"],"units":{"total":200,"done":0,"pending":200,"failed":0}}
+{"v":1,"ev":"run_end","ts":"2026-11-10T17:42:47+00:00","exit":3,"files_ok":1,"files_failed":4,"provider_calls":0}

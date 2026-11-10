@@ -18,6 +18,7 @@ import os
 import urllib.parse
 from typing import Mapping, Sequence
 
+from .. import redact
 from ._errors import ProviderConfigError
 
 NAMES = ("none", "openai-compatible", "command")
@@ -97,6 +98,10 @@ def build_provider(
         names = [item for item in command_env if item]
         if any("=" in item for item in names):
             raise ProviderConfigError("--command-env takes variable names, not assignments")
+        # The template becomes the plan/ledger destination, so an expanded credential would be stored in plain
+        # text. Values under 4 characters are not treated as credentials (they would refuse ordinary templates).
+        if any(len(value) >= 4 and value in command for value in redact.secret_values(settings)):
+            raise ProviderConfigError("command template contains a credential value; pass it with --command-env NAME")
         return CommandProvider(
             command=command, egress=command_egress, env_names=names, model=model,
             timeout_s=_timeout(settings), cost_hint=cost_hint)

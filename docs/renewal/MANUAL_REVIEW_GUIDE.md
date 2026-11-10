@@ -87,7 +87,7 @@ Unfilled placeholders, TODO, failed verdicts and stale commits are rejected.
 |---|---|---|
 | `oracles.json` / `docs/renewal/manual-templates/oracles.json` | Automatic CI receipt summaries + peer spot checks | Top-level peer fields are reviewer/date/commit/evidence/spot_checks. Generated fields are `generator_commit` (candidate tooling commit) and exactly G-01..G-17 records with candidate `commit`, receipt-evaluation `command`, generated `stdout`, integer `exit: 0`, `result`, acceptance `expected`, and `sources[]` (`path`, SHA256 `sha256`). Paths are relative to the retained `receipts/` directory. Validator rejects missing/changed raw files, hash mismatch, stale commits and fewer than three distinct valid spot checks. |
 | `actions-review.json` / `docs/renewal/manual-templates/actions-review.json` | Automatic identity + peer workflow review | Common peer fields and `actions[]`, exactly one row per section 4 action: `action`, exact table `sha`, nonempty `evidence[]`, peer PASS `checks.ownership` (official actions org) and `checks.workflow_permissions` (least privilege in our workflows). Automatic workflow/table checks and `gh api repos/<action>/commits/<sha>` identity verification remain unchanged. Trust GitHub-owned action implementation/runtime/dependencies under the explicit section 4 assumption; no dist-source audit is required. |
-| `pkg04_core_artifacts.json` / `docs/renewal/manual-templates/pkg04_core_artifacts.json` | Automatic PyPI/CI facts + peer license review | Common peer fields; `package: markitdown-gc`, `version: 0.3.7`, official versioned JSON `source`; unchanged automatic `artifacts[]` inventory (filename, URL, SHA256, size, package type, yanked flag; at least one wheel). The only peer check is `checks.artifact_licenses: PASS`. Six automatic `install_reports[]` rows carry `target`, candidate `commit`, `exit: 0` and unchanged pip `report.install[]` metadata/download URLs/SHA256 hashes. Target keys are derived from successful candidate CI runtime/install reports. Each resolves one compatible Core. |
+| `pkg04_core_artifacts.json` / `docs/renewal/manual-templates/pkg04_core_artifacts.json` | Automatic PyPI/CI facts + peer license review | Common peer fields; `package: markitdown-gc`, `version: 0.3.8`, official versioned JSON `source`; unchanged automatic `artifacts[]` inventory (filename, URL, SHA256, size, package type, yanked flag; at least one wheel). The only peer check is `checks.artifact_licenses: PASS`. Six automatic `install_reports[]` rows carry `target`, candidate `commit`, `exit: 0` and unchanged pip `report.install[]` metadata/download URLs/SHA256 hashes. Target keys are derived from successful candidate CI runtime/install reports. Each resolves one compatible Core. |
 | `listing-review.json` / `docs/renewal/manual-templates/listing-review.json` | Peer | Common peer fields, `listing: {id: markitdown-flow, version: 2.0.0}`, unchanged PASS checks: `identity`, `manifest_versions`, `description`, `commands`, `desktop_only`, `readme_disclosures`. Cite candidate manifest/versions/README against public Obsidian submission requirements. No listing-owner access is required. Listing installation and owner-only checks stay post-release REQ-PKG-19. |
 
 Six exact target keys: `windows-2022:x64:py3.10`, `windows-2022:x64:py3.14`,
@@ -102,11 +102,33 @@ They describe CI evidence, not reconstructed original command stdout. Release-on
 `pending: release execution` in these summaries; `exit: 0` describes successful receipt evaluation.
 Final scoring still requires every release parameter to pass in the actual six release executions.
 Reference PT-02 uses its reference receipt; G-04 retains both contract endpoints (or the existing
-`junit-contract-max.json` deduplication receipt when newest Core equals 0.3.7). No absent, failed,
+`junit-contract-max.json` deduplication receipt when newest Core equals 0.3.9). No absent, failed,
 skipped or stale required CI parameter is accepted. Every JUnit source includes registry/collection
 companions. Spot-check notes must explain how at least three chosen summaries agree with raw receipts.
 
 API contracts: [PyPI JSON API](https://docs.pypi.org/api/json/), [GitHub CLI API](https://cli.github.com/manual/gh_api).
+
+## Moving reviews to a new candidate commit (PT-41)
+
+When a new candidate commit leaves every path a review attests byte-identical, rebind the record
+instead of repeating the review:
+
+```sh
+python tools/rebind_evidence.py --folder release-evidence/2.0.0 --from <old-sha> --to <new-sha>
+```
+
+Attested paths: MAN-01 `shell/src` and `shell/styles.css`; MAN-02 `README.md`; MAN-03
+`shell/src/pure/i18n.ts` and `docs/renewal/10_SPEC.md` (section 7.5 table); actions-review
+`.github/workflows`; listing-review `manifest.json`, `versions.json`, `README.md`; pkg04
+`engine/requirements*.txt` and `engine/pyproject.toml`. The tool rewrites the record's `commit` fields
+and appends `Rebound <date> from <old> to <new>: <paths> byte-identical` to `evidence`, keeping the
+file's line endings (JSON records are re-serialized with `indent=2`; YAML records are edited in place
+and rebind only their top-level `commit`, so a nested YAML commit naming the old SHA is refused). If any
+attested path changed (content or mode), an attested path exists in neither commit, a record is bound to
+another commit, or git fails, it exits 1, names the records and files, and writes nothing: those reviews
+must be repeated. `oracles.json` is never rebound; the evidence workflow regenerates it at the new
+commit. `--ignore-eol` also accepts files whose only difference is CRLF -> LF (the repository LF
+renormalization; LF -> CRLF is still refused) and names them in the evidence line.
 
 ## After publication: owner MAN-04 and post-release validators
 

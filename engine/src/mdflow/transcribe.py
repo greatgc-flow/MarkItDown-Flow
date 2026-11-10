@@ -3,7 +3,7 @@
 The ledger store is owned by another worktree, so the stage receives a ``publish`` callable.
 
 ``run_transcribe(jobs, provider, *, prompt, force, max_requests, consent, tools, now, publish,
-postprocess) -> TranscribeResult``
+postprocess, shield=nullcontext) -> TranscribeResult``
 
 * ``jobs``: one ``KeyJob`` per distinct Key (units sharing a Key are listed in ``units``; the first is
   the representative handed to the provider). ``hit`` is the Lookup result; hits are skipped unless
@@ -17,14 +17,16 @@ postprocess) -> TranscribeResult``
 * ``postprocess(text) -> (text, issues)`` is the REQ-TRX-04 pipeline (owned by the assemble worktree).
 * Every result (ok or failed) is turned into a ledger entry (SPEC 7.2) and handed to ``publish`` BEFORE
   the next request starts. ``created`` is ``now.isoformat(timespec="seconds")``.
+* ``shield()`` (default: no-op) wraps provider-return..publish; Orchestrate passes its deferred-cancel section.
 """
 
 from __future__ import annotations
 
 import hashlib
+from contextlib import nullcontext
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Callable, Mapping, Sequence, TypedDict
+from typing import Callable, ContextManager, Mapping, Sequence, TypedDict
 
 from .contracts import Consent, Issue, LedgerEntry, Unit
 from . import approve, report
@@ -116,6 +118,7 @@ def run_transcribe(
     now: datetime,
     publish: Callable[[LedgerEntry], None],
     postprocess: Callable[[str], tuple[str, list[Issue]]],
+    shield: Callable[[], ContextManager] = nullcontext,
 ) -> TranscribeResult:
     meta = provider.meta  # type: ignore[attr-defined]
     outcome: TranscribeResult = {"entries": {}, "sent": 0, "ok": 0, "failed": 0, "denied": [], "issues": []}
@@ -191,9 +194,10 @@ def run_transcribe(
         except Exception as exc:  # BaseException (crash, interrupt) propagates untouched
             result = _failed_result("E_PROVIDER_CONFIG", f"provider raised {type(exc).__name__}")
         del raster
-        if result["status"] == "ok":
-            text, extra = postprocess(result["text"])
-            result["text"] = text
-            outcome["issues"].extend(dict(item) for item in extra)
-        finish(job, unit, result)
+        with shield():  # a cancel arriving now is deferred until the (possibly billed) reply is published
+            if result["status"] == "ok":
+                text, extra = postprocess(result["text"])
+                result["text"] = text
+                outcome["issues"].extend(dict(item) for item in extra)
+            finish(job, unit, result)
     return outcome

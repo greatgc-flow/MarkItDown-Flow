@@ -36,7 +36,7 @@ export interface BootstrapPaths {
 /** Release wheel attached to the GitHub release (R27). */
 export const ENGINE_WHEEL = 'mdflow-2.0.0-py3-none-any.whl';
 /** Declared Core policy, visible in the example even though the wheel metadata already declares it. */
-export const CORE_REQUIREMENT = 'markitdown-gc>=0.3.7,<0.4';
+export const CORE_REQUIREMENT = 'markitdown-gc>=0.3.9,<0.4';
 
 export interface SetupDiagnostics {
   enginePython: string | null;

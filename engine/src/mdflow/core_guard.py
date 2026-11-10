@@ -45,7 +45,7 @@ def check() -> None:
     except metadata.PackageNotFoundError:
         return
     with quiet_output():
-        from markitdown._installation import installation_conflict
-        message = installation_conflict()
+        from markitdown import tools
+        message = tools.installation_conflict()
     if message:
         raise CoreConflict('E_CORE_CONFLICT: ' + message)

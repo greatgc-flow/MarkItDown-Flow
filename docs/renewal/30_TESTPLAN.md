@@ -110,7 +110,7 @@ Rules (R22): candidate ids, counts, decisions and states come from the **pinned 
 | FX-66 ledger_mutator | - | - | entries via Ledger API then mutated: `v:2`, wrong `key_id`, wrong `destination`, `ok`+`text:null`, `status:"inflight"`, `failed` |
 | FX-67 fake_clock | - | - | injected `now`, `time` patch |
 | FX-70 v1_settings | - | - | all 21 keys + nested advanced defaults; missing/null/malformed/unknown/future variants; credential sentinels; 105-entry history; write-denied file |
-| FX-71 protocol_streams | - | - | recorded from real `mdflow` runs (`tools/record_protocol.py`): `plan` stdout (large unit list), `approve_required` summary events, split chunks, unknown events, oversize line, raw triage with `corrupt`, truncated report, `version` response variants (protocol 2, schema 2, wrong Pillow, missing field) |
+| FX-71 protocol_streams | - | - | recorded from real `mdflow` runs (`tools/record_protocol.py`; every child is `python -I`; it imports `mdflow` from `--engine-src PATH` (default: this checkout's `engine/src`) through a `-c` bootstrap that refuses any other import location, so no venv `.pth`/editable install is edited and the path never enters a recording; `--installed` records the interpreter's installed wheel instead): `plan` stdout (large unit list), `approve_required` summary events, split chunks, unknown events, oversize line, raw triage with `corrupt`, truncated report, `version` response variants (protocol 2, schema 2, wrong Pillow, missing field) |
 | FX-72 release_bundle | - | - | built in CI from the candidate commit |
 
 ## 4. Test catalog (planned mapping; markers authoritative, `trace.py check` diffs)
@@ -124,7 +124,7 @@ Cell = primary `S<stage>:FM<n>` (section 5).
 | T-META-01 | REQ-PKG-10, REQ-SHL-21 | - | S0:FM10 |
 | T-META-02 | REQ-PKG-10 (marker/id grammar, manifest closure, plan-vs-marker diff) | all | S0:FM10 |
 | T-META-03 | REQ-CLS-05 (GOLDEN.lock integrity, Core version) | all | S0:FM10 |
-| T-META-04 | REQ-PKG-10 (matrix cells covered-or-N/A) | all | S0:FM10 |
+| T-META-04 | REQ-PKG-10 (matrix cells covered-or-N/A; a cell both covered and declared N/A is reported as a stale declaration) | all | S0:FM10 |
 | T-META-05 | REQ-PKG-10 (no class x stage cell is both covered and declared N/A) | all | S0:FM10 |
 | T-META-06 | REQ-PKG-10 (class x stage header cell count equals the expanded declarations) | all | S0:FM10 |
 | T-GEN-01 | REQ-GEN-01 | - | S0:FM0 |
@@ -381,7 +381,8 @@ R27/R28 added registrations (existing REQs; precise fixture assertions replace b
 | CT-02 | `decision` and `coverage.state` vocabularies | REQ-CLS-05, REQ-CLS-06 |
 | CT-03 | 14 issue codes + candidate-reason vocabulary; `triage.issues[].code` within 3.0; regenerated golden == committed | REQ-CLS-05, REQ-GEN-10, REQ-TRI-04 |
 | CT-04 | candidate id/kind/page shapes per format; repeated ids (`refs`) | REQ-MAP-01, REQ-MAP-02, REQ-MAP-08, REQ-CLS-02 |
-| CT-05 | PDF per-page conversion: no markers, scanned page empty | REQ-CNV-02 |
+| CT-05 | PDF per-page conversion: no markers, scanned page empty; whole-document conversion of FX-03 has one `\f` per page break, drops trailing empty pages and equals the per-page text | REQ-CNV-02 |
+| CT-16 | R41: whole-document conversion of an own bookmarked PDF puts each bookmark's `#` heading on its own page piece (none without bookmarks); leading/middle empty pages keep their `\f`, a trailing one leaves none | REQ-CNV-02 |
 | CT-06 | triage never alters bytes | REQ-TRI-05 |
 | CT-07 | raster `fN`, `frame_cap`, `image_probe_failed` shapes; no total-frame field | REQ-RND-02, REQ-MAP-02 |
 | CT-08 | `extract_media` filename == `sha256(member)[:12]` | REQ-CNV-03, REQ-MAP-03 |
@@ -389,8 +390,9 @@ R27/R28 added registrations (existing REQs; precise fixture assertions replace b
 | CT-10 | HWP5/HWPX no `missing_dependency` on reference/compatibility installs | REQ-GEN-01 |
 | CT-11 | Core offline: no plugins/LLM/DocIntel; bytes + extension hint; URI-like not fetched | REQ-CNV-05 |
 | CT-12 | `txt` -> `not_applicable`, html -> `media_not_inspected`, csv -> `unsupported_format` | REQ-TRI-01 |
-| CT-13 | installed Core in `>=0.3.7,<0.4`; startup gate rejects out-of-range | REQ-GEN-02, REQ-PKG-03 |
+| CT-13 | installed Core in `>=0.3.9,<0.4` (0.3.7 and 0.3.8 rejected); startup gate rejects out-of-range | REQ-GEN-02, REQ-PKG-03 |
 | CT-14 | Core reports contain no absolute path/exception text | REQ-ASM-P3, REQ-SEC-02, REQ-TRI-04 |
+| CT-15 | the engine imports no private Core module or name (every imported name parsed with `ast`) and uses exactly the stable public `markitdown.tools.installation_conflict/probe_exiftool/probe_libreoffice` (only as `from markitdown import tools`; provisional `run_tool` excluded); their call shapes bind, probe results carry exactly `path/version/status/detail`, exiftool reports `ok`/`outdated` (< 12.24)/`error`/`missing`, a stalled tool is `error` within its deadline instead of raising | REQ-GEN-02, REQ-GEN-12, REQ-CNV-06, REQ-CNV-07 |
 
 ### 4.3 Shell (jest)
 
@@ -402,15 +404,15 @@ R27/R28 added registrations (existing REQs; precise fixture assertions replace b
 | JT-04 | REQ-SHL-04 (all migration rows; Base URL raw-text rule incl. loopback aliases/empty userinfo refused; relative `enginePython` from disk reset without echoing the value; refused text commits -> one `shell.settings.rejected` notice + field revert, stored values unchanged; R33 `enableLegacyPreconvert` off by default, non-boolean reset, shown in the Conversion section with the detected LibreOffice status) | FX-70 |
 | JT-05 | REQ-SHL-05 (atomic; idempotent; sanitized snapshot; write-denied leaves original bytes, blocks jobs, shows unsanitized-disk warning) | FX-70 |
 | JT-06 | REQ-SHL-06 (key presence only; absent key keeps `none` usable; env scrub; inherited-env smoke without printing values; no secrets persisted) | FX-70 |
-| JT-07 | REQ-SHL-07 | FX-70 |
+| JT-07 | REQ-SHL-07 (P4: shell-recorded history paths under the home directory are stored home-relative as `~`) | FX-70 |
 | JT-08 | REQ-SHL-08 | - |
 | JT-09 | REQ-SHL-09 (destination/symlink/case rules; atomic BUSY admission; progress summary resets on `run_start` and the incremental reducer equals the whole-stream summary; relative interpreter -> `shell.RUNTIME` before any spawn) | FX-71 |
 | JT-10 | REQ-SHL-10 (M6-01 timeout shown as "no answer", M6-02/03 recipe quoting for hints with spaces and POSIX apostrophes; version probes only; exiftool/LibreOffice status lines, `"unavailable"` = missing; tool-variable presence; `E_CORE_CONFLICT` guard shown with the interpreter's uninstall command, absent otherwise) | FX-71 |
 | JT-11 | REQ-SHL-11 (replay engine-produced streams; invented command/option fails) | FX-71 |
-| JT-12 | REQ-SHL-12 (argv array, `shell:false`; replay snapshot identical: args, cwd, output, cache; nested `inputs/sub/a.pdf` keeps logical `sub/a.pdf`) | FX-71 |
+| JT-12 | REQ-SHL-12 (argv array, `shell:false`; replay snapshot identical: args, cwd, output, cache; nested `inputs/sub/a.pdf` keeps logical `sub/a.pdf`; R38: the cache is the engine default `~/.mdflow/cache`, outside the vault and the plugin folder, passed as `--cache`, no cache setting; P5: `--model=<model>` and each `--sensitive=<glob>` are single argv tokens) | FX-71 |
 | JT-13 | REQ-SHL-13 (UTF-8 split/CRLF, 64 KiB limit, unknown events, summary events only, full Plan from `plan` stdout, raw triage `corrupt` retained, report spool removed) | FX-71 |
-| JT-14 | REQ-SHL-14 (50 files -> one modal; per-file fields = Plans; no run/token/interruption fields; Keep pending default; HTML literal) | FX-71 |
-| JT-15 | REQ-SHL-15 (`plan` then same-roots `run` with one plugin-owned `--yes-file` of the displayed hashes + `--approved-by plugin:modal`; consent only for `requests_to_send > 0`; cache warming keeps hash; changed bytes -> no egress; no per-file replay; yes-file deleted after the run) | FX-71 |
+| JT-14 | REQ-SHL-14 (50 files -> one modal; per-file fields = Plans; no run/token/interruption fields; Keep pending default (asks for the no-OCR run, R37; Escape/close = nothing) with its fixed hint; HTML literal; P3: a configured proxy is shown with the destination in the summary and the details, en/ko) | FX-71 |
+| JT-15 | REQ-SHL-15 (`plan` then same-roots `run` with one plugin-owned `--yes-file` of the displayed hashes + `--approved-by plugin:modal`; consent only for `requests_to_send > 0`; cache warming keeps hash; changed bytes -> no egress; no per-file replay; yes-file deleted after the run; Keep pending (R37) -> one same-roots `run` with no authorization argument, 0 requests sent, pending results shown; dismissal -> no run, `shell.notice.consentDismissed`, history `cancelled`) | FX-71 |
 | JT-16 | REQ-SHL-16 (cancel before launch / in modal / during blocked mock request / unload; cancel or dispose while the admission awaits the version gate -> zero spawns, `shell.CANCELLED`/`shell.RUNTIME`, later job admitted; the status item with Cancel exists while the gate is awaited and is removed on refusal (M7-02); status bar shows Run-only counts after Plan->consent->Run. Real OS process half: cooperative POSIX -> exit 130; forced POSIX + Windows -> native status, interrupted, restart recovers, no owned live process = 90_ACCEPTANCE E-03) | FX-63, FX-71 |
 | JT-17 | REQ-SHL-17 (M6-01: a timed-out probe is retried once after a backoff, timeout/spawn_failed are never cached as the jobs gate, compatibility verdicts are; complete `version` response recorded on a supported host against the release policy itself; protocol 2, schema 2, wrong Pillow/renderer, each missing field -> blocked; version syntax = both package-gate steps, character regex then PEP 440 public grammar: `5.15.1???`/leading whitespace/`3.14garbage`/`5.15.1abc`/`5.15.1..1`/`5.15.1+`/`5.15.1a1b2` blocked, rc/post/`-N`/dev/local admitted, the twelve T-GEN-96 cases mirrored per field; exit-1 `E_CORE_CONFLICT` -> `core_conflict`, other exit 1 -> `exit`; optional exiftool/LibreOffice fields diagnostics only) | FX-71 |
 | JT-18 | REQ-SHL-18 | - |
@@ -424,7 +426,7 @@ R27/R28 added registrations (existing REQs; precise fixture assertions replace b
 |---|---|---|
 | PT-01 | REQ-PKG-01 (direct pure-Python wheel/metadata, notices, forbidden content and isolated import) | R |
 | PT-02 | REQ-PKG-02 (one CI-generated Linux x64/Python 3.14 hashed reference; full closure install and tamper/missing-pin/hash rejection; other targets use declared ranges) | R |
-| PT-03 | REQ-PKG-03 (Core 0.3.7 and newest `<0.4`; resolver failure = fail) | A |
+| PT-03 | REQ-PKG-03 (Core 0.3.9 and newest `<0.4`; resolver failure = fail) | A |
 | PT-04 | REQ-PKG-04 (generated per-target resolved artifact URL/hash/license metadata and isolated installs; named license review, no universal catalog) | H |
 | PT-05 | REQ-PKG-05 (verified wheel + declared Core/PyPI policy; bootstrap commands execute per OS; plugin diagnostics only) | R |
 | PT-06 | REQ-PKG-06 (complete packaged version response, protocol/schema/Core policy and selftest; record renderer/Pillow versions without reference-pin blocking) | R |
@@ -449,7 +451,7 @@ R27/R28 added registrations (existing REQs; precise fixture assertions replace b
 | PT-25 | REQ-PKG-17, REQ-PKG-22 (R35: shared gate/publisher requires 93/93 + MAN-01..03; explicit MAN-04 deferral; no silent point; supplied failures block) | A |
 | PT-26 | REQ-PKG-22, REQ-PKG-17 (R35: reviewer peer/profile/model; MAN-01 independent peer, including different profiles of the same peer) | A |
 | PT-27 | REQ-PKG-22, REQ-PKG-04, REQ-PKG-11, REQ-PKG-17 (four extra templates; API-generated Core hashes/action identities; candidate-bound pip receipts; stale/invalid evidence rejection) | A |
-| PT-28 | REQ-PKG-17, REQ-PKG-18, REQ-PKG-20, REQ-PKG-22 (execute gate/publisher offline: seal explicit deferral, reject missing manual state; post-release rollback observation never blocks pre-publication tooling tests) | A |
+| PT-28 | REQ-PKG-17, REQ-PKG-18, REQ-PKG-20, REQ-PKG-22 (execute gate/publisher offline: seal explicit deferral, reject missing manual state; post-release rollback observation never blocks pre-publication tooling tests; the 1.0.8 rollback `gh release view` names `--repo` of the candidate) | A |
 | PT-29 | REQ-PKG-22, REQ-PKG-17 (R36: generate candidate CI oracles; source paths/hashes/generator commit; >=3 distinct peer spot checks; raw receipt tampering rejected) | A |
 | PT-30 | REQ-PKG-22, REQ-PKG-17 (R36: reject missing/failed/stale CI and changed collection hashes) | A |
 | PT-31 | REQ-PKG-22, REQ-PKG-11, REQ-PKG-04, REQ-PKG-15 (R36: reduced action/license reviews; oracle spot-check template; listing review without owner access) | A |
@@ -459,6 +461,10 @@ R27/R28 added registrations (existing REQs; precise fixture assertions replace b
 | PT-35 | REQ-PKG-04 (pip report sha256 accepted from hashes{} or legacy archive_info.hash `sha256=<hex>`; other algorithms rejected) | A |
 | PT-36 | REQ-PKG-04 (pkg04 placeholder scan excludes machine-enriched install_reports/artifacts; peer placeholders and other evidence files remain rejected) | A |
 | PT-37 | REQ-PKG-22 (evidence workflow placeholder guard scans peer-authored source JSON/YML via EVIDENCE_FOLDER, excluding machine-enriched build/evidence) | A |
+| PT-38 | REQ-PKG-07, REQ-PKG-17 (issue #11: every `build/trace/` artifact upload, including `acceptance-evidence`, excludes `build/trace/redgreen/*-tmp/**` test temp trees such as PT-05 venvs; all workspace temp roots match that pattern; trace/release-evidence/release-gate tools never read them) | A |
+| PT-39 | REQ-PKG-17, REQ-PKG-10 (one line-ending policy: root `.gitattributes` is `* text=auto eol=lf` plus `-text` for the byte-sealed `engine/tests/golden/**`, `engine/tests/fixtures/**` and `shell/test/fixtures/fx71/**`; every other tracked text file is LF in the index and the checkout; sealed files are never converted and the recorded FX-71 CRLF stream keeps its CRLF bytes) | A |
+| PT-40 | REQ-PKG-09, REQ-PKG-01 (FX-71 recorder `--engine-src PATH`, default this checkout's `engine/src`: the `python -I -c` bootstrap imports `mdflow` only from that folder, ignores PYTHONPATH and the work directory, refuses any other import location, edits no venv; the real argv carries the bootstrap while the manifest label stays `python -I -m mdflow`; `--installed` selects the interpreter's package; real `save` rejects output naming the source folder; the manifest's path-free `engine_source` digest (`mdflow/**/*.py`, LF-normalized) verifies against the same tree elsewhere, fails for a changed tree, and a manifest without it reports UNBOUND) | A |
+| PT-41 | REQ-PKG-22, REQ-PKG-17 (`tools/rebind_evidence.py`: MAN-01 `shell/src` + `shell/styles.css`, MAN-02 `README.md`, MAN-03 `i18n.ts` + `10_SPEC.md`, actions-review `.github/workflows`, listing-review `manifest.json` `versions.json` `README.md`, pkg04 `engine/requirements*.txt` + `engine/pyproject.toml`; unchanged paths -> every `commit` field OLD->NEW plus one `Rebound <date> from OLD to NEW: <paths> byte-identical` evidence item, file EOL preserved; changed paths (content or mode), pathspecs absent in both commits, a record bound elsewhere, a nested YAML commit bound to OLD, same/short/unknown commits (each reported), a missing folder, an invalid date, no rebindable record, git failures -> exit 1 naming records/files, nothing written; `oracles.json` and MAN-04 never rebound; `--ignore-eol` accepts and names CRLF->LF-only differences, never LF->CRLF or mode changes) | A |
 
 ### 4.5 Coverage statement
 
@@ -470,6 +476,8 @@ Every REQ id defined in `10_SPEC.md` (incl. new REQ-SNF-09), `20_SHELL.md` (SHL-
 | ID | REQ | Oracle |
 |---|---|---|
 | T-TRX-80 | REQ-GEN-09, REQ-SEC-04 | M2 regression: inherited_stdout_cannot_block_timeout_or_leave_reader. |
+| T-TRX-81 | REQ-GEN-09, REQ-SEC-04 | Round-12 A4: a command-provider timeout kills the command's whole process tree (no descendant survives). |
+| T-TRX-82 | REQ-GEN-09, REQ-SEC-04 | Round-13 a1: the Windows tree kill runs `taskkill` by its absolute `%SystemRoot%\System32` path, never a bare name searched in the current folder. |
 | T-RND-80 | REQ-RND-05, REQ-WRT-02 | M2 regression: render_setup_failure_is_per_unit_and_sibling_continues. |
 | T-RND-81 | REQ-MAP-05, REQ-RND-03, REQ-TRX-01, REQ-ASM-06 | M2 regression: hwp_equal_payloads_keep_stored_refusal_through_pipeline. |
 | T-RND-82 | REQ-MAP-05, REQ-CNV-03, REQ-RND-03 | M2 regression: real_hwp_extraction_renders_parser_payload_only. |
@@ -492,7 +500,7 @@ Every REQ id defined in `10_SPEC.md` (incl. new REQ-SNF-09), `20_SHELL.md` (SHL-
 | T-CLI-80 | REQ-GEN-02, REQ-RPT-03 | X-14: missing/old/new Core still produces all eight version fields, exit 0, empty stderr and no socket calls. |
 | T-GEN-87 | REQ-PKG-06, REQ-GEN-02 | X-14: unavailable/malformed/empty Core versions block package admission with a Core-range diagnostic rather than raising. |
 | T-GEN-88 | REQ-PKG-09, REQ-PKG-06 | X-11: FX-71 records current 2.0.0, matches host/manifest and exact admission verdict plus hash/derivation verification; experimental 3.15 and unavailable Core are derived, blocked variants. An unsupported recording host is diagnosed, not relabelled; supported-host release recording remains PT-06's prerequisite. |
-| T-GEN-89 | REQ-PKG-09, REQ-PKG-01 | X-11: recorder strips source injection and uses the selected interpreter's installed wheel. |
+| T-GEN-89 | REQ-PKG-09, REQ-PKG-01 | X-11: recorder strips environment source injection (PYTHONPATH/PYTHONHOME); the engine import is explicit: `Recorder` defaults to the selected interpreter's installed package, the CLI to the `--engine-src` bootstrap (PT-40). Round 11: a bin/python shim under the recording HOME forwards to that interpreter, leads child PATH, and yields a home-relative command destination. |
 
 | T-CLS-90 | REQ-CLS-01, REQ-GEN-07 | M3: malformed HWP payload-kind containers fall back without aborting siblings. |
 | T-RND-90 | REQ-RND-04 | M3: fractional PDF allocation, 200/300 dpi and rotation, refused before render; allowed boundary control. |
@@ -501,18 +509,21 @@ Every REQ id defined in `10_SPEC.md` (incl. new REQ-SNF-09), `20_SHELL.md` (SHL-
 | T-TRI-90 | REQ-CTR-03, REQ-TRI-02, REQ-GEN-07 | M3: corrupt inner Office relationship report retained; valid sibling completes. |
 | T-META-90 | REQ-PKG-10, REQ-PKG-17, REQ-PKG-08 | M3: every collected parameter identity required, no omission/duplication/substitution/stale registry. |
 | T-GEN-90 | REQ-PKG-06 | M3: package admission requires nonempty platform. |
-| T-META-91 | REQ-PKG-02, REQ-PKG-03, REQ-GEN-01 | R34: reference Core 0.3.7, DRAFT-3.8, actual three direct dependencies. |
+| T-META-91 | REQ-PKG-02, REQ-PKG-03, REQ-GEN-01 | R39: reference Core 0.3.8 (builder, bootstrap, packaging doc; the `requirements-reference.txt` pin and hashes follow publication), DRAFT-3.8, actual three direct dependencies. |
 | T-META-92 | REQ-PKG-10, REQ-PLN-01 | M3: handoff and class-specific Plan catalog reflect current ownership. |
-| T-META-94 | REQ-PKG-03, REQ-GEN-10 | R34: minimum 0.3.7 and another compatible endpoint check the Core 0.3.7 reference seal without substituting the installed version. |
+| T-META-93 | REQ-PKG-10, REQ-PKG-16 | Round 10/11 docs: HANDOFF states the R35 99/100 rule with MAN-04 deferred, round 9 with C1-C4 and the E-07 `trace.py score` step; the argon record is marked superseded and keeps MAN-01..03 required; R4 notes R38; CHANGELOG lists the round-9 changes (Keep OCR pending launches no conversion on close; Security last, C1-C4); README follows the repository LF policy (no CR byte; PT-39) and has the T/S/M section (local text, report-only labels, remote OCR after approval, `python -I -m mdflow classify`) and Known limitations; section 7 code counts and the 20_SHELL section 6 tables equal SPEC 7.5; 90_ACCEPTANCE names the current SPEC draft and states the round-9 FX-71 impact. |
+| T-META-94 | REQ-PKG-03, REQ-GEN-10 | R39: minimum 0.3.9 and another compatible endpoint check the reference seal (producer 0.3.7 until regenerated from the published 0.3.8) without substituting the installed version. |
 | T-GEN-92 | REQ-PKG-09, REQ-PKG-01 | M3: observe recorder child argv with -I, excluding work-directory modules and source environment injection. |
 | T-CLS-91 | REQ-CLS-06, REQ-GEN-07 | M4: numeric candidate id is refused without losing a sibling. |
 | T-GEN-93 | REQ-GEN-09, REQ-RND-05 | M4: temp recovery preserves live and unowned trees. |
 | T-GEN-94 | REQ-GEN-09, REQ-RND-05 | M4: native death releases the temp lease; the next run recovers. |
 | T-GEN-95 | REQ-GEN-09, REQ-RND-05 | M4: temp recovery never follows links or bad owner records. |
-| T-META-95 | REQ-PKG-05, REQ-PKG-17 | M4: all bootstrap engine probes are isolated and evidence is explicit. |
+| T-META-95 | REQ-PKG-05, REQ-PKG-17 | M4: all bootstrap engine probes are isolated and evidence is explicit; round 9: G-01 names the counters `trace.py check` prints, FX-71 docs state Core 0.3.7 for every stream, README required CI targets name macOS arm64. |
 | T-META-96 | REQ-PKG-10, REQ-PKG-17 | M4: a restricted collection cannot define the complete inventory. |
 | T-GEN-96 | REQ-PKG-06 | M4: all five package version fields require full syntax; malformed tails/leading whitespace refuse, documented prerelease/post/local controls admit. |
 | T-GEN-97 | REQ-PKG-09, REQ-PKG-01 | M4: recorder manifest argv label faithfully includes the actual isolated interpreter flag. |
+| T-GEN-98 | REQ-PKG-09, REQ-SEC-02 | Round 11: recorder save and --verify reject drive-letter and POSIX absolute paths outside ~, including JSON-escaped command destinations and unknown recording roots, even with valid manifest hashes. |
+| T-GEN-99 | REQ-PKG-09, REQ-SEC-02 | Round 11: leak checks admit home-relative paths, relative Korean/space paths, endpoint URLs and OCR closing markers. |
 | T-RPT-91 | REQ-RPT-01, REQ-RPT-02, REQ-GEN-07 | M4: literal per-invocation Plan/Run progress counters, one start/end/file-end per stream, bounded JSONL; no producer-side Plan/Run accumulation. |
 
 ### 4.6 Owner-directive regression catalog (DRAFT-3.6: R29, R30, R31)
@@ -527,7 +538,7 @@ Red logs: `build/trace/redgreen/r29-*.red.log` (R29 is green at baseline by audi
 | T-CNV-84 | REQ-CNV-06 | R31: detection order (PATH, `EXIFTOOL_PATH` wins, empty = unset), minimum 12.24 boundary, `too_old`, `unusable` (no silent PATH fallback), `not_found`. |
 | T-CNV-85 | REQ-CNV-06 | R31: png/jpeg bodies contain the metadata lines and `tools == {exiftool: version}`; pdf/txt never use exiftool. |
 | T-CNV-86 | REQ-CNV-06 | R31: Core receives an explicit `exiftool_path` (tool path for images, `""` for everything else and when absent). |
-| T-CNV-87 | REQ-CNV-06 | R31 (real Core): absent / invalid `EXIFTOOL_PATH` / too old / failing tool never yield `E_CONVERT_FAIL` and record no `tools` entry. |
+| T-CNV-87 | REQ-CNV-06 | R31 (real Core): absent / invalid `EXIFTOOL_PATH` / too old / failing tool never yield `E_CONVERT_FAIL` and record no `tools` entry; invalid and too old record exactly `W_EXIFTOOL_UNUSABLE`; a failed Core conversion with an invalid tool keeps only `E_CONVERT_FAIL`. |
 | T-CNV-88 | REQ-CNV-06, REQ-CNV-04 | R31/M7: image base cache keyed by exiftool path/version; warm rerun restores `tools`; absent tool, new versions and changed executable paths reconvert. |
 | T-ASM-81 | REQ-CNV-06, REQ-ASM-04 | R31: frontmatter `tools` gains `exiftool` after `pillow` only for the image that used it. |
 | T-CLI-81 | REQ-GEN-02, REQ-CNV-06 | R31: `version` adds `exiftool`, `exiftool_status`, `exiftool_source` for present/old/absent, exit 0, empty stderr, no sockets. |
@@ -553,16 +564,34 @@ Red logs: `build/trace/redgreen/r29-*.red.log` (R29 is green at baseline by audi
 | T-CLI-85 | REQ-CNV-07, REQ-GEN-02 | LibreOffice version fields: real fake executable success, absent PATH, invalid explicit override without fallback, malformed output, bounded timeout; no document conversion. |
 | T-META-97 | REQ-PKG-10, REQ-PKG-17 | Actual scorer complete positive; omit, omit+duplicate, substitute, skip/fail, stale candidate/source, tampered/missing collection and omitted-from-both negatives. |
 | T-META-98 | REQ-PKG-10, REQ-PKG-17 | Source title discovery preserves escaped quotes and embedded quote characters; explicit POSIX/WINDOWS guards restrict per-target expectations. |
+| T-META-99 | REQ-PKG-10 | Review archive: review/ holds only INDEX.md (35 unique commit-pinned permalinks) plus the live MAN01/FINAL records; every review/ link in docs/renewal resolves; HANDOFF is at most 15 lines. |
 
 Reviewed R33 golden changes: FX-30..33/classification.json and classification.review.json, GOLDEN.lock only. FX-30 csv becomes T/NONE without warning; FX-31 html, FX-32 md, FX-33 epub become T/NONE with W_MEDIA_NOT_INSPECTED. Core triage remains unchanged. Historical independent review is preserved and the implementing review's amendment is explicitly labeled.
 
 | T-CNV-95 | REQ-CNV-07, REQ-ASM-03, REQ-CNV-05 | Missing/malformed/wrong-source/non-DERIVED marker or oversized returned Markdown fails closed with E_PRECONVERT; siblings continue. |
 | T-CNV-96 | REQ-CNV-04, REQ-CNV-05 | M7-V01: exact identical-byte TXT/CSV counterexample, real Core cold literal outputs in both orders, separate shared-cache fills and no-call warm reuse. FX-28, FX-29; S5:FM12. |
 | T-CNV-97 | REQ-CNV-04 | M7-V01: legacy cache path and missing/mismatched conversion identities are rejected; real Core restores the literal TXT body. FX-28; S5:FM12. |
+| T-CNV-98 | REQ-CNV-06 | Round 9: a fake exiftool answering `-ver` after 1 s is used for image conversion (3 s conversion budget: metadata and `tools` present, no issue) while the `version` diagnostic keeps its 0.5 s deadline (`unusable`). FX-09; S5:FM3 (time threshold, not an interruption). |
+| T-ASM-92 | REQ-CNV-02 | R41: bookmarked born-digital PDF (T): one whole-document Core call; each bookmark heading sits under its own `<!-- mdflow:page N -->`. FX-01; S5:FM0. |
+| T-ASM-93 | REQ-CNV-02, REQ-ASM-04 | R41: bookmarked mixed (M) and scanned (S) PDFs: the text page keeps its heading, scanned pages (including a trailing one Core omits) still get their OCR text under the right anchor. FX-01, FX-03; S5:FM0. |
+| T-ASM-94 | REQ-CNV-02 | R41: fallback to one Core call per page when the whole-document text has no form feeds, too many pieces, an omitted page that has text, or Core fails; no whole-document call for a PDF without bookmarks. FX-01; S5:FM0. |
+| T-CNV-99 | REQ-CNV-06, REQ-RPT-03 | Round 9: present-but-unusable exiftool records one path-free `W_EXIFTOOL_UNUSABLE` per image (cold run and warm cache run, which makes no Core call for the image), exit 0 and outputs written; text files and an absent tool record none. FX-09; S5:FM10. |
 | T-CLI-86 | REQ-GEN-12 | Core-owned loaded-code/metadata mismatch maps to E_CORE_CONFLICT, including version. |
-| T-CLI-87 | REQ-GEN-02, REQ-CNV-06, REQ-CNV-07 | M6: real stalled exiftool, LibreOffice and both together; isolated version child completes within 3 s with all gate fields and unavailable diagnostics; controlled child PATH/tool overrides and opt-in Windows temp bridge survive the containment env scrub; expected sources and launch markers prove the fake tools ran. Core contains descendants on a red timeout. |
+| T-CLI-87 | REQ-GEN-02, REQ-CNV-06, REQ-CNV-07 | M6: real stalled exiftool, LibreOffice and both together (30 s sleep); an in-child recorder around Core's contained executor proves each stalled tool was probed once with its own requested 0.5 s deadline, failed, and was killed AT it (elapsed within [0.9 x deadline, deadline + 1 s], so two stalled probes stay <= 3 s inside the shell's 5 s gate budget); a negative control hands Core a deadline 2 s later than requested and must be reported "killed late"; and the isolated version child completes under an outer deadline of half that sleep with all gate fields and unavailable diagnostics. Whole-process wall time is printed, not asserted: the SPEC 10.1 3 s `version` figure is a healthy-machine target (interpreter start/imports vary with host load); controlled child PATH/tool overrides and opt-in Windows temp bridge survive the containment env scrub; expected sources and launch markers prove the fake tools ran. Core contains descendants on a red timeout. |
 | T-CLI-88 | REQ-GEN-02, REQ-CNV-06, REQ-CNV-07 | M6: each optional version probe has a deadline at most 0.5 s; success, timeout and malformed results are cached per process/environment; explicit reset of both caches isolates every optional-probe test. |
 | T-CLI-89 | REQ-GEN-02, REQ-CNV-06, REQ-CNV-07 | M6: unexpected optional diagnostic exceptions preserve the complete Core/Python compatibility response and exit 0. |
+
+### 4.10 Security review (2.0.0) engine regressions
+
+| Test | Requirements | Oracle |
+|---|---|---|
+| T-SEC-60 | REQ-SEC-03, REQ-CNV-06 | C1: `resolve_executable` skips empty, `.` and relative PATH entries (the current folder is never searched), returns an absolute path from an absolute entry and applies PATHEXT on Windows. |
+| T-SEC-61 | REQ-CNV-06, REQ-CNV-07 | C1: with a planted `exiftool` and `soffice` in the current folder and an empty PATH, `detect()` and the `version` LibreOffice probe are `not_found`, legacy pre-conversion fails with `E_PRECONVERT` before Core is called (a bare `EXIFTOOL_PATH` name is `unusable`), and no planted program runs. Round 10: a bare `SOFFICE_PATH=soffice` is looked up like `EXIFTOOL_PATH` (absolute PATH folders only): `unusable` with source `SOFFICE_PATH` and `E_PRECONVERT` without calling Core when PATH has none, and Core receives the absolute PATH program when PATH has one. Round 11: `EXIFTOOL_PATH` shares the `SOFFICE_PATH` override rule (a value with a folder is used as given; a bare name via absolute PATH folders): a bare `EXIFTOOL_PATH=exiftool` is `ok` with the absolute PATH program when PATH has one. |
+| T-SEC-62 | REQ-SEC-03 | C1 and (a) item 1: a bare command program name is pinned to the absolute PATH program (not the current-folder plant) for execution; `destination` shortens its complete home prefix to `~` using the report out/cache rule, while a sibling home-prefix path stays absolute; a different same-named program changes destination, provider fingerprint and plan_hash; an unresolved bare name fails with `E_PROVIDER_CONFIG` without starting anything. FX-63. |
+| T-SEC-63 | REQ-SEC-01 | C2: a `--command` template containing a credential-like env value (whole or embedded; also under a one-word name such as `PGPASSWORD`, round 11 also `GPG_PASSPHRASE`) is refused with `E_PROVIDER_CONFIG` without echoing it; `--command-env NAME` is accepted; values of non-secret names (`KEYBOARD`, round 11 `SSH_AUTH_SOCK`) are not refused. |
+| T-SEC-64 | REQ-SEC-02 | P6: redaction matches whole name components (`*_PAT`, `*_PASS`, `*_AUTH`, `*_CREDENTIAL`, `*_PASSWORD`, `*_KEY`, `*_TOKEN`, `*_SECRET`) and, round 10, one-word names whose component ends in a strong secret word (`PGPASSWORD`, `GHTOKEN`, `OPENAIKEY`, `MYAPIKEY`, `DBPASSWD`, `APPSECRET`, `GCPCREDENTIAL`); `KEYBOARD`, `MONKEY_*` and `TOKENIZERS_*` values stay visible. Round 11: `SECRETKEY`, `AWSACCESSKEY`, `SSHPRIVATEKEY`, `GPG_PASSPHRASE` and `DB_PASSWORDS` are redacted while `HOTKEY_*`, `BYPASS_*`, `TIKTOKEN_*`, `SSH_AUTH_SOCK` and `GPG_AGENT_AUTH_SOCK` stay visible; values shorter than 4 characters, digit-only or `yes`/`no`/`true`/`false`/`on`/`off` in any case (`HF_HUB_DISABLE_IMPLICIT_TOKEN=1`, `NPM_CONFIG_ALWAYS_AUTH=true`, `OPENAI_MAX_TOKENS=1024`) never garble a message (`page 12` stays), while a 4-character mixed value is redacted. |
+| T-PLN-60 | REQ-PLN-06 | C4: `--sensitive` globs also match the absolute `/`-separated source path (a directly passed file under `HR/`; a zip member as container + member); plans keep only the patterns, never the path; bare `--yes` is refused with `E_APPROVAL_REQUIRED` and nothing is sent. FX-09, FX-61. |
+| T-TRX-60 | REQ-TRX-02, REQ-TRX-06 | (b) item 1: a cooperative cancel delivered after the provider returned is deferred until the ledger entry is published; exit 130 and no further request. FX-09, FX-61, FX-65. |
 
 ## 5. Generated MECE matrices
 
@@ -571,7 +600,7 @@ Reviewed R33 golden changes: FX-30..33/classification.json and classification.re
 **Axes.** Stages `S1..S13` = SPEC section 4 (Sniff, Triage, Classify, Select, Convert, Render, Lookup, Plan, Approve, Transcribe, Assemble, Write, Report) + `S0` general (startup, CLI, cancellation, cross-run). Failure modes (primary cause of the injected condition; lowest applicable number; `FM0` if none): `FM0` nominal; `FM1` corrupt/invalid or internal failure; `FM2` protected/encrypted; `FM3` bound exceeded (bytes, units, pixels, zip, threshold, length); `FM4` unsupported/out-of-scope/legacy; `FM5` local IO/permission; `FM6` provider failure; `FM7` interruption/crash/forced kill; `FM8` consent missing/denied/stale/unused; `FM9` hostile or security-relevant input; `FM10` contract/vocabulary/version drift; `FM11` partial coverage/cap/low priority/unmapped; `FM12` duplicate/collision/concurrency/idempotency/determinism.
 File classes: `K01` pdf_text, `K02` pdf_scan, `K03` pdf_mixed, `K04` pdf_capped, `K05` raster_single, `K06` raster_multiframe, `K07` office (docx/pptx/xlsx), `K08` hwpx, `K09` hwp5, `K10` text_g2a (txt/log), `K11` g2b (csv/tsv/json/md/html/epub/xls), `K12` legacy, `K13` media, `K14` zip_container, `K15` protected, `K16` corrupt/zero/unreadable, `K17` oversize, `K18` ext_mismatch, `K19` unknown_ext, `K20` dir_tree.
 
-**Exclusive and exhaustive by construction.** (1) Each engine test has exactly one primary `cov` cell. (2) Every cell of the 14x13 stage-FM grid and the 20x14 class-stage grid is REGISTERED to an assertion or declared `N/A` in `matrix.toml` with `reason` and `owner` cell; an undeclared empty cell fails `trace.py check`; an N/A cell that is registered appears as registered in the compatibility projection. (3) The class_stage registration projection expands `fx("all")` only for S0-S3 and S13 (R28); other stages require explicit class fixtures or justified N/A. It includes explicit common-schema equivalences and does not assert runtime class execution. scope(schema) assertions are listed separately and excluded from class_execution_registrations; executed status requires the corresponding per-platform JUnit evidence. Class applicability ownership remains separate from this engine fix.
+**Exclusive and exhaustive by construction.** (1) Each engine test has exactly one primary `cov` cell. (2) Every cell of the 14x13 stage-FM grid and the 20x14 class-stage grid is REGISTERED to an assertion or declared `N/A` in `matrix.toml` with `reason` and `owner` cell; an undeclared empty cell fails `trace.py check`, and so does a cell both registered and declared N/A (a stale declaration). (3) The class_stage registration projection expands `fx("all")` only for S0-S3 and S13 (R28); other stages require explicit class fixtures or justified N/A. It includes explicit common-schema equivalences and does not assert runtime class execution. scope(schema) assertions are listed separately and excluded from class_execution_registrations; executed status requires the corresponding per-platform JUnit evidence. Class applicability ownership remains separate from this engine fix.
 **Floor (cannot be N/A):** all `S3` x FM0/1/2/3/4/10/11/12; `S1:FM1/2/3/9`; `S2:FM1/10`; `S6:FM1/3`; `S7:FM1/5`; `S9:FM8`; `S10:FM6/7`; `S12:FM5/9`; `S0:FM7/10/12`; every class x `S3`; every class x `S13` (GEN-07); every class except report-only K13,K15,K16,K17,K19 x `S11` (K12 participates when pre-conversion is enabled).
 
 ## 6. TDD order (red -> green; each step ends with `trace.py check` green for its REQs)
@@ -579,7 +608,7 @@ File classes: `K01` pdf_text, `K02` pdf_scan, `K03` pdf_mixed, `K04` pdf_capped,
 | Step | Build | Tests first |
 |---|---|---|
 | 0 | `tools/trace.py`, marker plugin, `golden.py`, in-test FX-60 mutations, fixture generators, CI skeleton | T-META-01..04, PT-10, PT-07 |
-| 1 | Contract pins (installed Core only) + goldens | CT-01..CT-14, T-META-03 |
+| 1 | Contract pins (installed Core only) + goldens | CT-01..CT-15, T-META-03 |
 | 2 | PURE: `canonical_json`/hashes, `detect_format`, `classify` | T-SNF-11/12 (pure parts of T-SNF-04/07), T-CLS-01..13, T-GEN-04 |
 | 3 | PURE: `select`, `plan` (approved/status, hash, budget, cost), ledger **key** + entry validation, `approve` | T-SEL-*, T-PLN-*, T-MAP-07/08, T-LKP-04, T-APR-01/02/05/07/08 |
 | 4 | PURE: `assemble` (frontmatter, `esc_*`, placements, reserved names), TRX-04 post-processing, exit map, redaction | T-ASM-*, T-MAP-01..05, T-TRX-04, T-RPT-03, T-SEC-02 |
@@ -607,13 +636,13 @@ Real CI round-two regression checks: CT-03 retains complete report, input hash a
 `trace.py attest` validates the schema (`id`, named `reviewer` = peer/profile/model for MAN-01..03, independent of implementer for MAN-01, `date`, `commit` = exact frozen candidate, `inputs[]`, `checks[]` all PASS, `evidence[]`, `verdict: PASS`). A passing schema check is not evidence of authorship, meaning or disclosure accuracy and is reported as MANUAL, outside automated coverage.
 
 Open items (DRAFT-3 sync):
-1. The shell code table (20_SHELL 6) now matches SPEC 7.5 by inspection (28 E_, 22 W_); `JT-SHL-19-01` is the authority and was not run.
-2. FX-71 fixtures are recordings of the real engine (SPEC DRAFT-3.5); re-recording on the release host is tracked as E-10 in 90_ACCEPTANCE section 7 (External evidence pending).
-3. TODO-VERIFY carried from 20/25, not settleable by tests: actual target installs and generated license review (PT-04; release/reference baseline Core 0.3.7 is published on PyPI), Windows signal/blocked-request behavior (JT-16 on real Windows runners), attestation eligibility (PT-13), terminal env launch commands per OS (PT-22), Obsidian min/current versions (MAN-04).
+1. The shell code table (20_SHELL 6) now matches SPEC 7.5 by inspection (30 E_ + 24 W_ = 54 codes); `JT-SHL-19-01` is the authority and runs in the shell suite (`npx jest --ci`).
+2. FX-71 fixtures are recordings of the real engine (SPEC DRAFT-3.8), all re-recorded at the round-11 candidate under Core 0.3.7 (command-provider destination home-relative; the recorder leak check rejects any absolute path outside ~); re-recording on the release host is tracked as E-10 in 90_ACCEPTANCE section 7 (External evidence pending).
+3. TODO-VERIFY carried from 20/25, not settleable by tests: actual target installs and generated license review (PT-04; release/reference baseline Core 0.3.8, R39; 0.3.7 is published on PyPI, 0.3.8 pending publication), Windows signal/blocked-request behavior (JT-16 on real Windows runners), attestation eligibility (PT-13), terminal env launch commands per OS (PT-22), Obsidian min/current versions (MAN-04).
 4. REQ-PKG-18/19/21 describe post-publication procedures; pre-release only their tooling is testable (PT-18/19/21). R35: pre-publication requires automated 93/93 + MAN-01..03 PASS (99/100), with MAN-04 explicitly `deferred: post-release (R35)`. Actual MAN-04 joins REQ-PKG-19/21 post-release validators and earns the final point only when attested. Failed MAN-04 triggers REQ-PKG-20 rollback; post-deploy/cleanup remain unscored.
 5. Cross-OS `plan_hash` equality holds only for equal raster bytes (SPEC 10.4); T-PLN-02 asserts per-OS goldens, cross-OS equality only for pass-through PNG/JPEG fixtures (FX-09, FX-10).
 
-Vote: APPROVE-TDD. Every one of the 153 spec REQs has a registered, oracle-backed test path, DRAFT-3's cuts removed the untestable inflight/run-hash/5 s claims, and remaining risks (Windows cancellation, public Core artifacts, regenerated shell fixtures) are explicit gates, not silent gaps.
+Vote: APPROVE-TDD. Every one of the 159 spec REQs (153 at the DRAFT-3 vote) has a registered, oracle-backed test path, DRAFT-3's cuts removed the untestable inflight/run-hash/5 s claims, and remaining risks (Windows cancellation, public Core artifacts, regenerated shell fixtures) are explicit gates, not silent gaps.
 
-R34 regression policy: retain content, source identity, timeout/process-tree death, cleanup, sibling-continuation, consent, raster hash, OCR placement and warm-cache oracles. Adapt only the artifact boundary: derived_sha256 hashes Core-returned UTF-8 Markdown including the DERIVED marker, explicitly marked derived_format=markdown; media ids name extracted content. The real-soffice integration remains enabled. Add rejection oracles for missing/malformed provenance and loaded-code/metadata conflicts. The orchestrator regenerated GOLDEN.lock with published Core 0.3.7, retaining all triage bytes. Verify the 0.3.7 producer independently of the installed compatible endpoint; retain report-byte and wrong-producer rejection oracles. T-META-91 also checks the published Core hashes in reference compiler input.
+R34 regression policy: retain content, source identity, timeout/process-tree death, cleanup, sibling-continuation, consent, raster hash, OCR placement and warm-cache oracles. Adapt only the artifact boundary: derived_sha256 hashes Core-returned UTF-8 Markdown including the DERIVED marker, explicitly marked derived_format=markdown; media ids name extracted content. The real-soffice integration remains enabled. Add rejection oracles for missing/malformed provenance and loaded-code/metadata conflicts. The orchestrator regenerated GOLDEN.lock with published Core 0.3.7, retaining all triage bytes. Verify the 0.3.7 producer independently of the installed compatible endpoint; retain report-byte and wrong-producer rejection oracles. T-META-91 also checks the published Core hashes in reference compiler input. R39: the minimum moves to Core 0.3.9 (0.3.8 first, then 0.3.9 for the PDF form-feed fix) and so does the baseline; GOLDEN.lock, the reference compiler input and the FX-71 fixtures are regenerated after 0.3.8 is published (T-META-91 stays red on the 0.3.7 reference file until then).
 

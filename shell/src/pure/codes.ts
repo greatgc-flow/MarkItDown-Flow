@@ -62,6 +62,7 @@ export const ENGINE_WARNING_CODES = [
   'W_OUTPUT_EDITED',
   'W_APPROVAL_UNUSED',
   'W_PRECONVERTED',
+  'W_EXIFTOOL_UNUSABLE',
 ] as const;
 
 export type EngineCode = (typeof ENGINE_ERROR_CODES)[number] | (typeof ENGINE_WARNING_CODES)[number];

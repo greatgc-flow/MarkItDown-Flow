@@ -70,7 +70,7 @@ export interface VersionPolicy {
   /** Engine `>=2.0.0,<2.1.0` on the release segment (pre-release suffixes ignored). */
   engineMin: Semver;
   engineMaxExclusive: Semver;
-  /** Core `>=0.3.7,<0.4`. */
+  /** Core `>=0.3.9,<0.4`. */
   coreMin: Semver;
   coreMaxExclusive: Semver;
   /**
@@ -92,7 +92,7 @@ export const RELEASE_LOCK: VersionPolicy = {
   pythonMaxExclusive: [3, 15, 0],
   engineMin: [2, 0, 0],
   engineMaxExclusive: [2, 1, 0],
-  coreMin: [0, 3, 7],
+  coreMin: [0, 3, 9],
   coreMaxExclusive: [0, 4, 0],
   pypdfium2Min: [5, 0, 0],
   pypdfium2MaxExclusive: [6, 0, 0],
