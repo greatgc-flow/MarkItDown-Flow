@@ -2,7 +2,7 @@
 #
 # This file holds applicability ONLY. Coverage is generated from `@pytest.mark.cov`/`fx` markers and the
 # fixture manifest; nothing here claims a test exists. A cell that is neither registered to an assertion nor
-# listed below fails `tools/trace.py check` (T-META-04). A listed cell that is also registered is displayed as registered.
+# listed below fails `tools/trace.py check` (T-META-04), and so does a listed cell that is also registered (stale N/A).
 #
 # Schema (the verifier is tools/trace.py `matrix_problems`, implemented registration verifier):
 #   [[stage_fm]]  cross product `stages` x `fms` of the 14x13 stage/failure-mode grid (S0..S13 x FM0..FM12)
@@ -163,7 +163,9 @@ fms = ["FM5", "FM6", "FM7", "FM8"]
 reason = "Select is PURE: no IO, no provider, no side effect to interrupt, and it runs before consent."
 owner = "S3:FM1"
 
-# ---- S5 Convert: covered FM0 FM1 FM9 FM12
+# ---- S5 Convert: covered FM0 FM1 FM3 FM4 FM5 FM7 FM9 FM10 FM12
+# Round 10: FM4 (T-CNV-80 unsupported raster) and FM10 (T-CNV-84/87/99 exiftool version states) are covered,
+# so their former N/A declarations were removed; trace.py now reports any cell both covered and declared N/A.
 [[stage_fm]]
 stages = ["S5"]
 fms = ["FM2"]
@@ -172,21 +174,9 @@ owner = "S3:FM2"
 
 [[stage_fm]]
 stages = ["S5"]
-fms = ["FM4"]
-reason = "Unsupported and legacy sources are routed to report_only and never converted."
-owner = "S3:FM4"
-
-[[stage_fm]]
-stages = ["S5"]
 fms = ["FM6", "FM8"]
 reason = "Convert uses offline Core only (REQ-CNV-05) and runs before consent; no provider or consent state exists here."
 owner = "S10:FM6"
-
-[[stage_fm]]
-stages = ["S5"]
-fms = ["FM10"]
-reason = "Core drift is detected by the startup gate (CT-13) and the Core contract pins; Convert has no separate vocabulary."
-owner = "S0:FM10"
 
 [[stage_fm]]
 stages = ["S5"]

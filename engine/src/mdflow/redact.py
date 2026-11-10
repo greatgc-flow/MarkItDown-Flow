@@ -1,13 +1,15 @@
 """PURE diagnostics redaction; environment and home are explicit inputs."""
 import re
 
-# Whole components of an env name (split on non-alphanumerics), so KEYBOARD or TOKENIZERS_* are not secrets.
-SECRET_WORDS = frozenset("KEY KEYS APIKEY TOKEN TOKENS SECRET SECRETS PASSWORD PASSWD PASS AUTH CREDENTIAL "
-                         "CREDENTIALS PAT".split())
+# Parts of an env name split on non-alphanumerics. Weak words count only as a whole part, so KEYBOARD, MONKEY_*
+# and TOKENIZERS_* are not secrets; a part ending in a strong word is (PGPASSWORD, GHTOKEN, OPENAIKEY).
+SECRET_WORDS = frozenset("KEY KEYS PASS AUTH PAT TOKENS SECRETS CREDENTIALS APIKEYS".split())
+SECRET_SUFFIXES = ("PASSWORD", "PASSWD", "TOKEN", "SECRET", "APIKEY", "AIKEY", "CREDENTIAL")
 
 
 def is_secret_name(name: str) -> bool:
-    return any(part in SECRET_WORDS for part in re.split(r"[^A-Z0-9]+", name.upper()))
+    return any(part in SECRET_WORDS or part.endswith(SECRET_SUFFIXES)
+               for part in re.split(r"[^A-Z0-9]+", name.upper()))
 
 
 def secret_values(env: dict) -> set:

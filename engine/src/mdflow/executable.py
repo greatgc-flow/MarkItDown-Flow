@@ -25,3 +25,8 @@ def resolve_executable(name: str, search_path: str) -> str | None:
             if os.path.isfile(candidate) and (os.name == "nt" or os.access(candidate, os.X_OK)):
                 return candidate
     return None
+
+
+def resolve_override(value: str, search_path: str) -> str | None:
+    """A ``*_PATH`` override: a bare name is looked up like ``resolve_executable``; a path is the user's choice."""
+    return value if os.path.dirname(value) else resolve_executable(value, search_path)

@@ -25,7 +25,7 @@ import { BOOTSTRAP_PROBE_CANDIDATES, collectSetupDiagnostics } from '../src/proc
 import { runSelftest } from '../src/process/selftest';
 import type { SpawnRequest } from '../src/process/types';
 import { probeVersion, RELEASE_LOCK, type VersionPolicy } from '../src/process/version-gate';
-import { type CoordinatorDeps, ShellCoordinator } from '../src/ui/coordinator';
+import { type CoordinatorDeps, defaultCacheDir, ShellCoordinator } from '../src/ui/coordinator';
 import { FakeClock, flush } from './fixtures/fake-clock';
 import { FakeFs, FakeSpoolFs } from './fixtures/fake-fs';
 import { FakeSpawner } from './fixtures/fake-spawner';
@@ -42,7 +42,8 @@ const PLATFORM = process.platform === 'win32' ? 'win32' : 'posix';
 /** FX-71 `version.json` is recorded on a supported host (Python 3.14, X-11 closed in M4): the release policy admits it as is. */
 const RELEASE_LOCK_FOR_RECORDING: VersionPolicy = RELEASE_LOCK;
 const OUT_DIR = abs(VAULT_ROOT, 'markitdown-output');
-const CACHE_DIR = abs(PLUGIN_DIR, 'cache');
+/** R38: the engine default `~/.mdflow/cache`, outside the vault and the plugin folder. */
+const CACHE_DIR = abs(HOME, '.mdflow', 'cache');
 const HASH_A = 'e81c750520319e685f3483f10caaca33856e78dd8afb348a9e447a4b2f89695f';
 const HASH_B = 'f918a5c781905fce7e7eca0c08f41192e0e2d475f2867c9ad1f1e1514eb14e84';
 const YES_FILE = abs(PLUGIN_DIR, 'consent', 'yes-0123456789abcdef-1.txt');
@@ -129,7 +130,10 @@ it(R('JT-12 spaces, Korean and shell metacharacters remain single argument token
   expect(request.args.filter((t) => t.includes('rm -rf'))).toEqual([INPUTS[1]]);
 });
 
-it(R('JT-12 -o is the validated vault destination and --cache is <plugin-dir>/cache, passed directly'), () => {
+it(R('JT-12 -o is the validated vault destination and --cache is the engine default ~/.mdflow/cache (R38), passed directly'), () => {
+  expect(CACHE_DIR).toBe(defaultCacheDir(PLATFORM, HOME));
+  expect(insideVault(CACHE_DIR)).toBe(false);
+  expect(comparablePath(PLATFORM, CACHE_DIR).startsWith(comparablePath(PLATFORM, PLUGIN_DIR) + '/')).toBe(false);
   const request = buildSpawnRequest(snapshot(), 'run', HOST_ENV);
   expect(request.args[request.args.indexOf('-o') + 1]).toBe(OUT_DIR);
   expect(request.args[request.args.indexOf('--cache') + 1]).toBe(CACHE_DIR);
@@ -236,6 +240,7 @@ it(R('JT-12 the coordinator, the version probe, the selftest command and the set
   if (result.accepted) {
     expect(result.snapshot.cwd).toBe(CWD);
     expect(insideVault(result.snapshot.cwd)).toBe(false);
+    expect(result.snapshot.cacheDir).toBe(CACHE_DIR);
   }
   await flush();
   expect(spawner.requests).toHaveLength(1);
