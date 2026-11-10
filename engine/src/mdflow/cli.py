@@ -15,7 +15,7 @@ import tempfile
 import zlib
 
 from . import approve, assemble, classify, convert, core_guard, exiftool, orchestrate, providers, report, runtime_temp, sniff_io, transcribe, triage, write
-from .executable import resolve_executable
+from .executable import resolve_executable, resolve_override
 
 _DISCLOSURE = ("A remote request can be billed even if its result is never stored: when the run is killed or "
                "cancelled, the connection drops or times out, the reply is unusable, or the cache write fails. Such "
@@ -225,8 +225,12 @@ def _probe_libreoffice(explicit: str, search_path: str) -> dict:
     try:
         with core_guard.quiet_output():
             from markitdown import _libreoffice as lo
-        # The default is looked up in absolute PATH folders only, never the current folder (security review C1).
-        executable = lo._resolve(explicit) if explicit else resolve_executable('soffice', search_path)
+        # soffice, or a bare SOFFICE_PATH name, is looked up in absolute PATH folders only (security review C1).
+        if explicit:
+            named = resolve_override(explicit, search_path)
+            executable = lo._resolve(named) if named else None
+        else:
+            executable = resolve_executable('soffice', search_path)
         found.update(libreoffice_status='unusable' if explicit or executable else 'not_found',
                      libreoffice_source='SOFFICE_PATH' if explicit else 'PATH' if executable else None)
         if executable:

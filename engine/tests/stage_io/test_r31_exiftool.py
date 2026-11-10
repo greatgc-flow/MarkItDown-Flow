@@ -174,7 +174,7 @@ def test_T_CNV_88_image_cache_is_keyed_by_the_exiftool_version_and_restores_the_
 
 
 @pytest.mark.req("REQ-CNV-06")
-@pytest.mark.cov("S5", "FM7")
+@pytest.mark.cov("S5", "FM3")
 @pytest.mark.fx("FX-09")
 def test_T_CNV_98_a_slow_starting_exiftool_within_the_conversion_budget_still_enriches_images(tmp_path, gen, run_temp,
                                                                                                clean_env, fake_exiftool):
