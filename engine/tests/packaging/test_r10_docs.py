@@ -18,8 +18,9 @@ def test_T_META_93_handoff_changelog_readme_and_counts_match_round_9():
     handoff = read('docs/renewal/HANDOFF.md')
     assert '99/100' in handoff and 'deferred: post-release (R35)' in handoff and 'Round 9' in handoff
     assert 'MAN-01..04' not in handoff
-    pending = next(line for line in handoff.splitlines() if line.startswith('Pending before 2.0.0'))
-    assert 'trace.py score' in pending and '99/100' in pending
+    released = next(line for line in handoff.splitlines() if line.startswith('2.0.0 is released'))
+    assert 'MAN-04' in released and '99/100' in released and 'REQ-PKG-19/21' in released
+    assert len(handoff.splitlines()) <= 15
     assert 'C3' in handoff
     argon = read('docs/renewal/review/FINAL_argon_acceptance.md').splitlines()
     assert argon[0].startswith('Superseded by R35 (owner decision): MAN-04 is post-release')

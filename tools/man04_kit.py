@@ -101,7 +101,7 @@ def provision_engine(folder: Path, work: Path, base_python: str) -> dict:
     subprocess.run([base_python, '-I', '-m', 'venv', str(venv)], check=True, timeout=600)
     python = venv / ('Scripts/python.exe' if platform.system() == 'Windows' else 'bin/python')
     _run(python, ['-m', 'pip', 'install', '--only-binary=:all:', '--index-url', 'https://pypi.org/simple',
-                  str(folder / WHEEL), 'markitdown-gc>=0.3.7,<0.4'], logs / '1-install.txt', work)
+                  str(folder / WHEEL), 'markitdown-gc>=0.3.9,<0.4'], logs / '1-install.txt', work)
     _run(python, ['-m', 'pip', 'check'], logs / '2-pip-check.txt', work)
     _run(python, ['-m', 'mdflow', 'selftest'], logs / '3-selftest.txt', work)
     _run(python, ['-m', 'mdflow', 'version'], logs / '4-version.txt', work)

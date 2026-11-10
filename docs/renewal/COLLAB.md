@@ -19,7 +19,7 @@ Owner directives, all recorded in [01_DECISIONS.md](01_DECISIONS.md):
 | Scope | R29 no markitdown-gc LLM captioning · R30 no-OCR path first · R31/R40 exiftool for standalone png/jpg/jpeg · R33/R34 legacy formats via LibreOffice inside markitdown-gc |
 | Release process | R35 MAN-01..03 by named peer cross-review, MAN-04 after release (release at 99/100) · R36 evidence simplification |
 | Product behaviour (round 9) | R37 "Keep OCR pending" converts all no-OCR content · R38 plugin cache outside the vault (`~/.mdflow/cache`) |
-| Core | R39 markitdown-gc 0.3.8 ships first and 2.0.0 requires it |
+| Core | R39 markitdown-gc 0.3.9 (0.3.8 + PDF form-feed fix) ships first and 2.0.0 requires it |
 
 Operating rules (owner): peers collaborate through peerhub with unanimous consensus on material
 decisions; English between AIs, Korean to the owner; VerySimple; plan before execution; no
@@ -70,6 +70,8 @@ Traceability is generated, not hand-kept: `python tools/trace.py check` must rep
 | 11-10 | Round 11 | redaction gaps, FX-71 re-recorded; found and fixed an absolute-path leak in recordings (home-relative destination) |
 | 11-10/11 | R39: markitdown-gc 0.3.8 | gc PRs #72-#78 merged (xls, docx/tsv, audio, pdf headings, xlsx, public API, upstream); release PR #79 |
 | 11-11 | Structural fixes (owner directive) | EOL policy, deterministic T-CLI-87, recorder `--engine-src`, rebind tool, peer test launcher, peer memory diet |
+| 11-11 | markitdown-gc 0.3.9 | form-feed fix for PDF outline headings; MarkItDown-Flow requires `>=0.3.9,<0.4`; GOLDEN.lock, reference and FX-71 regenerated (PR #13, rounds 13-15) |
+| 11-11 | 2.0.0 published | release run 42886235630 (evidence run 42885992301), `SCORE 99/100 (automated 93/93, manual 6/7); MAN-04 deferred: post-release (R35)` |
 
 ## 5. Results so far
 
@@ -77,16 +79,20 @@ Traceability is generated, not hand-kept: `python tools/trace.py check` must rep
   security 92 · docs 82 · release 60 · simplicity 72; after round 10 ≈ 90 · 94 · 94 · 91 · 93 · 88 · 70 · 78.
   Remaining deductions are tracked in the latest re-score; release readiness rises only with the
   real release run.
-- Named reviews at the round-11 candidate: MAN-01 PASS (cx), MAN-02 PASS (ag argon), MAN-03 PASS
-  (ag flash, 292 rows) — to be re-done on the final 0.3.8 candidate (R39).
+- Round 12 ≈ 96 · 98 · 97 · 97 · 94 · 91 · 75 · 80 (A1-A5 found); round 13 ≈ 99 · 99 · 99 · 98 · 95 · 93 ·
+  80 · 82 (a1-a3 found); round 14 (final candidate, no real defects) ≈ 99 · 99 · 99 · 99 · 98 · 98 · 80 · 82.
+- Round 15 (after release, before the post-release docs fix): goal 99 · vertical 100 · horizontal 99 ·
+  TDD 100 · security 100 · docs 97 · release 99 · simplicity 98. Remaining: MAN-04 and REQ-PKG-19/21
+  (owner actions), evidence-tooling size (owner decision R35/R36).
+- Named reviews bound to the released commit edc0ca6 (evidence run 42885992301): MAN-01 cx (delta
+  re-review), MAN-02 ag argon (README), MAN-03 ag flash (292 rows; reviewer confirmed it holds for
+  edc0ca6), actions/listing/pkg04 and oracles spot checks cc. MAN-04 is deferred to the owner (R35).
 - Lessons filed: MarkItDown-Flow #11 (artifact size, fixed), #14 (release dry-run), markitdown-gc
   #80 (guard vs source checkouts), peerhub #337 (headless peers, quota), LK #55 (global ag rules).
 
 ## 6. Next steps
 
-1. markitdown-gc: merge #79, tag `v0.3.8`, confirm PyPI.
-2. MarkItDown-Flow: public `markitdown.tools` switch (branch `feat/core-038`), pins `>=0.3.8,<0.4`,
-   regenerate goldens + GOLDEN.lock, re-record FX-71, reference hashes, README known-limitations.
-3. Merge structural + docs branches into `integ/2.0.0-rc`; CI; independent re-score.
-4. MAN-01..03 on the final commit; evidence (`evidence.yml`); move tag `2.0.0`; `release.yml`; verify.
-5. After release: MAN-04 (owner rehearsal kit `tools/man04_kit.py`), Core/plugin follow-ups.
+2.0.0 is released. Remaining, both owner-only:
+
+1. MAN-04: six-cell release rehearsal with `tools/man04_kit.py` (see [MANUAL_REVIEW_GUIDE.md](MANUAL_REVIEW_GUIDE.md)).
+2. REQ-PKG-19 and REQ-PKG-21 external evidence.

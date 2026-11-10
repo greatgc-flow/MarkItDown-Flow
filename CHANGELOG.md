@@ -1,6 +1,6 @@
 # Changelog
 
-## 2.0.0 — Zero-base renewal (release candidate)
+## 2.0.0 — Zero-base renewal (released 2026-11-11)
 
 Major version: a clean-room Obsidian shell (`shell/`) over a new Python engine
 (`mdflow`, `engine/`) built on `markitdown-gc` 0.3.9 (`>=0.3.9,<0.4`; the engine uses only the public

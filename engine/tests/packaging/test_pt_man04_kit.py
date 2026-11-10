@@ -17,7 +17,7 @@ from _support import ASSETS, REPO, SUBJECTS, load_py, load_yaml
 
 kit = load_py(REPO / "tools/man04_kit.py", "mdflow_pt_man04_kit")
 MANIFEST = json.loads((REPO / "manifest.json").read_text(encoding="utf-8"))
-ENGINE = {"python": "3.14.0", "engine": "2.0.0", "core": "0.3.7", "enginePython": "venv/python", "logs": "logs"}
+ENGINE = {"python": "3.14.0", "engine": "2.0.0", "core": "0.3.9", "enginePython": "venv/python", "logs": "logs"}
 PLACEHOLDER = re.compile(r"<[A-Z][A-Z0-9 /_.-]*>|\bTODO\b")
 CELLS = [(o, c) for o in ("windows", "macos", "linux") for c in ("minimum", "current")]
 COMMIT = "c" * 40
@@ -134,7 +134,7 @@ def test_PT_42_man04_kit_fills_only_mechanical_fields_detects_tampering_and_outp
     # 4. The venv steps run isolated in UTF-8 mode with the right per-OS interpreter path.
     calls = []
     monkeypatch.setattr(kit.subprocess, "run", lambda cmd, **_: calls.append(cmd) or
-                        subprocess.CompletedProcess(cmd, 0, "3.14.0 2.0.0 0.3.7", ""))
+                        subprocess.CompletedProcess(cmd, 0, "3.14.0 2.0.0 0.3.9", ""))
     for system, exe in (("Windows", "Scripts/python.exe"), ("Linux", "bin/python")):
         monkeypatch.setattr(kit.platform, "system", lambda: system)
         calls.clear()
