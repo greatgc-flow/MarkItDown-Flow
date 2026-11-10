@@ -201,10 +201,13 @@ def test_PT_28_r35_gate_seals_deferral_publisher_enforces_it_and_rehearsal_stays
     monkeypatch.setattr(gate, 'required_executions', lambda *a: [])
     monkeypatch.setattr(gate, 'validate_extra', lambda *a, **kw: [])
     monkeypatch.setattr(gate, 'score', lambda *a: deepcopy(result))
-    monkeypatch.setattr(gate.subprocess, 'check_output', lambda args, **kw: COMMIT if args[1] == 'api' else
-                        json.dumps(dict(tagName='1.0.8', assets=[dict(name=n) for n in ('main.js', 'manifest.json', 'styles.css')])))
+    calls = []
+    monkeypatch.setattr(gate.subprocess, 'check_output', lambda args, **kw: calls.append(list(args)) or (COMMIT if args[1] == 'api' else
+                        json.dumps(dict(tagName='1.0.8', assets=[dict(name=n) for n in ('main.js', 'manifest.json', 'styles.css')]))))
     monkeypatch.setattr(sys, 'argv', ['release_gate.py', '--candidate', str(folder), '--evidence', str(evidence), '--manual', str(manual)])
     gate.main()
+    # The rollback view must query the candidate repository, not whatever the runner's cwd resolves to.
+    assert ['gh', 'release', 'view', '1.0.8', '--repo', 'owner/repo', '--json', 'tagName,assets'] in calls
     sealed = json.loads((folder / 'release-candidate.json').read_text())
     assert sealed['acceptance']['manual'][-1]['status'] == DEFERRED
     assert sealed['acceptance']['post_release'] == result['post_release']

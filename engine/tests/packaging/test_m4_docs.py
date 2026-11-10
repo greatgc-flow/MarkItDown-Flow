@@ -20,6 +20,17 @@ def test_T_META_95_m4_all_bootstrap_engine_probes_are_isolated_and_evidence_is_e
     for relative in ('docs/renewal/25_PACKAGING.md', 'docs/renewal/30_TESTPLAN.md',
                      'docs/renewal/90_ACCEPTANCE.md'):
         assert 'SYNC-AFTER-DRAFT-3' not in (REPO / relative).read_text(encoding='utf-8')
+    # G-01 names exactly the counters `tools/trace.py check` prints (one line, in print order).
+    g01 = next(line for line in acceptance.splitlines() if line.startswith('| G-01 '))
+    assert '`unknown_req=0 uncovered_req=0 untagged_tests=0 registration_errors=0 matrix_errors=0`' in g01
+    # FX-71 was re-recorded entirely under Core 0.3.7 (manifest engine header); no stream is described as 0.3.6.
+    assert '"markitdown-gc": "0.3.7"' in (REPO / 'shell/test/fixtures/fx71/manifest.json').read_text(encoding='utf-8')
+    for relative in ('docs/renewal/90_ACCEPTANCE.md', 'docs/renewal/HANDOFF.md', 'docs/renewal/20_SHELL.md'):
+        text = (REPO / relative).read_text(encoding='utf-8')
+        assert 'recorded under Core 0.3.6' not in text and 'other sealed protocol streams retained' not in text, relative
+    # README required CI targets match ci.yml: macOS arm64 is required; macOS Intel is experimental only.
+    readme = (REPO / 'README.md').read_text(encoding='utf-8')
+    assert 'Ubuntu x64 and macOS arm64' in readme and 'and macOS Intel, Python' not in readme
 
 
 @pytest.mark.req('REQ-PKG-06')

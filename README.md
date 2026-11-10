@@ -215,8 +215,9 @@ and runs the program with your privileges on every unit.
 See [25_PACKAGING](docs/renewal/25_PACKAGING.md) for release gates. Build with
 `python tools/build_engine.py` and `python tools/build_release.py`; dependencies
 are explicitly pinned, and missing wheel or review evidence blocks release.
-Required CI targets are Windows x64, Ubuntu x64 and macOS Intel, Python 3.10 and
-3.14; Python 3.15 is experimental. Python 3.11-3.13 need the install/classify
+Required CI targets are Windows x64, Ubuntu x64 and macOS arm64, Python 3.10 and
+3.14; Python 3.15 and macOS Intel (Python 3.12) are experimental
+allowed-failure cells. Python 3.11-3.13 need the install/classify
 smokes before being advertised as verified. Shell: `cd shell && npm ci && npm run typecheck && npm test && npm run build`.
 
 MIT license; see [LICENSE](LICENSE). Historical MarkItDown Flow contributors and

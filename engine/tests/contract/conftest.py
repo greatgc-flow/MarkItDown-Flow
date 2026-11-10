@@ -35,5 +35,5 @@ def installed_core():
         from markitdown import MarkItDown, StreamInfo
         from markitdown.ocr_triage import triage
     except ImportError as error:
-        raise AssertionError("Installed markitdown-gc is required for CT-01..14") from error
+        raise AssertionError("Installed markitdown-gc is required for CT-01..15") from error
     return MarkItDown, StreamInfo, triage
