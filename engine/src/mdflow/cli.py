@@ -15,6 +15,7 @@ import tempfile
 import zlib
 
 from . import approve, assemble, classify, convert, core_guard, exiftool, orchestrate, providers, report, runtime_temp, sniff_io, transcribe, triage, write
+from .hashing import SHA256_HEX
 
 _DISCLOSURE = ("Duplicate remote charges are possible if a run dies between a response and its ledger write. "
                "A trusted command runs with your privileges on every OCR unit.")
@@ -131,7 +132,7 @@ def _options(args: argparse.Namespace) -> dict:
             opts["yes_hashes"].extend(approve.parse_yes_lines(path.read_text(encoding="utf-8")))
         except (OSError, UnicodeError):
             raise UsageError("The approval hash file could not be read.") from None
-    if any(not re.fullmatch(r"[0-9a-f]{64}", value) for value in opts["yes_hashes"]):
+    if any(not SHA256_HEX.fullmatch(value) for value in opts["yes_hashes"]):
         raise UsageError("Approval hashes must be 64 lowercase hexadecimal characters.")
     if opts["command_egress"] is not None:
         opts["command_egress"] = opts["command_egress"] == "true"

@@ -20,6 +20,9 @@ REQ_PATTERN = re.compile(r"REQ-[A-Z]+-[A-Za-z0-9]+")
 TEST_PATTERN = re.compile(
     r"test_((?:T_(?:GEN|SNF|TRI|CLS|SEL|PLN|CNV|RND|LKP|APR|TRX|ASM|WRT|RPT|CTR|MAP|SEC|CLI|META)_\d{2}|CT_\d{2}|PT_\d{2}))(?:_|$)"
 )
+JT_ID = re.compile(r'(JT-(?:\d{2}|SHL-19-01))\b')
+RUNNERS = ('windows-2022', 'ubuntu-24.04', 'macos-26')
+ENGINE_PYTHONS = ('3.10', '3.14')
 
 
 def requirement_registry(root: Path) -> dict[str, dict]:
@@ -87,13 +90,23 @@ def marker_values(test: dict, name: str) -> list:
     return [value for group in test["markers"].get(name, []) for value in group]
 
 
+def runner_rows(rows: list[dict], runner: str) -> list[dict]:
+    """A platform-restricted test is required only on the matching OS."""
+    platform = 'windows' if runner.startswith('windows') else 'posix'
+    return [r for r in rows if not marker_values(r, 'plat') or platform in marker_values(r, 'plat')]
+
+
+def _schema_skipped(test: dict, include_schema: bool) -> bool:
+    return not include_schema and 'schema' in marker_values(test, 'scope')
+
+
 def test_classes(test: dict, classes: dict, *, include_schema=False) -> set[str]:
     """Only actual fixture consumption contributes to the execution projection.
 
     The compatibility registration projection may include schema equivalences;
     it is explicitly separate from execution and never a passing-test claim.
     """
-    if not include_schema and 'schema' in marker_values(test, 'scope'):
+    if _schema_skipped(test, include_schema):
         return set()
     fixtures = set(marker_values(test, 'fx'))
     stages = {cell[0] for cell in test['markers'].get('cov', []) if len(cell) == 2}
@@ -109,7 +122,7 @@ def extra_cells(test: dict, *, include_schema=False) -> set[tuple[str, str]]:
     stages per class while the one primary `cov` cell stays unique. The marker is the explicit, literal list of
     those additional cells; the sweep test asserts that its per-class table and this marker agree.
     """
-    if not include_schema and 'schema' in marker_values(test, 'scope'):
+    if _schema_skipped(test, include_schema):
         return set()
     cells = set()
     for value in marker_values(test, 'cells'):
@@ -128,9 +141,19 @@ def coverage_problems(requirements: dict, tests: list[dict]) -> dict[str, list[s
     }
 
 
-def planned_tests(root: Path) -> dict[str, set[str]]:
+def _testplan_section(root: Path, heading: str, end: str) -> str:
     text = (root / "docs/renewal/30_TESTPLAN.md").read_text(encoding="utf-8")
-    catalog = text.split("## 4. Test catalog", 1)[1].split("## 5.", 1)[0]
+    return text.split(heading, 1)[1].split(end, 1)[0]
+
+
+def _manifest_rows(root: Path) -> list[list[str]]:
+    """Cells of each fixture-manifest table row."""
+    manifest = _testplan_section(root, "## 3. Fixture manifest", "## 4.")
+    return [line.split("|") for line in manifest.splitlines() if line.startswith("| ")]
+
+
+def planned_tests(root: Path) -> dict[str, set[str]]:
+    catalog = _testplan_section(root, "## 4. Test catalog", "## 5.")
     return {
         cells[1].strip(): set(REQ_PATTERN.findall(cells[2]))
         for line in catalog.splitlines()
@@ -144,12 +167,9 @@ def registration_problems(root: Path, tests: list[dict]) -> list[str]:
     problems = []
     seen = {}
     planned = planned_tests(root)
-    manifest = (root / "docs/renewal/30_TESTPLAN.md").read_text(encoding="utf-8")
-    manifest = manifest.split("## 3. Fixture manifest", 1)[1].split("## 4.", 1)[0]
     # A manifest row can declare several IDs in its first cell (FX-09 / FX-10,
     # FX-21 / FX-22, etc.). References in recipe cells are not declarations.
-    fixtures = {identity for line in manifest.splitlines() if line.startswith("| ")
-                for identity in re.findall(r"\bFX-\d{2}\b", line.split("|")[1])}
+    fixtures = {identity for cells in _manifest_rows(root) for identity in re.findall(r"\bFX-\d{2}\b", cells[1])}
     for test in tests:
         tid = test["tid"]
         if not tid or tid in seen:
@@ -204,15 +224,17 @@ FLOOR_CLASS_STAGE = {(k, s) for k in MATRIX_CLASSES for s in ("S3", "S13")} | {
 
 def fixture_classes(root: Path) -> dict[str, set[str]]:
     """FX id -> file classes from the manifest table (`-` and `all` rows have no class)."""
-    text = (root / "docs/renewal/30_TESTPLAN.md").read_text(encoding="utf-8")
-    manifest = text.split("## 3. Fixture manifest", 1)[1].split("## 4.", 1)[0]
-    classes = {}
-    for line in manifest.splitlines():
-        cells = line.split("|")
-        if line.startswith("| ") and len(cells) > 3:
-            for identity in re.findall(r"\bFX-\d{2}\b", cells[1]):
-                classes[identity] = set(re.findall(r"K\d{2}", cells[2]))
-    return classes
+    return {identity: set(re.findall(r"K\d{2}", cells[2]))
+            for cells in _manifest_rows(root) if len(cells) > 3
+            for identity in re.findall(r"\bFX-\d{2}\b", cells[1])}
+
+
+def _load_toml(path: Path) -> dict:
+    try:
+        import tomllib
+    except ModuleNotFoundError:  # Python 3.10
+        import tomli as tomllib
+    return tomllib.loads(path.read_text(encoding="utf-8"))
 
 
 def matrix_problems(root: Path, tests: list[dict]) -> list[str]:
@@ -222,14 +244,10 @@ def matrix_problems(root: Path, tests: list[dict]) -> list[str]:
     cell of every class of its `fx` ids (`fx("all")` expands only at S0-S3 and S13). `engine/tests/matrix.toml` supplies
     applicability only; floor cells can never be declared N/A. An N/A that is covered is not a problem.
     """
-    try:
-        import tomllib
-    except ModuleNotFoundError:  # Python 3.10
-        import tomli as tomllib
     path = root / "engine/tests/matrix.toml"
     if not path.is_file():
         return [f"missing applicability manifest: {path.relative_to(root).as_posix()}"]
-    declared = tomllib.loads(path.read_text(encoding="utf-8"))
+    declared = _load_toml(path)
     problems = []
     classes_of = fixture_classes(root)
     covered_fm, covered_class = set(), set()
@@ -301,24 +319,21 @@ def write_registry(root: Path, requirements: dict, tests: list[dict]) -> None:
     path.write_text(json.dumps({"v": 1, "requirements": requirements, "tests": tests}, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
+def _stem(junit_name: str) -> str:
+    return junit_name.removeprefix('junit-').removesuffix('.xml')
+
+
 def execution_registry_path(evidence: Path, junit_name: str) -> Path:
     """Each JUnit owns its collection inventory; matrix downloads cannot overwrite it."""
-    stem = junit_name.removeprefix('junit-').removesuffix('.xml')
-    return evidence / f'registry-{stem}.json'
+    return evidence / f'registry-{_stem(junit_name)}.json'
 
 
 def collection_path(evidence: Path, junit_name: str) -> Path:
-    stem = junit_name.removeprefix('junit-').removesuffix('.xml')
-    return evidence / f'collection-{stem}.json'
+    return evidence / f'collection-{_stem(junit_name)}.json'
 
 
-def suite_digest(root: Path) -> str:
-    """Bind collection to the candidate's tests, parameter builders and config."""
+def _digest_files(root: Path, paths: list[Path]) -> str:
     digest = hashlib.sha256()
-    paths = sorted((root / 'engine/tests').rglob('*.py'))
-    config = root / 'engine/pyproject.toml'
-    if config.is_file():
-        paths.append(config)
     for path in paths:
         digest.update(path.relative_to(root).as_posix().encode('utf-8') + b'\0')
         # Git checkouts may use CRLF on Windows; evidence is consumed on Linux.
@@ -326,6 +341,12 @@ def suite_digest(root: Path) -> str:
         # that can change the collected tests.
         digest.update(path.read_bytes().replace(b'\r\n', b'\n') + b'\0')
     return digest.hexdigest()
+
+
+def suite_digest(root: Path) -> str:
+    """Bind collection to the candidate's tests, parameter builders and config."""
+    config = root / 'engine/pyproject.toml'
+    return _digest_files(root, sorted((root / 'engine/tests').rglob('*.py')) + ([config] if config.is_file() else []))
 
 
 def write_collection(path: Path, tests: list[dict], commit: str, *, root: Path = ROOT) -> None:
@@ -336,16 +357,12 @@ def write_collection(path: Path, tests: list[dict], commit: str, *, root: Path =
 
 
 def shell_suite_digest(root: Path) -> str:
-    digest = hashlib.sha256()
-    paths = [p for folder in ('src', 'test') for p in (root / 'shell' / folder).rglob('*')
+    shell = root / 'shell'
+    paths = [p for p in (*(shell / 'src').rglob('*'), *(shell / 'test').rglob('*'), *shell.glob('*'))
              if p.is_file() and p.suffix in {'.ts', '.js', '.json'}]
-    paths += [p for p in (root / 'shell').glob('*') if p.is_file() and p.suffix in {'.ts', '.js', '.json'}]
     paths += [root / 'tools/trace.py']
     paths += [root / 'docs/renewal' / name for name in ('10_SPEC.md', '20_SHELL.md', '30_TESTPLAN.md')]
-    for path in sorted(p for p in paths if p.is_file()):
-        digest.update(path.relative_to(root).as_posix().encode() + b'\0')
-        digest.update(path.read_bytes().replace(b'\r\n', b'\n') + b'\0')
-    return digest.hexdigest()
+    return _digest_files(root, sorted(p for p in paths if p.is_file()))
 
 
 def write_shell_collection(path: Path, tests: list[dict], commit: str, *, root: Path = ROOT) -> None:
@@ -377,7 +394,7 @@ def collect_shell(destination: Path, commit: str, *, root: Path = ROOT) -> None:
             tests = []
             for case in suite['assertionResults']:
                 title = case['title']
-                tid = (re.match(r'(JT-(?:\d{2}|SHL-19-01))\b', title) or [''])[0]
+                tid = (JT_ID.match(title) or [''])[0]
                 if not tid or case.get('invocations') != 0 or case.get('wouldRun') is not True:
                     raise ValueError('unregistered/skipped/executed Jest collection case')
                 tests.append(dict(tid=tid, nodeid=source + '::' + title, markers={}, selected=True))
@@ -469,7 +486,7 @@ def execution_receipt(evidence: Path, junit_name: str, expected_commit: str, *, 
             source = 'shell/' + source[source.rfind('test/'):] if 'test/' in source else source
             title = case.get('name', '')
             nodeid = source + '::' + title
-            tid = (re.match(r'(JT-(?:\d{2}|SHL-19-01))\b', title) or [''])[0]
+            tid = (JT_ID.match(title) or [''])[0]
         else:
             nodeid, tid = props.get('nodeid'), props.get('tid')
         if not nodeid or nodeid in actual or selected.get(nodeid) != tid:
@@ -481,30 +498,31 @@ def execution_receipt(evidence: Path, junit_name: str, expected_commit: str, *, 
     return [dict(t, selected=selection.get(t['nodeid'], False)) for t in complete], actual
 
 
-def rows_passed(rows: list[dict], receipt: tuple[list[dict], dict]) -> bool:
-    """Every collected parameter of each required source callable must pass."""
+def _expansions_passed(rows: list[dict], receipt: tuple[list[dict], dict], matcher) -> bool:
+    """Each row needs at least one collected expansion (`matcher(row)` accepts its nodeid); all of them must pass."""
     tests, actual = receipt
     for row in rows:
-        base = row['nodeid']
-        expected = [t for t in tests if t['tid'] == row['tid'] and (
-            t['nodeid'] == base or t['nodeid'].startswith(base + '['))]
+        matches = matcher(row)
+        expected = [t for t in tests if t['tid'] == row['tid'] and matches(t['nodeid'])]
         if not expected or not all(t['selected'] and actual.get(t['nodeid']) is True for t in expected):
             return False
     return bool(rows)
+
+
+def rows_passed(rows: list[dict], receipt: tuple[list[dict], dict]) -> bool:
+    """Every collected parameter of each required source callable must pass."""
+    def matcher(row):
+        base = row['nodeid']
+        return lambda nodeid: nodeid == base or nodeid.startswith(base + '[')
+    return _expansions_passed(rows, receipt, matcher)
 
 
 def shell_rows_passed(rows: list[dict], receipt: tuple[list[dict], dict]) -> bool:
-    tests, actual = receipt
-    for row in rows:
+    def matcher(row):
         source, raw = row['nodeid'].split('::', 1)
-        description = raw.split(' ', 1)[1]
-        pattern = re.escape(description)
-        pattern = re.sub(r'%[sdifjpo#]', '.+?', pattern)
-        expected = [t for t in tests if t['tid'] == row['tid'] and t['nodeid'].startswith(source + '::')
-                    and re.fullmatch(pattern, t['nodeid'].split(': ', 1)[-1])]
-        if not expected or not all(t['selected'] and actual.get(t['nodeid']) is True for t in expected):
-            return False
-    return bool(rows)
+        pattern = re.sub(r'%[sdifjpo#]', '.+?', re.escape(raw.split(' ', 1)[1]))
+        return lambda nodeid: nodeid.startswith(source + '::') and re.fullmatch(pattern, nodeid.split(': ', 1)[-1])
+    return _expansions_passed(rows, receipt, matcher)
 
 
 def discover_shell_tests(root: Path) -> list[dict]:
@@ -587,11 +605,7 @@ def report(root: Path, destination: Path) -> dict:
     """Generate both matrices from registrations and reasoned applicability."""
     tests = discover_tests(root)
     classes = fixture_classes(root)
-    try:
-        import tomllib
-    except ImportError:
-        import tomli as tomllib
-    na = tomllib.loads((root / "engine/tests/matrix.toml").read_text(encoding="utf-8"))
+    na = _load_toml(root / "engine/tests/matrix.toml")
     fm, ks, execution = {}, {}, {}
     for test in tests:
         values = test["markers"].get("cov", [])
@@ -634,13 +648,12 @@ def required_executions(evidence: Path, expected_commit: str) -> list[str]:
     """Release prerequisite receipts: real installed endpoints and all nine smokes."""
     problems = []
     source_rows = discover_tests(ROOT)
-    for runner in ('windows-2022', 'ubuntu-24.04', 'macos-26'):
-        for py in ('3.10', '3.14'):
+    for runner in RUNNERS:
+        for py in ENGINE_PYTHONS:
             path = evidence / f'junit-engine-{runner}-py{py}.xml'
             try:
-                platform = 'windows' if runner.startswith('windows') else 'posix'
-                expected = [r for r in source_rows if not {'release', 'soffice'}.intersection(r['markers']) and (
-                    not marker_values(r, 'plat') or platform in marker_values(r, 'plat'))]
+                expected = [r for r in runner_rows(source_rows, runner)
+                            if not {'release', 'soffice'}.intersection(r['markers'])]
                 receipt = execution_receipt(evidence, path.name, expected_commit)
                 if not rows_passed(expected, receipt) or not all(receipt[1].values()):
                     raise ValueError('missing, failed, skipped or deselected engine parameter')
@@ -686,11 +699,9 @@ def oracle_receipts(root: Path, evidence: Path, expected_commit: str, *, defer_r
             return engine_passed('junit-reference.xml', rows)
         shell = tid.startswith("JT-")
         deferred = defer_release and any('release' in row['markers'] for row in rows)
-        for runner in ("windows-2022", "ubuntu-24.04", "macos-26"):
-            for py in ([None] if shell else ["3.10", "3.14"]):
-                # A platform-restricted test is required only on the matching OS.
-                platform = "windows" if runner.startswith("windows") else "posix"
-                expected = [r for r in rows if not marker_values(r, "plat") or platform in marker_values(r, "plat")]
+        for runner in RUNNERS:
+            for py in ([None] if shell else ENGINE_PYTHONS):
+                expected = runner_rows(rows, runner)
                 if not expected:
                     continue
                 filename = f"junit-shell-{runner}.xml" if shell else f"junit-engine-{runner}-py{py}.xml"

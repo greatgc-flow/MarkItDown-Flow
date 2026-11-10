@@ -22,17 +22,15 @@ import hashlib
 import io
 import math
 import os
-import re
 from pathlib import Path
 from typing import Sequence, TypedDict
 
 from . import sniff_io
-from .contracts import SniffResult, Unit
+from .contracts import FRAME_ID, SniffResult, Unit
 
 _RASTER_FORMATS = frozenset({"png", "jpeg", "gif", "bmp", "tiff", "webp"})
 _MEDIA_PILLOW_FORMATS = frozenset({"PNG", "JPEG", "GIF", "BMP", "TIFF", "WEBP", "MPO"})
 _PASSTHROUGH = {"PNG": ("image/png", "png"), "JPEG": ("image/jpeg", "jpg")}
-_FRAME_ID = re.compile(r"^f([0-9]+)$")
 
 
 class RenderResult(TypedDict):
@@ -105,7 +103,8 @@ def _render_pdf_page(document, unit: Unit, dpi: int, max_pixels: int) -> bytes:
 
 
 def _frame_index(unit: Unit) -> int:
-    match = _FRAME_ID.match(unit["source_id"])
+    # Select creates raster page units only for "image" and FRAME_ID ids, so the shared strict pattern applies.
+    match = FRAME_ID.fullmatch(unit["source_id"])
     if match:
         return max(0, int(match.group(1)) - 1)
     page = unit.get("page")

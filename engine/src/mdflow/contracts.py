@@ -4,7 +4,8 @@ TypedDicts describe data; runtime validation belongs to the owning stages.
 Key construction stays in ledger.py (DRAFT-3.1).
 """
 
-from typing import Literal, Mapping, TypedDict
+import re
+from typing import Literal, TypedDict
 
 Route = Literal["NATIVE", "CONTAINER", "LEGACY", "PROTECTED", "UNSUPPORTED"]
 Need = Literal["NONE", "PARTIAL", "FULL", "UNKNOWN"]
@@ -234,15 +235,5 @@ CODES = frozenset(EXIT_CODE_MAP)
 STARTUP_EXIT_CODE_MAP = {"E_USAGE": 1, "E_CORE_VERSION": 1, "E_CORE_CONFLICT": 1, "E_PROVIDER_CONFIG": 1}
 # Highest precedence first; numerical max() would give the wrong answer.
 EXIT_PRECEDENCE = (130, 1, 2, 4, 3, 0)
-
-
-def canonical_json(value: object) -> bytes:
-    """Return SPEC canonical UTF-8 JSON bytes (pure behavior in step 2)."""
-    from .hashing import canonical_json as serialize
-    return serialize(value)
-
-
-def key_id(key: Mapping[str, object]) -> str:
-    """Hash an already constructed Key; construction is owned by ledger.py."""
-    from .hashing import key_id as hash_key
-    return hash_key(key)
+# Standalone raster frame ids (`f1`, `f2`, ...): validated by classify, selected and rendered by id.
+FRAME_ID = re.compile(r"f([1-9]\d*)")

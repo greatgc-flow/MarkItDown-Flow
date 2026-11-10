@@ -1,5 +1,7 @@
 """PURE ordered classification boundary (SPEC 3.2)."""
 import re
+from .contracts import FRAME_ID
+from .hashing import SHA256_HEX
 from .sniff_pure import RASTERS, OFFICE, G2A, G2B
 
 
@@ -123,11 +125,11 @@ def _well_typed(report: dict, fmt: str) -> bool:
             if fmt == 'hwp' and (not {'stored_bytes', 'stored_sha256'} <= m.keys() or
                     m['stored_bytes'] is not None and type(m['stored_bytes']) is not int or
                     m['stored_sha256'] is not None and (not isinstance(m['stored_sha256'], str) or
-                        not re.fullmatch('[0-9a-f]{64}', m['stored_sha256']))):
+                        not SHA256_HEX.fullmatch(m['stored_sha256']))):
                 return False
         if fmt == 'hwp' and any(
             not isinstance(m.get('payload_sha256'), str) or
-            not re.fullmatch('[0-9a-f]{64}', m['payload_sha256']) or
+            not SHA256_HEX.fullmatch(m['payload_sha256']) or
             not isinstance(m.get('payload_kind'), str) or
             m.get('payload_kind') not in {'parser_image_payload', 'stored_ole_stream'} for m in media):
             return False
@@ -181,7 +183,7 @@ def _consistent(report: dict, fmt: str) -> bool:
             if c["kind"] != "image" or c["page"] is not None or not c["id"]:
                 return False
             if fmt in RASTERS:
-                match = re.fullmatch(r"f([1-9]\d*)", c["id"])
+                match = FRAME_ID.fullmatch(c["id"])
                 if c["id"] != "image" and not match:
                     return False
                 if not 1 <= (index(match[1], len(report['rasters'])) if match else 1) <= len(report["rasters"]):

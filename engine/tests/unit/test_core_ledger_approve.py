@@ -21,7 +21,7 @@ def test_T_LKP_01_key_is_three_fields_and_ok_entry_hits(core_api, core_data, tmp
     assert key == expected_entry["key"]
     assert set(key) == {"raster_sha256", "provider_fingerprint", "dpi"}
     kid = core_data.digest(core_data.canonical(key))
-    assert core_api.ledger.key_id(key) == core_api.hashing.key_id(key) == core_api.contracts.key_id(key) == kid
+    assert core_api.ledger.key_id(key) == core_api.hashing.key_id(key) == kid
     store = core_api.ledger.Ledger(tmp_path)
     assert store.write(expected_entry) == []
     path = tmp_path / "units" / kid[:2] / (kid + ".json")

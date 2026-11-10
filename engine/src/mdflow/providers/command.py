@@ -18,7 +18,7 @@ import time
 from typing import Sequence
 
 from ..contracts import ProviderMeta, UnitResult
-from ._errors import ProviderConfigError
+from ._errors import ProviderConfigError, failed as _failed
 
 ALLOWED_ENV = frozenset(
     {"PATH", "SYSTEMROOT", "SYSTEMDRIVE", "COMSPEC", "HOME", "USERPROFILE", "TEMP", "TMP", "LANG", "LC_ALL"}
@@ -56,13 +56,6 @@ def _read_ready(pipe) -> bytes | None:
 
 def canonical_destination(argv_template: Sequence[str]) -> str:
     return "command:" + json.dumps(list(argv_template), sort_keys=True, separators=(",", ":"), ensure_ascii=False)
-
-
-def _failed(code: str, message: str, started: float, exit_status: int | None = None) -> UnitResult:
-    return {
-        "status": "failed", "text": None, "duration_ms": int((time.monotonic() - started) * 1000),
-        "error": {"code": code, "message": message, "exit": exit_status},
-    }
 
 
 class CommandProvider:

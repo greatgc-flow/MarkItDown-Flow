@@ -17,7 +17,7 @@ import urllib.request
 from decimal import Decimal, InvalidOperation
 
 from ..contracts import ProviderMeta, UnitResult
-from ._errors import ProviderConfigError
+from ._errors import ProviderConfigError, failed as _failed
 
 DEFAULT_BASE_URL = "https://api.openai.com/v1"
 MAX_RESPONSE_BYTES = 4 * 1024 * 1024
@@ -68,13 +68,6 @@ class _NoRedirectOpener:
         ):
             opener.add_handler(handler)
         return opener
-
-
-def _failed(code: str, message: str, started: float) -> UnitResult:
-    return {
-        "status": "failed", "text": None, "duration_ms": int((time.monotonic() - started) * 1000),
-        "error": {"code": code, "message": message, "exit": None},
-    }
 
 
 def _is_timeout(exc: BaseException) -> bool:

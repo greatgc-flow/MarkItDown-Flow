@@ -1,5 +1,5 @@
 """PURE candidate-to-unit selection boundary."""
-import re
+from .contracts import FRAME_ID
 
 
 def select(classification: dict, options: dict) -> dict:
@@ -14,7 +14,7 @@ def select(classification: dict, options: dict) -> dict:
         unsupported = payload_kind == 'stored_ole_stream' or (
             'core:unsupported_media' in classification.get('reasons', []) and
             evidence.get('ext', '').lower() in {'wmf', 'emf', 'wmz', 'emz'})
-        page_unit = c["kind"] == "page" or identity == "image" or bool(re.fullmatch(r"f[1-9]\d*", identity))
+        page_unit = c["kind"] == "page" or identity == "image" or bool(FRAME_ID.fullmatch(identity))
         if page_unit:
             page = c["page"] if c["kind"] == "page" else 1 if identity == "image" else int(identity[1:])
             group = ("page", identity)
