@@ -41,6 +41,7 @@ it(R('JT-14 per-file fields are copied from the engine Plans: hash, provider, mo
     provider: 'openai-compatible',
     model: 'gpt-4.1-mini',
     destination: 'https://api.openai.com/v1/chat/completions',
+    proxy: null,
     selectedUnits: 2,
     dpi: 200,
     pendingLowPriority: 0,

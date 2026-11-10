@@ -16,7 +16,7 @@ import { FakeClock, flush } from './fixtures/fake-clock';
 import { FakeFs, FakeSpoolFs } from './fixtures/fake-fs';
 import { chunksOf, FakeSpawner, subcommandOf } from './fixtures/fake-spawner';
 import { fx71Bytes, fx71Exit } from './fixtures/fx71';
-import { abs, HOST_ENV, PLUGIN_DIR, settingsV2, VAULT_ROOT } from './fixtures/shell-settings';
+import { abs, HOME, HOST_ENV, PLUGIN_DIR, settingsV2, VAULT_ROOT } from './fixtures/shell-settings';
 
 const R10 = req('REQ-SHL-10');
 const R16 = req('REQ-SHL-16');
@@ -69,6 +69,7 @@ function gateHarness(gate: CoordinatorDeps['gate'], progress: ProgressSink, noti
     platform: process.platform === 'win32' ? 'win32' : 'posix',
     vaultRoot: VAULT_ROOT,
     pluginDir: PLUGIN_DIR,
+    homeDir: HOME,
     settings: () => settingsV2({}),
     gate,
     consent: async () => ({ approved: false }),

@@ -14,7 +14,7 @@ import { type FilePicker, registerEntryPoints, selectionFromDrop } from '../src/
 import { FakeClock } from './fixtures/fake-clock';
 import { FakeFs, FakeSpoolFs } from './fixtures/fake-fs';
 import { FakeSpawner } from './fixtures/fake-spawner';
-import { abs, HOST_ENV, PLUGIN_DIR, settingsV2, VAULT_ROOT } from './fixtures/shell-settings';
+import { abs, HOME, HOST_ENV, PLUGIN_DIR, settingsV2, VAULT_ROOT } from './fixtures/shell-settings';
 
 const R = req('REQ-SHL-08');
 
@@ -51,6 +51,7 @@ function realCoordinator(): ShellCoordinator {
     platform: process.platform === 'win32' ? 'win32' : 'posix',
     vaultRoot: VAULT_ROOT,
     pluginDir: PLUGIN_DIR,
+    homeDir: HOME,
     settings: () => settingsV2(),
     gate: () => null,
     consent: async () => ({ approved: false }),
@@ -224,7 +225,8 @@ it(R('JT-08 identical selections through command, ribbon, context menu and drop 
   for (const request of requests) expect(request).toEqual(requests[0]);
   expect(requests[0].inputs).toEqual([FILE_A]);
   expect(requests[0].outDir).toBe(path.join(VAULT_ROOT, 'markitdown-output'));
-  expect(requests[0].cacheDir).toBe(path.join(PLUGIN_DIR, 'cache'));
+  // R38: the cache is the engine default `~/.mdflow/cache`, outside the vault.
+  expect(requests[0].cacheDir).toBe(path.join(HOME, '.mdflow', 'cache'));
 });
 
 it(R('JT-08 reload leaves exactly one ribbon icon and one listener of each kind'), () => {

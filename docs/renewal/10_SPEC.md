@@ -35,7 +35,7 @@ Design rule applied in draft-3 (VerySimpleGuide): where a review found a contrad
 | Base body | Markdown produced by Core, before OCR blocks are inserted. |
 | Output | One `.md` per source (per member for containers), published atomically. |
 | Input root | A path given on the command line (2.1). |
-| Cache dir | `~/.mdflow/cache` (CLI default) or `--cache DIR` (plugin passes `<plugin-dir>/cache`). |
+| Cache dir | `~/.mdflow/cache` (CLI default) or `--cache DIR` (the plugin passes the same `~/.mdflow/cache` explicitly, outside the vault; R38). |
 
 ---
 

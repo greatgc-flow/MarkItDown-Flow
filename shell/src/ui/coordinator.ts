@@ -6,7 +6,7 @@
  */
 import { type Env, providerAvailability } from '../pure/env';
 import { type HistoryEntry, type HistoryOutcome } from '../pure/history';
-import { isAbsolutePath, joinPath } from '../pure/paths';
+import { homeRelativePath, isAbsolutePath, joinPath } from '../pure/paths';
 import type { Plan, RunReport } from '../pure/protocol';
 import { defaultSettings, type SettingsV2 } from '../pure/settings';
 import type { SpoolFs } from '../pure/spool';
@@ -50,6 +50,8 @@ export interface CoordinatorDeps {
   platform: HostPlatform;
   vaultRoot: string;
   pluginDir: string;
+  /** User home directory (`os.homedir()`): roots the default cache (R38) and the `~` form of history paths (P4). */
+  homeDir: string;
   settings: () => SettingsV2;
   /** Result of the version gate taken before jobs (may be probed lazily); null blocks with `shell.RUNTIME`. */
   gate: () => VersionGate | null | Promise<VersionGate | null>;
@@ -76,7 +78,6 @@ export interface JobReport {
   pendingShown: boolean;
 }
 
-export const CACHE_DIR_NAME = 'cache';
 export const SPOOL_DIR_NAME = 'spool';
 export const CONSENT_DIR_NAME = 'consent';
 
@@ -85,6 +86,15 @@ const APPROVAL_CODES: ReadonlySet<string> = new Set(['E_APPROVAL_REQUIRED', 'E_A
 /** SPEC 8.4 / approve.py: consent is required only when the provider has egress and requests remain to send. */
 export function needsConsent(plan: Plan): boolean {
   return plan.approved.provider.egress && plan.status.requests_to_send > 0;
+}
+
+/**
+ * R38: the plugin cache is the engine's own default `Path.home() / ".mdflow/cache"` (cli.py `--cache`),
+ * outside the vault: no sync leak, no cache poisoning through vault writes, hits shared with the CLI.
+ * Without an absolute home it is empty, so `snapshotJob` refuses the job instead of guessing a root.
+ */
+export function defaultCacheDir(platform: HostPlatform, homeDir: string): string {
+  return isAbsolutePath(homeDir) ? joinPath(platform, homeDir, '.mdflow', 'cache') : '';
 }
 
 /** History display reference: the first path plus a count; never every absolute path (REQ-SHL-07). */
@@ -116,7 +126,7 @@ export class ShellCoordinator {
       inputs: [...selection.paths],
       cwd: settings.enginePython ? engineWorkingDirectory(this.deps.platform, settings.enginePython) : '',
       outDir: joinPath(this.deps.platform, this.deps.vaultRoot, settings.outputPath),
-      cacheDir: joinPath(this.deps.platform, this.deps.pluginDir, CACHE_DIR_NAME),
+      cacheDir: defaultCacheDir(this.deps.platform, this.deps.homeDir),
       recursive: selection.kind === 'folder' ? settings.enableRecursiveConversion : true,
     };
   }
@@ -322,9 +332,11 @@ export class ShellCoordinator {
   }
 
   private async record(snapshot: JobSnapshot, outcome: HistoryOutcome): Promise<void> {
+    // P4: data.json may be synced; store `~`-relative display paths, never the absolute home directory.
+    const shown = (path: string): string => homeRelativePath(this.deps.platform, this.deps.homeDir, path);
     await this.deps.recordHistory({
-      inputFile: historyInputLabel(snapshot.inputs),
-      outputFile: snapshot.outDir,
+      inputFile: historyInputLabel(snapshot.inputs.map(shown)),
+      outputFile: shown(snapshot.outDir),
       timestamp: this.deps.clock.now(),
       success: outcome === 'complete',
       outcome,

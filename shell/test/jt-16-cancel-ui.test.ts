@@ -21,7 +21,7 @@ import { FakeFs, FakeSpoolFs } from './fixtures/fake-fs';
 import { chunksOf, FakeSpawner, type ScriptedChild, subcommandOf } from './fixtures/fake-spawner';
 import { fx71Bytes, fx71Exit, fx71Lines } from './fixtures/fx71';
 import { defaultScript, fakeApis, loadPluginWith, tick } from './fixtures/plugin-harness';
-import { abs, HOST_ENV, OPENAI_PROVIDER, PLUGIN_DIR, settingsV2, VAULT_ROOT } from './fixtures/shell-settings';
+import { abs, HOME, HOST_ENV, OPENAI_PROVIDER, PLUGIN_DIR, settingsV2, VAULT_ROOT } from './fixtures/shell-settings';
 import { loadNodeApis } from '../src/process/node-apis';
 
 jest.mock('../src/process/node-apis', () => ({
@@ -84,6 +84,7 @@ function harness(
     platform: process.platform === 'win32' ? 'win32' : 'posix',
     vaultRoot: VAULT_ROOT,
     pluginDir: PLUGIN_DIR,
+    homeDir: HOME,
     settings: () => settings,
     gate,
     consent,
@@ -342,18 +343,21 @@ it(R7('JT-07 a multi-input job records one history entry with the input count an
   const first = abs(INPUT_ROOT, 'a.pdf');
   const second = abs(INPUT_ROOT, 'b.docx');
   const third = abs(INPUT_ROOT, 'c.pdf');
+  // P4: the vault lies under HOME, so history shows the home-relative `~` form of each path.
+  const shownFirst = abs('~', 'Vault', 'inbox', 'a.pdf');
   await h.coordinator.submit({ kind: 'files', paths: [first, second, third] }, 'command');
   await h.coordinator.current;
   expect(h.history).toHaveLength(1);
-  expect(h.history[0].inputFile.startsWith(first)).toBe(true);
+  expect(h.history[0].inputFile.startsWith(shownFirst)).toBe(true);
   expect(h.history[0].inputFile).toContain('+2');
-  expect(h.history[0].inputFile).not.toContain(second);
-  expect(h.history[0].inputFile).not.toContain(third);
-  expect(h.history[0].outputFile).toBe(OUT);
+  expect(h.history[0].inputFile).not.toContain('b.docx');
+  expect(h.history[0].inputFile).not.toContain('c.pdf');
+  expect(h.history[0].outputFile).toBe(abs('~', 'Vault', 'markitdown-output'));
+  expect(second.startsWith(HOME) && OUT.startsWith(HOME)).toBe(true);
   const single = harness(settingsV2(), () => recordedRun('run-mixed'));
   await single.coordinator.submit({ kind: 'files', paths: [first] }, 'command');
   await single.coordinator.current;
-  expect(single.history[0].inputFile).toBe(first);
+  expect(single.history[0].inputFile).toBe(shownFirst);
 });
 
 // ProgressSink is the seam main.ts wires; keep its shape explicit so a future refactor cannot drop Cancel silently.

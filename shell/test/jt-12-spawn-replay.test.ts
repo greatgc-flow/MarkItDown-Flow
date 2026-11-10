@@ -31,7 +31,7 @@ import { FakeFs, FakeSpoolFs } from './fixtures/fake-fs';
 import { FakeSpawner } from './fixtures/fake-spawner';
 import { fx71Bytes, fx71Lines, fx71PlanObjects, fx71Text, FX71_ROOTS } from './fixtures/fx71';
 import { approvedHashesIn, replayInvariantArgs } from './fixtures/protocol';
-import { abs, ENGINE_PYTHON, HOST_ENV, KEY_VALUE, OPENAI_PROVIDER, PLUGIN_DIR, settingsV2, VAULT_ROOT } from './fixtures/shell-settings';
+import { abs, ENGINE_PYTHON, HOME, HOST_ENV, KEY_VALUE, OPENAI_PROVIDER, PLUGIN_DIR, settingsV2, VAULT_ROOT } from './fixtures/shell-settings';
 
 const R = req('REQ-SHL-12');
 
@@ -221,6 +221,7 @@ it(R('JT-12 the coordinator, the version probe, the selftest command and the set
     platform: PLATFORM,
     vaultRoot: VAULT_ROOT,
     pluginDir: PLUGIN_DIR,
+    homeDir: HOME,
     settings: () => settingsV2({ provider: { ...OPENAI_PROVIDER } }),
     gate: () => ({ enabled: true, info: { mdflow: '2.0.0', 'markitdown-gc': '0.3.7', pypdfium2: '5.15.1', pillow: '13.0.0', python: '3.14.0', platform: 'test', protocol: 1, triage_schema: 1 } }),
     consent: async () => ({ approved: false }),

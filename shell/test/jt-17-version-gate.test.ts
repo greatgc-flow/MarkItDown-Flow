@@ -21,7 +21,7 @@ import { FakeClock, flush } from './fixtures/fake-clock';
 import { FakeFs, FakeSpoolFs } from './fixtures/fake-fs';
 import { FakeSpawner, type ScriptedChild } from './fixtures/fake-spawner';
 import { fx71Bytes, fx71Manifest, fx71Text } from './fixtures/fx71';
-import { abs, ENGINE_PYTHON, HOST_ENV, PLUGIN_DIR, settingsV2, VAULT_ROOT } from './fixtures/shell-settings';
+import { abs, ENGINE_PYTHON, HOME, HOST_ENV, PLUGIN_DIR, settingsV2, VAULT_ROOT } from './fixtures/shell-settings';
 
 const R = req('REQ-SHL-17');
 
@@ -213,6 +213,7 @@ it(R('JT-17 a blocked gate yields zero conversions: submit is refused with shell
     platform: process.platform === 'win32' ? 'win32' : 'posix',
     vaultRoot: VAULT_ROOT,
     pluginDir: PLUGIN_DIR,
+    homeDir: HOME,
     settings: () => settingsV2(),
     gate: () => evaluateVersionResponse(fx71Text('version.protocol-2.json'), RELEASE_LOCK),
     consent: async () => ({ approved: false }),
