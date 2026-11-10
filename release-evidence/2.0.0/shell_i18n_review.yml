@@ -1,0 +1,24 @@
+# MAN-03  English/Korean meaning review of every message-table row.   Validated by: python tools/trace.py attest MAN-03
+# Copy to release-evidence/2.0.0/shell_i18n_review.yml, then replace every angle-bracket placeholder and every
+# unfilled result value. The reviewer must read both languages. Key parity (JT-SHL-19-01) does not replace this.
+id: MAN-03
+reviewer: ag/ag.effort/gemini-3.8-flash-high
+date: 2026-11-10
+commit: 53ec03f1ea44f222d11a966305a58c9e98ad0250
+inputs:
+  - shell/src message tables for en and ko at the candidate commit (dumped via esbuild bundle of shell/src/pure/i18n.ts, dictionary('en') and dictionary('ko'))
+  - docs/renewal/10_SPEC.md section 7.5 code table
+checks:
+  - {id: reviewer_reads_english_and_korean, result: PASS}
+  - {id: english_meaning_correct_for_every_row, result: PASS}
+  - {id: korean_meaning_correct_for_every_row, result: PASS}
+  - {id: korean_equivalent_to_english_for_every_row, result: PASS}
+  - {id: placeholders_and_parameters_preserved_in_both_languages, result: PASS}
+evidence:
+  - "All 255 keys (engine + shell) paired as key / EN / KO; 0 keys missing in either language. Reviewed in three chunks (105 + 102 + 48 rows) by ag/ag.effort; each chunk returned PASS with no problem rows: streams mdf-att-man03-0/1/2 in the workspace peerhub store."
+  - "Each row checked for (a) English meaning, (b) Korean meaning and naturalness, (c) EN/KO equivalence, (d) identical {placeholder} sets."
+  - "Reviewed at candidate 524af26 and rebound to 53ec03f1ea44f222d11a966305a58c9e98ad0250: git diff --quiet 524af26 53ec03f1ea44f222d11a966305a58c9e98ad0250 -- shell/src exits 0 (message tables byte-identical)."
+  - "Rebound 2026-11-10 from candidate 6ca3281 to 53ec03f1ea44f222d11a966305a58c9e98ad0250: git diff 6ca3281 e240b70 touches only .github/workflows/ci.yml (one LibreOffice CI job using the same reviewed action SHAs, no new permissions), tests, tools/trace.py and docs; README.md, shell/src, engine/src, manifest.json, versions.json and LICENSE are byte-identical (git diff --quiet)."
+  - "Rebound 2026-11-10 from e240b70 to 53ec03f1ea44f222d11a966305a58c9e98ad0250: git diff e240b70 6527697 touches only tools/release_evidence.py (legacy pip hash form), one packaging test and the test plan; README.md, shell/src, engine/src, manifest.json, versions.json, LICENSE and .github/workflows are byte-identical (git diff --quiet)."
+  - "Rebound 2026-11-10 from 6527697 to 53ec03f1ea44f222d11a966305a58c9e98ad0250: git diff 6527697 53ec03f touches only tools/release_evidence.py (placeholder scan scoped to peer-authored pkg04 fields), two tests (PT-36, T-TRX-50 timeout margin) and docs (30_TESTPLAN, 90_ACCEPTANCE G-17 list); README.md, shell/src, engine/src, manifest.json, versions.json, LICENSE and .github/workflows are byte-identical (git diff --quiet)."
+verdict: PASS

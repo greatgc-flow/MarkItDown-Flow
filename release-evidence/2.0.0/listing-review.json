@@ -1,0 +1,28 @@
+{
+  "reviewer": "cc/cc.effort/claude-sonnet-5-5",
+  "date": "2026-11-10",
+  "commit": "53ec03f1ea44f222d11a966305a58c9e98ad0250",
+  "evidence": [
+    "manifest.json @6ca3281: id=markitdown-flow, name=MarkItDown Flow, version=2.0.0, minAppVersion=1.14.4, isDesktopOnly=true, author/authorUrl set; description is 83 chars (<=250), a single sentence ending with a period, no 'Obsidian'/'plugin' filler.",
+    "versions.json @6ca3281: key '2.0.0' -> '1.14.4' equals manifest minAppVersion; all prior keys (0.1.0..1.0.8) retained; git tag 2.0.0 exists.",
+    "Command ids: shell/src/ui/commands.ts COMMAND_IDS = convert-file, convert-folder, convert-url, view-conversion-history, open-log-folder, run-image-pipeline-selftest; compared with `git grep` of tag 1.0.8 main.ts lines 81-111: the same six ids, unchanged.",
+    "README.md @6ca3281 sections: 'Network services and purpose' (OpenAI-compatible OCR endpoint, bootstrap downloads from release host and PyPI), 'Outside-vault access' (engine venv, source docs, OS temp rasters, exiftool/LibreOffice, cache/sync note), 'Account, API key and cost', 'Telemetry' (none). No ads and no paid tier appear in the code/README I read; open source with LICENSE present.",
+    "Limits: I compared against the public Obsidian plugin submission/developer-policy requirements as I know them; I did not fetch the live Obsidian docs or run the community-plugin validator. isDesktopOnly was checked in manifest only (guard in main.ts relied on prior M2 review, not re-executed). Listing install is post-release (REQ-PKG-19).",
+    "Rebound 2026-11-10 from candidate 6ca3281 to e240b70da748edc3c2bb3992d6f03f49eb4275c1: git diff 6ca3281 e240b70 touches only .github/workflows/ci.yml (one LibreOffice CI job using the same reviewed action SHAs, no new permissions), tests, tools/trace.py and docs; README.md, shell/src, engine/src, manifest.json, versions.json and LICENSE are byte-identical (git diff --quiet).",
+    "Rebound 2026-11-10 from e240b70 to 53ec03f1ea44f222d11a966305a58c9e98ad0250: git diff e240b70 6527697 touches only tools/release_evidence.py (legacy pip hash form), one packaging test and the test plan; README.md, shell/src, engine/src, manifest.json, versions.json, LICENSE and .github/workflows are byte-identical (git diff --quiet).",
+    "Rebound 2026-11-10 from 6527697 to 53ec03f1ea44f222d11a966305a58c9e98ad0250: git diff 6527697 53ec03f touches only tools/release_evidence.py (placeholder scan scoped to peer-authored pkg04 fields), two tests (PT-36, T-TRX-50 timeout margin) and docs (30_TESTPLAN, 90_ACCEPTANCE G-17 list); README.md, shell/src, engine/src, manifest.json, versions.json, LICENSE and .github/workflows are byte-identical (git diff --quiet)."
+  ],
+  "verdict": "PASS",
+  "listing": {
+    "id": "markitdown-flow",
+    "version": "2.0.0"
+  },
+  "checks": {
+    "identity": "PASS",
+    "manifest_versions": "PASS",
+    "description": "PASS",
+    "commands": "PASS",
+    "desktop_only": "PASS",
+    "readme_disclosures": "PASS"
+  }
+}

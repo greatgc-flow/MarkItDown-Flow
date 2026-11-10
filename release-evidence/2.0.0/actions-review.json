@@ -1,0 +1,89 @@
+{
+  "reviewer": "cc/cc.effort/claude-sonnet-5-5",
+  "date": "2026-11-10",
+  "commit": "53ec03f1ea44f222d11a966305a58c9e98ad0250",
+  "evidence": [
+    "Reviewed .github/workflows/ci.yml, evidence.yml, release.yml @6ca3281. All six actions are `actions/*` (GitHub's official org) pinned to full 40-hex SHAs; the SHAs in every `uses:` line equal the SHAs in this table.",
+    "Permissions: each workflow sets top-level `contents: read` (evidence.yml and release.yml add `actions: read` only to download artifacts from another run). Elevated scopes are job-local: release.yml `attest` has id-token: write + attestations: write (needed by actions/attest) and `publish` has contents: write (release draft). No other job elevates; ci.yml (also called by release.yml) stays read-only.",
+    "All 14 actions/checkout uses (ci 7, release 5, evidence 2) set `persist-credentials: false`. GITHUB_TOKEN is passed only as GH_TOKEN/github-token to steps that need gh API or cross-run artifact download. No pull_request_target trigger; ci.yml's pull_request trigger runs with the read-only token.",
+    "Not verified by me: the GitHub commit-identity check (`gh api repos/<action>/commits/<sha>`; automatic) and the actions' own dist/runtime code (out of scope per the R36 trust assumption). I judged ownership from the `actions/` owner prefix in the workflows, not by a live GitHub query.",
+    "Re-review 2026-11-10 for candidate e240b70da748edc3c2bb3992d6f03f49eb4275c1 (previously 6ca3281): I read `git diff 6ca3281 e240b70 -- .github/workflows`; only ci.yml changed. New job `legacy-libreoffice (ubuntu-24.04, 3.14)` uses checkout 3d3c42e5 (persist-credentials: false), setup-python 6d4fd22b, download-artifact 9000827c and upload-artifact cf430e03: the same six reviewed SHAs, no new action. It declares no `permissions:` and so inherits the workflow's top-level `contents: read`; no new secrets, tokens, id-token or write scope. The only privileged step is `sudo apt-get install --no-install-recommends` of libreoffice-*-nogui on the hosted runner, which has no effect on repository permissions (apt packages are unpinned; that is not an action-ownership or token-scope issue). Other changes: a pytest marker filter (`not release and not soffice`) and a `trace` job `needs`/download of the new `legacy-libreoffice` artifact, both with the same pinned download-artifact. Ownership and workflow_permissions remain PASS for all six actions.",
+    "Rebound 2026-11-10 from e240b70 to 53ec03f1ea44f222d11a966305a58c9e98ad0250: git diff e240b70 6527697 touches only tools/release_evidence.py (legacy pip hash form), one packaging test and the test plan; README.md, shell/src, engine/src, manifest.json, versions.json, LICENSE and .github/workflows are byte-identical (git diff --quiet).",
+    "Rebound 2026-11-10 from 6527697 to 53ec03f1ea44f222d11a966305a58c9e98ad0250: git diff 6527697 53ec03f touches only tools/release_evidence.py (placeholder scan scoped to peer-authored pkg04 fields), two tests (PT-36, T-TRX-50 timeout margin) and docs (30_TESTPLAN, 90_ACCEPTANCE G-17 list); README.md, shell/src, engine/src, manifest.json, versions.json, LICENSE and .github/workflows are byte-identical (git diff --quiet)."
+  ],
+  "verdict": "PASS",
+  "actions": [
+    {
+      "action": "actions/checkout",
+      "sha": "3d3c42e5aac5ba805825da76410c181273ba90b1",
+      "checks": {
+        "ownership": "PASS",
+        "workflow_permissions": "PASS"
+      },
+      "evidence": [
+        "Owner `actions` (official). Used in ci/evidence/release with contents: read; every use has persist-credentials: false."
+      ],
+      "verification": {}
+    },
+    {
+      "action": "actions/setup-python",
+      "sha": "6d4fd22b20465ccc0f7354476588e8df7c9ca0e0",
+      "checks": {
+        "ownership": "PASS",
+        "workflow_permissions": "PASS"
+      },
+      "evidence": [
+        "Owner `actions` (official). Runs under contents: read only; no token-scoped inputs."
+      ],
+      "verification": {}
+    },
+    {
+      "action": "actions/setup-node",
+      "sha": "949feb2413d6458794dcd2491c4babbbce0c15c1",
+      "checks": {
+        "ownership": "PASS",
+        "workflow_permissions": "PASS"
+      },
+      "evidence": [
+        "Owner `actions` (official). Used only in ci.yml (candidate and jest jobs) under contents: read."
+      ],
+      "verification": {}
+    },
+    {
+      "action": "actions/upload-artifact",
+      "sha": "cf430e030ddbb5b0abf93d22962f4752f3646cd9",
+      "checks": {
+        "ownership": "PASS",
+        "workflow_permissions": "PASS"
+      },
+      "evidence": [
+        "Owner `actions` (official). Needs no token scope beyond the runtime artifact service; runs under contents: read (publish job's contents: write is for the later release steps, not this action)."
+      ],
+      "verification": {}
+    },
+    {
+      "action": "actions/download-artifact",
+      "sha": "9000827ccba6bdab643e8b6fd33ac0654aef8333",
+      "checks": {
+        "ownership": "PASS",
+        "workflow_permissions": "PASS"
+      },
+      "evidence": [
+        "Owner `actions` (official). Same-run downloads need no extra scope; cross-run downloads (release/evidence) use github-token with the declared `actions: read`, the minimum for that."
+      ],
+      "verification": {}
+    },
+    {
+      "action": "actions/attest",
+      "sha": "1e69f48acb82d1966a394da916b4c1698aa569d6",
+      "checks": {
+        "ownership": "PASS",
+        "workflow_permissions": "PASS"
+      },
+      "evidence": [
+        "Owner `actions` (official). Single use in release.yml `attest` job with job-scoped contents: read, id-token: write, attestations: write; that is the documented minimum for provenance attestations."
+      ],
+      "verification": {}
+    }
+  ]
+}
