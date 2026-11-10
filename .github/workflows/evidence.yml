@@ -112,8 +112,10 @@ jobs:
           gh run download "$INPUT_CI_RUN" --repo "$GITHUB_REPOSITORY" -n acceptance-evidence -D build/executions
           python build/source/tools/release_evidence.py produce --source "$EVIDENCE_FOLDER" --output build/evidence --executions build/executions --commit "$COMMIT"
       - name: Reject unfilled template placeholders
+        env:
+          EVIDENCE_FOLDER: ${{ steps.bind.outputs.folder }}
         run: |
-          if grep -nE '<[A-Z][A-Z0-9 /_.-]*>|\bTODO\b' build/evidence/*.json build/evidence/*.yml; then
+          if grep -nE '<[A-Z][A-Z0-9 /_.-]*>|\bTODO\b' "$EVIDENCE_FOLDER"/*.json "$EVIDENCE_FOLDER"/*.yml; then
             echo "::error::unfilled template placeholders or TODO values remain (listed above)"; exit 1
           fi
       - name: Validate every review against the candidate commit

@@ -71,6 +71,19 @@ def test_PT_23_evidence_workflow_is_least_privilege_and_documented_with_an_owner
     check_guide()
 
 
+@pytest.mark.req("REQ-PKG-22")
+@pytest.mark.cov("S0", "FM10")
+def test_PT_37_placeholder_step_scans_peer_authored_source_evidence_only():
+    _, job = evidence_job()
+    step = next(s for s in job["steps"] if s.get("name") == "Reject unfilled template placeholders")
+    assert step.get("env", {}).get("EVIDENCE_FOLDER") == "${{ steps.bind.outputs.folder }}"
+    script = step["run"]
+    assert "build/evidence" not in script, "machine-enriched pip metadata is validated by validate_extra"
+    for extension in ("json", "yml"):
+        assert f'"$EVIDENCE_FOLDER"/*.{extension}' in script
+    assert f"grep -nE '{PLACEHOLDER.pattern}'" in script
+
+
 def check_workflow():
     flow, job = evidence_job()
     assert triggers(flow) == {"workflow_dispatch"}, "evidence.yml must be dispatch-only"
