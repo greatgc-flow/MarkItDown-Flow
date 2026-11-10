@@ -381,7 +381,8 @@ R27/R28 added registrations (existing REQs; precise fixture assertions replace b
 | CT-02 | `decision` and `coverage.state` vocabularies | REQ-CLS-05, REQ-CLS-06 |
 | CT-03 | 14 issue codes + candidate-reason vocabulary; `triage.issues[].code` within 3.0; regenerated golden == committed | REQ-CLS-05, REQ-GEN-10, REQ-TRI-04 |
 | CT-04 | candidate id/kind/page shapes per format; repeated ids (`refs`) | REQ-MAP-01, REQ-MAP-02, REQ-MAP-08, REQ-CLS-02 |
-| CT-05 | PDF per-page conversion: no markers, scanned page empty | REQ-CNV-02 |
+| CT-05 | PDF per-page conversion: no markers, scanned page empty; whole-document conversion of FX-03 has one `\f` per page break, drops trailing empty pages and equals the per-page text | REQ-CNV-02 |
+| CT-16 | R41: whole-document conversion of an own bookmarked PDF puts each bookmark's `#` heading on its own page piece (none without bookmarks); leading/middle empty pages keep their `\f`, a trailing one leaves none | REQ-CNV-02 |
 | CT-06 | triage never alters bytes | REQ-TRI-05 |
 | CT-07 | raster `fN`, `frame_cap`, `image_probe_failed` shapes; no total-frame field | REQ-RND-02, REQ-MAP-02 |
 | CT-08 | `extract_media` filename == `sha256(member)[:12]` | REQ-CNV-03, REQ-MAP-03 |
@@ -389,9 +390,9 @@ R27/R28 added registrations (existing REQs; precise fixture assertions replace b
 | CT-10 | HWP5/HWPX no `missing_dependency` on reference/compatibility installs | REQ-GEN-01 |
 | CT-11 | Core offline: no plugins/LLM/DocIntel; bytes + extension hint; URI-like not fetched | REQ-CNV-05 |
 | CT-12 | `txt` -> `not_applicable`, html -> `media_not_inspected`, csv -> `unsupported_format` | REQ-TRI-01 |
-| CT-13 | installed Core in `>=0.3.7,<0.4`; startup gate rejects out-of-range | REQ-GEN-02, REQ-PKG-03 |
+| CT-13 | installed Core in `>=0.3.8,<0.4` (0.3.7 rejected); startup gate rejects out-of-range | REQ-GEN-02, REQ-PKG-03 |
 | CT-14 | Core reports contain no absolute path/exception text | REQ-ASM-P3, REQ-SEC-02, REQ-TRI-04 |
-| CT-15 | private Core helpers used by the engine are exactly `_libreoffice._execute/_resolve/_write_profile` and `_installation.installation_conflict` (every imported name parsed with `ast`; `_libreoffice` only as `lo`); their call shapes bind, `_execute` returns captured text and raises past its deadline | REQ-GEN-02, REQ-GEN-12, REQ-CNV-06, REQ-CNV-07 |
+| CT-15 | the engine imports no private Core module or name (every imported name parsed with `ast`) and uses exactly the stable public `markitdown.tools.installation_conflict/probe_exiftool/probe_libreoffice` (only as `from markitdown import tools`; provisional `run_tool` excluded); their call shapes bind, probe results carry exactly `path/version/status/detail`, exiftool reports `ok`/`outdated` (< 12.24)/`error`/`missing`, a stalled tool is `error` within its deadline instead of raising | REQ-GEN-02, REQ-GEN-12, REQ-CNV-06, REQ-CNV-07 |
 
 ### 4.3 Shell (jest)
 
@@ -425,7 +426,7 @@ R27/R28 added registrations (existing REQs; precise fixture assertions replace b
 |---|---|---|
 | PT-01 | REQ-PKG-01 (direct pure-Python wheel/metadata, notices, forbidden content and isolated import) | R |
 | PT-02 | REQ-PKG-02 (one CI-generated Linux x64/Python 3.14 hashed reference; full closure install and tamper/missing-pin/hash rejection; other targets use declared ranges) | R |
-| PT-03 | REQ-PKG-03 (Core 0.3.7 and newest `<0.4`; resolver failure = fail) | A |
+| PT-03 | REQ-PKG-03 (Core 0.3.8 and newest `<0.4`; resolver failure = fail) | A |
 | PT-04 | REQ-PKG-04 (generated per-target resolved artifact URL/hash/license metadata and isolated installs; named license review, no universal catalog) | H |
 | PT-05 | REQ-PKG-05 (verified wheel + declared Core/PyPI policy; bootstrap commands execute per OS; plugin diagnostics only) | R |
 | PT-06 | REQ-PKG-06 (complete packaged version response, protocol/schema/Core policy and selftest; record renderer/Pillow versions without reference-pin blocking) | R |
@@ -506,10 +507,10 @@ Every REQ id defined in `10_SPEC.md` (incl. new REQ-SNF-09), `20_SHELL.md` (SHL-
 | T-TRI-90 | REQ-CTR-03, REQ-TRI-02, REQ-GEN-07 | M3: corrupt inner Office relationship report retained; valid sibling completes. |
 | T-META-90 | REQ-PKG-10, REQ-PKG-17, REQ-PKG-08 | M3: every collected parameter identity required, no omission/duplication/substitution/stale registry. |
 | T-GEN-90 | REQ-PKG-06 | M3: package admission requires nonempty platform. |
-| T-META-91 | REQ-PKG-02, REQ-PKG-03, REQ-GEN-01 | R34: reference Core 0.3.7, DRAFT-3.8, actual three direct dependencies. |
+| T-META-91 | REQ-PKG-02, REQ-PKG-03, REQ-GEN-01 | R39: reference Core 0.3.8 (builder, bootstrap, packaging doc; the `requirements-reference.txt` pin and hashes follow publication), DRAFT-3.8, actual three direct dependencies. |
 | T-META-92 | REQ-PKG-10, REQ-PLN-01 | M3: handoff and class-specific Plan catalog reflect current ownership. |
 | T-META-93 | REQ-PKG-10, REQ-PKG-16 | Round 10/11 docs: HANDOFF states the R35 99/100 rule with MAN-04 deferred, round 9 with C1-C4 and the E-07 `trace.py score` step; the argon record is marked superseded and keeps MAN-01..03 required; R4 notes R38; CHANGELOG lists the round-9 changes (Keep OCR pending launches no conversion on close; Security last, C1-C4); README follows the repository LF policy (no CR byte; PT-39) and has the T/S/M section (local text, report-only labels, remote OCR after approval, `python -I -m mdflow classify`) and Known limitations; section 7 code counts and the 20_SHELL section 6 tables equal SPEC 7.5; 90_ACCEPTANCE names the current SPEC draft and states the round-9 FX-71 impact. |
-| T-META-94 | REQ-PKG-03, REQ-GEN-10 | R34: minimum 0.3.7 and another compatible endpoint check the Core 0.3.7 reference seal without substituting the installed version. |
+| T-META-94 | REQ-PKG-03, REQ-GEN-10 | R39: minimum 0.3.8 and another compatible endpoint check the reference seal (producer 0.3.7 until regenerated from the published 0.3.8) without substituting the installed version. |
 | T-GEN-92 | REQ-PKG-09, REQ-PKG-01 | M3: observe recorder child argv with -I, excluding work-directory modules and source environment injection. |
 | T-CLS-91 | REQ-CLS-06, REQ-GEN-07 | M4: numeric candidate id is refused without losing a sibling. |
 | T-GEN-93 | REQ-GEN-09, REQ-RND-05 | M4: temp recovery preserves live and unowned trees. |
@@ -569,6 +570,9 @@ Reviewed R33 golden changes: FX-30..33/classification.json and classification.re
 | T-CNV-96 | REQ-CNV-04, REQ-CNV-05 | M7-V01: exact identical-byte TXT/CSV counterexample, real Core cold literal outputs in both orders, separate shared-cache fills and no-call warm reuse. FX-28, FX-29; S5:FM12. |
 | T-CNV-97 | REQ-CNV-04 | M7-V01: legacy cache path and missing/mismatched conversion identities are rejected; real Core restores the literal TXT body. FX-28; S5:FM12. |
 | T-CNV-98 | REQ-CNV-06 | Round 9: a fake exiftool answering `-ver` after 1 s is used for image conversion (3 s conversion budget: metadata and `tools` present, no issue) while the `version` diagnostic keeps its 0.5 s deadline (`unusable`). FX-09; S5:FM3 (time threshold, not an interruption). |
+| T-ASM-92 | REQ-CNV-02 | R41: bookmarked born-digital PDF (T): one whole-document Core call; each bookmark heading sits under its own `<!-- mdflow:page N -->`. FX-01; S5:FM0. |
+| T-ASM-93 | REQ-CNV-02, REQ-ASM-04 | R41: bookmarked mixed (M) and scanned (S) PDFs: the text page keeps its heading, scanned pages (including a trailing one Core omits) still get their OCR text under the right anchor. FX-01, FX-03; S5:FM0. |
+| T-ASM-94 | REQ-CNV-02 | R41: fallback to one Core call per page when the whole-document text has no form feeds, too many pieces, an omitted page that has text, or Core fails; no whole-document call for a PDF without bookmarks. FX-01; S5:FM0. |
 | T-CNV-99 | REQ-CNV-06, REQ-RPT-03 | Round 9: present-but-unusable exiftool records one path-free `W_EXIFTOOL_UNUSABLE` per image (cold run and warm cache run, which makes no Core call for the image), exit 0 and outputs written; text files and an absent tool record none. FX-09; S5:FM10. |
 | T-CLI-86 | REQ-GEN-12 | Core-owned loaded-code/metadata mismatch maps to E_CORE_CONFLICT, including version. |
 | T-CLI-87 | REQ-GEN-02, REQ-CNV-06, REQ-CNV-07 | M6: real stalled exiftool, LibreOffice and both together (30 s sleep); an in-child recorder around Core's contained executor proves each stalled tool was probed once with its own requested 0.5 s deadline, failed, and was killed AT it (elapsed within [0.9 x deadline, deadline + 1 s], so two stalled probes stay <= 3 s inside the shell's 5 s gate budget); a negative control hands Core a deadline 2 s later than requested and must be reported "killed late"; and the isolated version child completes under an outer deadline of half that sleep with all gate fields and unavailable diagnostics. Whole-process wall time is printed, not asserted: the SPEC 10.1 3 s `version` figure is a healthy-machine target (interpreter start/imports vary with host load); controlled child PATH/tool overrides and opt-in Windows temp bridge survive the containment env scrub; expected sources and launch markers prove the fake tools ran. Core contains descendants on a red timeout. |
@@ -632,11 +636,11 @@ Real CI round-two regression checks: CT-03 retains complete report, input hash a
 Open items (DRAFT-3 sync):
 1. The shell code table (20_SHELL 6) now matches SPEC 7.5 by inspection (30 E_ + 24 W_ = 54 codes); `JT-SHL-19-01` is the authority and was not run.
 2. FX-71 fixtures are recordings of the real engine (SPEC DRAFT-3.8), all re-recorded at the round-11 candidate under Core 0.3.7 (command-provider destination home-relative; the recorder leak check rejects any absolute path outside ~); re-recording on the release host is tracked as E-10 in 90_ACCEPTANCE section 7 (External evidence pending).
-3. TODO-VERIFY carried from 20/25, not settleable by tests: actual target installs and generated license review (PT-04; release/reference baseline Core 0.3.7 is published on PyPI), Windows signal/blocked-request behavior (JT-16 on real Windows runners), attestation eligibility (PT-13), terminal env launch commands per OS (PT-22), Obsidian min/current versions (MAN-04).
+3. TODO-VERIFY carried from 20/25, not settleable by tests: actual target installs and generated license review (PT-04; release/reference baseline Core 0.3.8, R39; 0.3.7 is published on PyPI, 0.3.8 pending publication), Windows signal/blocked-request behavior (JT-16 on real Windows runners), attestation eligibility (PT-13), terminal env launch commands per OS (PT-22), Obsidian min/current versions (MAN-04).
 4. REQ-PKG-18/19/21 describe post-publication procedures; pre-release only their tooling is testable (PT-18/19/21). R35: pre-publication requires automated 93/93 + MAN-01..03 PASS (99/100), with MAN-04 explicitly `deferred: post-release (R35)`. Actual MAN-04 joins REQ-PKG-19/21 post-release validators and earns the final point only when attested. Failed MAN-04 triggers REQ-PKG-20 rollback; post-deploy/cleanup remain unscored.
 5. Cross-OS `plan_hash` equality holds only for equal raster bytes (SPEC 10.4); T-PLN-02 asserts per-OS goldens, cross-OS equality only for pass-through PNG/JPEG fixtures (FX-09, FX-10).
 
 Vote: APPROVE-TDD. Every one of the 153 spec REQs has a registered, oracle-backed test path, DRAFT-3's cuts removed the untestable inflight/run-hash/5 s claims, and remaining risks (Windows cancellation, public Core artifacts, regenerated shell fixtures) are explicit gates, not silent gaps.
 
-R34 regression policy: retain content, source identity, timeout/process-tree death, cleanup, sibling-continuation, consent, raster hash, OCR placement and warm-cache oracles. Adapt only the artifact boundary: derived_sha256 hashes Core-returned UTF-8 Markdown including the DERIVED marker, explicitly marked derived_format=markdown; media ids name extracted content. The real-soffice integration remains enabled. Add rejection oracles for missing/malformed provenance and loaded-code/metadata conflicts. The orchestrator regenerated GOLDEN.lock with published Core 0.3.7, retaining all triage bytes. Verify the 0.3.7 producer independently of the installed compatible endpoint; retain report-byte and wrong-producer rejection oracles. T-META-91 also checks the published Core hashes in reference compiler input.
+R34 regression policy: retain content, source identity, timeout/process-tree death, cleanup, sibling-continuation, consent, raster hash, OCR placement and warm-cache oracles. Adapt only the artifact boundary: derived_sha256 hashes Core-returned UTF-8 Markdown including the DERIVED marker, explicitly marked derived_format=markdown; media ids name extracted content. The real-soffice integration remains enabled. Add rejection oracles for missing/malformed provenance and loaded-code/metadata conflicts. The orchestrator regenerated GOLDEN.lock with published Core 0.3.7, retaining all triage bytes. Verify the 0.3.7 producer independently of the installed compatible endpoint; retain report-byte and wrong-producer rejection oracles. T-META-91 also checks the published Core hashes in reference compiler input. R39: the minimum and baseline move to Core 0.3.8; GOLDEN.lock, the reference compiler input and the FX-71 fixtures are regenerated after 0.3.8 is published (T-META-91 stays red on the 0.3.7 reference file until then).
 

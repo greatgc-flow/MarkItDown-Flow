@@ -29,4 +29,4 @@ The archived [Core guide](../renewal/ref/markitdown-gc_GUIDE_0.3.5.md) documents
 
 The cache fingerprint includes the command template, model label and environment **names**, but not script contents or environment values. Change `--model` when adapter behavior changes, or use `--force`, to avoid reusing old transcriptions.
 
-The release/reference baseline is Core0.3.7; the archived 0.3.5 guide retains stable references. See the [Core reference note](../renewal/ref/README.md).
+The release/reference baseline is Core 0.3.8; the archived 0.3.5 guide retains stable references. See the [Core reference note](../renewal/ref/README.md).

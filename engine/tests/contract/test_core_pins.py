@@ -145,6 +145,52 @@ def test_CT_05_one_page_pdf_conversion_has_no_anchors(installed_core, contract_f
     assert bodies[0].strip() and bodies[2].strip()
     assert not bodies[1].strip() and not bodies[3].strip()
     assert all("mdflow:page" not in body for body in bodies)
+    # R41: the whole document, converted once, has one form feed between pages (empty pages keep theirs) and
+    # drops trailing pages without text: FX-03 (text, scan, text, scan) gives three pieces whose text equals the
+    # per-page results.
+    whole = core.convert_stream(BytesIO(contract_fx.path("FX-03").read_bytes()), file_extension=".pdf").text_content
+    pieces = whole.split("\f")
+    assert "mdflow:page" not in whole and len(pieces) in (3, 4)
+    assert [p.strip() for p in pieces] == [b.strip() for b in bodies[:len(pieces)]]
+    assert not any(b.strip() for b in bodies[len(pieces):])
+
+
+@pytest.mark.req("REQ-CNV-02")
+@pytest.mark.cov("S5", "FM0")
+@pytest.mark.fx("FX-01")
+def test_CT_16_whole_document_pdf_conversion_keeps_page_breaks_and_puts_bookmark_headings_on_their_page(installed_core):
+    import re
+
+    from pathlib import Path
+
+    spec = importlib.util.spec_from_file_location(
+        "mdflow_pdf_outline_fixture", Path(__file__).resolve().parents[1] / "pdf_outline_fixture.py")
+    fixture = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(fixture)
+    PAGE_TEXT, outline_pdf = fixture.PAGE_TEXT, fixture.outline_pdf
+
+    core = installed_core[0](enable_plugins=False)
+    data = outline_pdf()
+    text = core.convert_stream(BytesIO(data), file_extension=".pdf").text_content
+    pieces = text.split("\f")
+    if len(pieces) == 3 and not pieces[-1].strip():
+        pieces.pop()
+    assert len(pieces) == 2, "Core keeps one form feed per page"
+    for number, (piece, title) in enumerate(zip(pieces, ("Chapter One", "Chapter Two")), start=1):
+        assert re.search(rf"^#{{1,6}} {title}\s*$", piece, re.M), f"bookmark heading on page {number}: {piece!r}"
+        assert PAGE_TEXT[number - 1] in piece
+    assert "Chapter Two" not in pieces[0] and "Chapter One" not in pieces[1]
+    plain = core.convert_stream(BytesIO(outline_pdf(titles=(None, None))), file_extension=".pdf").text_content
+    assert not re.search(r"^#", plain, re.M), "no bookmarks, no headings"
+    # Page breaks around pages without text: leading/middle empty pages keep their form feed, trailing ones vanish.
+    scan = ("image", None)
+    text_page = ("text", ("Chapter One", PAGE_TEXT[0]))
+    pieces = core.convert_stream(BytesIO(outline_pdf((scan, text_page), (None, "Chapter One"))), file_extension=".pdf") \
+        .text_content.split("\f")
+    assert len(pieces) == 2 and not pieces[0].strip() and "Chapter One" in pieces[1]
+    pieces = core.convert_stream(BytesIO(outline_pdf((text_page, scan), ("Chapter One", None))), file_extension=".pdf") \
+        .text_content.split("\f")
+    assert len(pieces) == 1 and "Chapter One" in pieces[0], "a trailing page without text leaves no form feed"
 
 
 @pytest.mark.req("REQ-TRI-05")
@@ -259,11 +305,11 @@ def test_CT_12_text_html_csv_verdicts(installed_core, contract_fx):
 def test_CT_13_installed_version_and_startup_range_gate(repo_root):
     from packaging.version import Version
     installed = Version(importlib.metadata.version("markitdown-gc"))
-    assert Version("0.3.7") <= installed < Version("0.4")
+    assert Version("0.3.8") <= installed < Version("0.4")
     spec = importlib.util.spec_from_file_location("core_version_red", repo_root / "engine/src/mdflow/hashing.py")
     hashing = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(hashing)
-    for value, expected in (("0.3.4", False), ("0.3.5", False), ("0.3.6", False), ("0.3.7", True), ("0.3.99", True), ("0.4.0", False), ("1.0.0", False)):
+    for value, expected in (("0.3.4", False), ("0.3.5", False), ("0.3.6", False), ("0.3.7", False), ("0.3.8", True), ("0.3.99", True), ("0.4.0", False), ("1.0.0", False)):
         assert hashing.core_version_supported(value) is expected
 
 
@@ -285,33 +331,66 @@ def test_CT_14_report_has_no_absolute_path_or_exception_text(installed_core, con
 
 @pytest.mark.req("REQ-GEN-02", "REQ-GEN-12", "REQ-CNV-06", "REQ-CNV-07")
 @pytest.mark.cov("S0", "FM10")
-def test_CT_15_private_core_symbols_used_by_the_engine_keep_their_shape(repo_root, tmp_path):
-    """Core range is >=0.3.7,<0.4, but the engine reuses private Core helpers (exiftool/LibreOffice `version` probes,
-    E_CORE_CONFLICT). Pin exactly that set and the call shapes the engine uses, so a Core change fails loud here."""
+def test_CT_15_public_core_tool_api_used_by_the_engine_keeps_its_shape(repo_root, tmp_path):
+    """The engine reaches Core's tool probes and installation check (exiftool/LibreOffice `version` probes,
+    E_CORE_CONFLICT) only through the stable public ``markitdown.tools`` API; no private Core module or name is
+    imported. Pin exactly that set, the call shapes the engine uses and the result semantics it relies on."""
+    import os
     import sys
-    from markitdown import _installation, _libreoffice as lo
+    import time
+    from markitdown import tools
 
     sources = [p.read_text(encoding="utf-8") for p in sorted((repo_root / "engine/src/mdflow").rglob("*.py"))]
-    source = "\n".join(sources)
-    private = set()  # every imported name (incl. `import a, b` and aliases) that reaches a private Core module/name
-    for node in (n for text in sources for n in ast.walk(ast.parse(text))):
-        if isinstance(node, ast.ImportFrom) and (node.module or "").split(".")[0] == "markitdown":
-            private |= {(node.module, a.name, a.asname) for a in node.names if "._" in node.module or a.name.startswith("_")}
-        elif isinstance(node, ast.Import):
-            private |= {(a.name, None, a.asname) for a in node.names if a.name.startswith("markitdown._")}
-    # `_libreoffice` only under the alias `lo`, so the call scan below sees every use.
-    assert private == {("markitdown", "_libreoffice", "lo"), ("markitdown._installation", "installation_conflict", None)}
-    assert set(re.findall(r"\blo\.(_\w+)\(", source)) == {"_execute", "_resolve", "_write_profile"}
-    # Call shapes exactly as exiftool.py and cli.py use them.
-    inspect.signature(lo._execute).bind(["tool", "-ver"], cwd=tmp_path, timeout_s=0.5, output=tmp_path / "version.log")
-    inspect.signature(lo._resolve).bind("soffice")
-    inspect.signature(lo._write_profile).bind(tmp_path / "profile")
-    inspect.signature(_installation.installation_conflict).bind()
-    # Semantics the engine relies on: captured stdout is returned as text; the deadline raises; no conflict -> falsy text.
-    text = lo._execute([sys.executable, "-c", "print('13.59')"], cwd=tmp_path, timeout_s=30, output=tmp_path / "ok.log")
-    assert isinstance(text, str) and text.strip() == "13.59"
-    with pytest.raises(Exception):
-        lo._execute([sys.executable, "-c", "import time; time.sleep(30)"], cwd=tmp_path, timeout_s=0.5,
-                    output=tmp_path / "slow.log")
-    message = _installation.installation_conflict()
+    private, tool_imports, used = set(), set(), set()  # every imported name (incl. `import a, b` and aliases) from Core
+    for text in sources:
+        importing = False
+        for node in ast.walk(ast.parse(text)):
+            if isinstance(node, ast.ImportFrom) and (node.module or "").split(".")[0] == "markitdown":
+                private |= {(node.module, a.name) for a in node.names if "._" in node.module or a.name.startswith("_")}
+                names = {(node.module, a.name, a.asname) for a in node.names
+                         if node.module == "markitdown.tools" or a.name == "tools"}
+                tool_imports |= names
+                importing = importing or bool(names)
+            elif isinstance(node, ast.Import):
+                private |= {(a.name, None) for a in node.names if a.name.startswith("markitdown") and "._" in a.name}
+                tool_imports |= {(a.name, None, a.asname) for a in node.names if a.name == "markitdown.tools"}
+        if importing:  # a module importing `tools` uses no other local of that name, so this scan sees every use
+            used |= set(re.findall(r"\btools\.(\w+)\(", text))
+    assert private == set(), "the engine must not import private Core modules or names"
+    # `tools` only as `from markitdown import tools`, so the call scan sees every use.
+    assert tool_imports == {("markitdown", "tools", None)}
+    assert used == {"installation_conflict", "probe_exiftool", "probe_libreoffice"}
+    assert used <= set(tools.__all__) - {"run_tool"}, "only the stable surface; run_tool is provisional"
+    # Call shapes exactly as exiftool.py, cli.py and core_guard.py use them.
+    inspect.signature(tools.probe_exiftool).bind("tool", timeout=0.5)
+    inspect.signature(tools.probe_libreoffice).bind("soffice", timeout=0.5)
+    inspect.signature(tools.installation_conflict).bind()
+    # Semantics the engine relies on: fixed result keys, a status instead of an exception, a deadline that holds.
+    keys = {"path", "version", "status", "detail"}
+
+    def tool(name, body):
+        if os.name == "nt":
+            path = tmp_path / (name + ".cmd")
+            path.write_text("@echo off\r\n" + body + "\r\n", encoding="ascii")
+        else:
+            path = tmp_path / name
+            path.write_text("#!/bin/sh\n" + body + "\n", encoding="ascii")
+            path.chmod(0o755)
+        return str(path)
+
+    ok = tools.probe_exiftool(tool("exif-ok", "echo 13.59"), timeout=30)
+    assert set(ok) == keys and (ok["status"], ok["version"]) == ("ok", "13.59") and os.path.isabs(ok["path"])
+    old = tools.probe_exiftool(tool("exif-old", "echo 12.23"), timeout=30)
+    assert (old["status"], old["version"]) == ("outdated", "12.23")
+    assert tools.probe_exiftool(tool("exif-bad", "echo not-a-version"), timeout=30)["status"] == "error"
+    missing = tools.probe_exiftool(str(tmp_path / "absent-exiftool"), timeout=0.5)
+    assert set(missing) == keys and (missing["status"], missing["path"]) == ("missing", None)
+    slow = tool("exif-slow", '"' + sys.executable + '" -c "import time; time.sleep(30)"')
+    started = time.monotonic()
+    assert tools.probe_exiftool(slow, timeout=0.5)["status"] == "error"
+    assert time.monotonic() - started < 15, "the deadline kills the stalled tool instead of waiting for it"
+    soffice = tools.probe_libreoffice(tool("soffice", "echo LibreOffice 25.2.7.2 fake"), timeout=30)
+    assert set(soffice) == keys and (soffice["status"], soffice["version"]) == ("ok", "25.2.7.2")
+    assert tools.probe_libreoffice(str(tmp_path / "absent-soffice"), timeout=0.5)["status"] == "missing"
+    message = tools.installation_conflict()
     assert message is None or isinstance(message, str)

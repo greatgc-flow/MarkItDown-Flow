@@ -77,7 +77,7 @@ def test_T_GEN_54_r27_wheel_reproducible_and_every_frozen_asset_rejects_tamperin
     with zipfile.ZipFile(wheel) as archive:
         metadata = archive.read('mdflow-2.0.0.dist-info/METADATA').decode()
         dependency, = [line for line in metadata.splitlines() if line.startswith('Requires-Dist: markitdown-gc')]
-        assert 'markitdown-gc' in dependency and '>=0.3.7' in dependency and '<0.4' in dependency
+        assert 'markitdown-gc' in dependency and '>=0.3.8' in dependency and '<0.4' in dependency
         assert 'pypdfium2<6,>=5' in metadata and 'pillow<14,>=11' in metadata.lower()
         assert 'Tag: py3-none-any' in archive.read('mdflow-2.0.0.dist-info/WHEEL').decode()
     with pytest.raises(ValueError, match='refusing to replace'):

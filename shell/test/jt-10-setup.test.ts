@@ -116,7 +116,7 @@ it(R('JT-10 bootstrap instructions are the R27 25_PACKAGING section 2 commands w
   expect(posix.posix).toContain("'/path/to/mdflow-venvs/2.0.0/bin/python' -I -m mdflow version");
   expect(posix.posix).toContain("'/path/to/mdflow-venvs/2.0.0/bin/python' -I -m mdflow selftest");
   expect(ENGINE_WHEEL).toMatch(/^mdflow-2\.0\.0-py3-none-any\.whl$/);
-  expect(CORE_REQUIREMENT).toBe('markitdown-gc>=0.3.7,<0.4');
+  expect(CORE_REQUIREMENT).toBe('markitdown-gc>=0.3.8,<0.4');
   for (const block of [text.windows, text.posix, posix.windows, posix.posix]) {
     // Every install is wheel-only; no source builds, no upgrades, no extras, no lock files or hash manifests remain (R27).
     expect(block).not.toMatch(/pip install(?! --only-binary=:all:)/);

@@ -74,7 +74,7 @@ target.write_bytes(b'broken' if %r else (root / 'seed.docx').read_bytes())
 @pytest.mark.parametrize('state', ['missing', 'invalid_override', 'ok', 'malformed', 'timeout'])
 def test_T_CLI_85_libreoffice_version_diagnostics(tmp_path, monkeypatch, capsys, state):
     from mdflow import cli
-    from markitdown import _libreoffice as lo
+    from markitdown import tools
     exe = fake_soffice(tmp_path / 'tool')
     monkeypatch.delenv('SOFFICE_PATH', raising=False)
     if state == 'missing':
@@ -85,12 +85,11 @@ def test_T_CLI_85_libreoffice_version_diagnostics(tmp_path, monkeypatch, capsys,
     else:
         monkeypatch.setenv('SOFFICE_PATH', str(exe))
     if state in {'malformed', 'timeout'}:
-        def probe(args, **kwargs):
-            assert 0 < kwargs['timeout_s'] <= 0.5
-            if state == 'timeout':
-                raise TimeoutError('injected deadline')
-            return 'not a LibreOffice version'
-        monkeypatch.setattr(lo, '_execute', probe)
+        def probe(path, **kwargs):  # Core's documented statuses for a killed deadline / unreadable version
+            assert 0 < kwargs['timeout'] <= 0.5
+            detail = 'injected deadline' if state == 'timeout' else 'LibreOffice version unavailable'
+            return dict(path=str(path), version=None, status='error', detail=detail)
+        monkeypatch.setattr(tools, 'probe_libreoffice', probe)
     assert cli.main(['version']) == 0
     captured = capsys.readouterr()
     assert captured.err == ''
@@ -265,7 +264,7 @@ def local_soffice():
 @pytest.mark.parametrize('extension', ['doc', 'rtf'])
 def test_T_CNV_93_real_libreoffice_generated_legacy(tmp_path, monkeypatch, extension):
     from mdflow import orchestrate, runtime_temp
-    from markitdown import _libreoffice as lo
+    from markitdown import tools
     soffice = local_soffice()
     if not soffice:
         pytest.skip('LibreOffice soffice absent')
@@ -274,9 +273,9 @@ def test_T_CNV_93_real_libreoffice_generated_legacy(tmp_path, monkeypatch, exten
     legacy = tmp_path / 'legacy'
     legacy.mkdir()
     with runtime_temp.run_directory() as generation:
-        output = lo._execute([soffice, '-env:UserInstallation=' + (generation / 'profile').as_uri(),
+        output = tools.run_tool([soffice, '-env:UserInstallation=' + (generation / 'profile').as_uri(),
             '--headless', '--convert-to', extension, '--outdir', str(legacy), str(tmp_path / 'seed.docx')],
-            cwd=generation, timeout_s=60, output=generation / 'generation.log')
+            cwd=generation, timeout=60).stdout
     path = legacy / ('seed.' + extension)
     assert path.is_file(), output
     result = orchestrate.run([path], dict(out=tmp_path / 'out', cache=tmp_path / 'cache', preconvert_legacy=True))
@@ -303,6 +302,13 @@ def test_T_CLI_83_distribution_collision_blocks_all_conversion_entries(tmp_path,
     dist.mkdir()
     (dist / 'METADATA').write_text('Metadata-Version: 2.1\nName: markitdown\nVersion: 99.0\n')
     monkeypatch.syspath_prepend(str(tmp_path))
+    from markitdown import tools
+    checks = []
+    real_conflict = tools.installation_conflict
+    def conflict():  # Core's real check runs; the spy only proves every entry delegates to it
+        checks.append(real_conflict())
+        return checks[-1]
+    monkeypatch.setattr(tools, 'installation_conflict', conflict)
     original_import = builtins.__import__
     imports = []
     def check(name, *args, **kwargs):
@@ -329,7 +335,7 @@ def test_T_CLI_83_distribution_collision_blocks_all_conversion_entries(tmp_path,
         }
         with pytest.raises(RuntimeError, match='E_CORE_CONFLICT'):
             calls[entry]()
-    assert 'markitdown._installation' in imports
+    assert checks and all(checks), 'every entry asks Core and gets its conflict message'
     assert not any(name.endswith('ocr_triage') for name in imports)
 
 
@@ -370,10 +376,13 @@ def test_T_CNV_95_public_marker_and_derived_bounds_fail_closed(tmp_path, monkeyp
 @pytest.mark.req('REQ-GEN-12')
 @pytest.mark.cov('S0', 'FM10')
 def test_T_CLI_86_core_guard_owns_loaded_version_mismatch(monkeypatch, capsys):
-    from markitdown import _installation as installation
+    import importlib.metadata
     from mdflow import cli
 
-    monkeypatch.setattr(installation, '__version__', '0.0.0')
+    # Installed metadata disagrees with the loaded Core code (a half-upgraded venv); only Core detects it.
+    real_version = importlib.metadata.version
+    monkeypatch.setattr(importlib.metadata, 'version',
+                        lambda name, *a, **k: '0.0.0' if name == 'markitdown-gc' else real_version(name, *a, **k))
     assert cli.main(['version']) == 1
     captured = capsys.readouterr()
     assert not captured.out

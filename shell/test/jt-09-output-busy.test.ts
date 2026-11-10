@@ -112,7 +112,7 @@ it(R('JT-09 nonrecursive folder selection keeps immediate regular files only and
   expect(win).toEqual(['C:\\Vault\\Inbox\\A.PDF']);
 });
 
-const ENABLED_GATE: VersionGate = { enabled: true, info: { mdflow: '2.0.0', 'markitdown-gc': '0.3.7', pypdfium2: '5.15.1', pillow: '13.0.0', python: '3.14.0', platform: 'test', protocol: 1, triage_schema: 1 } };
+const ENABLED_GATE: VersionGate = { enabled: true, info: { mdflow: '2.0.0', 'markitdown-gc': '0.3.8', pypdfium2: '5.15.1', pillow: '13.0.0', python: '3.14.0', platform: 'test', protocol: 1, triage_schema: 1 } };
 
 function coordinator(spawner: FakeSpawner, outputPath = 'markitdown-output', gate?: CoordinatorDeps['gate'], extra: Parameters<typeof settingsV2>[0] = {}): { coordinator: ShellCoordinator; notices: string[] } {
   const fs = new FakeFs({ directories: [VAULT_ROOT, abs(VAULT_ROOT, 'markitdown-output'), abs(VAULT_ROOT, 'inbox'), PLUGIN_DIR, abs(PLUGIN_DIR, 'cache')] });

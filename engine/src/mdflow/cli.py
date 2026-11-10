@@ -95,9 +95,9 @@ def _check_core() -> None:
     except metadata.PackageNotFoundError:
         raise RuntimeError("markitdown-gc is not installed") from None
     match = re.fullmatch(r"0\.3\.(\d+)(.*)", version)
-    if not match or int(match[1]) < 7 or (int(match[1]) == 7 and match[2] and
+    if not match or int(match[1]) < 8 or (int(match[1]) == 8 and match[2] and
                                         not match[2].startswith((".post", "+"))):
-        raise RuntimeError("markitdown-gc must be >=0.3.7,<0.4")
+        raise RuntimeError("markitdown-gc must be >=0.3.8,<0.4")
 
 
 def _print(value: object, *, pretty: bool = False) -> None:
@@ -213,7 +213,7 @@ def _exiftool_versions() -> dict:
 
 
 def _libreoffice_versions() -> dict:
-    """Informational probe using Core's resolver and contained execution helper."""
+    """Informational probe via Core's public ``markitdown.tools.probe_libreoffice``."""
     explicit = os.environ.get('SOFFICE_PATH', '').strip()
     return dict(_probe_libreoffice(explicit, os.environ.get('PATH', '')))
 
@@ -223,26 +223,19 @@ def _probe_libreoffice(explicit: str, search_path: str) -> dict:
     # Cache successes and failures per process/environment, as exiftool does.
     found = dict(libreoffice='unavailable', libreoffice_status='not_found', libreoffice_source=None)
     try:
-        with core_guard.quiet_output():
-            from markitdown import _libreoffice as lo
-        # soffice, or a bare SOFFICE_PATH name, is looked up in absolute PATH folders only (security review C1).
-        if explicit:
-            named = resolve_override(explicit, search_path)
-            executable = lo._resolve(named) if named else None
-        else:
-            executable = resolve_executable('soffice', search_path)
+        # soffice, or a bare SOFFICE_PATH name, is looked up in absolute PATH folders only (security review C1);
+        # Core's probe only ever receives that absolute path, never None (its own default lookup).
+        executable = resolve_override(explicit, search_path) if explicit else resolve_executable('soffice', search_path)
         found.update(libreoffice_status='unusable' if explicit or executable else 'not_found',
                      libreoffice_source='SOFFICE_PATH' if explicit else 'PATH' if executable else None)
         if executable:
-            with runtime_temp.run_directory() as work:
-                profile = work / 'profile'
-                lo._write_profile(profile)
-                text = lo._execute([executable, '-env:UserInstallation=' + profile.as_uri(),
-                                    '--headless', '--norestore', '--nofirststartwizard', '--version'],
-                                   cwd=work, timeout_s=0.5, output=work / 'version.log')
-                match = re.search(r'LibreOffice\s+(\d+(?:\.\d+)+)', text)
-                if match:
-                    found.update(libreoffice=match[1], libreoffice_status='ok')
+            with core_guard.quiet_output():
+                from markitdown import tools
+            # Stable Core probe: soffice.exe -> soffice.com, throwaway macro-disabled profile, contained run.
+            probe = tools.probe_libreoffice(executable, timeout=exiftool.VERSION_TIMEOUT_S)
+            version = probe.get('version')
+            if probe.get('status') == 'ok' and isinstance(version, str) and re.fullmatch(r'\d+(?:\.\d+)+', version):
+                found.update(libreoffice=version, libreoffice_status='ok')
     except Exception:
         found.update(libreoffice_status='unusable')
     return found

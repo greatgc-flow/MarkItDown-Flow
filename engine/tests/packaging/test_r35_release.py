@@ -113,8 +113,8 @@ def test_PT_27_r35_extra_evidence_has_validated_templates_and_automatic_facts(tm
             if endpoint == f'repos/{action}/commits/{sha}':
                 return {'sha': sha}
         raise AssertionError(endpoint)
-    catalog = {'info': {'name': 'markitdown-gc', 'version': '0.3.7', 'license': 'MIT'}, 'urls': [
-        {'filename': 'markitdown_gc-0.3.7-py3-none-any.whl', 'url': 'https://files.pythonhosted.org/core.whl',
+    catalog = {'info': {'name': 'markitdown-gc', 'version': '0.3.8', 'license': 'MIT'}, 'urls': [
+        {'filename': 'markitdown_gc-0.3.8-py3-none-any.whl', 'url': 'https://files.pythonhosted.org/core.whl',
          'digests': {'sha256': 'ab' * 32}, 'packagetype': 'bdist_wheel', 'size': 123, 'yanked': False}]}
     monkeypatch.setattr(tool, 'gh_json', gh_json)
     monkeypatch.setattr(tool, 'pypi_json', lambda version: deepcopy(catalog))
@@ -126,7 +126,7 @@ def test_PT_27_r35_extra_evidence_has_validated_templates_and_automatic_facts(tm
         for py in ('3.10', '3.14'):
             (executions / f'runtime-{runner}-py{py}.json').write_text(json.dumps(dict(commit=COMMIT, installed=True)))
             (executions / f'install-{platform}-py{py}-compat-env.json').write_text(json.dumps({'install': [
-                {'metadata': {'name': 'markitdown-gc', 'version': '0.3.7'}, 'download_info': {
+                {'metadata': {'name': 'markitdown-gc', 'version': '0.3.8'}, 'download_info': {
                     'url': catalog['urls'][0]['url'], 'archive_info': {'hashes': {'sha256': 'ab' * 32}}}}]}))
     output = tmp_path / 'output'
     tool.produce_extras(candidate_root, reviews, output, COMMIT, executions=executions)
