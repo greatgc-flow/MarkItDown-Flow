@@ -1,9 +1,9 @@
-# These files are sealed by byte hashes; checkout must preserve their exact bytes.
+# One line-ending policy for the whole repository: every text file is stored AND checked out
+# with LF on every OS (also with core.autocrlf=true). Binary files are auto-detected.
+* text=auto eol=lf
+# Byte-sealed files are never converted: GOLDEN.lock seals engine/tests/golden, the FX-71
+# manifest seals shell/test/fixtures/fx71 (including recorded CRLF streams), and the
+# engine/tests/fixtures binaries carry pinned digests (FX-46.zip, FX-24.hwp).
 /engine/tests/golden/** -text
-/engine/tests/fixtures/*.hwp -text
-/engine/tests/fixtures/*.zip -text
+/engine/tests/fixtures/** -text
 /shell/test/fixtures/fx71/** -text
-# Wheel payloads must have identical bytes on Windows and POSIX checkouts.
-/engine/src/** text=auto eol=lf
-/engine/pyproject.toml text eol=lf
-/LICENSE text eol=lf

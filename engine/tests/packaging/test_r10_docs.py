@@ -37,14 +37,14 @@ def test_T_META_93_handoff_changelog_readme_and_counts_match_round_9():
     assert changelog.index('### Removed') < changelog.index('### Security')
 
     raw = (REPO / 'README.md').read_bytes()
-    assert raw.count(b'\n') == raw.count(b'\r\n'), 'README must stay CRLF'
+    assert b'\r' not in raw, 'README follows the repository LF policy (.gitattributes: * text=auto eol=lf)'
     readme = raw.decode('utf-8')
-    classification = re.search(r'^## Classification \(T, S, M\)\r\n(.*?)(?=^## )', readme, re.M | re.S)[1]
+    classification = re.search(r'^## Classification \(T, S, M\)\n(.*?)(?=^## )', readme, re.M | re.S)[1]
     for item in ('Remote OCR', 'Closing the dialog converts nothing', 'only reported',
                  '`python -I -m mdflow classify <PATH>`'):
         assert item in classification, item
     assert 'every class' not in classification and 'no usable text layer' not in classification
-    limits = re.search(r'^## Known limitations\r\n(.*?)(?=^## )', readme, re.M | re.S)[1]
+    limits = re.search(r'^## Known limitations\n(.*?)(?=^## )', readme, re.M | re.S)[1]
     assert all(f'#{n}' in limits for n in (68, 69, 70, 71)) and '0.3.8' in limits
     assert 'standalone `png`, `jpg` and `jpeg`' in limits
 
