@@ -70,15 +70,21 @@ updates disabled to convert legacy `.doc`, `.ppt`, `.rtf` and HWP sources; it
 reads the source and writes a temporary converted copy that is not kept. The
 plugin itself never runs either program.
 
-The CLI cache defaults to `~/.mdflow/cache`. The plugin keeps its cache,
-transient report spool, one-run consent files and redacted logs inside the
-vault under `.obsidian/plugins/markitdown-flow/` (`cache/`, `spool/`,
-`consent/`, `logs/`). The cache contains OCR transcriptions and is retained by
-default; if your vault or its plugin folder is synchronized (Obsidian Sync with
-installed community plugins enabled, or a cloud-synced vault), those
-transcriptions and logs are replicated too. Exclude the folder from sync or
-clear the cache (`mdflow cache clear --cache <plugin-dir>/cache`) if that is not
-acceptable. Explicit clearing can cause paid retranscription.
+The CLI and the plugin share one local cache outside the vault, the engine
+default `~/.mdflow/cache` (`%USERPROFILE%\.mdflow\cache` on Windows). It holds
+the converted Markdown and extracted media of every converted document (also
+with provider `none` and for files picked from outside the vault) and the OCR
+transcriptions, and it is kept after you delete the notes. It is not inside
+the vault, so Obsidian Sync or a cloud-synced vault does not replicate it; a
+second device converts again and pays again for remote OCR. Clear it with
+`mdflow cache clear`; explicit clearing can cause paid retranscription. The
+plugin keeps its transient report spool, one-run consent files and redacted
+logs inside the vault under `.obsidian/plugins/markitdown-flow/` (`spool/`,
+`consent/`, `logs/`); if your vault or its plugin folder is synchronized
+(Obsidian Sync with installed community plugins enabled, or a cloud-synced
+vault), those logs are replicated too. Exclude the folder from sync if that is
+not acceptable. Conversion history in `data.json` records paths under your
+home folder as `~`.
 
 ## Telemetry
 

@@ -51,11 +51,14 @@ export function invocationViolations(request: SpawnRequest): InvocationViolation
   for (let i = SUBCOMMAND_INDEX + 1; i < args.length; i++) {
     const token = args[i];
     if (!token.startsWith('-')) continue;
-    if (!SPEC_OPTIONS.includes(token)) {
-      violations.push({ kind: 'option', token });
+    // argparse `--opt=value`: one token carrying its own value (P5); the option name is still checked.
+    const inline = token.startsWith('--') && token.includes('=');
+    const option = inline ? token.slice(0, token.indexOf('=')) : token;
+    if (!SPEC_OPTIONS.includes(option) || (inline && FLAG_OPTIONS.has(option))) {
+      violations.push({ kind: 'option', token: option });
       continue;
     }
-    if (!FLAG_OPTIONS.has(token) && i + 1 < args.length && !args[i + 1].startsWith('-')) i += 1;
+    if (!inline && !FLAG_OPTIONS.has(token) && i + 1 < args.length && !args[i + 1].startsWith('-')) i += 1;
   }
   return violations;
 }

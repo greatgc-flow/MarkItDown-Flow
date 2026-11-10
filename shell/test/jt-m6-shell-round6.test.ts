@@ -257,6 +257,7 @@ function consentHarness(decide: CoordinatorDeps['consent']): { coordinator: Shel
     platform: process.platform === 'win32' ? 'win32' : 'posix',
     vaultRoot: VAULT_ROOT,
     pluginDir: PLUGIN_DIR,
+    homeDir: HOME,
     settings: () => settingsV2({ provider: { ...OPENAI_PROVIDER } }),
     gate: () => ({ enabled: true, info: { mdflow: '2.0.0', 'markitdown-gc': '0.3.7', pypdfium2: '5.15.1', pillow: '13.0.0', python: '3.14.0', platform: 'test', protocol: 1, triage_schema: 1 } }),
     consent: decide,

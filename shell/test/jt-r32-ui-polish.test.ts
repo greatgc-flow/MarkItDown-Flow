@@ -188,6 +188,7 @@ function coordinatorWith(script: (request: SpawnRequest) => ScriptedChild, resul
     platform: process.platform === 'win32' ? 'win32' : 'posix',
     vaultRoot: VAULT_ROOT,
     pluginDir: PLUGIN_DIR,
+    homeDir: HOME,
     settings: () => settingsV2(),
     gate: () => ENABLED_GATE,
     consent: async () => ({ approved: false }),

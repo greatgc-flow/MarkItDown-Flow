@@ -114,6 +114,7 @@ export default class MarkItDownFlowPlugin extends Plugin {
       platform,
       vaultRoot: this.vaultRoot,
       pluginDir: this.pluginDir,
+      homeDir: apis.homeDir(),
       settings: () => this.settings,
       gate: () => this.currentGate(),
       consent: (view) => {

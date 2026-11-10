@@ -17,7 +17,7 @@ import { FakeFs, FakeSpoolFs } from './fixtures/fake-fs';
 import { chunksOf, FakeSpawner, type ScriptedChild, subcommandOf } from './fixtures/fake-spawner';
 import { fx71Bytes, fx71Exit, fx71PlanObjects, fx71YesFile } from './fixtures/fx71';
 import { approvedHashesIn, bytes, parseYesFile, plan as syntheticPlan, planStdout, replayInvariantArgs } from './fixtures/protocol';
-import { abs, HOST_ENV, KEY_VALUE, OPENAI_PROVIDER, PLUGIN_DIR, settingsV2, VAULT_ROOT } from './fixtures/shell-settings';
+import { abs, HOME, HOST_ENV, KEY_VALUE, OPENAI_PROVIDER, PLUGIN_DIR, settingsV2, VAULT_ROOT } from './fixtures/shell-settings';
 import type { SettingsV2 } from '../src/pure/settings';
 import type { ResultsViewModel } from '../src/ui/results-modal';
 
@@ -83,6 +83,7 @@ function harness(
     platform: process.platform === 'win32' ? 'win32' : 'posix',
     vaultRoot: VAULT_ROOT,
     pluginDir: PLUGIN_DIR,
+    homeDir: HOME,
     settings: () => settings,
     gate: () => ({ enabled: true, info: { mdflow: '2.0.0', 'markitdown-gc': '0.3.7', pypdfium2: '5.15.1', pillow: '13.0.0', python: '3.14.0', platform: 'test', protocol: 1, triage_schema: 1 } }),
     consent: async (view) => {

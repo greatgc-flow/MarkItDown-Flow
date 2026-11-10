@@ -16,7 +16,7 @@ import { FakeClock, flush } from './fixtures/fake-clock';
 import { FakeFs, FakeSpoolFs } from './fixtures/fake-fs';
 import { FakeSpawner } from './fixtures/fake-spawner';
 import { fx71Bytes } from './fixtures/fx71';
-import { abs, HOST_ENV, PLUGIN_DIR, settingsV2, VAULT_ROOT } from './fixtures/shell-settings';
+import { abs, HOME, HOST_ENV, PLUGIN_DIR, settingsV2, VAULT_ROOT } from './fixtures/shell-settings';
 
 const R = req('REQ-SHL-09');
 
@@ -126,6 +126,7 @@ function coordinator(spawner: FakeSpawner, outputPath = 'markitdown-output', gat
     platform: process.platform === 'win32' ? 'win32' : 'posix',
     vaultRoot: VAULT_ROOT,
     pluginDir: PLUGIN_DIR,
+    homeDir: HOME,
     settings: () => settingsV2({ outputPath }),
     gate: gate ?? (() => ENABLED_GATE),
     consent: async () => ({ approved: false }),
@@ -292,6 +293,7 @@ it(R('JT-09 a relative enginePython is refused as shell.RUNTIME before any spawn
     platform: process.platform === 'win32' ? 'win32' : 'posix',
     vaultRoot: VAULT_ROOT,
     pluginDir: PLUGIN_DIR,
+    homeDir: HOME,
     settings: () => settingsV2({ enginePython: 'venv/bin/python' }),
     gate: () => ENABLED_GATE,
     consent: async () => ({ approved: false }),

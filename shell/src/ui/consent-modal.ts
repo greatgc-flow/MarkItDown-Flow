@@ -24,6 +24,8 @@ export interface ConsentFileView {
   provider: string;
   model: string;
   destination: string | null;
+  /** `approved.provider.proxy` (`MDFLOW_PROXY`; hashed into the Plan): the hop requests pass through, or null. */
+  proxy: string | null;
   /** `approved.units` with status `eligible`. */
   selectedUnits: number;
   dpi: number;
@@ -83,6 +85,7 @@ export function buildConsentView(plans: readonly Plan[], destinationDir: string)
       provider: approved.provider.name,
       model: approved.provider.model,
       destination: approved.provider.destination,
+      proxy: approved.provider.proxy,
       selectedUnits: approved.units.filter((u) => u.status === 'eligible').length,
       dpi: approved.dpi,
       pendingLowPriority: status.units.skipped_low_priority,
@@ -156,6 +159,12 @@ export class ConsentModal extends Modal {
     return file.unknownCost ? this.t('shell.consent.unknownCost') : file.estMaxCost;
   }
 
+  /** Destination plus the proxy every request passes through, when one is configured (P3). */
+  private destinationText(file: ConsentFileView): string {
+    const destination = file.destination ?? '-';
+    return file.proxy ? `${destination} (${this.t('shell.consent.proxy')}: ${file.proxy})` : destination;
+  }
+
   private renderSummary(parent: HTMLElement): void {
     const table = parent.createEl('table', { cls: 'mdflow-table mdflow-consent-summary' });
     const head = table.createEl('thead').createEl('tr');
@@ -170,7 +179,7 @@ export class ConsentModal extends Modal {
       const labelCell = row.createEl('td', { cls: 'mdflow-cell-label', text: file.label });
       if (legend) labelCell.setAttr('title', this.t(legend));
       row.createEl('td', { cls: 'mdflow-cell-number', text: String(file.selectedUnits) });
-      row.createEl('td', { cls: 'mdflow-cell-path', text: file.destination ?? '-' });
+      row.createEl('td', { cls: 'mdflow-cell-path', text: this.destinationText(file) });
       row.createEl('td', { cls: 'mdflow-cell-number', text: this.costText(file) });
       row.createEl('td', {
         cls: `mdflow-badge ${file.needsConsent ? 'mdflow-badge-attention' : 'mdflow-badge-muted'}`,
@@ -206,6 +215,7 @@ export class ConsentModal extends Modal {
       row(this.t('shell.consent.planHash'), file.planHash);
       row(this.t('shell.consent.provider'), `${file.provider} / ${file.model}`);
       row(this.t('shell.consent.destination'), file.destination ?? '-');
+      if (file.proxy) row(this.t('shell.consent.proxy'), file.proxy);
       row(this.t('shell.consent.selectedUnits'), String(file.selectedUnits));
       row(this.t('shell.consent.dpi'), String(file.dpi));
       row(this.t('shell.consent.pendingLowPriority'), String(file.pendingLowPriority));

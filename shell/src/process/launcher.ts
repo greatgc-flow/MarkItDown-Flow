@@ -59,7 +59,7 @@ export interface JobSnapshot {
   cwd: string;
   /** Validated vault destination, passed directly as `-o`. */
   outDir: string;
-  /** `<plugin-dir>/cache`. */
+  /** The engine default `~/.mdflow/cache`, outside the vault (R38). */
   cacheDir: string;
   provider: Readonly<ProviderSettings>;
   runOptions: Readonly<RunOptions>;
@@ -146,12 +146,13 @@ export function buildSpawnRequest(
   if (command === 'run') args.push('-o', snapshot.outDir);
   args.push('--cache', snapshot.cacheDir);
   args.push('--provider', provider.name);
-  if (provider.name !== 'none') args.push('--model', provider.model);
+  // P5: user-typed values travel as one `--opt=value` token, so a value starting with `-` is never read as an option.
+  if (provider.name !== 'none') args.push(`--model=${provider.model}`);
   args.push('--dpi', String(runOptions.dpi));
   args.push('--min-priority', runOptions.minPriority);
   args.push('--max-units', String(runOptions.maxUnits));
   args.push('--approve-threshold', String(runOptions.approveThreshold));
-  for (const glob of runOptions.sensitive) args.push('--sensitive', glob);
+  for (const glob of runOptions.sensitive) args.push(`--sensitive=${glob}`);
   if (snapshot.legacyPreconvert) args.push(LEGACY_PRECONVERT_OPTION);
   args.push('--progress', 'jsonl');
   if (authorization && command === 'run') {

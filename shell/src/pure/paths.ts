@@ -37,6 +37,20 @@ export function isAbsolutePath(value: string): boolean {
   return /^(?:\/|\\\\|[A-Za-z]:[\\/])/.test(value);
 }
 
+/**
+ * Display form with a leading home directory replaced by `~` (P4: history in the synced data.json
+ * never carries the username). Only a whole leading home path matches (case-insensitive on Windows);
+ * anything else is returned unchanged.
+ */
+export function homeRelativePath(platform: HostPlatform, home: string, path: string): string {
+  const base = home.replace(/[\\/]+$/, '');
+  if (!base) return path;
+  const rest = path.slice(base.length);
+  if (comparablePath(platform, path.slice(0, base.length)) !== comparablePath(platform, base)) return path;
+  if (rest === '') return '~';
+  return /^[\\/]/.test(rest) ? `~${rest}` : path;
+}
+
 /** Comparable form of a real path: forward slashes, no trailing slash, case-folded on Windows. */
 export function comparablePath(platform: HostPlatform, path: string): string {
   const slashed = path.replace(/\\/g, '/').replace(/\/+$/, '');
