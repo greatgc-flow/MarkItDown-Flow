@@ -459,6 +459,7 @@ R27/R28 added registrations (existing REQs; precise fixture assertions replace b
 | PT-35 | REQ-PKG-04 (pip report sha256 accepted from hashes{} or legacy archive_info.hash `sha256=<hex>`; other algorithms rejected) | A |
 | PT-36 | REQ-PKG-04 (pkg04 placeholder scan excludes machine-enriched install_reports/artifacts; peer placeholders and other evidence files remain rejected) | A |
 | PT-37 | REQ-PKG-22 (evidence workflow placeholder guard scans peer-authored source JSON/YML via EVIDENCE_FOLDER, excluding machine-enriched build/evidence) | A |
+| PT-38 | REQ-PKG-07, REQ-PKG-17 (issue #11: every `build/trace/` artifact upload, including `acceptance-evidence`, excludes `build/trace/redgreen/*-tmp/**` test temp trees such as PT-05 venvs; all workspace temp roots match that pattern; trace/release-evidence/release-gate tools never read them) | A |
 
 ### 4.5 Coverage statement
 

@@ -1,4 +1,5 @@
-"""PT-03, PT-07, PT-09, PT-11, PT-12: CI matrix, action pinning and permissions (mode A, every CI run).
+"""PT-03, PT-07, PT-09, PT-11, PT-12, PT-38: CI matrix, action pinning, permissions and evidence artifact scope
+(mode A, every CI run).
 
 These read the repository's workflows as data. They are RED while ``.github/workflows`` still carries the
 v1 release workflow and no shell/contract/smoke jobs; they never run CI.
@@ -171,6 +172,50 @@ def test_PT_11_every_external_uses_is_a_reviewed_full_sha():
             if sha not in evidence:
                 problems.append(f"{path.name}: SHA {sha} has no review record in 25_PACKAGING section 4")
     assert not problems, "\n".join(problems)
+
+
+TEST_TEMPS = "!build/trace/redgreen/*-tmp/**"
+
+
+def uploads_whole_trace(line):
+    """True for an include line naming the whole trace dir: build/trace, ./build/trace/, build/trace/** ..."""
+    path = line.removeprefix("./")
+    for suffix in ("/**", "/"):
+        path = path.removesuffix(suffix)
+    return path == "build/trace"
+
+
+@pytest.mark.req("REQ-PKG-07", "REQ-PKG-17")
+@pytest.mark.cov("S0", "FM0")
+def test_PT_38_trace_uploads_exclude_test_temp_dirs_and_consumers_never_read_them():
+    """Issue #11: PT-05 bootstrap venvs under pt-tmp made acceptance-evidence ~2.7 GB."""
+    uploads = []
+    for name, wf in load_workflows().items():
+        for jid, job in jobs(wf).items():
+            for step in job.get("steps") or []:
+                if not str(step.get("uses", "")).startswith("actions/upload-artifact@"):
+                    continue
+                raw = str((step.get("with") or {}).get("path", ""))
+                paths = [line.strip() for line in raw.splitlines() if line.strip()]
+                if any(uploads_whole_trace(p) for p in paths):
+                    uploads.append((f"{name}:{jid}", step["with"]["name"], paths))
+    assert "acceptance-evidence" in {artifact for _, artifact, _ in uploads}
+    for where, artifact, paths in uploads:
+        assert TEST_TEMPS in paths, f"{where}: {artifact} uploads build/trace/ including test temp venvs"
+        # upload-artifact globs: the last matching line wins, so no include may follow the exclusion.
+        later = paths[paths.index(TEST_TEMPS) + 1:]
+        assert all(p.startswith("!") for p in later), f"{where}: {artifact} re-includes after {TEST_TEMPS}"
+    # Every workspace temp root inside build/trace must be one the exclusion covers.
+    roots = set()
+    for source in (REPO / "engine/tests").rglob("*.py"):
+        text = source.read_text(encoding="utf-8")
+        roots |= set(re.findall(r"""WorkspaceTemps\([^)]*?["'](build/trace/[^"']*)["']""", text))
+    assert "build/trace/redgreen/pt-tmp" in roots
+    for root in roots:
+        assert re.fullmatch(r"build/trace/redgreen/[^/*]+-tmp", root), f"{root} escapes {TEST_TEMPS}"
+    # Acceptance consumers read only top-level receipts, never test temp trees.
+    for tool in ("trace.py", "release_evidence.py", "release_gate.py"):
+        assert "redgreen" not in (REPO / "tools" / tool).read_text(encoding="utf-8"), tool
 
 
 @pytest.mark.req("REQ-PKG-12")
