@@ -150,7 +150,7 @@ it(R('JT-10 SetupModal open and refresh spawn only version probes; nothing is in
   const rendered = (setup.contentEl as unknown as { textContent: string }).textContent;
   expect(rendered).toContain(ENGINE_PYTHON);
   expect(rendered).toContain(fx71Manifest().engine.mdflow);
-  expect(rendered).toContain('0.3.7');
+  expect(rendered).toContain('0.3.8');
   expect(rendered).not.toContain(KEY_VALUE);
   setup.close();
 });

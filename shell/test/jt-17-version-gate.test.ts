@@ -25,7 +25,7 @@ import { abs, ENGINE_PYTHON, HOME, HOST_ENV, PLUGIN_DIR, settingsV2, VAULT_ROOT 
 
 const R = req('REQ-SHL-17');
 
-// FX-71 was re-recorded on a supported host (Python 3.14, Core 0.3.7; M4 P-03 / X-11), so every
+// FX-71 was re-recorded on a supported host (Python 3.14, Core 0.3.8; M4 P-03 / X-11), so every
 // "actual response" check below runs against `RELEASE_LOCK` itself; no widened or aliased policy remains (M5 Q-04).
 
 function blocked(gate: VersionGate): { reason: string; field?: string } {
@@ -39,9 +39,9 @@ it(R('JT-17 the actual packaged version response passes the complete gate and ma
   expect(gate.enabled).toBe(true);
   if (!gate.enabled) return;
   expect(gate.info).toMatchObject(Object.fromEntries(VERSION_REQUIRED_FIELDS.map((key) => [key, fx71Manifest().engine[key]])));
-  // Supported recording host (M4 P-03): Python 3.14.x inside the 3.10-3.14 policy, Core 0.3.7 reference baseline.
+  // Supported recording host (M4 P-03): Python 3.14.x inside the 3.10-3.14 policy, Core 0.3.8 reference baseline.
   expect(releaseSegment(gate.info.python)).toEqual([3, 14, expect.any(Number)]);
-  expect(gate.info['markitdown-gc']).toBe('0.3.7');
+  expect(gate.info['markitdown-gc']).toBe('0.3.8');
   expect(evaluateVersionResponse(fx71Text('version.json')).enabled).toBe(true);
   expect(gate.info.protocol).toBe(1);
   expect(gate.info.triage_schema).toBe(1);

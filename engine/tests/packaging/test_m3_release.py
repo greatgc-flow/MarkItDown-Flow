@@ -57,7 +57,7 @@ def test_T_META_94_m3_minimum_core_can_check_the_reference_seal_without_relabell
     golden = load_py(REPO / 'tools/golden.py', 'm3_reference_golden')
     version = golden.importlib.metadata.version
     monkeypatch.setattr(golden.importlib.metadata, 'version', lambda name: endpoint if name == 'markitdown-gc' else version(name))
-    assert golden.verify(REPO)['core_version'] == '0.3.7'
+    assert golden.verify(REPO)['core_version'] == '0.3.8'
 
 
 @pytest.mark.req('REQ-PKG-09', 'REQ-PKG-01')

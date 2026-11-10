@@ -1,6 +1,6 @@
 {
   "mdflow": "2.0.0",
-  "markitdown-gc": "0.3.7",
+  "markitdown-gc": "0.3.8",
   "pypdfium2": "5.15.1",
   "pillow": "13.0.0",
   "platform": "Windows-11-10.0.26300-SP0",
