@@ -59,8 +59,8 @@ _real_version = md.version
 md.version = lambda name, *a, **k: {version!r} if name == "markitdown-gc" else _real_version(name, *a, **k)
 from mdflow import core_guard
 with core_guard.quiet_output():
-    import markitdown._installation as installation
-installation.__version__ = {version!r}
+    from markitdown import tools
+tools.installation_conflict = lambda: None  # the faked metadata is out of range, not a broken install
 _opened = []
 def _wrap(real):
     def wrapper(file, *a, **k):

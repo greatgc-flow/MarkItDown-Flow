@@ -72,8 +72,8 @@ _real_version = metadata.version
 metadata.version = lambda name: {bad_version!r} if name == 'markitdown-gc' else _real_version(name)
 from mdflow import core_guard
 with core_guard.quiet_output():
-    import markitdown._installation as installation
-installation.__version__ = {bad_version!r}
+    from markitdown import tools
+tools.installation_conflict = lambda: None  # the faked metadata is out of range, not a broken install
 def _track_open(original):
     def tracked(path, *args, **kwargs):
         if isinstance(path, (str, bytes, os.PathLike)) and os.path.realpath(path) == {str(source.resolve())!r}:

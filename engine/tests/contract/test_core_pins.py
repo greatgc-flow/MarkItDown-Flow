@@ -285,33 +285,66 @@ def test_CT_14_report_has_no_absolute_path_or_exception_text(installed_core, con
 
 @pytest.mark.req("REQ-GEN-02", "REQ-GEN-12", "REQ-CNV-06", "REQ-CNV-07")
 @pytest.mark.cov("S0", "FM10")
-def test_CT_15_private_core_symbols_used_by_the_engine_keep_their_shape(repo_root, tmp_path):
-    """Core range is >=0.3.7,<0.4, but the engine reuses private Core helpers (exiftool/LibreOffice `version` probes,
-    E_CORE_CONFLICT). Pin exactly that set and the call shapes the engine uses, so a Core change fails loud here."""
+def test_CT_15_public_core_tool_api_used_by_the_engine_keeps_its_shape(repo_root, tmp_path):
+    """The engine reaches Core's tool probes and installation check (exiftool/LibreOffice `version` probes,
+    E_CORE_CONFLICT) only through the stable public ``markitdown.tools`` API; no private Core module or name is
+    imported. Pin exactly that set, the call shapes the engine uses and the result semantics it relies on."""
+    import os
     import sys
-    from markitdown import _installation, _libreoffice as lo
+    import time
+    from markitdown import tools
 
     sources = [p.read_text(encoding="utf-8") for p in sorted((repo_root / "engine/src/mdflow").rglob("*.py"))]
-    source = "\n".join(sources)
-    private = set()  # every imported name (incl. `import a, b` and aliases) that reaches a private Core module/name
-    for node in (n for text in sources for n in ast.walk(ast.parse(text))):
-        if isinstance(node, ast.ImportFrom) and (node.module or "").split(".")[0] == "markitdown":
-            private |= {(node.module, a.name, a.asname) for a in node.names if "._" in node.module or a.name.startswith("_")}
-        elif isinstance(node, ast.Import):
-            private |= {(a.name, None, a.asname) for a in node.names if a.name.startswith("markitdown._")}
-    # `_libreoffice` only under the alias `lo`, so the call scan below sees every use.
-    assert private == {("markitdown", "_libreoffice", "lo"), ("markitdown._installation", "installation_conflict", None)}
-    assert set(re.findall(r"\blo\.(_\w+)\(", source)) == {"_execute", "_resolve", "_write_profile"}
-    # Call shapes exactly as exiftool.py and cli.py use them.
-    inspect.signature(lo._execute).bind(["tool", "-ver"], cwd=tmp_path, timeout_s=0.5, output=tmp_path / "version.log")
-    inspect.signature(lo._resolve).bind("soffice")
-    inspect.signature(lo._write_profile).bind(tmp_path / "profile")
-    inspect.signature(_installation.installation_conflict).bind()
-    # Semantics the engine relies on: captured stdout is returned as text; the deadline raises; no conflict -> falsy text.
-    text = lo._execute([sys.executable, "-c", "print('13.59')"], cwd=tmp_path, timeout_s=30, output=tmp_path / "ok.log")
-    assert isinstance(text, str) and text.strip() == "13.59"
-    with pytest.raises(Exception):
-        lo._execute([sys.executable, "-c", "import time; time.sleep(30)"], cwd=tmp_path, timeout_s=0.5,
-                    output=tmp_path / "slow.log")
-    message = _installation.installation_conflict()
+    private, tool_imports, used = set(), set(), set()  # every imported name (incl. `import a, b` and aliases) from Core
+    for text in sources:
+        importing = False
+        for node in ast.walk(ast.parse(text)):
+            if isinstance(node, ast.ImportFrom) and (node.module or "").split(".")[0] == "markitdown":
+                private |= {(node.module, a.name) for a in node.names if "._" in node.module or a.name.startswith("_")}
+                names = {(node.module, a.name, a.asname) for a in node.names
+                         if node.module == "markitdown.tools" or a.name == "tools"}
+                tool_imports |= names
+                importing = importing or bool(names)
+            elif isinstance(node, ast.Import):
+                private |= {(a.name, None) for a in node.names if a.name.startswith("markitdown") and "._" in a.name}
+                tool_imports |= {(a.name, None, a.asname) for a in node.names if a.name == "markitdown.tools"}
+        if importing:  # a module importing `tools` uses no other local of that name, so this scan sees every use
+            used |= set(re.findall(r"\btools\.(\w+)\(", text))
+    assert private == set(), "the engine must not import private Core modules or names"
+    # `tools` only as `from markitdown import tools`, so the call scan sees every use.
+    assert tool_imports == {("markitdown", "tools", None)}
+    assert used == {"installation_conflict", "probe_exiftool", "probe_libreoffice"}
+    assert used <= set(tools.__all__) - {"run_tool"}, "only the stable surface; run_tool is provisional"
+    # Call shapes exactly as exiftool.py, cli.py and core_guard.py use them.
+    inspect.signature(tools.probe_exiftool).bind("tool", timeout=0.5)
+    inspect.signature(tools.probe_libreoffice).bind("soffice", timeout=0.5)
+    inspect.signature(tools.installation_conflict).bind()
+    # Semantics the engine relies on: fixed result keys, a status instead of an exception, a deadline that holds.
+    keys = {"path", "version", "status", "detail"}
+
+    def tool(name, body):
+        if os.name == "nt":
+            path = tmp_path / (name + ".cmd")
+            path.write_text("@echo off\r\n" + body + "\r\n", encoding="ascii")
+        else:
+            path = tmp_path / name
+            path.write_text("#!/bin/sh\n" + body + "\n", encoding="ascii")
+            path.chmod(0o755)
+        return str(path)
+
+    ok = tools.probe_exiftool(tool("exif-ok", "echo 13.59"), timeout=30)
+    assert set(ok) == keys and (ok["status"], ok["version"]) == ("ok", "13.59") and os.path.isabs(ok["path"])
+    old = tools.probe_exiftool(tool("exif-old", "echo 12.23"), timeout=30)
+    assert (old["status"], old["version"]) == ("outdated", "12.23")
+    assert tools.probe_exiftool(tool("exif-bad", "echo not-a-version"), timeout=30)["status"] == "error"
+    missing = tools.probe_exiftool(str(tmp_path / "absent-exiftool"), timeout=0.5)
+    assert set(missing) == keys and (missing["status"], missing["path"]) == ("missing", None)
+    slow = tool("exif-slow", '"' + sys.executable + '" -c "import time; time.sleep(30)"')
+    started = time.monotonic()
+    assert tools.probe_exiftool(slow, timeout=0.5)["status"] == "error"
+    assert time.monotonic() - started < 15, "the deadline kills the stalled tool instead of waiting for it"
+    soffice = tools.probe_libreoffice(tool("soffice", "echo LibreOffice 25.2.7.2 fake"), timeout=30)
+    assert set(soffice) == keys and (soffice["status"], soffice["version"]) == ("ok", "25.2.7.2")
+    assert tools.probe_libreoffice(str(tmp_path / "absent-soffice"), timeout=0.5)["status"] == "missing"
+    message = tools.installation_conflict()
     assert message is None or isinstance(message, str)

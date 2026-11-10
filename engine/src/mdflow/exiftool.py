@@ -21,7 +21,7 @@ import functools
 import os
 import re
 
-from . import core_guard, runtime_temp
+from . import core_guard
 from .executable import resolve_executable, resolve_override
 
 MIN_VERSION = (12, 24)
@@ -37,21 +37,23 @@ def _result(status: str, *, path: str | None = None, version: str | None = None,
 
 
 def _probe(candidate: str, source: str, timeout_s: float) -> dict:
+    # Core's stable probe (markitdown.tools): contained `-ver` run (env allowlist, whole-tree kill; killing a
+    # Windows .cmd alone leaves inherited PIPE readers alive) and the CVE-2021-22204 minimum. mdflow has already
+    # resolved `candidate` to an absolute path (never the current folder), so Core's own discovery is not used.
     try:
-        # Reuse Core's bounded capture and descendant cleanup. In particular,
-        # killing a Windows .cmd alone leaves inherited PIPE readers alive.
         with core_guard.quiet_output():
-            from markitdown import _libreoffice as lo
-        with runtime_temp.run_directory() as work:
-            text = lo._execute([candidate, "-ver"], cwd=work, timeout_s=timeout_s,
-                               output=work / 'version.log').strip()
+            from markitdown import tools
+        probe = tools.probe_exiftool(candidate, timeout=timeout_s)
     except Exception:
         return _result("unusable", source=source)
-    if not _VERSION.fullmatch(text):
+    version = probe.get("version")
+    if probe.get("status") == "outdated" and isinstance(version, str) and _VERSION.fullmatch(version):
+        return _result("too_old", version=version, source=source)
+    if probe.get("status") != "ok" or not isinstance(version, str) or not _VERSION.fullmatch(version):
         return _result("unusable", source=source)
-    if tuple(int(part) for part in text.split(".")) < MIN_VERSION:
-        return _result("too_old", version=text, source=source)
-    return _result("ok", path=candidate, version=text, source=source)
+    if tuple(int(part) for part in version.split(".")) < MIN_VERSION:  # defence in depth against a Core regression
+        return _result("too_old", version=version, source=source)
+    return _result("ok", path=candidate, version=version, source=source)
 
 
 @functools.lru_cache(maxsize=16)

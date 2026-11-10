@@ -391,7 +391,7 @@ R27/R28 added registrations (existing REQs; precise fixture assertions replace b
 | CT-12 | `txt` -> `not_applicable`, html -> `media_not_inspected`, csv -> `unsupported_format` | REQ-TRI-01 |
 | CT-13 | installed Core in `>=0.3.7,<0.4`; startup gate rejects out-of-range | REQ-GEN-02, REQ-PKG-03 |
 | CT-14 | Core reports contain no absolute path/exception text | REQ-ASM-P3, REQ-SEC-02, REQ-TRI-04 |
-| CT-15 | private Core helpers used by the engine are exactly `_libreoffice._execute/_resolve/_write_profile` and `_installation.installation_conflict` (every imported name parsed with `ast`; `_libreoffice` only as `lo`); their call shapes bind, `_execute` returns captured text and raises past its deadline | REQ-GEN-02, REQ-GEN-12, REQ-CNV-06, REQ-CNV-07 |
+| CT-15 | the engine imports no private Core module or name (every imported name parsed with `ast`) and uses exactly the stable public `markitdown.tools.installation_conflict/probe_exiftool/probe_libreoffice` (only as `from markitdown import tools`; provisional `run_tool` excluded); their call shapes bind, probe results carry exactly `path/version/status/detail`, exiftool reports `ok`/`outdated` (< 12.24)/`error`/`missing`, a stalled tool is `error` within its deadline instead of raising | REQ-GEN-02, REQ-GEN-12, REQ-CNV-06, REQ-CNV-07 |
 
 ### 4.3 Shell (jest)
 
