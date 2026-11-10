@@ -108,6 +108,25 @@ companions. Spot-check notes must explain how at least three chosen summaries ag
 
 API contracts: [PyPI JSON API](https://docs.pypi.org/api/json/), [GitHub CLI API](https://cli.github.com/manual/gh_api).
 
+## Moving reviews to a new candidate commit (PT-41)
+
+When a new candidate commit leaves every path a review attests byte-identical, rebind the record
+instead of repeating the review:
+
+```sh
+python tools/rebind_evidence.py --folder release-evidence/2.0.0 --from <old-sha> --to <new-sha>
+```
+
+Attested paths: MAN-01 `shell/src` and `shell/styles.css`; MAN-02 `README.md`; MAN-03
+`shell/src/pure/i18n.ts` and `docs/renewal/10_SPEC.md` (section 7.5 table); actions-review
+`.github/workflows`; listing-review `manifest.json`, `versions.json`, `README.md`; pkg04
+`engine/requirements*.txt` and `engine/pyproject.toml`. The tool rewrites the record's `commit` fields
+and appends `Rebound <date> from <old> to <new>: <paths> byte-identical` to `evidence`, keeping the
+file's line endings. If any attested path changed (or a record is bound to another commit) it exits 1,
+names the records and files, and writes nothing: those reviews must be repeated. `oracles.json` is never
+rebound; the evidence workflow regenerates it at the new commit. `--ignore-eol` also accepts files whose
+only difference is CRLF -> LF (the repository LF renormalization) and names them in the evidence line.
+
 ## After publication: owner MAN-04 and post-release validators
 
 The owner copies `docs/renewal/manual-templates/release_rehearsal.yml` and installs published bytes on

@@ -1,7 +1,16 @@
 """Record FX-71 protocol streams from REAL ``python -m mdflow`` runs (stdlib only).
 
-    python -I tools/record_protocol.py            # installed wheel; record + derive into shell/test/fixtures/fx71/
-    python -I tools/record_protocol.py --verify   # hashes match manifest; derived == transform(parent)
+    python -I tools/record_protocol.py              # this checkout's engine/src; record + derive into shell/test/fixtures/fx71/
+    python -I tools/record_protocol.py --engine-src PATH  # another engine source tree (e.g. a git worktree's engine/src)
+    python -I tools/record_protocol.py --installed  # the interpreter's installed mdflow (e.g. the release wheel)
+    python -I tools/record_protocol.py --verify     # hashes match manifest; derived == transform(parent)
+
+Engine import: every child is ``python -I``. With ``--engine-src`` (the default) the child runs a short
+``-c`` bootstrap that puts ONLY that folder first on ``sys.path``, refuses to continue unless ``mdflow``
+was imported from it, then runs ``mdflow`` as ``__main__``. No venv ``.pth``/editable install is
+touched and no ``PYTHONPATH`` is set; ``-I`` still drops PYTHON* variables, user site-packages and the
+work directory. The source path is never recorded (manifest argv label stays ``python -I -m mdflow``;
+``check_recordings`` rejects any recording containing it).
 
 Provenance rules (30_TESTPLAN FX-71, 90_ACCEPTANCE G-12):
 
@@ -36,6 +45,7 @@ import sys
 import zipfile
 
 REPO = Path(__file__).resolve().parents[1]
+ENGINE_SRC_DEFAULT = REPO / "engine/src"
 OUT_DEFAULT = REPO / "shell/test/fixtures/fx71"
 WORK_DEFAULT = REPO / "build/trace/fx71-work"
 SENTINEL = "sk-fx71-dummy-sentinel-0000"  # not a credential; must never be recorded
@@ -269,9 +279,28 @@ for _variant_name in VERSION_VARIANTS:
 
 # ------------------------------------------------------------------- recording
 
+def child_argv(engine_src: Path | None, args) -> list[str]:
+    """The isolated child command line. ``engine_src=None``: the interpreter's installed ``mdflow``."""
+    if engine_src is None:
+        return [sys.executable, "-I", "-m", "mdflow", *map(str, args)]
+    src = str(Path(engine_src).resolve())
+    bootstrap = (
+        "import os, runpy, sys\n"
+        f"_src = {src!r}\n"
+        "sys.path.insert(0, _src)\n"
+        "import mdflow\n"
+        "_norm = lambda p: os.path.normcase(os.path.realpath(p))\n"
+        "if _norm(os.path.dirname(os.path.dirname(mdflow.__file__))) != _norm(_src):\n"
+        "    raise SystemExit('record_protocol: mdflow was not imported from --engine-src')\n"
+        "del _src, _norm\n"
+        "runpy.run_module('mdflow', run_name='__main__', alter_sys=True)\n")
+    return [sys.executable, "-I", "-c", bootstrap, *map(str, args)]
+
+
 class Recorder:
-    def __init__(self, out: Path, work: Path):
+    def __init__(self, out: Path, work: Path, *, engine_src: Path | None = None):
         self.out, self.work = out, work
+        self.engine_src = Path(engine_src).resolve() if engine_src is not None else None
         self.entries: dict[str, dict] = {}
         self.gen = load_gen()
         # HOME is the work dir itself: the engine reports out/cache as absolute paths but shortens the home prefix
@@ -280,7 +309,8 @@ class Recorder:
         tmp.mkdir(parents=True, exist_ok=True)
         base = {k: v for k, v in os.environ.items()
                 if not k.upper().startswith("MDFLOW_") and k.upper() not in {"PYTHONPATH", "PYTHONHOME"}}
-        # Use the selected interpreter's installed engine, never a source-tree injection.
+        # No environment-based source injection: the engine comes from child_argv (installed, or the
+        # --engine-src bootstrap), never from PYTHONPATH or an edited venv .pth.
         base.update(HOME=str(home), USERPROFILE=str(home), TMP=str(tmp), TEMP=str(tmp),
                     PYTHONIOENCODING="utf-8", PYTHONUTF8="1")
         # Resolve the command scenario under HOME too: its destination must not expose this interpreter's path.
@@ -336,7 +366,7 @@ class Recorder:
     def record(self, label: str, args, *, expect, stdout: str | None, progress: str | None = None,
                env: dict | None = None, note: str = ""):
         """``expect``: an exit code or a collection of acceptable codes (plan may announce missing consent: 0 or 3)."""
-        argv = [sys.executable, "-I", "-m", "mdflow", *map(str, args)]
+        argv = child_argv(self.engine_src, args)
         proc = subprocess.run(argv, cwd=self.work, env=dict(self.env, **(env or {})), capture_output=True, timeout=900)
         if proc.returncode not in ({expect} if isinstance(expect, int) else set(expect)):
             raise SystemExit(f"{label}: exit {proc.returncode}, expected {expect}\n"
@@ -452,6 +482,8 @@ class Recorder:
 
     def check_recordings(self):
         paths = [str(self.work), self.work.as_posix(), str(REPO), REPO.as_posix(), str(Path.home()), Path.home().as_posix()]
+        if self.engine_src is not None:  # the bootstrap's source folder must never reach a recording
+            paths += [str(self.engine_src), self.engine_src.as_posix()]
         # JSON-escaped spellings too (backslashes are doubled inside recorded JSON text).
         forbidden = [SENTINEL, *paths, *(json.dumps(p)[1:-1] for p in paths)]
         for name, entry in self.entries.items():
@@ -486,6 +518,8 @@ class Recorder:
                       "`python ocr_echo.py {input}` (no network)",
             "recording_host": {"platform": platform.platform(), "python": platform.python_version()},
             "engine": self.version,
+            "engine_import": ("installed package (--installed)" if self.engine_src is None else
+                              "source tree (--engine-src bootstrap; path not recorded)"),
             "placeholder": {PLACEHOLDER: "recording work directory; HOME was set to it, so the engine prints `~/...`; "
                                          "any other absolute spelling was replaced by this token (see "
                                          "`placeholder_replacements` per file)"},
@@ -497,15 +531,17 @@ class Recorder:
         (self.out / "manifest.json").write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
-def record(out: Path, work: Path) -> None:
+def record(out: Path, work: Path, engine_src: Path | None = ENGINE_SRC_DEFAULT) -> None:
     out, work = out.resolve(), work.resolve()
     if not work.is_relative_to(REPO / "build") or not out.is_relative_to(REPO):
         raise SystemExit("--work must be under build/ and --out inside the repository")
+    if engine_src is not None and not (Path(engine_src) / "mdflow/__init__.py").is_file():
+        raise SystemExit(f"--engine-src must contain mdflow/__init__.py: {engine_src}")
     shutil.rmtree(work, ignore_errors=True)
     work.mkdir(parents=True)
     shutil.rmtree(out, ignore_errors=True)
     out.mkdir(parents=True)
-    recorder = Recorder(out, work)
+    recorder = Recorder(out, work, engine_src=engine_src)
     recorder.build_inputs()
     recorder.scenarios()
     recorder.derive()
@@ -548,10 +584,15 @@ def main(argv=None) -> int:
     parser.add_argument("--out", type=Path, default=OUT_DEFAULT)
     parser.add_argument("--work", type=Path, default=WORK_DEFAULT)
     parser.add_argument("--verify", action="store_true", help="check manifest hashes and derived == transform(parent)")
+    engine = parser.add_mutually_exclusive_group()
+    engine.add_argument("--engine-src", type=Path, default=ENGINE_SRC_DEFAULT,
+                        help="folder containing the mdflow package the -I children import (default: this checkout's "
+                             "engine/src); no venv is modified")
+    engine.add_argument("--installed", action="store_true", help="children import the interpreter's installed mdflow")
     args = parser.parse_args(argv)
     if args.verify:
         return verify(args.out.resolve())
-    record(args.out, args.work)
+    record(args.out, args.work, None if args.installed else args.engine_src)
     return verify(args.out.resolve())
 
 

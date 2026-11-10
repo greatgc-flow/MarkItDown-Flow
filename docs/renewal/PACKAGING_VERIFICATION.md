@@ -4,6 +4,21 @@ Current release/reference baseline: **Core0.3.7**, SPEC DRAFT-3.8; runtime compa
 
 R34 publication follow-up, local Windows Python 3.15.2 with published Core 0.3.7: full `python -I -m pytest engine/tests --runxfail -q -p no:cacheprovider` passed **667 tests**, with **12 absent-release-evidence skips** and **1 POSIX-only deselection** (540.44 s). Uses the existing `M1_WINDOWS_TEST_TEMP=1` bridge and workspace temp paths. Receipts: `build/trace/r34-followup-full.log` and `build/trace/junit-r34-followup-full.xml`. Golden verification passes all 150 sealed files; trace check has zero coverage, registration or matrix errors; `pip check` reports no broken requirements. This is local engine evidence, not the fresh Linux reference install or supported-target release evidence.
 
+## Structural follow-up (2026-11-10, branch fix/structural)
+
+- One line-ending policy (PT-39): root `.gitattributes` `* text=auto eol=lf`; only the byte-sealed
+  `engine/tests/golden/**`, `engine/tests/fixtures/**` and `shell/test/fixtures/fx71/**` are `-text`.
+  Text files were renormalized to LF. Wheel bytes are unaffected (`canonical_wheel` already wrote LF)
+  and the trace suite digests already normalized CRLF.
+- T-CLI-87 measures each optional-tool probe inside the `version` child (deadline 0.5 s, killed at it,
+  far below the stalled tool's sleep). Whole-process time is no longer asserted; the SPEC 10.1 3 s figure
+  stays a healthy-machine target.
+- FX-71 recording (PT-40): `python -I tools/record_protocol.py [--engine-src PATH | --installed]`. The
+  default imports `mdflow` from this checkout's `engine/src` through an isolated `-c` bootstrap, so a
+  worktree can record without editing any venv `.pth`; the path never enters a recording.
+- Evidence rebinding (PT-41): `tools/rebind_evidence.py` moves named reviews to a new candidate commit
+  only when their attested paths are byte-identical (MANUAL_REVIEW_GUIDE).
+
 ## Historical R27/R28 verification
 
 R27 replaces the cached universal lock, fifteen-report merger and public
