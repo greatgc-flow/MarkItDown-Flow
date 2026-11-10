@@ -84,6 +84,11 @@ def test_T_SEC_61_exiftool_and_soffice_lookups_never_run_a_program_planted_in_th
         convert.convert_legacy(b"{\\rtf1 x}", dict(format="rtf"), run_temp=tmp_path / "run2")
         assert len(called) == 1 and Path(called[0]["libreoffice_path"]).samefile(genuine), \
             "a bare SOFFICE_PATH name reaches Core as the absolute PATH program"
+        # Round 11: EXIFTOOL_PATH shares SOFFICE_PATH's override rule (a bare name -> the absolute PATH program).
+        tool = _program(genuine.parent, "exiftool")
+        exiftool.reset()
+        found = exiftool.detect(exiftool.CONVERT_TIMEOUT_S)
+        assert found["status"] == "ok" and Path(found["path"]).samefile(tool), found
     finally:
         cli.reset_optional_tool_probes()
     assert not marker.exists(), "the planted program ran"
@@ -124,17 +129,20 @@ def test_T_SEC_62_command_program_is_pinned_to_an_absolute_path_in_the_destinati
 @pytest.mark.req("REQ-SEC-01")
 @pytest.mark.cov("S0", "FM9")
 def test_T_SEC_63_command_template_containing_a_credential_value_is_refused_without_echo():
-    env = {"OCR_TOKEN": "s3cr3t-v", "PGPASSWORD": "hunter2pw", "KEYBOARD": "layout-us", "MDFLOW_TIMEOUT_S": "5"}
+    env = {"OCR_TOKEN": "s3cr3t-v", "PGPASSWORD": "hunter2pw", "GPG_PASSPHRASE": "phrase-v1", "KEYBOARD": "layout-us",
+           "SSH_AUTH_SOCK": "/tmp/agent.sock", "MDFLOW_TIMEOUT_S": "5"}
     config = dict(model="m", env=env, command_egress=True, trust_command=True)
-    for template in ("tool --t s3cr3t-v {input}", "tool --t=prefix-s3cr3t-v {input}", "ocr --pw hunter2pw {input}"):
+    for template in ("tool --t s3cr3t-v {input}", "tool --t=prefix-s3cr3t-v {input}", "ocr --pw hunter2pw {input}",
+                     "gpg --passphrase phrase-v1 {input}"):
         with pytest.raises(providers.ProviderConfigError) as caught:
             providers.build_provider("command", command=template, **config)
         assert caught.value.code == "E_PROVIDER_CONFIG"
-        assert "s3cr3t" not in str(caught.value) and "hunter2pw" not in str(caught.value)
+        assert not any(value in str(caught.value) for value in ("s3cr3t", "hunter2pw", "phrase-v1"))
         assert "--command-env" in str(caught.value)
     accepted = providers.build_provider("command", command="tool --t {input}", command_env=["OCR_TOKEN"], **config)
     assert "s3cr3t" not in accepted.meta["destination"]
     providers.build_provider("command", command="tool --layout layout-us {input}", **config)
+    providers.build_provider("command", command="tool --agent /tmp/agent.sock {input}", **config)
 
 
 @pytest.mark.req("REQ-SEC-02")
@@ -144,11 +152,23 @@ def test_T_SEC_64_redaction_matches_secret_name_parts_and_one_word_credential_na
               "SMTP_PASSWORD": "v-pw", "MDFLOW_API_KEY": "v-key", "AWS_SESSION_TOKEN": "v-tok", "APP_SECRET": "v-sec",
               # One-word names: a part ending in a strong secret word is a secret (round 10, Defect 1).
               "PGPASSWORD": "v-pg", "GHTOKEN": "v-gh", "OPENAIKEY": "v-oai", "MYAPIKEY": "v-api",
-              "DBPASSWD": "v-passwd", "APPSECRET": "v-appsec", "GCPCREDENTIAL": "v-gcpcred"}
-    plain = {"KEYBOARD": "us", "MONKEY_MODE": "on", "TOKENIZERS_PARALLELISM": "false", "PATH": "plain-path"}
+              "DBPASSWD": "v-passwd", "APPSECRET": "v-appsec", "GCPCREDENTIAL": "v-gcpcred",
+              # Round 11: one-word key names, passphrases and PASSWORDS.
+              "SECRETKEY": "v-seckey", "AWSACCESSKEY": "v-acckey", "SSHPRIVATEKEY": "v-privkey",
+              "GPG_PASSPHRASE": "v-phrase", "DB_PASSWORDS": "v-pws"}
+    plain = {"KEYBOARD": "us", "MONKEY_MODE": "on", "TOKENIZERS_PARALLELISM": "false", "PATH": "plain-path",
+             "HOTKEY_MODE": "hot-mode", "BYPASS_LIST": "bypass-list", "TIKTOKEN_CACHE_DIR": "tiktoken-cache",
+             "SSH_AUTH_SOCK": "/tmp/ssh-agent.sock", "GPG_AGENT_AUTH_SOCK": "/tmp/gpg-agent.sock"}
     assert all(redact.is_secret_name(name) for name in secret)
     assert not any(redact.is_secret_name(name) for name in plain)
     message = " ".join([*secret.values(), *plain.values(), "house"])
     result = redact.redact(message, {**secret, **plain}, "")
     assert not any(value in result for value in secret.values())
-    assert result.split()[len(secret):] == ["us", "on", "false", "plain-path", "house"]
+    assert result.split()[len(secret):] == [*plain.values(), "house"]
+    # Round 11: values shorter than 4 characters, digit-only and yes/no-like values are settings, not secrets.
+    flags = {"HF_HUB_DISABLE_IMPLICIT_TOKEN": "1", "NPM_CONFIG_ALWAYS_AUTH": "true", "OPENAI_MAX_TOKENS": "1024",
+             "MYSQL_ALLOW_EMPTY_PASSWORD": "YES", "SMTP_AUTH": "Off", "APP_SECRET": "FALSE", "ROOT_PASS": "abc"}
+    assert all(redact.is_secret_name(name) for name in flags)
+    page = "page 12 of 1024: true, YES, Off, FALSE, abc"
+    assert redact.redact(page, flags, "") == page
+    assert redact.redact("pw abcd, pin 12a4", {"ROOT_PASS": "abcd", "APP_PIN_TOKEN": "12a4"}, "") == "pw ***, pin ***"
