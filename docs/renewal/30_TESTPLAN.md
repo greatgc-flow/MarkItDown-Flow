@@ -459,6 +459,7 @@ R27/R28 added registrations (existing REQs; precise fixture assertions replace b
 | PT-35 | REQ-PKG-04 (pip report sha256 accepted from hashes{} or legacy archive_info.hash `sha256=<hex>`; other algorithms rejected) | A |
 | PT-36 | REQ-PKG-04 (pkg04 placeholder scan excludes machine-enriched install_reports/artifacts; peer placeholders and other evidence files remain rejected) | A |
 | PT-37 | REQ-PKG-22 (evidence workflow placeholder guard scans peer-authored source JSON/YML via EVIDENCE_FOLDER, excluding machine-enriched build/evidence) | A |
+| PT-39 | REQ-PKG-22 (tools/man04_kit.py: offline MAN-04 helper fills only mechanical fields, never PASS or the minimum app version; SHA256SUMS tamper detected; validate runs trace.attest, so an unfilled top-level check fails; owner-filled record attests) | A |
 
 ### 4.5 Coverage statement
 
