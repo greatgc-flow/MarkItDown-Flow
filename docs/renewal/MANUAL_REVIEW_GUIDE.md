@@ -102,7 +102,7 @@ They describe CI evidence, not reconstructed original command stdout. Release-on
 `pending: release execution` in these summaries; `exit: 0` describes successful receipt evaluation.
 Final scoring still requires every release parameter to pass in the actual six release executions.
 Reference PT-02 uses its reference receipt; G-04 retains both contract endpoints (or the existing
-`junit-contract-max.json` deduplication receipt when newest Core equals 0.3.8). No absent, failed,
+`junit-contract-max.json` deduplication receipt when newest Core equals 0.3.9). No absent, failed,
 skipped or stale required CI parameter is accepted. Every JUnit source includes registry/collection
 companions. Spot-check notes must explain how at least three chosen summaries agree with raw receipts.
 

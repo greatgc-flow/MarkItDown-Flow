@@ -2,7 +2,7 @@
 
 MarkItDown Flow converts local documents to Markdown and plans selective OCR for
 pages and images. The engine (`mdflow`, a Python CLI) uses `markitdown-gc`
-0.3.8 or newer (published on PyPI). The desktop Obsidian shell drives an engine installed separately in a
+0.3.9 or newer (published on PyPI). The desktop Obsidian shell drives an engine installed separately in a
 virtual environment. Release verification is still pending; see
 [packaging verification](docs/renewal/PACKAGING_VERIFICATION.md).
 

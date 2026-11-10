@@ -217,7 +217,7 @@ def test_PT_32_r36_ci_generation_precedes_release_and_keeps_endpoint_dedup(tmp_p
         path.unlink()
     (executions / 'junit-contract-max.xml').unlink()
     dedup = executions / 'junit-contract-max.json'
-    dedup.write_text(json.dumps(dict(version='0.3.8', deduplicated_with='contract-min',
+    dedup.write_text(json.dumps(dict(version='0.3.9', deduplicated_with='contract-min',
                                     reason='same exact Core distribution/version')))
     record = tool.generate_oracles(tmp_path, executions, COMMIT, {})
     assert record['G-15']['result'] == 'pending: release execution'
@@ -254,13 +254,13 @@ def test_PT_36_placeholder_scan_excludes_only_pkg04_machine_fields():
     record = dict(
         reviewer="cx/cx.effort/gpt-6.1-sol", date="2026-11-10", commit=COMMIT,
         evidence=["artifact license review notes"], verdict="PASS",
-        package="markitdown-gc", version="0.3.8",
-        source="https://pypi.org/pypi/markitdown-gc/0.3.8/json",
+        package="markitdown-gc", version="0.3.9",
+        source="https://pypi.org/pypi/markitdown-gc/0.3.9/json",
         checks={"artifact_licenses": "PASS"},
         artifacts=[dict(filename="core.whl", url=download["url"], sha256="a" * 64,
                         size=123, packagetype="bdist_wheel", yanked=False)],
         install_reports=[dict(target=target, commit=COMMIT, exit=0, report={"install": [
-            {"metadata": {"name": "markitdown-gc", "version": "0.3.8"}, "download_info": download},
+            {"metadata": {"name": "markitdown-gc", "version": "0.3.9"}, "download_info": download},
             {"metadata": {"name": "pypdfium2", "version": "4.30.0"}, "download_info": download},
         ]}) for target in module.TARGETS],
     )

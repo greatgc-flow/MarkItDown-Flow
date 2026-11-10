@@ -19,7 +19,7 @@ Windows PowerShell (replace both quoted directory paths):
 ```powershell
 Set-Location -LiteralPath 'C:\Downloads\mdflow-2.0.0-engine'
 py -3.14 -m venv 'C:\mdflow-venvs\2.0.0'
-& 'C:\mdflow-venvs\2.0.0\Scripts\python.exe' -m pip install --only-binary=:all: --index-url https://pypi.org/simple './mdflow-2.0.0-py3-none-any.whl' 'markitdown-gc>=0.3.8,<0.4'
+& 'C:\mdflow-venvs\2.0.0\Scripts\python.exe' -m pip install --only-binary=:all: --index-url https://pypi.org/simple './mdflow-2.0.0-py3-none-any.whl' 'markitdown-gc>=0.3.9,<0.4'
 if ($LASTEXITCODE -ne 0) { throw 'Wheel install failed' }
 & 'C:\mdflow-venvs\2.0.0\Scripts\python.exe' -m pip check
 if ($LASTEXITCODE -ne 0) { throw 'Dependency check failed' }
@@ -35,7 +35,7 @@ Ubuntu/macOS POSIX shell:
 set -e
 cd '/path/to/mdflow-2.0.0-engine'
 python3.14 -m venv '/path/to/mdflow-venvs/2.0.0'
-'/path/to/mdflow-venvs/2.0.0/bin/python' -m pip install --only-binary=:all: --index-url https://pypi.org/simple './mdflow-2.0.0-py3-none-any.whl' 'markitdown-gc>=0.3.8,<0.4'
+'/path/to/mdflow-venvs/2.0.0/bin/python' -m pip install --only-binary=:all: --index-url https://pypi.org/simple './mdflow-2.0.0-py3-none-any.whl' 'markitdown-gc>=0.3.9,<0.4'
 '/path/to/mdflow-venvs/2.0.0/bin/python' -m pip check
 '/path/to/mdflow-venvs/2.0.0/bin/python' -I -m mdflow selftest
 '/path/to/mdflow-venvs/2.0.0/bin/python' -I -m mdflow version
@@ -45,7 +45,7 @@ Set `enginePython` to the resulting absolute `Scripts/python.exe` or `bin/python
 path. Activation is unnecessary. Keep the venv at its creation location; recreate
 it after moving it or removing its base interpreter. Create another venv for an
 upgrade and retain the previous one for rollback. Do not use global fallback
-packages. The mdflow wheel is pure Python; dependencies can contain native code. Its metadata declares Core >=0.3.8,<0.4, pypdfium2 >=5,<6 and Pillow >=11,<14, matching the released shell gate. Core may impose tighter constraints; pip check and selftest verify the resolved environment.
+packages. The mdflow wheel is pure Python; dependencies can contain native code. Its metadata declares Core >=0.3.9,<0.4, pypdfium2 >=5,<6 and Pillow >=11,<14, matching the released shell gate. Core may impose tighter constraints; pip check and selftest verify the resolved environment.
 
 ## Optional remote OCR
 
@@ -70,7 +70,7 @@ shows presence only. Read the README network and cost disclosures before consent
 
 ## Reference reproduction (Linux x64 / CPython 3.14 only)
 
-CI generates one `reference-requirements.txt` with pip-tools, including Core 0.3.8, the exact wheel hash and resolved dependency hashes. Verify it alongside
+CI generates one `reference-requirements.txt` with pip-tools, including Core 0.3.9, the exact wheel hash and resolved dependency hashes. Verify it alongside
 the wheel; in a new venv on that target, from the download directory, run:
 
 ```sh

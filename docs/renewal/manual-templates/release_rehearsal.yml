@@ -27,7 +27,7 @@ runs:
     obsidian_version: "<OBSIDIAN MINIMUM VERSION>"
     python: "<PYTHON VERSION>"
     engine: "2.0.0"
-    core: "0.3.8"
+    core: "0.3.9"
     downloads:
       - {asset: main.js, sha256: "<SHA256 OF DOWNLOADED ASSET>"}
       - {asset: manifest.json, sha256: "<SHA256 OF DOWNLOADED ASSET>"}
@@ -55,7 +55,7 @@ runs:
     obsidian_version: "<OBSIDIAN CURRENT VERSION>"
     python: "<PYTHON VERSION>"
     engine: "2.0.0"
-    core: "0.3.8"
+    core: "0.3.9"
     downloads:
       - {asset: main.js, sha256: "<SHA256 OF DOWNLOADED ASSET>"}
       - {asset: manifest.json, sha256: "<SHA256 OF DOWNLOADED ASSET>"}
@@ -83,7 +83,7 @@ runs:
     obsidian_version: "<OBSIDIAN MINIMUM VERSION>"
     python: "<PYTHON VERSION>"
     engine: "2.0.0"
-    core: "0.3.8"
+    core: "0.3.9"
     downloads:
       - {asset: main.js, sha256: "<SHA256 OF DOWNLOADED ASSET>"}
       - {asset: manifest.json, sha256: "<SHA256 OF DOWNLOADED ASSET>"}
@@ -111,7 +111,7 @@ runs:
     obsidian_version: "<OBSIDIAN CURRENT VERSION>"
     python: "<PYTHON VERSION>"
     engine: "2.0.0"
-    core: "0.3.8"
+    core: "0.3.9"
     downloads:
       - {asset: main.js, sha256: "<SHA256 OF DOWNLOADED ASSET>"}
       - {asset: manifest.json, sha256: "<SHA256 OF DOWNLOADED ASSET>"}
@@ -139,7 +139,7 @@ runs:
     obsidian_version: "<OBSIDIAN MINIMUM VERSION>"
     python: "<PYTHON VERSION>"
     engine: "2.0.0"
-    core: "0.3.8"
+    core: "0.3.9"
     downloads:
       - {asset: main.js, sha256: "<SHA256 OF DOWNLOADED ASSET>"}
       - {asset: manifest.json, sha256: "<SHA256 OF DOWNLOADED ASSET>"}
@@ -167,7 +167,7 @@ runs:
     obsidian_version: "<OBSIDIAN CURRENT VERSION>"
     python: "<PYTHON VERSION>"
     engine: "2.0.0"
-    core: "0.3.8"
+    core: "0.3.9"
     downloads:
       - {asset: main.js, sha256: "<SHA256 OF DOWNLOADED ASSET>"}
       - {asset: manifest.json, sha256: "<SHA256 OF DOWNLOADED ASSET>"}

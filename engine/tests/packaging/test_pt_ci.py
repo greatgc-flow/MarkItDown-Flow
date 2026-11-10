@@ -37,8 +37,8 @@ def runs_on_cells(job):
 def test_PT_03_core_range_endpoints_are_visible_jobs_and_resolver_failure_fails():
     low, high = job_named("contract-min"), job_named("contract-max")
     text_low, text_high = step_text(low), step_text(high)
-    assert "markitdown-gc==0.3.8" in text_low, "contract-min must install exactly Core 0.3.8"
-    assert re.search(r"markitdown-gc\s*(>=\s*0\.3\.8\s*,\s*)?<\s*0\.4", text_high), \
+    assert "markitdown-gc==0.3.9" in text_low, "contract-min must install exactly Core 0.3.9"
+    assert re.search(r"markitdown-gc\s*(>=\s*0\.3\.9\s*,\s*)?<\s*0\.4", text_high), \
         "contract-max must resolve the newest publicly available Core below 0.4"
     for label, job, text in (("contract-min", low, text_low), ("contract-max", high, text_high)):
         assert job['runs-on'] == 'macos-26', f'{label}: required macOS contracts must use Apple Silicon'
@@ -50,7 +50,7 @@ def test_PT_03_core_range_endpoints_are_visible_jobs_and_resolver_failure_fails(
         assert not any(step.get("continue-on-error") for step in job.get("steps") or []), label
         assert not re.search(r"\|\|\s*(true|:)|exit\s+0\b", text), f"{label} swallows a resolver/network failure"
     pyproject = (REPO / "engine/pyproject.toml").read_text(encoding="utf-8")
-    assert '"markitdown-gc>=0.3.8,<0.4"' in pyproject, "engine dependency range must equal SPEC 3.0"
+    assert '"markitdown-gc>=0.3.9,<0.4"' in pyproject, "engine dependency range must equal SPEC 3.0"
 
 
 @pytest.mark.req("REQ-PKG-07", "REQ-GEN-03")
@@ -83,7 +83,7 @@ def test_PT_07_engine_matrix_has_six_required_four_experimental_cells_and_gates_
     assert 'reference-install.json' in builder and 'reference-metadata.json' in builder
     assert 'Linux x64' in builder and '3.14' in builder
     installer = (REPO / 'tools/packaged_check.py').read_text(encoding='utf-8')
-    assert 'markitdown-gc>=0.3.8,<0.4' in installer and "'--report'" in installer
+    assert 'markitdown-gc>=0.3.9,<0.4' in installer and "'--report'" in installer
     assert '--require-hashes' not in installer, 'compatibility targets must not use the reference closure'
 
     for _, jid, job in engine:

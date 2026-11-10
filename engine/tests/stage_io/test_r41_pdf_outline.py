@@ -1,6 +1,6 @@
 """R41: a PDF with bookmarks is converted whole so Core's outline headings reach the output, on the right page.
 
-Core's conversion is replaced by an emulation of what Core 0.3.8 does with a PDF (CT-05/CT-16 pin the real thing):
+Core's conversion is replaced by an emulation of what Core 0.3.9 does with a PDF (CT-05/CT-16 pin the real thing):
 one form feed between pages, trailing pages without text dropped, and, for a PDF that has bookmarks, a ``# `` heading
 for the line a bookmark names. The pipeline under test is real: sniff, triage, class, convert, render, OCR provider,
 assemble. T = every page has text; M = a text page plus a scanned page (provider OCR); S = scanned pages only.

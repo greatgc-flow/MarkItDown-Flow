@@ -23,8 +23,8 @@ def test_T_META_95_m4_all_bootstrap_engine_probes_are_isolated_and_evidence_is_e
     # G-01 names exactly the counters `tools/trace.py check` prints (one line, in print order).
     g01 = next(line for line in acceptance.splitlines() if line.startswith('| G-01 '))
     assert '`unknown_req=0 uncovered_req=0 untagged_tests=0 registration_errors=0 matrix_errors=0`' in g01
-    # FX-71 was re-recorded entirely under Core 0.3.8 (manifest engine header); no stream is described as 0.3.6.
-    assert '"markitdown-gc": "0.3.8"' in (REPO / 'shell/test/fixtures/fx71/manifest.json').read_text(encoding='utf-8')
+    # FX-71 was re-recorded entirely under Core 0.3.9 (manifest engine header); no stream is described as 0.3.6.
+    assert '"markitdown-gc": "0.3.9"' in (REPO / 'shell/test/fixtures/fx71/manifest.json').read_text(encoding='utf-8')
     for relative in ('docs/renewal/90_ACCEPTANCE.md', 'docs/renewal/HANDOFF.md', 'docs/renewal/20_SHELL.md'):
         text = (REPO / relative).read_text(encoding='utf-8')
         assert 'recorded under Core 0.3.6' not in text and 'other sealed protocol streams retained' not in text, relative
@@ -38,7 +38,8 @@ def test_T_META_95_m4_all_bootstrap_engine_probes_are_isolated_and_evidence_is_e
 @pytest.mark.parametrize('field,value,enabled', [
     ('python', '3.14garbage', False), ('python', '3.14.0rc1', True),
     ('mdflow', '2.0.0???', False), ('mdflow', '2.0.0.dev0', True),
-    ('markitdown-gc', '0.3.8???', False), ('markitdown-gc', '0.3.8rc1', True),
+    ('markitdown-gc', '0.3.9???', False), ('markitdown-gc', '0.3.9rc1', True),
+    ('markitdown-gc', '0.3.8', False),
     ('pypdfium2', '5.15.1???', False), ('pypdfium2', ' 5.15.1', False),
     ('pypdfium2', '5.15.1rc1', True), ('pypdfium2', '5.15.1.post1', True),
     ('pillow', '13.0.0???', False), ('pillow', '13.0.0+local', True),
@@ -51,7 +52,7 @@ def test_T_META_95_m4_all_bootstrap_engine_probes_are_isolated_and_evidence_is_e
 def test_T_GEN_96_m4_package_version_oracle_checks_full_syntax(field, value, enabled):
     from _support import load_py
     release = load_py(REPO / 'engine/tests/packaging/test_pt_release.py', 'm4_gate')
-    base = dict(mdflow='2.0.0', **{'markitdown-gc': '0.3.8'}, python='3.14.10', platform='test',
+    base = dict(mdflow='2.0.0', **{'markitdown-gc': '0.3.9'}, python='3.14.10', platform='test',
                 protocol=1, triage_schema=1, pypdfium2='5.15.1', pillow='13.0.0')
     assert (release.gate(dict(base, **{field: value})) == []) is enabled
 

@@ -3,7 +3,7 @@
 ## 2.0.0 — Zero-base renewal (release candidate)
 
 Major version: a clean-room Obsidian shell (`shell/`) over a new Python engine
-(`mdflow`, `engine/`) built on `markitdown-gc` 0.3.8 (`>=0.3.8,<0.4`; the engine uses only the public
+(`mdflow`, `engine/`) built on `markitdown-gc` 0.3.9 (`>=0.3.9,<0.4`; the engine uses only the public
 `markitdown.tools` API). Settings migrate from
 1.0.8 automatically (schema 2); see the README "Migration and operation"
 section for the rollback snapshot `data.v1.json` and the removals below.
