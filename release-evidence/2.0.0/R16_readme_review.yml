@@ -1,0 +1,30 @@
+# MAN-02  R16 README disclosure review.   Validated by: python tools/trace.py attest MAN-02
+# Copy to release-evidence/2.0.0/R16_readme_review.yml, then replace every angle-bracket placeholder and every
+# unfilled result value. Open the README at the candidate commit and the plugin as configured; cite the exact
+# README heading or anchor for each disclosure and confirm it matches the actual behavior.
+id: MAN-02
+reviewer: ag/ag.argon/argon
+date: 2026-11-10
+commit: 53ec03f1ea44f222d11a966305a58c9e98ad0250
+inputs:
+  - README.md at the candidate commit
+  - SPEC/code behavior facts supplied by orchestrator (below)
+checks:
+  - {id: network_services_and_purpose, readme_anchor: Network services and purpose, result: PASS}
+  - {id: outside_vault_access, readme_anchor: Outside-vault access, result: PASS}
+  - {id: no_client_telemetry, readme_anchor: Telemetry, result: PASS}
+  - {id: account_key_cost, readme_anchor: "Account, API key and cost", result: PASS}
+  - {id: migration_and_operation, readme_anchor: Migration and operation, result: PASS}
+  - {id: setup_and_provider_ui_link_to_disclosures, readme_anchor: Setup, result: PASS}
+evidence:
+  - "Network services and purpose (plus Command-line usage and Account, API key and cost) discloses that default provider `none` performs local conversion with no document data sent, egress occurs only via `openai-compatible` (default https://api.openai.com/v1, configurable via Base URL) or CLI-only user-configured `command` provider, and remote OCR requires per-file consent (approval dialog in shell showing per-file destination/model/units/cost, or `plan_hash` with `--yes` / `--yes-file` in CLI)."
+  - "Outside-vault access discloses that the plugin runs a user-installed Python engine in an external venv (`python -I -X utf8 -m mdflow ...`), reads selected source files outside the vault, writes note outputs inside the vault, keeps caches at `<plugin-dir>/cache` (`.obsidian/plugins/markitdown-flow/cache/`) and CLI default `~/.mdflow/cache`, and executes optional user-installed `exiftool` and opt-in LibreOffice (`soffice`)."
+  - "Telemetry and Setup disclose that there is no client telemetry or analytics, and the plugin never installs Python/dependencies or runs update/installer actions (only showing copy-paste commands such as `pip uninstall -y markitdown` and referencing external bootstrap instructions)."
+  - "Account, API key and cost discloses that `MDFLOW_API_KEY` is used for remote `openai-compatible` OCR, supplied only via the launch environment and never persisted in settings/data.json, and that `mdflow plan` shows per-file estimated maximum cost and request budget in the approval dialog before consent."
+  - "Migration and operation discloses that v1 settings are migrated while dropping removed settings and credentials (writing a sanitized `data.v1.json` rollback snapshot and removing secrets from `data.json`) and retaining the six v1 local command IDs (`convert-file`, `convert-folder`, `convert-url`, `view-conversion-history`, `open-log-folder`, `run-image-pipeline-selftest`)."
+  - "Setup, Network services and purpose, Account, API key and cost, and Migration and operation link the setup workflow and provider/conversion UI settings (Engine interpreter, Base URL, Model, Legacy formats toggle, and linked `engine/BOOTSTRAP.md` / `docs/renewal/10_SPEC.md` / `docs/renewal/PACKAGING_VERIFICATION.md` disclosures) to the runtime behavior."
+  - "Rebound 2026-11-10 from candidate 524af26 to 53ec03f1ea44f222d11a966305a58c9e98ad0250: git diff --quiet 524af26 53ec03f1ea44f222d11a966305a58c9e98ad0250 -- README.md shell/src exits 0 (byte-identical); the diff touches only release tooling/docs (R36). Reviewer re-confirmation recorded below."
+  - "Rebound 2026-11-10 from candidate 6ca3281 to 53ec03f1ea44f222d11a966305a58c9e98ad0250: git diff 6ca3281 e240b70 touches only .github/workflows/ci.yml (one LibreOffice CI job using the same reviewed action SHAs, no new permissions), tests, tools/trace.py and docs; README.md, shell/src, engine/src, manifest.json, versions.json and LICENSE are byte-identical (git diff --quiet)."
+  - "Rebound 2026-11-10 from e240b70 to 53ec03f1ea44f222d11a966305a58c9e98ad0250: git diff e240b70 6527697 touches only tools/release_evidence.py (legacy pip hash form), one packaging test and the test plan; README.md, shell/src, engine/src, manifest.json, versions.json, LICENSE and .github/workflows are byte-identical (git diff --quiet)."
+  - "Rebound 2026-11-10 from 6527697 to 53ec03f1ea44f222d11a966305a58c9e98ad0250: git diff 6527697 53ec03f touches only tools/release_evidence.py (placeholder scan scoped to peer-authored pkg04 fields), two tests (PT-36, T-TRX-50 timeout margin) and docs (30_TESTPLAN, 90_ACCEPTANCE G-17 list); README.md, shell/src, engine/src, manifest.json, versions.json, LICENSE and .github/workflows are byte-identical (git diff --quiet)."
+verdict: PASS

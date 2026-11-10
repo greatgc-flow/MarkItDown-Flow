@@ -1,0 +1,23 @@
+{
+  "reviewer": "cc/cc.effort/claude-sonnet-5-5",
+  "date": "2026-11-10",
+  "commit": "53ec03f1ea44f222d11a966305a58c9e98ad0250",
+  "evidence": [
+    "Facts were fetched by the orchestrator (I have no PyPI access) into build/pkg04/. I read them myself: pypi-markitdown-gc-0.3.7.json (name markitdown-gc, version 0.3.7, info.license_expression \"MIT\", two files, both yanked:false), METADATA-0.3.7.txt (Metadata 2.5; `License-Expression: MIT`; License-File: LICENSE and ThirdPartyNotices.md) and LICENSE-0.3.7.txt (standard MIT text, 'Copyright (c) Microsoft Corporation').",
+    "Artifact hashes: PyPI JSON lists the wheel markitdown_gc-0.3.7-py3-none-any.whl (bdist_wheel) sha256 75debec2...1780de and the sdist markitdown_gc-0.3.7.tar.gz sha256 baab1609...3867aa; both equal the pins in engine/requirements-reference.txt. I recomputed the wheel sha256 with sha256sum and it matches 75debec20fec1c983248a9f328ea22c7d1b34a4130a7f34b823ce5b1741780de.",
+    "Result: wheel metadata, the PyPI record and the LICENSE text agree on MIT, so artifact_licenses is PASS for markitdown-gc 0.3.7.",
+    "Limits: I did not re-extract METADATA/LICENSE from the wheel myself (I trust the orchestrator's extraction, tied to the wheel hash I confirmed). I did not unpack the sdist (its license rests on PyPI's license_expression, which covers the release). I did not read ThirdPartyNotices.md or audit transitive dependency licenses; only markitdown-gc's own license was reviewed. Automatic artifacts[]/install_reports[] are left for evidence.yml.",
+    "Rebound 2026-11-10 from candidate 6ca3281 to e240b70da748edc3c2bb3992d6f03f49eb4275c1: git diff 6ca3281 e240b70 touches only .github/workflows/ci.yml (one LibreOffice CI job using the same reviewed action SHAs, no new permissions), tests, tools/trace.py and docs; README.md, shell/src, engine/src, manifest.json, versions.json and LICENSE are byte-identical (git diff --quiet).",
+    "Rebound 2026-11-10 from e240b70 to 53ec03f1ea44f222d11a966305a58c9e98ad0250: git diff e240b70 6527697 touches only tools/release_evidence.py (legacy pip hash form), one packaging test and the test plan; README.md, shell/src, engine/src, manifest.json, versions.json, LICENSE and .github/workflows are byte-identical (git diff --quiet).",
+    "Rebound 2026-11-10 from 6527697 to 53ec03f1ea44f222d11a966305a58c9e98ad0250: git diff 6527697 53ec03f touches only tools/release_evidence.py (placeholder scan scoped to peer-authored pkg04 fields), two tests (PT-36, T-TRX-50 timeout margin) and docs (30_TESTPLAN, 90_ACCEPTANCE G-17 list); README.md, shell/src, engine/src, manifest.json, versions.json, LICENSE and .github/workflows are byte-identical (git diff --quiet)."
+  ],
+  "verdict": "PASS",
+  "package": "markitdown-gc",
+  "version": "0.3.7",
+  "source": "https://pypi.org/pypi/markitdown-gc/0.3.7/json",
+  "artifacts": [],
+  "install_reports": [],
+  "checks": {
+    "artifact_licenses": "PASS"
+  }
+}
