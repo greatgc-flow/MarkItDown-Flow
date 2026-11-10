@@ -556,6 +556,7 @@ Red logs: `build/trace/redgreen/r29-*.red.log` (R29 is green at baseline by audi
 | T-META-97 | REQ-PKG-10, REQ-PKG-17 | Actual scorer complete positive; omit, omit+duplicate, substitute, skip/fail, stale candidate/source, tampered/missing collection and omitted-from-both negatives. |
 | T-META-98 | REQ-PKG-10, REQ-PKG-17 | Source title discovery preserves escaped quotes and embedded quote characters; explicit POSIX/WINDOWS guards restrict per-target expectations. |
 | T-META-99 | REQ-PKG-10 | Review archive: review/ holds only INDEX.md (35 unique commit-pinned permalinks) plus the live MAN01/FINAL records; every review/ link in docs/renewal resolves; HANDOFF is at most 15 lines. |
+| T-META-93 | REQ-PKG-10, REQ-PKG-16 | Round 10 docs: HANDOFF states the R35 99/100 rule with MAN-04 deferred and round 9; the argon record is marked superseded; CHANGELOG lists the round-9 changes; README stays CRLF and has the T/S/M and Known limitations sections; section 7 code counts equal SPEC 7.5; 90_ACCEPTANCE names the current SPEC draft and states the round-9 FX-71 impact. |
 
 Reviewed R33 golden changes: FX-30..33/classification.json and classification.review.json, GOLDEN.lock only. FX-30 csv becomes T/NONE without warning; FX-31 html, FX-32 md, FX-33 epub become T/NONE with W_MEDIA_NOT_INSPECTED. Core triage remains unchanged. Historical independent review is preserved and the implementing review's amendment is explicitly labeled.
 
@@ -624,7 +625,7 @@ Real CI round-two regression checks: CT-03 retains complete report, input hash a
 `trace.py attest` validates the schema (`id`, named `reviewer` = peer/profile/model for MAN-01..03, independent of implementer for MAN-01, `date`, `commit` = exact frozen candidate, `inputs[]`, `checks[]` all PASS, `evidence[]`, `verdict: PASS`). A passing schema check is not evidence of authorship, meaning or disclosure accuracy and is reported as MANUAL, outside automated coverage.
 
 Open items (DRAFT-3 sync):
-1. The shell code table (20_SHELL 6) now matches SPEC 7.5 by inspection (28 E_, 22 W_); `JT-SHL-19-01` is the authority and was not run.
+1. The shell code table (20_SHELL 6) now matches SPEC 7.5 by inspection (30 E_ + 24 W_ = 54 codes); `JT-SHL-19-01` is the authority and was not run.
 2. FX-71 fixtures are recordings of the real engine (SPEC DRAFT-3.5); re-recording on the release host is tracked as E-10 in 90_ACCEPTANCE section 7 (External evidence pending).
 3. TODO-VERIFY carried from 20/25, not settleable by tests: actual target installs and generated license review (PT-04; release/reference baseline Core 0.3.7 is published on PyPI), Windows signal/blocked-request behavior (JT-16 on real Windows runners), attestation eligibility (PT-13), terminal env launch commands per OS (PT-22), Obsidian min/current versions (MAN-04).
 4. REQ-PKG-18/19/21 describe post-publication procedures; pre-release only their tooling is testable (PT-18/19/21). R35: pre-publication requires automated 93/93 + MAN-01..03 PASS (99/100), with MAN-04 explicitly `deferred: post-release (R35)`. Actual MAN-04 joins REQ-PKG-19/21 post-release validators and earns the final point only when attested. Failed MAN-04 triggers REQ-PKG-20 rollback; post-deploy/cleanup remain unscored.
