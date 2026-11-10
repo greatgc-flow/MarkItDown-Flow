@@ -33,6 +33,7 @@ from typing import TypedDict
 
 from . import classify, core_guard, exiftool, hashing, sniff_io, triage, write
 from .contracts import Issue, SniffResult
+from .executable import resolve_executable
 
 _MEDIA_FORMATS = frozenset({"docx", "pptx", "xlsx", "hwp", "hwpx"})
 _PAGE_JOIN = "\n\n"
@@ -104,9 +105,13 @@ def convert_legacy(data: bytes, sniff: dict, *, run_temp: Path, timeout_s: float
     """
     core_guard.check()
     try:
+        # The default soffice is looked up in absolute PATH folders only, never the current folder (C1).
+        program = (os.environ.get('SOFFICE_PATH', '').strip()
+                   or resolve_executable('soffice', os.environ.get('PATH', '')))
+        if not program:
+            raise FileNotFoundError('soffice')
         body = core_convert(data, _hint(sniff['format']), extract_media=str(run_temp / 'media'),
-                            media_base_dir=str(run_temp),
-                            libreoffice_path=os.environ.get('SOFFICE_PATH', '').strip() or 'soffice',
+                            media_base_dir=str(run_temp), libreoffice_path=program,
                             libreoffice_timeout=timeout_s)
         marker = _DERIVED.match(body)
         if marker is None or marker[2] != _hint(sniff['format']):

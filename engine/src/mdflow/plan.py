@@ -52,12 +52,16 @@ def plan(selected: dict, render_meta: dict, lookup: dict,
     source = {k: deepcopy(options["file"][k]) for k in ("path", "sha256", "bytes", "format")}
     threshold = options.get("approve_threshold", 20)
     classification = {k: deepcopy(options["classification"][k]) for k in ("route", "need", "label", "action", "decision", "coverage_state")}
+    # Globs also see the absolute source path ('/'-separated; zip members as container + member), so a folder
+    # pattern works for directly selected files. Only the matching patterns are kept, never that path.
+    names = [source["path"].casefold()] + ([options["origin"].casefold()] if options.get("origin") else [])
+    hits = [p for p in options.get("sensitive", []) if any(fnmatchcase(name, p.casefold()) for name in names)]
     approved = dict(file=source, classification=classification, provider=provider,
         provider_fingerprint=provider_fingerprint(provider_meta, prompt), prompt_version=prompt,
         dpi=options.get("dpi", 200), units=units, units_total=len(units), keys_unique=len(keys),
         max_requests=maximum, est_max_cost=cost, cost_known=cost is not None,
         approve_threshold=threshold, threshold_exceeded=len(keys) > threshold,
-        sensitive_hits=[p for p in options.get("sensitive", []) if fnmatchcase(source["path"].casefold(), p.casefold())],
+        sensitive_hits=hits,
         oversize=oversize)
     if options.get('preconversion'):
         approved['preconversion'] = deepcopy(options['preconversion'])

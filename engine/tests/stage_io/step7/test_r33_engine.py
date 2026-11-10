@@ -357,6 +357,8 @@ def test_T_CNV_95_public_marker_and_derived_bounds_fail_closed(tmp_path, monkeyp
             return body
         return original(data, ext, **kwargs)
     monkeypatch.setattr(convert, 'core_convert', controlled)
+    # Without an override mdflow refuses before Core when soffice is not on PATH; reach the marker checks.
+    monkeypatch.setenv('SOFFICE_PATH', str(tmp_path / 'soffice'))
     result = orchestrate.run([source, sibling], dict(out=tmp_path / 'out', cache=tmp_path / 'cache',
         preconvert_legacy=True, preconvert_timeout_s=9, max_bytes=80))
     assert result['exit'] == 2
