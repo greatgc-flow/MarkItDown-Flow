@@ -505,6 +505,7 @@ Every REQ id defined in `10_SPEC.md` (incl. new REQ-SNF-09), `20_SHELL.md` (SHL-
 | T-GEN-90 | REQ-PKG-06 | M3: package admission requires nonempty platform. |
 | T-META-91 | REQ-PKG-02, REQ-PKG-03, REQ-GEN-01 | R34: reference Core 0.3.7, DRAFT-3.8, actual three direct dependencies. |
 | T-META-92 | REQ-PKG-10, REQ-PLN-01 | M3: handoff and class-specific Plan catalog reflect current ownership. |
+| T-META-93 | REQ-PKG-10, REQ-PKG-16 | Round 10/11 docs: HANDOFF states the R35 99/100 rule with MAN-04 deferred, round 9 with C1-C4 and the E-07 `trace.py score` step; the argon record is marked superseded and keeps MAN-01..03 required; R4 notes R38; CHANGELOG lists the round-9 changes (Keep OCR pending launches no conversion on close; Security last, C1-C4); README stays CRLF and has the T/S/M section (local text, report-only labels, remote OCR after approval, `python -I -m mdflow classify`) and Known limitations; section 7 code counts and the 20_SHELL section 6 tables equal SPEC 7.5; 90_ACCEPTANCE names the current SPEC draft and states the round-9 FX-71 impact. |
 | T-META-94 | REQ-PKG-03, REQ-GEN-10 | R34: minimum 0.3.7 and another compatible endpoint check the Core 0.3.7 reference seal without substituting the installed version. |
 | T-GEN-92 | REQ-PKG-09, REQ-PKG-01 | M3: observe recorder child argv with -I, excluding work-directory modules and source environment injection. |
 | T-CLS-91 | REQ-CLS-06, REQ-GEN-07 | M4: numeric candidate id is refused without losing a sibling. |
@@ -556,7 +557,6 @@ Red logs: `build/trace/redgreen/r29-*.red.log` (R29 is green at baseline by audi
 | T-META-97 | REQ-PKG-10, REQ-PKG-17 | Actual scorer complete positive; omit, omit+duplicate, substitute, skip/fail, stale candidate/source, tampered/missing collection and omitted-from-both negatives. |
 | T-META-98 | REQ-PKG-10, REQ-PKG-17 | Source title discovery preserves escaped quotes and embedded quote characters; explicit POSIX/WINDOWS guards restrict per-target expectations. |
 | T-META-99 | REQ-PKG-10 | Review archive: review/ holds only INDEX.md (35 unique commit-pinned permalinks) plus the live MAN01/FINAL records; every review/ link in docs/renewal resolves; HANDOFF is at most 15 lines. |
-| T-META-93 | REQ-PKG-10, REQ-PKG-16 | Round 10 docs: HANDOFF states the R35 99/100 rule with MAN-04 deferred and round 9; the argon record is marked superseded; CHANGELOG lists the round-9 changes; README stays CRLF and has the T/S/M and Known limitations sections; section 7 code counts equal SPEC 7.5; 90_ACCEPTANCE names the current SPEC draft and states the round-9 FX-71 impact. |
 
 Reviewed R33 golden changes: FX-30..33/classification.json and classification.review.json, GOLDEN.lock only. FX-30 csv becomes T/NONE without warning; FX-31 html, FX-32 md, FX-33 epub become T/NONE with W_MEDIA_NOT_INSPECTED. Core triage remains unchanged. Historical independent review is preserved and the implementing review's amendment is explicitly labeled.
 
