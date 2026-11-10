@@ -20,7 +20,7 @@ from typing import Sequence
 from ..contracts import ProviderMeta, UnitResult
 from ..executable import resolve_executable
 from ..report import home_relative
-from ._errors import ProviderConfigError
+from ._errors import ProviderConfigError, failed as _failed
 
 ALLOWED_ENV = frozenset(
     {"PATH", "SYSTEMROOT", "SYSTEMDRIVE", "COMSPEC", "HOME", "USERPROFILE", "TEMP", "TMP", "LANG", "LC_ALL"}
@@ -80,13 +80,6 @@ def _kill_tree(child: subprocess.Popen) -> None:
         pass
     if child.poll() is None:
         child.kill()
-
-
-def _failed(code: str, message: str, started: float, exit_status: int | None = None) -> UnitResult:
-    return {
-        "status": "failed", "text": None, "duration_ms": int((time.monotonic() - started) * 1000),
-        "error": {"code": code, "message": message, "exit": exit_status},
-    }
 
 
 class CommandProvider:

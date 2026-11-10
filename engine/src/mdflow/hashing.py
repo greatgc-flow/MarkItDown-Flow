@@ -4,6 +4,8 @@ import json
 import re
 from typing import Mapping
 
+SHA256_HEX = re.compile(r"[0-9a-f]{64}")
+
 
 def canonical_json(value: object) -> bytes:
     return json.dumps(value, sort_keys=True, separators=(",", ":"),
