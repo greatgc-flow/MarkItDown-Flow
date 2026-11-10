@@ -28,6 +28,8 @@ import json
 import os
 from pathlib import Path
 import platform
+import re
+import shlex
 import shutil
 import subprocess
 import sys
@@ -41,6 +43,15 @@ LINE_LIMIT = 64 * 1024
 MODEL = "gpt-4.1-mini"
 PLACEHOLDER = "<WORK>"  # stands for the recording work directory wherever the engine printed it absolutely
 LARGE_PAGES = 200  # the pretty Plan stdout must exceed the 64 KiB progress-line limit
+ABSOLUTE_PATH = re.compile(rb"""(?<![A-Za-z0-9])[A-Za-z]:[\\/]|(?<![\w\x80-\xff~:/\\])/(?!/)[^/\\\s"'<>:{}|]+(?:/|(?=[\s"'\\]|$))""")
+
+
+def check_portable(name: str, data: bytes) -> None:
+    """Check bytes, including JSON-escaped paths; never rely on known host roots."""
+    if ABSOLUTE_PATH.search(data.replace(b"\\/", b"/")):
+        raise SystemExit(f"{name}: recording leaks an absolute path")
+    if SENTINEL.encode() in data:
+        raise SystemExit(f"{name}: recording leaks the credential sentinel")
 
 
 def load_gen():
@@ -272,6 +283,17 @@ class Recorder:
         # Use the selected interpreter's installed engine, never a source-tree injection.
         base.update(HOME=str(home), USERPROFILE=str(home), TMP=str(tmp), TEMP=str(tmp),
                     PYTHONIOENCODING="utf-8", PYTHONUTF8="1")
+        # Resolve the command scenario under HOME too: its destination must not expose this interpreter's path.
+        bin_dir = work / "bin"
+        bin_dir.mkdir(parents=True, exist_ok=True)
+        if os.name == "nt":
+            (bin_dir / "python.cmd").write_text('@echo off\n"' + sys.executable.replace('%', '%%') + '" %*\n',
+                                                encoding="utf-8")
+        else:
+            shim = bin_dir / "python"
+            shim.write_text("#!/bin/sh\nexec " + shlex.quote(sys.executable) + ' "$@"\n', encoding="utf-8")
+            shim.chmod(0o755)
+        base["PATH"] = str(bin_dir) + os.pathsep + base.get("PATH", "")
         self.env = base
         self.version = None
 
@@ -300,6 +322,7 @@ class Recorder:
 
     def save(self, name: str, data: bytes, *, argv, exit_code, stream, env_names, note=""):
         data, replaced = self.portable(data)
+        check_portable(name, data)
         entry = {"kind": "recorded", "stream": stream, "argv": argv, "exit": exit_code, "env_names": env_names,
                  "bytes": len(data), "sha256": hashlib.sha256(data).hexdigest(),
                  "eol": "crlf" if b"\r\n" in data else "lf"}
@@ -433,6 +456,7 @@ class Recorder:
         forbidden = [SENTINEL, *paths, *(json.dumps(p)[1:-1] for p in paths)]
         for name, entry in self.entries.items():
             if entry["kind"] == "recorded":
+                check_portable(name, self.entry_bytes(name))
                 text = self.entry_bytes(name).decode("utf-8")
                 for bad in forbidden:
                     if bad and bad in text:
@@ -481,8 +505,6 @@ def record(out: Path, work: Path) -> None:
     work.mkdir(parents=True)
     shutil.rmtree(out, ignore_errors=True)
     out.mkdir(parents=True)
-    if shutil.which("python") is None:
-        raise SystemExit("`python` must be on PATH for the command-provider scenario")
     recorder = Recorder(out, work)
     recorder.build_inputs()
     recorder.scenarios()
@@ -504,6 +526,11 @@ def verify(out: Path) -> int:
         if not path.is_file():
             continue
         data = path.read_bytes()
+        if entry["kind"] == "recorded":
+            try:
+                check_portable(name, data)
+            except SystemExit as exc:
+                problems.append(str(exc))
         if hashlib.sha256(data).hexdigest() != entry["sha256"] or len(data) != entry["bytes"]:
             problems.append(f"hash mismatch (edited?): {name}")
         if entry["kind"] == "derived":

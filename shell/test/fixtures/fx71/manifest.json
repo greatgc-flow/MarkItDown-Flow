@@ -19,8 +19,8 @@
     "exiftool": "unavailable",
     "exiftool_status": "unusable",
     "exiftool_source": "PATH",
-    "libreoffice": "unavailable",
-    "libreoffice_status": "unusable",
+    "libreoffice": "26.8.2.2",
+    "libreoffice_status": "ok",
     "libreoffice_source": "PATH"
   },
   "placeholder": {
@@ -34,7 +34,7 @@
       "transform": "t_crlf",
       "description": "LF to CRLF",
       "bytes": 35940,
-      "sha256": "3f55ca98284a8fe2f9e34091536097e25204ba81b1bab9640a29de4327dee8cb"
+      "sha256": "c8b7edb5b28caa1c325af02db0d25ed06937dd6b5f50b5c2ea423889efab4dbb"
     },
     "approve-required.crlf.split.json": {
       "kind": "derived",
@@ -42,7 +42,7 @@
       "transform": "t_split_crlf",
       "description": "UTF-8 / CR|LF split chunks (CRLF)",
       "bytes": 49022,
-      "sha256": "cd9fdf77da4f336e82dd381840a54b379c5922dc6c8e77a03e8c966bfc5e2cea"
+      "sha256": "cd966a35146a1084b4369af6493db32531e6f003618a87253c7f0bb3b1181719"
     },
     "approve-required.line-65536.jsonl": {
       "kind": "derived",
@@ -50,7 +50,7 @@
       "transform": "t_line_exact_limit",
       "description": "one valid line of exactly 65536 bytes (allowed)",
       "bytes": 101192,
-      "sha256": "3791aad411317e6356b494e03ddac13106f03c1910ce00334427e0f331a7a0fd"
+      "sha256": "a2a151282275beaf0ffe09fcef44cc83dba34c4c625890a83534e6e3d62acd52"
     },
     "approve-required.line-65537.jsonl": {
       "kind": "derived",
@@ -58,7 +58,7 @@
       "transform": "t_line_over_limit",
       "description": "one line of 65537 bytes (over the limit)",
       "bytes": 101193,
-      "sha256": "1365c8a67988732321dc28434b8755948a81ffc3659e7f4e802b4fd711d23b02"
+      "sha256": "bc9fd4a8104608ca5c43e1301303e2329137c30144b3f449f76f0a68d383650a"
     },
     "approve-required.progress.jsonl": {
       "kind": "recorded",
@@ -87,7 +87,7 @@
         "MDFLOW_API_KEY"
       ],
       "bytes": 35940,
-      "sha256": "3f55ca98284a8fe2f9e34091536097e25204ba81b1bab9640a29de4327dee8cb",
+      "sha256": "c8b7edb5b28caa1c325af02db0d25ed06937dd6b5f50b5c2ea423889efab4dbb",
       "eol": "crlf",
       "note": "no --yes: one approve_required summary event per file needing consent; exit 3"
     },
@@ -97,7 +97,7 @@
       "transform": "t_split",
       "description": "UTF-8 / line-break split chunks (LF)",
       "bytes": 48576,
-      "sha256": "4248d0a2df8253946a81ec6dd243be83fd392d4c2cb855b2660485ecc731a453"
+      "sha256": "26d067a9c875f9b788fea30d8d7c052e0869af18830351b644198a784e94f812"
     },
     "approve-required.stdout.json": {
       "kind": "recorded",
@@ -126,7 +126,7 @@
         "MDFLOW_API_KEY"
       ],
       "bytes": 109852,
-      "sha256": "b526b04d149024c7385cca531adc5374607849a958e10b454668113ef6235efe",
+      "sha256": "e770072aef0954064070d88fa34c80b25686faa5703ec36c9f7f889f2e7e0f16",
       "eol": "crlf",
       "note": "no --yes: one approve_required summary event per file needing consent; exit 3"
     },
@@ -136,7 +136,7 @@
       "transform": "t_unknown_events",
       "description": "unknown ev values + additive field inserted",
       "bytes": 44799,
-      "sha256": "3f35b9096daf54a393616f6f08b014d8653f18eba43c5b188bad29b6bdab29b5"
+      "sha256": "d7e3a8d7b7ae7bd193281ddba739888b70b522dd470b44670ebab4c0c4191ee4"
     },
     "approve-required.unterminated-70000.jsonl": {
       "kind": "derived",
@@ -144,7 +144,7 @@
       "transform": "t_unterminated_oversize",
       "description": "70000-byte unterminated tail line",
       "bytes": 70196,
-      "sha256": "5211adb5afac3ea8ae8abe3550fe03ec10d58b8816579adaf5461df8046baa05"
+      "sha256": "d172665a828083326cd7866623b17b30dcb7606513a7473e29453c90c0437191"
     },
     "consent-1-plan.stdout.json": {
       "kind": "recorded",
@@ -170,8 +170,8 @@
       ],
       "exit": 3,
       "env_names": [],
-      "bytes": 8735,
-      "sha256": "e1e1326e4cac90cd68df5f15ab86e52b0c0f9c2aceb482c3ecd1e0c31df3ff12",
+      "bytes": 8799,
+      "sha256": "854293e257b94c4e460804ba4da41c6869439d9d25abebe644a8269b068e8b60",
       "eol": "crlf"
     },
     "consent-2-pending.progress.jsonl": {
@@ -202,8 +202,8 @@
       ],
       "exit": 3,
       "env_names": [],
-      "bytes": 9487,
-      "sha256": "7d986d450b74499b7d02e360c70709aac9a9c85ff2c8906c0c3b12746f4f82a4",
+      "bytes": 9537,
+      "sha256": "d4c830fa1b1a68b70d50f0c391b9a984c80f10e48d917824ecdbe979e2c8c43b",
       "eol": "crlf"
     },
     "consent-2-pending.stdout.json": {
@@ -235,7 +235,7 @@
       "exit": 3,
       "env_names": [],
       "bytes": 8782,
-      "sha256": "b5d2c2c8509da2fd59c2789570bceb540a512746e0e43e9d69aa7962fa06c9bf",
+      "sha256": "f9e8990a5729c0d879fd1ea638eeb0a33aba2aac163a1b255a96e128cfb83a7b",
       "eol": "crlf"
     },
     "consent-3-partial.progress.jsonl": {
@@ -270,8 +270,8 @@
       ],
       "exit": 3,
       "env_names": [],
-      "bytes": 9159,
-      "sha256": "ac9793b7af3fbfa0c5ef6b49ae76fa8b64dee7832a536db5827b84da3b3897aa",
+      "bytes": 9193,
+      "sha256": "5324b4fd4236fdbb3d05475d5013f301f111ab463bdb4b130bb12223964ee68f",
       "eol": "crlf",
       "note": "one file approved and executed; the rest stay pending (exit 3)"
     },
@@ -308,7 +308,7 @@
       "exit": 3,
       "env_names": [],
       "bytes": 8836,
-      "sha256": "8572526edbf60920d4ed38edef1b60e0b8aad443ac673fd798067bafdcf1ce97",
+      "sha256": "005572654356dcbc5c82032aee3c2d073e4cb7eefa3ee1038481e1dc09fc0181",
       "eol": "crlf",
       "note": "one file approved and executed; the rest stay pending (exit 3)"
     },
@@ -336,8 +336,8 @@
       ],
       "exit": 3,
       "env_names": [],
-      "bytes": 8735,
-      "sha256": "f65d37db3e9ac4ab7d733bfbc516e8d150219ec15f8dde312d84dc6b9198f05d",
+      "bytes": 8799,
+      "sha256": "a695cce902492ad9197e06fc6ae851c5cad3cecefbaa90ce6ac3f430a664e9eb",
       "eol": "crlf"
     },
     "consent-5-approved.progress.jsonl": {
@@ -372,8 +372,8 @@
       ],
       "exit": 0,
       "env_names": [],
-      "bytes": 8520,
-      "sha256": "b92e1b6180146af9ab295fce4cfe0d05061eff435fe51e4e659e57b70bdfad11",
+      "bytes": 8521,
+      "sha256": "0a540a27af81127339b35ff1861391256839ed1bd0a36ecd6bcc119da6a5685d",
       "eol": "crlf"
     },
     "consent-5-approved.stdout.json": {
@@ -409,7 +409,7 @@
       "exit": 0,
       "env_names": [],
       "bytes": 8670,
-      "sha256": "888e022a32bb7a23309c93df4ba00c3138e6257214262c9259d09b6d91b170bc",
+      "sha256": "5eb067a0b489370ec443e263a8a6e57cdd4e0a850b31ce1829a40b0923dc1cef",
       "eol": "crlf"
     },
     "consent-6-warm.progress.jsonl": {
@@ -440,8 +440,8 @@
       ],
       "exit": 0,
       "env_names": [],
-      "bytes": 8526,
-      "sha256": "7ce05fb8e182cfc4b7ee355fd93258f9e823118748dcbbb78791fa70d4a2217d",
+      "bytes": 8528,
+      "sha256": "fb8ebdf4470b672a89903a2bfa95f934f10e7d5b1b24b472542d5cc46f469616",
       "eol": "crlf",
       "note": "warm rerun without --yes: no approve_required, provider_calls 0"
     },
@@ -474,7 +474,7 @@
       "exit": 0,
       "env_names": [],
       "bytes": 8532,
-      "sha256": "2ed0dc3ef701323bd218c764876bbb5d9c42d23e973b6f2482c04c8a586b58d4",
+      "sha256": "29ccf7824742cbb1da8475c3270aa365fded3ae3bf33fc2500e36a2cbcedfba4",
       "eol": "crlf",
       "note": "warm rerun without --yes: no approve_required, provider_calls 0"
     },
@@ -485,7 +485,7 @@
       "exit": null,
       "env_names": [],
       "bytes": 161,
-      "sha256": "72f1d451da8a8cc515ab6d06174b4564e2ec7ff158d3a49b0e4b06435473b5a8",
+      "sha256": "7f02389425190a2e6f3c4ac6a129e43d116e23d8192913b5b0f0a6135f984aa8",
       "eol": "lf",
       "note": "yes-file passed to the next run"
     },
@@ -496,7 +496,7 @@
       "exit": null,
       "env_names": [],
       "bytes": 291,
-      "sha256": "df1ef434cc949070b87caeb5ec92dd5af2920057d13620cf91963ab4dfad7f32",
+      "sha256": "1c9062333e8396aec3973db34d773c5ca451c8496a8e760d333ae2df7fd64f38",
       "eol": "lf",
       "note": "yes-file passed to the next run"
     },
@@ -623,7 +623,7 @@
       "exit": 2,
       "env_names": [],
       "bytes": 5829,
-      "sha256": "a8515d7aabadefec4f4bf7697710e37eeec3cce5961ef10045173c1aeba7ede1",
+      "sha256": "720f228d5f0307130faf715e3b5ee838f5690a91f9fae3142a61e32b7b49506e",
       "eol": "crlf"
     },
     "run-corrupt.stdout.json": {
@@ -646,7 +646,7 @@
       "exit": 2,
       "env_names": [],
       "bytes": 3700,
-      "sha256": "259a626ee7a8c1009c413a44a26e5277195f4bc51f442d3257e9cf5c7e857ccf",
+      "sha256": "c9fbd9e402185b18c54cd3dfb179f9b43ffd5a8ddfacaf96a555ab80cdfd2c02",
       "eol": "crlf"
     },
     "run-corrupt.triage-extra.stdout.json": {
@@ -655,7 +655,7 @@
       "transform": "t_triage_extra",
       "description": "unknown Core field added inside files[].triage",
       "bytes": 4106,
-      "sha256": "b7e9cb6fcdd92aee4bb37fdd40dd560df499eabfd2730e8420fa1f5397bd1639"
+      "sha256": "a05c1c10b4c1feeb2bcf2e039d647a8934012eb7966c5a03b2d131081817d2d6"
     },
     "run-mixed.progress.jsonl": {
       "kind": "recorded",
@@ -677,8 +677,8 @@
       ],
       "exit": 2,
       "env_names": [],
-      "bytes": 14162,
-      "sha256": "3261170e827ff2eb2cc2d02e3df4dbd3227df8fac533112d3a5a6a95e4f3bb65",
+      "bytes": 14163,
+      "sha256": "fa5c2e7f5b64e973135c774b835515d6e6611e5dd3d5d60a90e2ae75abec1b34",
       "eol": "crlf",
       "note": "provider none; hidden file skipped; corrupt and empty PDFs; exit 2"
     },
@@ -703,7 +703,7 @@
       "exit": 2,
       "env_names": [],
       "bytes": 11914,
-      "sha256": "a5d263cb02a1def29c2fee43a92c07739dd24206b3324b384990524530cf2525",
+      "sha256": "64f6ad6ecee7003d06ccf66408069e2715be187dc6381e4ff6527396b5f18de8",
       "eol": "crlf",
       "note": "provider none; hidden file skipped; corrupt and empty PDFs; exit 2"
     },
@@ -713,7 +713,7 @@
       "transform": "t_truncate_report",
       "description": "truncated run report",
       "bytes": 7148,
-      "sha256": "bdcedecaf22203f651e08ff5a7b38d1a8ca3592a065260d8cb0c144af777b34a"
+      "sha256": "23598057e6fcea79196e8948e26f3fdb66566c4137ecc0cb829fa11998e29b53"
     },
     "selftest.json": {
       "kind": "recorded",
@@ -756,16 +756,16 @@
       "derived_from": "version.json",
       "transform": "version_variant:core-out-of-range",
       "description": "version response variant: core-out-of-range",
-      "bytes": 395,
-      "sha256": "d55294ee9b0a039d19403f6a7e559b9336822aa46970b5dafa1c8b0b50529aba"
+      "bytes": 386,
+      "sha256": "95c8ea56e755456763d8bdd1850c825a115a0c80cd58c8b94dfd870e47adf400"
     },
     "version.core-unavailable.json": {
       "kind": "derived",
       "derived_from": "version.json",
       "transform": "version_variant:core-unavailable",
       "description": "version response variant: core-unavailable",
-      "bytes": 401,
-      "sha256": "00a46851c6acd25a6e35c89e9d0f7d42c07271ff0fd5a72b8cba363f5c2b2dc0"
+      "bytes": 392,
+      "sha256": "11462028c2777dc4ee89599d407983e7be232105836ecb7bb1815d1128924436"
     },
     "version.json": {
       "kind": "recorded",
@@ -779,8 +779,8 @@
       ],
       "exit": 0,
       "env_names": [],
-      "bytes": 366,
-      "sha256": "8de821739c48f49d685ee03a9455a3f067557f634d51dbefcd52b32719e01ae5",
+      "bytes": 357,
+      "sha256": "3c6750c519e46f52dd512dbf40617dbad30f1959aa3d8da1d9c24db34e44d647",
       "eol": "crlf"
     },
     "version.missing-markitdown-gc.json": {
@@ -788,120 +788,120 @@
       "derived_from": "version.json",
       "transform": "version_variant:missing-markitdown-gc",
       "description": "version response variant: missing-markitdown-gc",
-      "bytes": 367,
-      "sha256": "52f7c0d72159add949b74e9cde8bfcea62936429e0961aea62e85fab40aaf12f"
+      "bytes": 358,
+      "sha256": "ad0ff7394c35ad9739ce5e38e509c74909464cec3ede48ee79004745164e9975"
     },
     "version.missing-mdflow.json": {
       "kind": "derived",
       "derived_from": "version.json",
       "transform": "version_variant:missing-mdflow",
       "description": "version response variant: missing-mdflow",
-      "bytes": 374,
-      "sha256": "2f7abc34223f62ddd5301deccf33e568107f0fef9f2d25d6b2269196c835b5c8"
+      "bytes": 365,
+      "sha256": "1d4553ea614f95c7e0c0fbc89e58972754ace68dcd35e4ba87a76bbd5188f293"
     },
     "version.missing-pillow.json": {
       "kind": "derived",
       "derived_from": "version.json",
       "transform": "version_variant:missing-pillow",
       "description": "version response variant: missing-pillow",
-      "bytes": 373,
-      "sha256": "39b38166a3ba0c2252611cf16cf4053562b48339ce9857b61cdffa5887493c43"
+      "bytes": 364,
+      "sha256": "0aaff6543524d39c85a7dc190325b57438be394a91f398dc6a022025ad94d675"
     },
     "version.missing-platform.json": {
       "kind": "derived",
       "derived_from": "version.json",
       "transform": "version_variant:missing-platform",
       "description": "version response variant: missing-platform",
-      "bytes": 352,
-      "sha256": "51e51b952c1ce65877c11229a13e36a3cceb8add6a308943557f9f2672abc626"
+      "bytes": 343,
+      "sha256": "ef5602e6727907447ddcb1b328f25ffcecdaa75596731f5ad59ec116d421a76d"
     },
     "version.missing-protocol.json": {
       "kind": "derived",
       "derived_from": "version.json",
       "transform": "version_variant:missing-protocol",
       "description": "version response variant: missing-protocol",
-      "bytes": 378,
-      "sha256": "664876b7fb54ad6121f2dc6e8b6c5de8d08f61c92b0e687e62e9823dfac0d851"
+      "bytes": 369,
+      "sha256": "cd44cc2a37d63e8e6fa8b7a749e92f14c95673f87594f4e4e9196ffa095fe755"
     },
     "version.missing-pypdfium2.json": {
       "kind": "derived",
       "derived_from": "version.json",
       "transform": "version_variant:missing-pypdfium2",
       "description": "version response variant: missing-pypdfium2",
-      "bytes": 370,
-      "sha256": "8d4183d3f336aaca14c586f2c4222a3d36dc5db5c8c89f0b6c9fb0dd6422dff8"
+      "bytes": 361,
+      "sha256": "1093b60dd48d8737836180c4dfbb42c86f09d057c82a814e64e7f75a02654615"
     },
     "version.missing-python.json": {
       "kind": "derived",
       "derived_from": "version.json",
       "transform": "version_variant:missing-python",
       "description": "version response variant: missing-python",
-      "bytes": 372,
-      "sha256": "58b4350deac75f4c55a27ac470f3acd376c928e6c9534d8d781447d674b83950"
+      "bytes": 363,
+      "sha256": "0252083c53bc52cf0a7f0f19a839941e993859a94bf33b7f93d33f1e30c95c6a"
     },
     "version.missing-triage_schema.json": {
       "kind": "derived",
       "derived_from": "version.json",
       "transform": "version_variant:missing-triage_schema",
       "description": "version response variant: missing-triage_schema",
-      "bytes": 373,
-      "sha256": "0bf290e4e8cb4c106ab8e9e5c1f1658985b78aedd0a65c5f05630cb916e579f3"
+      "bytes": 364,
+      "sha256": "a5125483ffa3ca9d213484671993c8c0e8c8e339ec69d059970c8eb46da349f0"
     },
     "version.protocol-2.json": {
       "kind": "derived",
       "derived_from": "version.json",
       "transform": "version_variant:protocol-2",
       "description": "version response variant: protocol-2",
-      "bytes": 395,
-      "sha256": "a0739da4dae637f93e2eaed3bdd9f79b5378efe393f19e6b5599f0599be52887"
+      "bytes": 386,
+      "sha256": "7704db0b5ff0b4be1ac9a1e4b47f2f767a36dba6a8cbf18de4ea3adf69b2675d"
     },
     "version.protocol-string.json": {
       "kind": "derived",
       "derived_from": "version.json",
       "transform": "version_variant:protocol-string",
       "description": "version response variant: protocol-string",
-      "bytes": 397,
-      "sha256": "729dc4b42a19c61f06bc7adfa1d3923084994329f9ff292ebe11101fd23ec828"
+      "bytes": 388,
+      "sha256": "9d114eb3f3ad14bf05166cf7347c0bcc642f2dc9e93fa7aa3bf10b39ca608914"
     },
     "version.python-3.15.json": {
       "kind": "derived",
       "derived_from": "version.json",
       "transform": "version_variant:python-3.15",
       "description": "version response variant: python-3.15",
-      "bytes": 394,
-      "sha256": "2d7682a4a3d7bcc7cc7db8b59729df1baae997728dc5ee37654b7987ee3cc3c9"
+      "bytes": 385,
+      "sha256": "ae852ab0aae429df0cd03232f2df4f7b3d965ac12473142e10f1d857349923b0"
     },
     "version.schema-2.json": {
       "kind": "derived",
       "derived_from": "version.json",
       "transform": "version_variant:schema-2",
       "description": "version response variant: schema-2",
-      "bytes": 395,
-      "sha256": "452d2754d9529fe203b7a2fec7c76b51ac3ccff8701d09f9677fd1d70f2383ee"
+      "bytes": 386,
+      "sha256": "4e098ccb1b38df4f47a7f8c4d79d743177c5cfb73ccfed162e5e21cb076da6da"
     },
     "version.unknown-optional-field.json": {
       "kind": "derived",
       "derived_from": "version.json",
       "transform": "version_variant:unknown-optional-field",
       "description": "version response variant: unknown-optional-field",
-      "bytes": 443,
-      "sha256": "fa4d53bf9bb1a3f152efa16ece44d12a6f8295b51771a65a91627df83917739a"
+      "bytes": 434,
+      "sha256": "b63e0a87dccc1dbdabf830451cabde45d4cc7f1c1d68bed977896cc881a001b3"
     },
     "version.wrong-pillow.json": {
       "kind": "derived",
       "derived_from": "version.json",
       "transform": "version_variant:wrong-pillow",
       "description": "version response variant: wrong-pillow",
-      "bytes": 395,
-      "sha256": "40f73aaf851c3a370cab9d8c5d0e05f886f0733c286b341320f80d54bdc04ecc"
+      "bytes": 386,
+      "sha256": "b40dafeed73a99f4b14b60b1b97e63537ac030c76b11b5ff9eeaac355b4b79f1"
     },
     "version.wrong-renderer.json": {
       "kind": "derived",
       "derived_from": "version.json",
       "transform": "version_variant:wrong-renderer",
       "description": "version response variant: wrong-renderer",
-      "bytes": 394,
-      "sha256": "e581808b4a42028ad461d009cd5eef16025a621aa4ff23f7835c2c70aaa34909"
+      "bytes": 385,
+      "sha256": "6272396ec45aa8dccfbce423c9bcc5f5ac1c16ef5e9c34abfe89e17bf7ebc4d3"
     }
   }
 }

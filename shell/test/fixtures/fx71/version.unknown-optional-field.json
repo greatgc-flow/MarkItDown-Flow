@@ -10,8 +10,8 @@
   "exiftool": "unavailable",
   "exiftool_status": "unusable",
   "exiftool_source": "PATH",
-  "libreoffice": "unavailable",
-  "libreoffice_status": "unusable",
+  "libreoffice": "26.8.2.2",
+  "libreoffice_status": "ok",
   "libreoffice_source": "PATH",
   "future_optional": {
     "ignored": true

@@ -19,6 +19,7 @@ from typing import Sequence
 
 from ..contracts import ProviderMeta, UnitResult
 from ..executable import resolve_executable
+from ..report import home_relative
 from ._errors import ProviderConfigError
 
 ALLOWED_ENV = frozenset(
@@ -56,7 +57,8 @@ def _read_ready(pipe) -> bytes | None:
 
 
 def canonical_destination(argv_template: Sequence[str]) -> str:
-    return "command:" + json.dumps(list(argv_template), sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+    return "command:" + json.dumps([home_relative(word) for word in argv_template],
+                                  sort_keys=True, separators=(",", ":"), ensure_ascii=False)
 
 
 def _failed(code: str, message: str, started: float, exit_status: int | None = None) -> UnitResult:
@@ -80,8 +82,8 @@ class CommandProvider:
         if not template:
             raise ProviderConfigError("command template is empty")
         if not os.path.dirname(template[0]):
-            # Pin the vouched-for program: the absolute path is part of destination, hence of the plan hash and
-            # cache fingerprint. Unresolved names stay bare and are refused in _capture (never a cwd lookup).
+            # Pin the vouched-for program; destination shortens only its home prefix, retaining program identity
+            # in the plan hash/cache fingerprint. Unresolved names are refused in _capture (never a cwd lookup).
             template[0] = resolve_executable(template[0], os.environ.get("PATH", "")) or template[0]
         self._template = template
         self._env_names = sorted(set(env_names))
