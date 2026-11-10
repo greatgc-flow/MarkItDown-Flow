@@ -393,6 +393,11 @@ it(R10('JT-10 setup diagnostics surface the exiftool status reported by the engi
   expect(KO['shell.setup.exiftool']?.length).toBeGreaterThan(0);
   expect(KO['shell.setup.exiftoolMissing']?.length).toBeGreaterThan(0);
   expect(KO['shell.setup.exiftoolUnknown']?.length).toBeGreaterThan(0);
+  // The engine runs exiftool only for standalone png/jpg/jpeg images, so the hint never promises audio metadata.
+  expect(EN['shell.setup.exiftoolMissing']).toContain('image metadata');
+  expect(EN['shell.setup.exiftoolMissing']).not.toMatch(/audio/i);
+  expect(KO['shell.setup.exiftoolMissing']).toContain('이미지 메타데이터');
+  expect(KO['shell.setup.exiftoolMissing']).not.toContain('오디오');
 });
 
 // ----------------------------------------------------------------------------- JT-01 styles

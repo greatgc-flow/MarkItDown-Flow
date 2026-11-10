@@ -161,21 +161,24 @@ FAKE_EXIF_JSON = '[{"ImageSize":"32x32","Title":"Fake Title"}]'
 
 @pytest.fixture
 def fake_exiftool():
-    """R31 factory ``make(directory, version="13.59", *, fail_json=False) -> Path``: a tiny executable answering
-    ``-ver`` and ``-json -`` like exiftool (``.cmd`` on Windows, ``sh`` on POSIX), identical on every machine."""
+    """R31 factory ``make(directory, version="13.59", *, fail_json=False, ver_delay_s=0) -> Path``: a tiny executable
+    answering ``-ver`` and ``-json -`` like exiftool (``.cmd`` on Windows, ``sh`` on POSIX), identical on every machine.
+    ``ver_delay_s`` delays the ``-ver`` answer (a slow cold start)."""
     import os
     import stat
+    import sys
 
-    def make(directory, version="13.59", *, fail_json=False):
+    def make(directory, version="13.59", *, fail_json=False, ver_delay_s=0):
         directory.mkdir(parents=True, exist_ok=True)
+        delay = [f'  "{sys.executable}" -c "import time; time.sleep({ver_delay_s})"'] if ver_delay_s else []
         if os.name == "nt":
             path = directory / "exiftool.cmd"
-            body = ["@echo off", 'if "%1"=="-ver" (', f"  echo {version}", "  exit /b 0", ")"]
+            body = ["@echo off", 'if "%1"=="-ver" (', *delay, f"  echo {version}", "  exit /b 0", ")"]
             body += ["exit /b 1"] if fail_json else ["more >nul", f"echo {FAKE_EXIF_JSON}"]
             path.write_text("\r\n".join(body) + "\r\n", encoding="ascii")
         else:
             path = directory / "exiftool"
-            body = ["#!/bin/sh", 'if [ "$1" = "-ver" ]; then', f"  echo {version}", "  exit 0", "fi"]
+            body = ["#!/bin/sh", 'if [ "$1" = "-ver" ]; then', *delay, f"  echo {version}", "  exit 0", "fi"]
             body += ["exit 1"] if fail_json else ["cat >/dev/null", f"echo '{FAKE_EXIF_JSON}'"]
             path.write_text("\n".join(body) + "\n", encoding="ascii")
             path.chmod(path.stat().st_mode | stat.S_IXUSR)

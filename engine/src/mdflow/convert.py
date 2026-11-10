@@ -267,6 +267,22 @@ def convert_source(
     run_temp: str | Path,
     cache_dir: str | Path | None = None,
 ) -> ConvertResult:
+    result = _convert_source(data, sniff=sniff, action=action, run_temp=run_temp, cache_dir=cache_dir)
+    converted = not any(i["code"].startswith("E_") for i in result["issues"])
+    if action in ("convert_only", "convert_and_ocr") and converted:
+        # Added after caching, so cache hits warn too; a failed conversion keeps only its error.
+        result["issues"].extend(exiftool.unusable_issues(_hint(sniff["format"])))
+    return result
+
+
+def _convert_source(
+    data: bytes,
+    *,
+    sniff: SniffResult,
+    action: str,
+    run_temp: str | Path,
+    cache_dir: str | Path | None = None,
+) -> ConvertResult:
     core_guard.check()
     result: ConvertResult = {"body": "", "pages": None, "media": {}, "issues": []}
     if action not in ("convert_only", "convert_and_ocr"):

@@ -391,6 +391,7 @@ R27/R28 added registrations (existing REQs; precise fixture assertions replace b
 | CT-12 | `txt` -> `not_applicable`, html -> `media_not_inspected`, csv -> `unsupported_format` | REQ-TRI-01 |
 | CT-13 | installed Core in `>=0.3.7,<0.4`; startup gate rejects out-of-range | REQ-GEN-02, REQ-PKG-03 |
 | CT-14 | Core reports contain no absolute path/exception text | REQ-ASM-P3, REQ-SEC-02, REQ-TRI-04 |
+| CT-15 | private Core helpers used by the engine are exactly `_libreoffice._execute/_resolve/_write_profile` and `_installation.installation_conflict` (every imported name parsed with `ast`; `_libreoffice` only as `lo`); their call shapes bind, `_execute` returns captured text and raises past its deadline | REQ-GEN-02, REQ-GEN-12, REQ-CNV-06, REQ-CNV-07 |
 
 ### 4.3 Shell (jest)
 
@@ -449,7 +450,7 @@ R27/R28 added registrations (existing REQs; precise fixture assertions replace b
 | PT-25 | REQ-PKG-17, REQ-PKG-22 (R35: shared gate/publisher requires 93/93 + MAN-01..03; explicit MAN-04 deferral; no silent point; supplied failures block) | A |
 | PT-26 | REQ-PKG-22, REQ-PKG-17 (R35: reviewer peer/profile/model; MAN-01 independent peer, including different profiles of the same peer) | A |
 | PT-27 | REQ-PKG-22, REQ-PKG-04, REQ-PKG-11, REQ-PKG-17 (four extra templates; API-generated Core hashes/action identities; candidate-bound pip receipts; stale/invalid evidence rejection) | A |
-| PT-28 | REQ-PKG-17, REQ-PKG-18, REQ-PKG-20, REQ-PKG-22 (execute gate/publisher offline: seal explicit deferral, reject missing manual state; post-release rollback observation never blocks pre-publication tooling tests) | A |
+| PT-28 | REQ-PKG-17, REQ-PKG-18, REQ-PKG-20, REQ-PKG-22 (execute gate/publisher offline: seal explicit deferral, reject missing manual state; post-release rollback observation never blocks pre-publication tooling tests; the 1.0.8 rollback `gh release view` names `--repo` of the candidate) | A |
 | PT-29 | REQ-PKG-22, REQ-PKG-17 (R36: generate candidate CI oracles; source paths/hashes/generator commit; >=3 distinct peer spot checks; raw receipt tampering rejected) | A |
 | PT-30 | REQ-PKG-22, REQ-PKG-17 (R36: reject missing/failed/stale CI and changed collection hashes) | A |
 | PT-31 | REQ-PKG-22, REQ-PKG-11, REQ-PKG-04, REQ-PKG-15 (R36: reduced action/license reviews; oracle spot-check template; listing review without owner access) | A |
@@ -509,7 +510,7 @@ Every REQ id defined in `10_SPEC.md` (incl. new REQ-SNF-09), `20_SHELL.md` (SHL-
 | T-GEN-93 | REQ-GEN-09, REQ-RND-05 | M4: temp recovery preserves live and unowned trees. |
 | T-GEN-94 | REQ-GEN-09, REQ-RND-05 | M4: native death releases the temp lease; the next run recovers. |
 | T-GEN-95 | REQ-GEN-09, REQ-RND-05 | M4: temp recovery never follows links or bad owner records. |
-| T-META-95 | REQ-PKG-05, REQ-PKG-17 | M4: all bootstrap engine probes are isolated and evidence is explicit. |
+| T-META-95 | REQ-PKG-05, REQ-PKG-17 | M4: all bootstrap engine probes are isolated and evidence is explicit; round 9: G-01 names the counters `trace.py check` prints, FX-71 docs state Core 0.3.7 for every stream, README required CI targets name macOS arm64. |
 | T-META-96 | REQ-PKG-10, REQ-PKG-17 | M4: a restricted collection cannot define the complete inventory. |
 | T-GEN-96 | REQ-PKG-06 | M4: all five package version fields require full syntax; malformed tails/leading whitespace refuse, documented prerelease/post/local controls admit. |
 | T-GEN-97 | REQ-PKG-09, REQ-PKG-01 | M4: recorder manifest argv label faithfully includes the actual isolated interpreter flag. |
@@ -527,7 +528,7 @@ Red logs: `build/trace/redgreen/r29-*.red.log` (R29 is green at baseline by audi
 | T-CNV-84 | REQ-CNV-06 | R31: detection order (PATH, `EXIFTOOL_PATH` wins, empty = unset), minimum 12.24 boundary, `too_old`, `unusable` (no silent PATH fallback), `not_found`. |
 | T-CNV-85 | REQ-CNV-06 | R31: png/jpeg bodies contain the metadata lines and `tools == {exiftool: version}`; pdf/txt never use exiftool. |
 | T-CNV-86 | REQ-CNV-06 | R31: Core receives an explicit `exiftool_path` (tool path for images, `""` for everything else and when absent). |
-| T-CNV-87 | REQ-CNV-06 | R31 (real Core): absent / invalid `EXIFTOOL_PATH` / too old / failing tool never yield `E_CONVERT_FAIL` and record no `tools` entry. |
+| T-CNV-87 | REQ-CNV-06 | R31 (real Core): absent / invalid `EXIFTOOL_PATH` / too old / failing tool never yield `E_CONVERT_FAIL` and record no `tools` entry; invalid and too old record exactly `W_EXIFTOOL_UNUSABLE`; a failed Core conversion with an invalid tool keeps only `E_CONVERT_FAIL`. |
 | T-CNV-88 | REQ-CNV-06, REQ-CNV-04 | R31/M7: image base cache keyed by exiftool path/version; warm rerun restores `tools`; absent tool, new versions and changed executable paths reconvert. |
 | T-ASM-81 | REQ-CNV-06, REQ-ASM-04 | R31: frontmatter `tools` gains `exiftool` after `pillow` only for the image that used it. |
 | T-CLI-81 | REQ-GEN-02, REQ-CNV-06 | R31: `version` adds `exiftool`, `exiftool_status`, `exiftool_source` for present/old/absent, exit 0, empty stderr, no sockets. |
@@ -559,6 +560,8 @@ Reviewed R33 golden changes: FX-30..33/classification.json and classification.re
 | T-CNV-95 | REQ-CNV-07, REQ-ASM-03, REQ-CNV-05 | Missing/malformed/wrong-source/non-DERIVED marker or oversized returned Markdown fails closed with E_PRECONVERT; siblings continue. |
 | T-CNV-96 | REQ-CNV-04, REQ-CNV-05 | M7-V01: exact identical-byte TXT/CSV counterexample, real Core cold literal outputs in both orders, separate shared-cache fills and no-call warm reuse. FX-28, FX-29; S5:FM12. |
 | T-CNV-97 | REQ-CNV-04 | M7-V01: legacy cache path and missing/mismatched conversion identities are rejected; real Core restores the literal TXT body. FX-28; S5:FM12. |
+| T-CNV-98 | REQ-CNV-06 | Round 9: a fake exiftool answering `-ver` after 1 s is used for image conversion (3 s conversion budget: metadata and `tools` present, no issue) while the `version` diagnostic keeps its 0.5 s deadline (`unusable`). FX-09; S5:FM7. |
+| T-CNV-99 | REQ-CNV-06, REQ-RPT-03 | Round 9: present-but-unusable exiftool records one path-free `W_EXIFTOOL_UNUSABLE` per image (cold run and warm cache run, which makes no Core call for the image), exit 0 and outputs written; text files and an absent tool record none. FX-09; S5:FM10. |
 | T-CLI-86 | REQ-GEN-12 | Core-owned loaded-code/metadata mismatch maps to E_CORE_CONFLICT, including version. |
 | T-CLI-87 | REQ-GEN-02, REQ-CNV-06, REQ-CNV-07 | M6: real stalled exiftool, LibreOffice and both together; isolated version child completes within 3 s with all gate fields and unavailable diagnostics; controlled child PATH/tool overrides and opt-in Windows temp bridge survive the containment env scrub; expected sources and launch markers prove the fake tools ran. Core contains descendants on a red timeout. |
 | T-CLI-88 | REQ-GEN-02, REQ-CNV-06, REQ-CNV-07 | M6: each optional version probe has a deadline at most 0.5 s; success, timeout and malformed results are cached per process/environment; explicit reset of both caches isolates every optional-probe test. |
@@ -579,7 +582,7 @@ File classes: `K01` pdf_text, `K02` pdf_scan, `K03` pdf_mixed, `K04` pdf_capped,
 | Step | Build | Tests first |
 |---|---|---|
 | 0 | `tools/trace.py`, marker plugin, `golden.py`, in-test FX-60 mutations, fixture generators, CI skeleton | T-META-01..04, PT-10, PT-07 |
-| 1 | Contract pins (installed Core only) + goldens | CT-01..CT-14, T-META-03 |
+| 1 | Contract pins (installed Core only) + goldens | CT-01..CT-15, T-META-03 |
 | 2 | PURE: `canonical_json`/hashes, `detect_format`, `classify` | T-SNF-11/12 (pure parts of T-SNF-04/07), T-CLS-01..13, T-GEN-04 |
 | 3 | PURE: `select`, `plan` (approved/status, hash, budget, cost), ledger **key** + entry validation, `approve` | T-SEL-*, T-PLN-*, T-MAP-07/08, T-LKP-04, T-APR-01/02/05/07/08 |
 | 4 | PURE: `assemble` (frontmatter, `esc_*`, placements, reserved names), TRX-04 post-processing, exit map, redaction | T-ASM-*, T-MAP-01..05, T-TRX-04, T-RPT-03, T-SEC-02 |

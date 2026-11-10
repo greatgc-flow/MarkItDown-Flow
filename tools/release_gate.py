@@ -40,7 +40,7 @@ def main():
     if problems:
         raise ValueError(result['score'] + '\n' + '\n'.join(problems))
     retained = json.loads(subprocess.check_output(
-        ['gh', 'release', 'view', '1.0.8', '--json', 'tagName,assets'], text=True))
+        ['gh', 'release', 'view', '1.0.8', '--repo', candidate['repo'], '--json', 'tagName,assets'], text=True))
     names = {x['name'] for x in retained['assets']}
     if retained['tagName'] != '1.0.8' or not {'main.js', 'manifest.json', 'styles.css'} <= names:
         raise ValueError('verified 1.0.8 rollback assets must remain available')

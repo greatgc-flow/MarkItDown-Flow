@@ -82,7 +82,7 @@ def test_T_RPT_03_every_spec_code_and_precedence(core_api, repo_root):
         destination = startup if "(startup)" in fields[1] else runtime
         destination.update(dict.fromkeys(codes, contribution))
     expected = dict(startup, **runtime)
-    assert len(expected) == 53  # R33: conflict, preconvert error and warning
+    assert len(expected) == 54  # R33: conflict, preconvert error and warning; round 9: W_EXIFTOOL_UNUSABLE
     assert set(expected) == set(core_api.contracts.CODES)
     assert core_api.contracts.EXIT_CODE_MAP == expected
     for code, value in expected.items():

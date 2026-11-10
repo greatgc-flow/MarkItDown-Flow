@@ -82,6 +82,7 @@ const ENGINE_EN: Record<EngineCode, string> = {
   W_OUTPUT_EDITED: 'Existing output was edited and was preserved.',
   W_APPROVAL_UNUSED: 'An approved hash was unused; the file may already be cached.',
   W_PRECONVERTED: 'Converted from a LibreOffice-derived copy of a legacy format; fidelity is derived, not native.',
+  W_EXIFTOOL_UNUSABLE: 'exiftool is configured or found but unusable or too old; image metadata was skipped. Open setup diagnostics.',
 };
 
 const ENGINE_KO: Record<EngineCode, string> = {
@@ -138,6 +139,7 @@ const ENGINE_KO: Record<EngineCode, string> = {
   W_OUTPUT_EDITED: '기존 출력이 수정되어 있어 그대로 보존했습니다.',
   W_APPROVAL_UNUSED: '승인된 해시가 사용되지 않았습니다. 파일이 이미 캐시되어 있을 수 있습니다.',
   W_PRECONVERTED: '구형 형식을 LibreOffice로 먼저 변환한 사본에서 변환했습니다. 원본 충실도는 파생(derived)이며 원본 그대로가 아닙니다.',
+  W_EXIFTOOL_UNUSABLE: 'exiftool이 설정되어 있거나 발견되었지만 사용할 수 없거나 버전이 낮아 이미지 메타데이터를 건너뛰었습니다. 설정 진단 창을 열어 확인하세요.',
 };
 
 const SHELL_EN: Record<string, string> = {
@@ -261,13 +263,13 @@ const SHELL_EN: Record<string, string> = {
   'shell.setup.section.environment': 'Environment',
   'shell.setup.section.instructions': 'Terminal setup',
   'shell.setup.exiftool': 'exiftool',
-  'shell.setup.exiftoolMissing': 'not found – image and audio metadata is skipped. Optional: install exiftool 12.24 or newer, or set EXIFTOOL_PATH.',
+  'shell.setup.exiftoolMissing': 'not found – image metadata is skipped. Optional: install exiftool 12.24 or newer, or set EXIFTOOL_PATH.',
   'shell.setup.exiftoolUnknown': 'not reported by this engine version',
   'shell.setup.libreoffice': 'LibreOffice (legacy formats)',
   'shell.setup.libreofficeMissing': 'not found – legacy formats (.doc, .ppt, .rtf, HWP 3.x/4.x) are reported, not converted. Optional: install LibreOffice or set SOFFICE_PATH, then enable "Legacy formats (LibreOffice)" in settings.',
   'shell.setup.libreofficeUnknown': 'not reported by this engine version',
   'shell.setup.tool.too_old': 'found but too old – update it or point its *_PATH variable at a newer install',
-  'shell.setup.tool.unusable': 'found but unusable (it did not start or report a version) – check its *_PATH variable',
+  'shell.setup.tool.unusable': 'configured or found but unusable (missing, or no version within the diagnostic deadline) – check its *_PATH variable',
   'shell.setup.upstreamConflict': 'The engine venv also contains the upstream "markitdown" package, which conflicts with markitdown-gc: every conversion is refused until it is removed. Run this in your own terminal, then re-run the version check:',
   'shell.setup.upstreamConflictFix': 'Uninstall command for the selected interpreter (removes only the upstream package)',
   'shell.setup.toolEnv': 'Optional tool locations in the Obsidian process (presence only; paths are never shown)',
@@ -466,13 +468,13 @@ const SHELL_KO: Record<string, string> = {
   'shell.setup.section.environment': '환경',
   'shell.setup.section.instructions': '터미널 설정',
   'shell.setup.exiftool': 'exiftool',
-  'shell.setup.exiftoolMissing': '찾을 수 없음 – 이미지·오디오 메타데이터는 건너뜁니다. 선택 사항: exiftool 12.24 이상을 설치하거나 EXIFTOOL_PATH를 설정하세요.',
+  'shell.setup.exiftoolMissing': '찾을 수 없음 – 이미지 메타데이터는 건너뜁니다. 선택 사항: exiftool 12.24 이상을 설치하거나 EXIFTOOL_PATH를 설정하세요.',
   'shell.setup.exiftoolUnknown': '이 엔진 버전은 보고하지 않습니다',
   'shell.setup.libreoffice': 'LibreOffice (구형 형식)',
   'shell.setup.libreofficeMissing': '찾을 수 없음 – 구형 형식(.doc, .ppt, .rtf, HWP 3.x/4.x)은 변환되지 않고 보고만 됩니다. 선택 사항: LibreOffice를 설치하거나 SOFFICE_PATH를 설정한 뒤 설정에서 "구형 형식 (LibreOffice)"을 켜세요.',
   'shell.setup.libreofficeUnknown': '이 엔진 버전은 보고하지 않습니다',
   'shell.setup.tool.too_old': '찾았지만 버전이 너무 낮음 – 업데이트하거나 해당 *_PATH 변수를 새 설치 경로로 지정하세요',
-  'shell.setup.tool.unusable': '찾았지만 사용할 수 없음(실행되지 않거나 버전을 보고하지 않음) – 해당 *_PATH 변수를 확인하세요',
+  'shell.setup.tool.unusable': '설정되어 있거나 발견되었지만 사용할 수 없음(파일이 없거나 진단 제한 시간 안에 버전을 보고하지 않음) – 해당 *_PATH 변수를 확인하세요',
   'shell.setup.upstreamConflict': '엔진 venv에 markitdown-gc와 충돌하는 업스트림 "markitdown" 패키지가 함께 설치되어 있습니다. 제거할 때까지 모든 변환이 거부됩니다. 아래 명령을 사용자 터미널에서 실행한 뒤 버전 확인을 다시 실행하세요:',
   'shell.setup.upstreamConflictFix': '선택한 인터프리터용 제거 명령 (업스트림 패키지만 제거합니다)',
   'shell.setup.toolEnv': 'Obsidian 프로세스의 선택적 도구 경로 변수 (설정 여부만 표시, 경로는 표시하지 않음)',

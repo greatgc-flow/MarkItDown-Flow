@@ -41,6 +41,10 @@ section for the rollback snapshot `data.v1.json` and the removals below.
   holds the upstream `markitdown` package is refused (`E_CORE_CONFLICT`) with
   the exact uninstall command shown. The version gate applies the package
   gate's PEP 440 step as well (`3.14garbage` is refused).
+- Warning `W_EXIFTOOL_UNUSABLE` (exit 0): an image converted while the
+  configured or found exiftool is unusable or older than 12.24 now says that
+  its metadata was skipped instead of dropping it silently. A missing exiftool
+  stays a normal, warning-free state.
 
 ### Changed
 

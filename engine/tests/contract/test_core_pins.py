@@ -281,3 +281,37 @@ def test_CT_14_report_has_no_absolute_path_or_exception_text(installed_core, con
     assert sentinel not in encoded and str(tmp_path) not in encoded
     assert "corrupt" in {i["code"] for i in report["issues"]}
     assert report == original
+
+
+@pytest.mark.req("REQ-GEN-02", "REQ-GEN-12", "REQ-CNV-06", "REQ-CNV-07")
+@pytest.mark.cov("S0", "FM10")
+def test_CT_15_private_core_symbols_used_by_the_engine_keep_their_shape(repo_root, tmp_path):
+    """Core range is >=0.3.7,<0.4, but the engine reuses private Core helpers (exiftool/LibreOffice `version` probes,
+    E_CORE_CONFLICT). Pin exactly that set and the call shapes the engine uses, so a Core change fails loud here."""
+    import sys
+    from markitdown import _installation, _libreoffice as lo
+
+    sources = [p.read_text(encoding="utf-8") for p in sorted((repo_root / "engine/src/mdflow").rglob("*.py"))]
+    source = "\n".join(sources)
+    private = set()  # every imported name (incl. `import a, b` and aliases) that reaches a private Core module/name
+    for node in (n for text in sources for n in ast.walk(ast.parse(text))):
+        if isinstance(node, ast.ImportFrom) and (node.module or "").split(".")[0] == "markitdown":
+            private |= {(node.module, a.name, a.asname) for a in node.names if "._" in node.module or a.name.startswith("_")}
+        elif isinstance(node, ast.Import):
+            private |= {(a.name, None, a.asname) for a in node.names if a.name.startswith("markitdown._")}
+    # `_libreoffice` only under the alias `lo`, so the call scan below sees every use.
+    assert private == {("markitdown", "_libreoffice", "lo"), ("markitdown._installation", "installation_conflict", None)}
+    assert set(re.findall(r"\blo\.(_\w+)\(", source)) == {"_execute", "_resolve", "_write_profile"}
+    # Call shapes exactly as exiftool.py and cli.py use them.
+    inspect.signature(lo._execute).bind(["tool", "-ver"], cwd=tmp_path, timeout_s=0.5, output=tmp_path / "version.log")
+    inspect.signature(lo._resolve).bind("soffice")
+    inspect.signature(lo._write_profile).bind(tmp_path / "profile")
+    inspect.signature(_installation.installation_conflict).bind()
+    # Semantics the engine relies on: captured stdout is returned as text; the deadline raises; no conflict -> falsy text.
+    text = lo._execute([sys.executable, "-c", "print('13.59')"], cwd=tmp_path, timeout_s=30, output=tmp_path / "ok.log")
+    assert isinstance(text, str) and text.strip() == "13.59"
+    with pytest.raises(Exception):
+        lo._execute([sys.executable, "-c", "import time; time.sleep(30)"], cwd=tmp_path, timeout_s=0.5,
+                    output=tmp_path / "slow.log")
+    message = _installation.installation_conflict()
+    assert message is None or isinstance(message, str)
