@@ -45,11 +45,11 @@ section for the rollback snapshot `data.v1.json` and the removals below.
   configured or found exiftool is unusable or older than 12.24 now says that
   its metadata was skipped instead of dropping it silently. A missing exiftool
   stays a normal, warning-free state.
-- Approval dialog default "Keep OCR pending" (R37): reruns the original
-  command without any approval, so content that needs no OCR is converted
-  right away and the OCR parts stay pending markers; nothing is sent or billed.
-  The destination is rechecked before that run; closing the dialog launches
-  nothing and is recorded as `cancelled`.
+- Approval dialog default "Keep OCR pending" (R37): after the plugin's `plan`
+  step, it starts a `run` with no approval, so content that needs no OCR is
+  converted right away and the OCR parts stay pending markers; nothing is sent
+  or billed. The destination is rechecked before that run; closing the dialog
+  launches no conversion and is recorded as `cancelled`.
 
 ### Changed
 
@@ -84,6 +84,13 @@ section for the rollback snapshot `data.v1.json` and the removals below.
   empty selections, a two-step history clear, and accessibility fixes (labels,
   button types, focus).
 
+### Removed
+
+- Audio/YouTube and URL conversion (the `convert-url` command shows guidance),
+  Azure Document Intelligence / Content Understanding routing, the image
+  pipeline router and its tuning, output/media name templates, auto tags and
+  frontmatter options, bundled Python wrapper, in-plugin credential fields.
+
 ### Security
 
 - Programs started by bare name (exiftool, the default `soffice`, the
@@ -93,15 +100,14 @@ section for the rollback snapshot `data.v1.json` and the removals below.
 - A `--command` template containing the value of a credential-like
   environment variable is refused without echoing it; pass it with
   `--command-env NAME` (C2).
+- The README states that the engine's version check starts `exiftool -ver`
+  and `soffice --version` (C3).
 - `--sensitive` globs also match the absolute source path (zip members as
   `<container>/<member>`); only the matching patterns are stored (C4).
-
-### Removed
-
-- Audio/YouTube and URL conversion (the `convert-url` command shows guidance),
-  Azure Document Intelligence / Content Understanding routing, the image
-  pipeline router and its tuning, output/media name templates, auto tags and
-  frontmatter options, bundled Python wrapper, in-plugin credential fields.
+- Log redaction also covers `*_AUTH`, `*_CREDENTIAL`, `*_PAT` and `*_PASS`
+  by name component.
+- `--command-egress false` skips only the approval step; the plan's per-file
+  request limit (`max_requests`) still applies.
 
 ## 0.1.0 — Initial fork
 

@@ -28,14 +28,17 @@ libraries. Use the same `-I` form in your own scripts.
 ## Classification (T, S, M)
 
 Each document is classified before anything is converted. `T` (text) needs no
-OCR: its text is extracted directly. `S` (scanned) has no usable text layer and
-needs OCR for all of its pages or images. `M` (mixed) has text plus some pages
-or images that need OCR. Text content of every class is converted immediately
-and locally. OCR happens only after you approve the per-file plan; until then
-the parts that need OCR stay as pending markers in the note. With provider
-`none` they stay pending. Other labels: `U` (need unknown), `C` (archive),
-`L` (legacy format), `P` (protected) and `X` (unsupported). Run
-`mdflow classify <PATH>` to see a file's label.
+OCR: its text is extracted directly. `S` (scanned) needs OCR for every page
+(or is a single image). `M` (mixed) has text plus some pages or images that
+need OCR. For `T`, `S` and `M` files, text content is converted locally without
+approval; in the plugin, once you choose "Keep OCR pending" or approve.
+Closing the dialog converts nothing. `P`, `X`, `L` (unless "Legacy formats
+(LibreOffice)" is on) and some `U`/`C` files are only reported. Remote OCR (a
+provider that sends data) happens only after you approve the per-file plan;
+until then the parts that need OCR stay as pending markers in the note. With
+provider `none` they stay pending. Other labels: `U` (need unknown), `C`
+(archive), `L` (legacy format), `P` (protected) and `X` (unsupported). Run
+`python -I -m mdflow classify <PATH>` to see a file's label.
 
 ## Network services and purpose
 
