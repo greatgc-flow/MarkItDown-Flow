@@ -20,6 +20,7 @@ import re
 import shutil
 
 from . import core_guard, runtime_temp
+from .executable import resolve_executable
 
 MIN_VERSION = (12, 24)
 IMAGE_EXTENSIONS = frozenset({".png", ".jpg", ".jpeg"})  # the extensions Core's image converter accepts
@@ -53,10 +54,13 @@ def _probe(candidate: str, source: str) -> dict:
 @functools.lru_cache(maxsize=16)
 def _detect(explicit: str, search_path: str) -> dict:
     if explicit:
-        found = shutil.which(explicit) if not os.path.isabs(explicit) else (explicit if os.path.isfile(explicit) else None)
+        if os.path.isabs(explicit):
+            found = explicit if os.path.isfile(explicit) else None
+        else:  # a bare name is looked up like PATH; a relative path with a folder is the user's explicit choice
+            found = shutil.which(explicit) if os.path.dirname(explicit) else resolve_executable(explicit, search_path)
         return _probe(found, "EXIFTOOL_PATH") if found else _result("unusable", source="EXIFTOOL_PATH")
-    found = shutil.which("exiftool", path=search_path)
-    return _probe(os.path.abspath(found), "PATH") if found else _result("not_found")
+    found = resolve_executable("exiftool", search_path)  # never the current folder (security review C1)
+    return _probe(found, "PATH") if found else _result("not_found")
 
 
 def detect() -> dict:

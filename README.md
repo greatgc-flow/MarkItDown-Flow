@@ -68,7 +68,10 @@ you turn on "Legacy formats (LibreOffice)", the engine runs your own LibreOffice
 (`soffice` on PATH or `SOFFICE_PATH`) in a private profile with macros and link
 updates disabled to convert legacy `.doc`, `.ppt`, `.rtf` and HWP sources; it
 reads the source and writes a temporary converted copy that is not kept. The
-plugin itself never runs either program.
+engine's version check, which the plugin runs at startup, starts `exiftool -ver`
+and `soffice --version` to report them, whatever the "Legacy formats" setting;
+the plugin does not start either program itself. The engine looks exiftool and
+soffice up only in absolute PATH folders, never in the current folder.
 
 The CLI cache defaults to `~/.mdflow/cache`. The plugin keeps its cache,
 transient report spool, one-run consent files and redacted logs inside the
@@ -105,9 +108,12 @@ units, DPI, the per-file maximum request budget and estimated maximum cost (or
 unknown cost when pricing is unavailable), threshold and sensitive-pattern
 notices. Files with nothing left to send (already cached) are listed as
 informational and need no approval. These are planning limits, not a billing
-cap. Interrupted requests, retry, force and concurrent cache misses can incur
-additional charges. A Cancel button stays visible in the status bar for the
-whole job (planning, approval, conversion). On macOS and Linux, Cancel first
+cap. A remote request can be billed even if its result is never stored: when
+the run is killed or cancelled, the connection drops or times out, the reply is
+unusable, or the cache write fails. Such units are sent and billed again on the
+next approved run; `--force`, cache clearing and concurrent runs can also
+resend. `--command-egress` is your declaration, not verified. A Cancel button
+stays visible in the status bar for the whole job (planning, approval, conversion). On macOS and Linux, Cancel first
 asks the engine to stop cooperatively and forces termination after five
 seconds; on Windows every Cancel is a forced termination, because the plugin
 cannot deliver a console control event to the engine. A forced termination may
@@ -208,7 +214,16 @@ Remote OCR needs consent per file: `run` stops with exit 3 and an
 `--approved-by TEXT`. Hashes exclude cache state, so an approval stays valid
 while other files fill the cache. The `command` provider requires
 `--command "<template>" --command-egress true|false --trust-command --model <label>`
-and runs the program with your privileges on every unit.
+and runs the program with your privileges on every unit. `--command-egress false`
+is your declaration; mdflow does not sandbox or verify it. `false` skips the
+approval step; the plan's per-file request limit (`max_requests`) still
+applies. A bare program name is resolved to its
+absolute path in an absolute PATH folder (never the current folder), and that
+path is part of the approved destination. A template containing the value of a
+credential-like variable (`*_KEY`, `*_TOKEN`, `*_SECRET`, `*_PASSWORD`, `*_PASS`,
+`*_AUTH`, `*_CREDENTIAL`, `*_PAT`) is refused; pass it with `--command-env NAME`.
+`--sensitive` globs match the logical path and the absolute source path with `/`
+separators (zip members as `<container>/<member>`).
 
 ## Development and license
 

@@ -564,6 +564,18 @@ Reviewed R33 golden changes: FX-30..33/classification.json and classification.re
 | T-CLI-88 | REQ-GEN-02, REQ-CNV-06, REQ-CNV-07 | M6: each optional version probe has a deadline at most 0.5 s; success, timeout and malformed results are cached per process/environment; explicit reset of both caches isolates every optional-probe test. |
 | T-CLI-89 | REQ-GEN-02, REQ-CNV-06, REQ-CNV-07 | M6: unexpected optional diagnostic exceptions preserve the complete Core/Python compatibility response and exit 0. |
 
+### 4.10 Security review (2.0.0) engine regressions
+
+| Test | Requirements | Oracle |
+|---|---|---|
+| T-SEC-60 | REQ-SEC-03, REQ-CNV-06 | C1: `resolve_executable` skips empty, `.` and relative PATH entries (the current folder is never searched), returns an absolute path from an absolute entry and applies PATHEXT on Windows. |
+| T-SEC-61 | REQ-CNV-06, REQ-CNV-07 | C1: with a planted `exiftool` and `soffice` in the current folder and an empty PATH, `detect()` and the `version` LibreOffice probe are `not_found`, legacy pre-conversion fails with `E_PRECONVERT` before Core is called (a bare `EXIFTOOL_PATH` name is `unusable`), and no planted program runs. |
+| T-SEC-62 | REQ-SEC-03 | C1 and (a) item 1: a bare command program name is pinned to the absolute PATH program (not the current-folder plant) inside `destination`; a different same-named program changes destination and provider fingerprint; an unresolved bare name fails with `E_PROVIDER_CONFIG` without starting anything. FX-63. |
+| T-SEC-63 | REQ-SEC-01 | C2: a `--command` template containing a credential-like env value (whole or embedded) is refused with `E_PROVIDER_CONFIG` without echoing it; `--command-env NAME` is accepted; values of non-secret names are not refused. |
+| T-SEC-64 | REQ-SEC-02 | P6: redaction matches whole name components (`*_PAT`, `*_PASS`, `*_AUTH`, `*_CREDENTIAL`, `*_PASSWORD`, `*_KEY`, `*_TOKEN`, `*_SECRET`); `KEYBOARD`, `MONKEY_*` and `TOKENIZERS_*` values stay visible. |
+| T-PLN-60 | REQ-PLN-06 | C4: `--sensitive` globs also match the absolute `/`-separated source path (a directly passed file under `HR/`; a zip member as container + member); plans keep only the patterns, never the path; bare `--yes` is refused with `E_APPROVAL_REQUIRED` and nothing is sent. FX-09, FX-61. |
+| T-TRX-60 | REQ-TRX-02, REQ-TRX-06 | (b) item 1: a cooperative cancel delivered after the provider returned is deferred until the ledger entry is published; exit 130 and no further request. FX-09, FX-61, FX-65. |
+
 ## 5. Generated MECE matrices
 
 `trace.py report` writes `build/trace/matrices.json` (stage_failure, class_stage, common_schema_assertions, class_execution_registrations); **never hand-edited**. Inputs: markers, FX `class`, `engine/tests/matrix.toml` (applicability only).

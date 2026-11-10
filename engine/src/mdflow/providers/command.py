@@ -18,6 +18,7 @@ import time
 from typing import Sequence
 
 from ..contracts import ProviderMeta, UnitResult
+from ..executable import resolve_executable
 from ._errors import ProviderConfigError
 
 ALLOWED_ENV = frozenset(
@@ -78,6 +79,10 @@ class CommandProvider:
             raise ProviderConfigError("command template cannot be parsed") from None
         if not template:
             raise ProviderConfigError("command template is empty")
+        if not os.path.dirname(template[0]):
+            # Pin the vouched-for program: the absolute path is part of destination, hence of the plan hash and
+            # cache fingerprint. Unresolved names stay bare and are refused in _capture (never a cwd lookup).
+            template[0] = resolve_executable(template[0], os.environ.get("PATH", "")) or template[0]
         self._template = template
         self._env_names = sorted(set(env_names))
         self._timeout_s = timeout_s
@@ -110,6 +115,8 @@ class CommandProvider:
     def _capture(self, argv, started) -> UnitResult:
         child = None
         deadline = started + self._timeout_s
+        if not os.path.dirname(argv[0]):
+            return _failed('E_PROVIDER_CONFIG', 'command program was not found on PATH', started)
         try:
             child = subprocess.Popen(argv, shell=False, env=self._child_env(), stdin=subprocess.DEVNULL,
                                      stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, bufsize=0)

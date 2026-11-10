@@ -15,8 +15,12 @@ import tempfile
 import zlib
 
 from . import approve, assemble, classify, convert, core_guard, exiftool, orchestrate, providers, report, runtime_temp, sniff_io, transcribe, triage, write
+from .executable import resolve_executable
 
-_DISCLOSURE = ("Duplicate remote charges are possible if a run dies between a response and its ledger write. "
+_DISCLOSURE = ("A remote request can be billed even if its result is never stored: when the run is killed or "
+               "cancelled, the connection drops or times out, the reply is unusable, or the cache write fails. Such "
+               "units are sent and billed again on the next approved run (a duplicate charge); --force, cache clearing "
+               "and concurrent runs can also resend. --command-egress is your declaration, not verified. "
                "A trusted command runs with your privileges on every OCR unit.")
 
 
@@ -66,7 +70,9 @@ def _parser() -> argparse.ArgumentParser:
         cmd.add_argument("--progress", choices=("none", "jsonl"), default="none")
         cmd.add_argument("--report", type=Path)
         cmd.add_argument("--command")
-        cmd.add_argument("--command-egress", choices=("true", "false"))
+        cmd.add_argument("--command-egress", choices=("true", "false"),
+                         help="false is your declaration; mdflow does not sandbox or verify it. false skips the "
+                              "approval step; the plan's per-file request limit (max_requests) still applies.")
         cmd.add_argument("--command-env", action="append", default=[])
         cmd.add_argument("--trust-command", action="store_true",
                          help="The command runs with your privileges on every OCR unit.")
@@ -219,7 +225,8 @@ def _probe_libreoffice(explicit: str, search_path: str) -> dict:
     try:
         with core_guard.quiet_output():
             from markitdown import _libreoffice as lo
-        executable = lo._resolve(explicit or 'soffice')
+        # The default is looked up in absolute PATH folders only, never the current folder (security review C1).
+        executable = lo._resolve(explicit) if explicit else resolve_executable('soffice', search_path)
         found.update(libreoffice_status='unusable' if explicit or executable else 'not_found',
                      libreoffice_source='SOFFICE_PATH' if explicit else 'PATH' if executable else None)
         if executable:

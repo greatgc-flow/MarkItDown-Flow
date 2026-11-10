@@ -44,15 +44,39 @@ class Cancelled(BaseException):
     """Escapes stage Exception handlers and subprocess.run's child cleanup."""
 
 
+_DEFERRED = dict(depth=0, pending=False)
+
+
+@contextmanager
+def deferred_cancel():
+    """Inside, a cooperative cancel only becomes pending; it is raised when the outermost section ends.
+
+    Transcribe wraps provider-return..ledger publish in it, so a reply that already arrived (and may be billed)
+    is stored instead of being discarded and resent by the next run.
+    """
+    _DEFERRED["depth"] += 1
+    try:
+        yield
+    finally:
+        _DEFERRED["depth"] -= 1
+        if not _DEFERRED["depth"] and _DEFERRED["pending"]:
+            _DEFERRED["pending"] = False
+            raise Cancelled()
+
+
 @contextmanager
 def cancellation():
     previous = {}
     interrupted = False
+    _DEFERRED.update(depth=0, pending=False)
 
     def stop(signum, frame):
         nonlocal interrupted
         if not interrupted:
             interrupted = True
+            if _DEFERRED["depth"]:
+                _DEFERRED["pending"] = True
+                return
             raise Cancelled()
 
     if threading.current_thread() is threading.main_thread():
@@ -62,6 +86,7 @@ def cancellation():
     try:
         yield
     finally:
+        _DEFERRED.update(depth=0, pending=False)
         for number, handler in previous.items():
             signal.signal(number, handler)
 
@@ -154,7 +179,9 @@ class _Pipeline:
             sn = sniff_io.sniff(discovered["path"], logical=discovered["logical"], root=discovered["root"],
                                 **{k: self.options[k] for k in ("max_bytes", "zip_entries", "zip_total_bytes")})
             sn["issues"].extend(deepcopy(discovered["issues"]))
-            source = dict(sniff=sn, runtime=discovered["path"])
+            # The absolute '/'-separated source path, used only to match --sensitive globs (never published).
+            origin = Path(discovered["path"]).as_posix()
+            source = dict(sniff=sn, runtime=discovered["path"], origin=origin)
             sources.append(source)
             if sn["route"] == "CONTAINER" and not any(i["code"].startswith("E_") for i in sn["issues"]):
                 try:
@@ -165,7 +192,8 @@ class _Pipeline:
                 expanded = sniff_io.expand_container(source['data'], logical=sn["path"], root=sn["root"],
                     **{k: self.options[k] for k in ("max_bytes", "zip_depth", "zip_entries", "zip_total_bytes")})
                 sn["issues"].extend(expanded["issues"])
-                sources.extend(dict(sniff=m["sniff"], data=m["data"]) for m in expanded["members"])
+                sources.extend(dict(sniff=m["sniff"], data=m["data"], origin=origin + m["sniff"]["path"][len(sn["path"]):])
+                               for m in expanded["members"])
         # Use Assemble's reserved-name rules for the final collision check, and
         # complete it for members as well as roots before publishing anything.
         for source in sources:
@@ -225,7 +253,7 @@ class _Pipeline:
         entry["units"] = counts
 
     def process(self, source: dict, entry: dict, directory: Path) -> None:
-        sn, logical = source["sniff"], source["sniff"]["path"]
+        sn, logical, origin = source["sniff"], source["sniff"]["path"], source.get("origin")
         original_sniff, provenance, prepared = sn, None, None
         self.emit("stage", file=logical, stage="sniff", state="end", ms=0)
         path = source.get("runtime")
@@ -286,7 +314,7 @@ class _Pipeline:
             self.issues(entry, c['issues'])
             media_hashes = {}
         opts = dict(self.options, file={k: original_sniff[k] for k in ("path", "sha256", "bytes", "format")},
-                    classification=c, triage_media=triage_media, media_hashes=media_hashes)
+                    classification=c, triage_media=triage_media, media_hashes=media_hashes, origin=origin)
         if provenance:
             opts['preconversion'] = provenance
             # Derived assets have content ids; HWP5's stored-stream rules do not apply.
@@ -389,7 +417,7 @@ class _Pipeline:
                 result = self.stage(logical, "transcribe", transcribe.run_transcribe, list(jobs.values()), self.provider,
                     prompt=transcribe.load_prompt(opts["prompt_version"]), force=False,
                     max_requests=file_plan["approved"]["max_requests"], consent=entry["consent"], tools=self.tools,
-                    now=self.now(), publish=publish, postprocess=assemble.postprocess_text)
+                    now=self.now(), publish=publish, postprocess=assemble.postprocess_text, shield=deferred_cancel)
             finally:
                 entry["requests"]["sent"] = self.provider.calls - before
             entries.update(result["entries"])
