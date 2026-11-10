@@ -169,7 +169,7 @@ def test_PT_01_direct_wheel_inventory_wheel_metadata_and_run_outside_the_source_
 @pytest.mark.fx("FX-72")
 def test_PT_02_reference_is_exact_hash_checked_wheel_only_and_a_changed_wheel_fails(release_bundle, tmp_path, cli_command):
     lock = (release_bundle / "reference-requirements.txt").read_text(encoding="utf-8")
-    assert 'Linux x64' in lock and 'CPython 3.14' in lock and 'Core 0.3.7' in lock
+    assert 'Linux x64' in lock and 'CPython 3.14' in lock and 'Core 0.3.8' in lock
     assert sys.platform == 'linux' and sys.version_info[:2] == (3, 14), 'PT-02 runs on the reference target only'
     wheel_name, wheel = engine_wheel(release_bundle)
     entries = parse_lock(lock)
@@ -190,7 +190,7 @@ def test_PT_02_reference_is_exact_hash_checked_wheel_only_and_a_changed_wheel_fa
             problems.append(f"no --hash: {requirement}")
     assert not problems, "\n".join(problems)
     pins = lock_pins(lock)
-    assert pins.get("markitdown-gc") == "0.3.7"
+    assert pins.get("markitdown-gc") == "0.3.8"
     assert "pillow" in pins and "pypdfium2" in pins, "renderer and Pillow must be exact lock entries"
     # A changed wheel fails hash-mode installation; the real one installs.
     good, bad = tmp_path / "good" / "wheels", tmp_path / "bad" / "wheels"
@@ -218,8 +218,8 @@ def test_T_GEN_52_m1_v32_offline_dependency_hash_mutation_control(tmp_path, cli_
     bundle = tmp_path / 'bundle'
     bundle.mkdir()
     members, requirements = {}, []
-    packages = [('mdflow', '2.0.0', 'markitdown-gc>=0.3.7,<0.4'),
-                ('markitdown_gc', '0.3.7', 'm1-dependency>=1'), ('m1_dependency', '1.0', None)]
+    packages = [('mdflow', '2.0.0', 'markitdown-gc>=0.3.8,<0.4'),
+                ('markitdown_gc', '0.3.8', 'm1-dependency>=1'), ('m1_dependency', '1.0', None)]
     for name, version, dependency in packages:
         stream = io.BytesIO()
         info = f'{name}-{version}.dist-info'
@@ -255,7 +255,7 @@ def test_PT_05_bootstrap_commands_run_unchanged_after_placeholder_substitution(r
     blocks = [body for lang, body in fences if lang in languages and "pip install" in body]
     assert blocks, "BOOTSTRAP.md has no install block for this OS"
     block = blocks[0]
-    for needle in ("--only-binary=:all:", "./mdflow-2.0.0-py3-none-any.whl", "markitdown-gc>=0.3.7,<0.4", "https://pypi.org/simple", "-m mdflow selftest",
+    for needle in ("--only-binary=:all:", "./mdflow-2.0.0-py3-none-any.whl", "markitdown-gc>=0.3.8,<0.4", "https://pypi.org/simple", "-m mdflow selftest",
                    "pip check", "-m mdflow version", "-m venv"):
         assert needle in block, f"install block lacks {needle!r}"
     before = text[:text.index(block)]
@@ -317,7 +317,7 @@ def gate(response: dict) -> list[str]:
             return False
     if not valid(response['mdflow']) or not (2, 0, 0) <= version_tuple(response["mdflow"]) < (2, 1, 0):
         problems.append("engine range")
-    if not valid(response['markitdown-gc']) or not (0, 3, 7) <= version_tuple(response["markitdown-gc"]) < (0, 4):
+    if not valid(response['markitdown-gc']) or not (0, 3, 8) <= version_tuple(response["markitdown-gc"]) < (0, 4):
         problems.append("Core range")
     if not valid(response['python']) or not (3, 10) <= version_tuple(response["python"])[:2] < (3, 15):
         problems.append("Python range")

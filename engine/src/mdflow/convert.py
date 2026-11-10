@@ -13,7 +13,9 @@
   with ``ext`` (``".pdf"``-style hint; never a path or URI) to ``convert_stream`` and returns Markdown text.
 * ``convert_source(data, *, sniff, action, run_temp, cache_dir=None) -> ConvertResult``
   - ``action`` not in ``convert_only|convert_and_ocr``: no Core call, empty result.
-  - PDF: per page ``N`` a one-page PDF (pypdfium2) is converted; ``pages`` holds one string per page.
+  - PDF: ``pages`` holds one string per page. A PDF with bookmarks is converted whole and split at Core's form feeds
+    so outline headings survive (R41); otherwise, and whenever that split does not give exactly the real page count,
+    per page ``N`` a one-page PDF (pypdfium2) is converted.
   - ``docx|pptx|xlsx|hwp|hwpx``: ``extract_media=str(run_temp/'media')``, ``media_base_dir=str(run_temp)``.
   - any Core exception -> ``E_CONVERT_FAIL`` issue, ``body == ""``, never raises.
   - ``media`` maps file name (e.g. ``3f9a1c2b7d10.png``) -> absolute path under ``run_temp/media``.
@@ -169,13 +171,64 @@ def _convert_with_exiftool(data: bytes, ext: str, found: dict | None) -> tuple[s
     return core_convert(data, ext), {}
 
 
+def _has_outline(document) -> bool:
+    try:
+        return next(iter(document.get_toc()), None) is not None
+    except Exception:
+        return False
+
+
+def _page_has_text(document, index: int) -> bool:
+    try:
+        page = document[index]
+        try:
+            textpage = page.get_textpage()
+            try:
+                return bool(textpage.get_text_range().strip())
+            finally:
+                textpage.close()
+        finally:
+            page.close()
+    except Exception:
+        return True  # unknown counts as text: the caller then converts page by page
+
+
+def _whole_document_pages(document, data: bytes, ext: str, total: int) -> list[str] | None:
+    """R41: one Core call over the whole PDF so Core can turn bookmarks into headings; split at its page breaks.
+
+    Core separates pages with a form feed and drops trailing pages without text, so fewer pieces than pages are
+    accepted only when the PDF itself has no text on every missing (trailing) page. Returns ``None`` (the caller
+    falls back to one call per page) when Core fails or the pieces cannot be matched to the real pages, so page
+    anchors always line up."""
+    try:
+        text = core_convert(data, ext)
+    except Exception:
+        return None
+    pieces = text.split("\f")
+    if len(pieces) == total + 1 and not pieces[-1].strip():
+        pieces.pop()  # a trailing page break
+    if len(pieces) > total:
+        return None
+    missing = range(len(pieces), total)
+    if any(_page_has_text(document, index) for index in missing):
+        return None
+    return pieces + ["" for _ in missing]
+
+
 def _pdf_pages(data: bytes, ext: str, issues: list[Issue]) -> list[str]:
-    """Convert a PDF one page at a time; a page that Core cannot read stays empty."""
+    """Convert a PDF to one text per page; a page that Core cannot read stays empty.
+
+    A PDF with bookmarks is converted whole (R41) so Core's outline headings survive; every other PDF, and any
+    bookmarked PDF whose whole-document result cannot be split reliably, is converted one page at a time."""
     import pypdfium2 as pdfium
 
     document = pdfium.PdfDocument(data)
     try:
         total = len(document)
+        if total and _has_outline(document):
+            whole = _whole_document_pages(document, data, ext, total)
+            if whole is not None:
+                return whole
         pages: list[str] = []
         failed = False
         for index in range(total):
@@ -209,9 +262,12 @@ def _collect_media(media_dir: Path) -> dict[str, str]:
 def _conversion_identity(fmt: str, ext: str, found: dict | None) -> dict:
     # Bind every conversion-affecting option. Temporary extraction destinations
     # vary per run, but Core emits relative media links and the cache restores media.
-    return dict(format=fmt, extension=ext, extract_media=fmt in _MEDIA_FORMATS,
-                enable_plugins=False,
-                exiftool={"path": found["path"], "version": found["version"]} if found else None)
+    identity = dict(format=fmt, extension=ext, extract_media=fmt in _MEDIA_FORMATS,
+                    enable_plugins=False,
+                    exiftool={"path": found["path"], "version": found["version"]} if found else None)
+    if fmt == "pdf":
+        identity["pdf"] = "outline-whole-document"  # R41: bookmarked PDFs are converted whole; older page entries are not reused
+    return identity
 
 
 def _cache_paths(cache_dir: str | Path, sha256: str, conversion: dict) -> tuple[Path, Path, Path]:

@@ -738,7 +738,7 @@ def oracle_receipts(root: Path, evidence: Path, expected_commit: str, *, defer_r
                     sources.add('junit-contract-max.json')
                     try:
                         dedup = json.loads((evidence / 'junit-contract-max.json').read_text(encoding='utf-8'))
-                        outcomes.append(dedup.get('version') == '0.3.7' and dedup.get('deduplicated_with') == 'contract-min')
+                        outcomes.append(dedup.get('version') == '0.3.8' and dedup.get('deduplicated_with') == 'contract-min')
                     except (OSError, ValueError, AttributeError):
                         outcomes.append(False)
         result = ('FAIL' if not tids or False in outcomes else

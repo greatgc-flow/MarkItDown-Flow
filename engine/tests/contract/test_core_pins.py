@@ -145,6 +145,52 @@ def test_CT_05_one_page_pdf_conversion_has_no_anchors(installed_core, contract_f
     assert bodies[0].strip() and bodies[2].strip()
     assert not bodies[1].strip() and not bodies[3].strip()
     assert all("mdflow:page" not in body for body in bodies)
+    # R41: the whole document, converted once, has one form feed between pages (empty pages keep theirs) and
+    # drops trailing pages without text: FX-03 (text, scan, text, scan) gives three pieces whose text equals the
+    # per-page results.
+    whole = core.convert_stream(BytesIO(contract_fx.path("FX-03").read_bytes()), file_extension=".pdf").text_content
+    pieces = whole.split("\f")
+    assert "mdflow:page" not in whole and len(pieces) in (3, 4)
+    assert [p.strip() for p in pieces] == [b.strip() for b in bodies[:len(pieces)]]
+    assert not any(b.strip() for b in bodies[len(pieces):])
+
+
+@pytest.mark.req("REQ-CNV-02")
+@pytest.mark.cov("S5", "FM0")
+@pytest.mark.fx("FX-01")
+def test_CT_16_whole_document_pdf_conversion_keeps_page_breaks_and_puts_bookmark_headings_on_their_page(installed_core):
+    import re
+
+    from pathlib import Path
+
+    spec = importlib.util.spec_from_file_location(
+        "mdflow_pdf_outline_fixture", Path(__file__).resolve().parents[1] / "pdf_outline_fixture.py")
+    fixture = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(fixture)
+    PAGE_TEXT, outline_pdf = fixture.PAGE_TEXT, fixture.outline_pdf
+
+    core = installed_core[0](enable_plugins=False)
+    data = outline_pdf()
+    text = core.convert_stream(BytesIO(data), file_extension=".pdf").text_content
+    pieces = text.split("\f")
+    if len(pieces) == 3 and not pieces[-1].strip():
+        pieces.pop()
+    assert len(pieces) == 2, "Core keeps one form feed per page"
+    for number, (piece, title) in enumerate(zip(pieces, ("Chapter One", "Chapter Two")), start=1):
+        assert re.search(rf"^#{{1,6}} {title}\s*$", piece, re.M), f"bookmark heading on page {number}: {piece!r}"
+        assert PAGE_TEXT[number - 1] in piece
+    assert "Chapter Two" not in pieces[0] and "Chapter One" not in pieces[1]
+    plain = core.convert_stream(BytesIO(outline_pdf(titles=(None, None))), file_extension=".pdf").text_content
+    assert not re.search(r"^#", plain, re.M), "no bookmarks, no headings"
+    # Page breaks around pages without text: leading/middle empty pages keep their form feed, trailing ones vanish.
+    scan = ("image", None)
+    text_page = ("text", ("Chapter One", PAGE_TEXT[0]))
+    pieces = core.convert_stream(BytesIO(outline_pdf((scan, text_page), (None, "Chapter One"))), file_extension=".pdf") \
+        .text_content.split("\f")
+    assert len(pieces) == 2 and not pieces[0].strip() and "Chapter One" in pieces[1]
+    pieces = core.convert_stream(BytesIO(outline_pdf((text_page, scan), ("Chapter One", None))), file_extension=".pdf") \
+        .text_content.split("\f")
+    assert len(pieces) == 1 and "Chapter One" in pieces[0], "a trailing page without text leaves no form feed"
 
 
 @pytest.mark.req("REQ-TRI-05")
@@ -259,11 +305,11 @@ def test_CT_12_text_html_csv_verdicts(installed_core, contract_fx):
 def test_CT_13_installed_version_and_startup_range_gate(repo_root):
     from packaging.version import Version
     installed = Version(importlib.metadata.version("markitdown-gc"))
-    assert Version("0.3.7") <= installed < Version("0.4")
+    assert Version("0.3.8") <= installed < Version("0.4")
     spec = importlib.util.spec_from_file_location("core_version_red", repo_root / "engine/src/mdflow/hashing.py")
     hashing = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(hashing)
-    for value, expected in (("0.3.4", False), ("0.3.5", False), ("0.3.6", False), ("0.3.7", True), ("0.3.99", True), ("0.4.0", False), ("1.0.0", False)):
+    for value, expected in (("0.3.4", False), ("0.3.5", False), ("0.3.6", False), ("0.3.7", False), ("0.3.8", True), ("0.3.99", True), ("0.4.0", False), ("1.0.0", False)):
         assert hashing.core_version_supported(value) is expected
 
 

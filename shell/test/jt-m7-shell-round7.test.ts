@@ -52,7 +52,7 @@ class RecordingSink implements ProgressSink {
   }
 }
 
-const GOOD_GATE: VersionGate = { enabled: true, info: { mdflow: '2.0.0', 'markitdown-gc': '0.3.7', pypdfium2: '5.15.1', pillow: '13.0.0', python: '3.14.0', platform: 'test', protocol: 1, triage_schema: 1 } };
+const GOOD_GATE: VersionGate = { enabled: true, info: { mdflow: '2.0.0', 'markitdown-gc': '0.3.8', pypdfium2: '5.15.1', pillow: '13.0.0', python: '3.14.0', platform: 'test', protocol: 1, triage_schema: 1 } };
 
 function gateHarness(gate: CoordinatorDeps['gate'], progress: ProgressSink, notify: CoordinatorDeps['notify'] = () => undefined): { coordinator: ShellCoordinator; spawner: FakeSpawner } {
   const fsys = new FakeFs({ directories: [VAULT_ROOT, abs(VAULT_ROOT, 'markitdown-output'), abs(VAULT_ROOT, 'inbox'), PLUGIN_DIR, abs(PLUGIN_DIR, 'cache')] });

@@ -1,6 +1,6 @@
 # HANDOFF — current state (2026-11-10)
 
-Engine release/reference baseline: **Core 0.3.7** (published on PyPI), SPEC DRAFT-3.8; runtime compatibility is `>=0.3.7,<0.4`. GOLDEN.lock uses producer 0.3.7, and `engine/requirements-reference.txt` pins the published Core hashes.
+Engine release/reference baseline: **Core 0.3.8** (R39; the first release with the public `markitdown.tools` API the engine now uses), SPEC DRAFT-3.8; runtime compatibility is `>=0.3.8,<0.4`. Until 0.3.8 is published and they are regenerated, GOLDEN.lock still uses producer 0.3.7 and `engine/requirements-reference.txt` still pins the Core 0.3.7 hashes.
 
 FX-71 protocol fixtures were first recorded on a supported host (Python 3.14.10, Core 0.3.6) and published to `shell/test/fixtures/fx71`; all streams were then re-recorded from the real engine at the round-11 candidate under Core 0.3.7 (after the round-9/10/11 engine changes). The command provider's destination is home-relative (`~\bin\python.CMD` shim under the recording HOME) and the recorder's leak check rejects any absolute path outside `~` ([90_ACCEPTANCE.md](90_ACCEPTANCE.md) §6.1).
 

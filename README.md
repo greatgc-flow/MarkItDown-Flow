@@ -2,7 +2,7 @@
 
 MarkItDown Flow converts local documents to Markdown and plans selective OCR for
 pages and images. The engine (`mdflow`, a Python CLI) uses `markitdown-gc`
-0.3.7 (published on PyPI). The desktop Obsidian shell drives an engine installed separately in a
+0.3.8 or newer (published on PyPI). The desktop Obsidian shell drives an engine installed separately in a
 virtual environment. Release verification is still pending; see
 [packaging verification](docs/renewal/PACKAGING_VERIFICATION.md).
 
@@ -252,14 +252,14 @@ separators (zip members as `<container>/<member>`).
 
 ## Known limitations
 
-These output gaps come from `markitdown-gc` 0.3.7 (markitdown-gc issues #68,
-#69, #70, #71) and are planned to be fixed in `markitdown-gc` 0.3.8:
+`markitdown-gc` 0.3.8 fixed DOCX Title headings, the empty DOCX table header
+row, XLSX empty cells and whole numbers, and TSV tables (markitdown-gc issues
+#68, #69, #70, #71). These output gaps remain:
 
-- A DOCX Title and PDF headings come out as plain paragraphs, not Markdown
-  headings.
-- An empty DOCX table header row is emitted as an empty row.
-- XLSX empty cells appear as `NaN` and whole numbers as `12.0`.
-- TSV and XML content is emitted as raw text, not as a table or structure.
+- PDF headings can still come out as plain paragraphs, not Markdown headings:
+  the engine converts PDFs one page at a time, so the outline headings that
+  Core 0.3.8 emits for a whole document may not reach the output.
+- XML content is emitted as raw text, not as structure.
 
 exiftool metadata (R31) is added only for standalone `png`, `jpg` and `jpeg`
 files. Images inside PDF, Office, HWP or archive files get no exiftool

@@ -95,9 +95,9 @@ def _check_core() -> None:
     except metadata.PackageNotFoundError:
         raise RuntimeError("markitdown-gc is not installed") from None
     match = re.fullmatch(r"0\.3\.(\d+)(.*)", version)
-    if not match or int(match[1]) < 7 or (int(match[1]) == 7 and match[2] and
+    if not match or int(match[1]) < 8 or (int(match[1]) == 8 and match[2] and
                                         not match[2].startswith((".post", "+"))):
-        raise RuntimeError("markitdown-gc must be >=0.3.7,<0.4")
+        raise RuntimeError("markitdown-gc must be >=0.3.8,<0.4")
 
 
 def _print(value: object, *, pretty: bool = False) -> None:

@@ -95,12 +95,12 @@ def test_T_GEN_02_core_outside_range_exits_one_before_any_file_is_read(tmp_path,
         opened = json.loads(log.read_text(encoding="utf-8")) if log.exists() else []
         return done, opened
 
-    for version in ("0.4.0", "0.3.4", "1.0.0"):
+    for version in ("0.4.0", "0.3.4", "0.3.7", "1.0.0"):
         done, opened = run(version, version)
         assert done.returncode == 1 and "E_CORE_VERSION" in done.stdout + done.stderr, (version, done.stderr)
         assert wanted not in opened, f"{version}: input was opened before the version gate"
         assert not (tmp_path / f"out-{version}").exists() and not (tmp_path / f"cache-{version}").exists()
-    done, opened = run("0.3.7", "control")  # the spy does see the input when the gate passes
+    done, opened = run("0.3.8", "control")  # the spy does see the input when the gate passes
     assert done.returncode == 0, done.stderr
     assert wanted in opened, "control: the open spy did not observe the input file"
 
