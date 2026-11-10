@@ -48,7 +48,6 @@ def test_T_SNF_12_pure_result_and_canonical_hashes(core_api, core_data):
     value = {"z": [None, True, 3], "가": "é\n", "a": {"b": 2}}
     expected = core_data.canonical(value)
     assert core_api.hashing.canonical_json(value) == expected
-    assert core_api.contracts.canonical_json(value) == expected
     assert core_api.hashing.sha256(b"abc") == "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
     for invalid in (math.nan, math.inf, -math.inf):
         with pytest.raises(ValueError):

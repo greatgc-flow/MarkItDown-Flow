@@ -16,6 +16,7 @@ import zlib
 
 from . import approve, assemble, classify, convert, core_guard, exiftool, orchestrate, providers, report, runtime_temp, sniff_io, transcribe, triage, write
 from .executable import resolve_executable, resolve_override
+from .hashing import SHA256_HEX
 
 _DISCLOSURE = ("A remote request can be billed even if its result is never stored: when the run is killed or "
                "cancelled, the connection drops or times out, the reply is unusable, or the cache write fails. Such "
@@ -137,7 +138,7 @@ def _options(args: argparse.Namespace) -> dict:
             opts["yes_hashes"].extend(approve.parse_yes_lines(path.read_text(encoding="utf-8")))
         except (OSError, UnicodeError):
             raise UsageError("The approval hash file could not be read.") from None
-    if any(not re.fullmatch(r"[0-9a-f]{64}", value) for value in opts["yes_hashes"]):
+    if any(not SHA256_HEX.fullmatch(value) for value in opts["yes_hashes"]):
         raise UsageError("Approval hashes must be 64 lowercase hexadecimal characters.")
     if opts["command_egress"] is not None:
         opts["command_egress"] = opts["command_egress"] == "true"
