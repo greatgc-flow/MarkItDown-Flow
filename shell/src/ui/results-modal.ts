@@ -14,6 +14,8 @@ import { labelLegendKey } from './consent-modal';
 
 export type ResultStatus = 'ok' | 'pending' | 'failed';
 
+const APPROVAL_REQUIRED_CODE = 'E_APPROVAL_REQUIRED';
+
 export interface ResultRow {
   path: string;
   /** SPEC 3.2 classification label (`T`/`S`/`M`/...). */
@@ -40,7 +42,8 @@ export interface ResultsViewModel {
 export function buildResultsView(report: RunReport, outcome: HistoryOutcome): ResultsViewModel {
   const rows: ResultRow[] = report.files.map((file) => {
     const issueCodes = file.issues.map((issue) => issue.code);
-    const failed = issueCodes.some((code) => code.startsWith('E_')) || file.units.failed > 0;
+    // E_APPROVAL_REQUIRED is pending OCR awaiting consent (SPEC REQ-APR-03; Keep pending, R37), not a failed conversion.
+    const failed = issueCodes.some((code) => code.startsWith('E_') && code !== APPROVAL_REQUIRED_CODE) || file.units.failed > 0;
     const status: ResultStatus = failed ? 'failed' : file.units.pending > 0 ? 'pending' : 'ok';
     const preconverted = file.issues.find((issue) => issue.code === PRECONVERTED_CODE);
     return {

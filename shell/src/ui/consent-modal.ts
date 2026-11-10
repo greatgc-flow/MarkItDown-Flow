@@ -1,7 +1,8 @@
 /**
  * One consent modal for the complete original selection (20_SHELL.md
  * REQ-SHL-14; SPEC 7.1/8.4 by reference). Fields are rendered as literal text;
- * the default is Keep pending; Escape/close grants nothing.
+ * the default is Keep pending (no authorization; the no-OCR part still runs, R37);
+ * Escape/close grants nothing and runs nothing.
  *
  * Layout (R32): a compact per-file summary table (file, class, units,
  * destination, est. max cost, status) followed by collapsible full Plan details
@@ -54,7 +55,12 @@ export interface ConsentViewModel {
   requiresAcknowledgement: boolean;
 }
 
-export type ConsentDecision = { approved: false } | { approved: true; hashes: string[] };
+/**
+ * `approved: false` grants nothing. `keepPending: true` (the explicit default button, owner decision R37) still asks
+ * for the original invocation to run without any authorization, so every no-OCR part is converted now and OCR units
+ * stay pending (SPEC REQ-APR-03: no egress); a dismissal (Escape/close, no flag) launches nothing.
+ */
+export type ConsentDecision = { approved: false; keepPending?: true } | { approved: true; hashes: string[] };
 
 /** SPEC 3.2 labels with a legend string (`shell.label.<L>`); anything else is shown as its literal letter(s). */
 const KNOWN_LABELS: ReadonlySet<string> = new Set(['T', 'S', 'M', 'U', 'C', 'L', 'P', 'X']);
@@ -118,7 +124,7 @@ export class ConsentModal extends Modal {
     });
   }
 
-  /** Resolves once: approve -> displayed hashes; keep pending / close / Escape -> no authorization. */
+  /** Resolves once: approve -> displayed hashes; keep pending -> no authorization, no-OCR run (R37); close / Escape -> no authorization, no run. */
   get decision(): Promise<ConsentDecision> {
     return this.decisionPromise;
   }
@@ -136,9 +142,9 @@ export class ConsentModal extends Modal {
     this.close();
   }
 
-  /** Default action. */
+  /** Default action: convert everything that needs no OCR now and leave the OCR units pending (R37). */
   keepPending(): void {
-    this.settle({ approved: false });
+    this.settle({ approved: false, keepPending: true });
     this.close();
   }
 
@@ -228,6 +234,7 @@ export class ConsentModal extends Modal {
     contentEl.createEl('p', { cls: 'mdflow-consent-billing', text: this.t(this.view.billingNoticeKey) });
     if (this.view.requiresAcknowledgement) contentEl.createEl('p', { cls: 'mdflow-consent-ack', text: this.t('shell.consent.acknowledge') });
     this.renderDetails(contentEl);
+    contentEl.createEl('p', { cls: 'mdflow-muted mdflow-consent-keep-hint', text: this.t('shell.consent.keepPendingHint') });
     const buttons = contentEl.createDiv({ cls: 'mdflow-buttons mdflow-consent-buttons' });
     const approve = buttons.createEl('button', { text: this.t('shell.consent.approve'), cls: 'mdflow-consent-approve', attr: { type: 'button' } });
     approve.addEventListener('click', () => this.approve());

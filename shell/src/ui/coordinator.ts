@@ -372,21 +372,29 @@ export class ShellCoordinator {
           return report;
         }
         report.decision = decision;
-        if (!decision.approved) {
-          await this.log({ stage: 'approve', count: needingConsent.length, status: 'kept_pending' });
+        if (!decision.approved && !decision.keepPending) {
+          // Escape/close: no authorization and no run.
+          await this.log({ stage: 'approve', count: needingConsent.length, status: 'dismissed' });
           await this.record(snapshot, 'pending_consent');
           return report;
         }
-        const approvable = new Set(needingConsent.map((p) => p.plan_hash));
-        const hashes = decision.hashes.filter((h) => approvable.has(h));
-        const consentDir = joinPath(this.deps.platform, this.deps.pluginDir, CONSENT_DIR_NAME);
-        yesFilePath = joinPath(this.deps.platform, consentDir, `yes-${this.deps.nonce()}-${this.deps.clock.now().toString(36)}.txt`);
-        authorization = { yesFile: yesFilePath, approvedBy: APPROVED_BY_MODAL };
-        await this.log({ stage: 'approve', count: hashes.length, status: 'approved' });
-        // REQ-SHL-09: revalidate the destination immediately before the spawn; the plan/modal may have taken minutes.
-        if (!(await this.destinationStillValid(snapshot))) return this.refuseRun(snapshot, report);
-        await this.deps.fs.mkdir(consentDir);
-        await this.deps.fs.writeFile(yesFilePath, new TextEncoder().encode(renderYesFile(hashes)));
+        if (!decision.approved) {
+          // Owner decision R37: Keep pending replays the original invocation without any authorization argument, so the
+          // engine converts every no-OCR part now and writes pending markers for the OCR units (SPEC REQ-APR-03: exit 3,
+          // no egress). The destination is revalidated before that spawn below, like any unauthorized run.
+          await this.log({ stage: 'approve', count: needingConsent.length, status: 'kept_pending' });
+        } else {
+          const approvable = new Set(needingConsent.map((p) => p.plan_hash));
+          const hashes = decision.hashes.filter((h) => approvable.has(h));
+          const consentDir = joinPath(this.deps.platform, this.deps.pluginDir, CONSENT_DIR_NAME);
+          yesFilePath = joinPath(this.deps.platform, consentDir, `yes-${this.deps.nonce()}-${this.deps.clock.now().toString(36)}.txt`);
+          authorization = { yesFile: yesFilePath, approvedBy: APPROVED_BY_MODAL };
+          await this.log({ stage: 'approve', count: hashes.length, status: 'approved' });
+          // REQ-SHL-09: revalidate the destination immediately before the spawn; the plan/modal may have taken minutes.
+          if (!(await this.destinationStillValid(snapshot))) return this.refuseRun(snapshot, report);
+          await this.deps.fs.mkdir(consentDir);
+          await this.deps.fs.writeFile(yesFilePath, new TextEncoder().encode(renderYesFile(hashes)));
+        }
       }
     }
 
