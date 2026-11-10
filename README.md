@@ -25,6 +25,18 @@ and the current directory, so files inside a vault (including a synced or
 downloaded vault) can never be imported in place of the engine or its
 libraries. Use the same `-I` form in your own scripts.
 
+## Classification (T, S, M)
+
+Each document is classified before anything is converted. `T` (text) needs no
+OCR: its text is extracted directly. `S` (scanned) has no usable text layer and
+needs OCR for all of its pages or images. `M` (mixed) has text plus some pages
+or images that need OCR. Text content of every class is converted immediately
+and locally. OCR happens only after you approve the per-file plan; until then
+the parts that need OCR stay as pending markers in the note. With provider
+`none` they stay pending. Other labels: `U` (need unknown), `C` (archive),
+`L` (legacy format), `P` (protected) and `X` (unsupported). Run
+`mdflow classify <PATH>` to see a file's label.
+
 ## Network services and purpose
 
 The default provider `none` performs local conversion and sends no document data.
@@ -234,6 +246,21 @@ credential-like variable (`*_KEY`, `*_TOKEN`, `*_SECRET`, `*_PASSWORD`, `*_PASS`
 `*_AUTH`, `*_CREDENTIAL`, `*_PAT`) is refused; pass it with `--command-env NAME`.
 `--sensitive` globs match the logical path and the absolute source path with `/`
 separators (zip members as `<container>/<member>`).
+
+## Known limitations
+
+These output gaps come from `markitdown-gc` 0.3.7 (markitdown-gc issues #68,
+#69, #70, #71) and are planned to be fixed in `markitdown-gc` 0.3.8:
+
+- A DOCX Title and PDF headings come out as plain paragraphs, not Markdown
+  headings.
+- An empty DOCX table header row is emitted as an empty row.
+- XLSX empty cells appear as `NaN` and whole numbers as `12.0`.
+- TSV and XML content is emitted as raw text, not as a table or structure.
+
+exiftool metadata (R31) is added only for standalone `png`, `jpg` and `jpeg`
+files. Images inside PDF, Office, HWP or archive files get no exiftool
+metadata, and exiftool is never started for them.
 
 ## Development and license
 

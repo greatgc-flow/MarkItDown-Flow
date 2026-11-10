@@ -45,6 +45,11 @@ section for the rollback snapshot `data.v1.json` and the removals below.
   configured or found exiftool is unusable or older than 12.24 now says that
   its metadata was skipped instead of dropping it silently. A missing exiftool
   stays a normal, warning-free state.
+- Approval dialog default "Keep OCR pending" (R37): reruns the original
+  command without any approval, so content that needs no OCR is converted
+  right away and the OCR parts stay pending markers; nothing is sent or billed.
+  The destination is rechecked before that run; closing the dialog launches
+  nothing and is recorded as `cancelled`.
 
 ### Changed
 
@@ -64,6 +69,32 @@ section for the rollback snapshot `data.v1.json` and the removals below.
   the optional exiftool and LibreOffice programs. The status item with Cancel now
   appears while a conversion waits for the engine check, and the copied Windows
   commands also protect typographic quotes in folder names.
+- The plugin's cache is the engine default `~/.mdflow/cache`
+  (`%USERPROFILE%\.mdflow\cache` on Windows) outside the vault (R38), so vault
+  sync does not replicate converted content or OCR transcriptions.
+- A cooperative cancel that arrives after a provider reply is deferred until
+  that reply is stored, so a reply that may already be billed is not discarded
+  and sent again by the next run.
+- The billing disclosure (README, approval dialog, `--help`) now states that a
+  remote request can be billed even if its result is never stored (run killed
+  or cancelled, dropped or timed-out connection, unusable reply, failed cache
+  write) and that `--force`, cache clearing and concurrent runs can resend.
+- UI/UX polish: no raw engine tokens in the UI (localized stage names and
+  setup results), reworded Korean and English text, separate messages for
+  empty selections, a two-step history clear, and accessibility fixes (labels,
+  button types, focus).
+
+### Security
+
+- Programs started by bare name (exiftool, the default `soffice`, the
+  `command` provider's program) are looked up only in absolute PATH folders,
+  never in the current folder (C1); the `command` provider's program is pinned
+  to its absolute path, which is part of the approved destination.
+- A `--command` template containing the value of a credential-like
+  environment variable is refused without echoing it; pass it with
+  `--command-env NAME` (C2).
+- `--sensitive` globs also match the absolute source path (zip members as
+  `<container>/<member>`); only the matching patterns are stored (C4).
 
 ### Removed
 
