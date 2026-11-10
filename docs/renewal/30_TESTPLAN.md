@@ -553,6 +553,7 @@ Red logs: `build/trace/redgreen/r29-*.red.log` (R29 is green at baseline by audi
 | T-CLI-85 | REQ-CNV-07, REQ-GEN-02 | LibreOffice version fields: real fake executable success, absent PATH, invalid explicit override without fallback, malformed output, bounded timeout; no document conversion. |
 | T-META-97 | REQ-PKG-10, REQ-PKG-17 | Actual scorer complete positive; omit, omit+duplicate, substitute, skip/fail, stale candidate/source, tampered/missing collection and omitted-from-both negatives. |
 | T-META-98 | REQ-PKG-10, REQ-PKG-17 | Source title discovery preserves escaped quotes and embedded quote characters; explicit POSIX/WINDOWS guards restrict per-target expectations. |
+| T-META-99 | REQ-PKG-10 | Review archive: review/ holds only INDEX.md (35 unique commit-pinned permalinks) plus the live MAN01/FINAL records; every review/ link in docs/renewal resolves; HANDOFF is at most 15 lines. |
 
 Reviewed R33 golden changes: FX-30..33/classification.json and classification.review.json, GOLDEN.lock only. FX-30 csv becomes T/NONE without warning; FX-31 html, FX-32 md, FX-33 epub become T/NONE with W_MEDIA_NOT_INSPECTED. Core triage remains unchanged. Historical independent review is preserved and the implementing review's amendment is explicitly labeled.
 

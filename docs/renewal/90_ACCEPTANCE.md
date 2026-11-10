@@ -106,7 +106,7 @@ For each subject, the constrained provenance command used by PT-13 is `gh attest
 
 ## 8. Protected owner handoffs
 
-These were local code/documentation obligations, not items that require a push, release or human to fix. The engine M4 task was explicitly forbidden to edit `shell/**` or the matrix `class_stage` section; the shell owner completed S-01..S-06 in the M4 shell fix round ([M4_SHELL_FIXES.md](review/M4_SHELL_FIXES.md)). Status below is the shell owner's local receipt (Windows, Jest 277/277, compiler check 0 diagnostics, production build), not 3-OS CI evidence; the real CI run stays E-02 in §7.
+These were local code/documentation obligations, not items that require a push, release or human to fix. The engine M4 task was explicitly forbidden to edit `shell/**` or the matrix `class_stage` section; the shell owner completed S-01..S-06 in the M4 shell fix round ([M4_SHELL_FIXES.md](https://github.com/greatgc-flow/MarkItDown-Flow/blob/d3df2524be63ad82f9c706545de15a5c1be78155/docs/renewal/review/M4_SHELL_FIXES.md)). Status below is the shell owner's local receipt (Windows, Jest 277/277, compiler check 0 diagnostics, production build), not 3-OS CI evidence; the real CI run stays E-02 in §7.
 
 | ID | Finding / owner | Concrete completion and oracle | Status |
 |---|---|---|---|
