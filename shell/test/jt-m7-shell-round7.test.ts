@@ -141,5 +141,5 @@ it(R16('JT-16 M7-02 the checking phase has text in both locales'), () => {
 it(R17('JT-17 M7-03 HANDOFF does not present the FX-71 publication as Core 0.3.6 without the R34 refresh'), () => {
   const handoff = fs.readFileSync(path.join(REPO, 'docs', 'renewal', 'HANDOFF.md'), 'utf8');
   const line = handoff.split('\n').find((l) => l.includes('Python 3.14.10, Core 0.3.6')) ?? '';
-  expect(line).toContain('Core 0.3.7');
+  expect(line).toContain('Core 0.3.9');
 });
