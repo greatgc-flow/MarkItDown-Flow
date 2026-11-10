@@ -8,7 +8,7 @@
  */
 import { type App, Modal } from 'obsidian';
 import type { HistoryOutcome } from '../pure/history';
-import { formatMessage, type UiLocale } from '../pure/i18n';
+import { formatMessage, messageForCode, type UiLocale } from '../pure/i18n';
 import { DERIVED_FIDELITY, PRECONVERTED_CODE, type RunReport } from '../pure/protocol';
 import { labelLegendKey } from './consent-modal';
 
@@ -76,12 +76,13 @@ export class ResultsModal extends Modal {
   override onOpen(): void {
     const { contentEl, titleEl } = this;
     titleEl.setText(this.t('shell.results.title'));
+    this.modalEl.addClass('mdflow-modal-wide');
     contentEl.empty();
     contentEl.addClass('mdflow-results');
     const outcomeText = this.t(`shell.history.outcome.${this.view.outcome}`);
     const summary = contentEl.createEl('p', { cls: 'mdflow-results-summary' });
     summary.createSpan({ cls: `mdflow-badge mdflow-outcome mdflow-outcome-${this.view.outcome}`, text: outcomeText });
-    summary.createSpan({ text: ` ${this.t('shell.results.summary', { outcome: outcomeText, files: String(this.view.rows.length) })}` });
+    summary.createSpan({ text: ` ${this.t('shell.results.summary', { files: String(this.view.rows.length) })}` });
     if (this.view.rows.length === 0) {
       contentEl.createEl('p', { cls: 'mdflow-muted', text: this.t('shell.results.empty') });
     } else {
@@ -109,7 +110,14 @@ export class ResultsModal extends Modal {
           cls: 'mdflow-cell-number',
           text: this.t('shell.results.units', { done: String(row.units.done), pending: String(row.units.pending), failed: String(row.units.failed) }),
         });
-        tr.createEl('td', { cls: 'mdflow-cell-codes', text: row.issueCodes.length > 0 ? row.issueCodes.join(', ') : '-' });
+        // One line per SPEC 7.5 code with its localized message (never the raw engine `message`, REQ-SHL-19).
+        const issues = tr.createEl('td', { cls: 'mdflow-cell-codes', text: row.issueCodes.length > 0 ? '' : '-' });
+        for (const code of row.issueCodes) {
+          const ref = messageForCode(code);
+          const line = issues.createDiv({ cls: 'mdflow-issue' });
+          line.createSpan({ cls: 'mdflow-issue-code', text: code });
+          line.createSpan({ cls: 'mdflow-issue-message', text: ` – ${this.t(ref.key, ref.params)}` });
+        }
       }
     }
     if (this.view.skipped.length > 0) {

@@ -82,6 +82,8 @@ export const SPOOL_DIR_NAME = 'spool';
 export const CONSENT_DIR_NAME = 'consent';
 
 const APPROVAL_CODES: ReadonlySet<string> = new Set(['E_APPROVAL_REQUIRED', 'E_APPROVAL_DENIED']);
+/** The notice key Keep pending replaces with `shell.notice.keptPending` (R37). */
+const KEPT_PENDING_DIAGNOSTIC = 'engine.E_APPROVAL_REQUIRED';
 
 /** SPEC 8.4 / approve.py: consent is required only when the provider has egress and requests remain to send. */
 export function needsConsent(plan: Plan): boolean {
@@ -134,6 +136,16 @@ export class ShellCoordinator {
   private refuse(diagnostic: Extract<SubmitResult, { accepted: false }>['diagnostic']): SubmitResult {
     this.deps.notify(diagnostic);
     return { accepted: false, diagnostic };
+  }
+
+  /**
+   * Nothing to convert (empty selection, or a non-recursive folder without files): the internal diagnostic stays
+   * `shell.DESTINATION`, but the user is told the selection was empty (REQ-SHL-08 `shell.notice.pickerEmpty`), not
+   * to choose another output folder.
+   */
+  private refuseEmpty(): SubmitResult {
+    this.deps.notify('shell.notice.pickerEmpty');
+    return { accepted: false, diagnostic: 'shell.DESTINATION' };
   }
 
   private async validateDestination(outputPath: string): Promise<string | null> {
@@ -206,7 +218,7 @@ export class ShellCoordinator {
     // REQ-SHL-04/12: only a committed absolute interpreter is ever spawned; a relative value that reached the
     // settings (hand-edited or synced data.json) is a runtime configuration problem, not a destination one (M4 P-04).
     if (!settings.enginePython || !isAbsolutePath(settings.enginePython)) return this.refuse('shell.RUNTIME');
-    if (selection.paths.length === 0) return this.refuse('shell.DESTINATION');
+    if (selection.paths.length === 0) return this.refuseEmpty();
     // M7-02: a re-probe after a transient failure can take about 11 s; show the item and its Cancel while we wait.
     this.deps.progress?.begin('check');
     this.checking = true;
@@ -238,7 +250,7 @@ export class ShellCoordinator {
       }
       const afterListing = this.admissionInterrupted();
       if (afterListing) return afterListing;
-      if (inputs.length === 0) return this.refuse('shell.DESTINATION');
+      if (inputs.length === 0) return this.refuseEmpty();
     }
 
     // Remote work without an inherited key degrades to provider none (REQ-SHL-06).
@@ -348,6 +360,7 @@ export class ShellCoordinator {
     const remote = snapshot.provider.name !== 'none';
     let authorization: Authorization | null = null;
     let yesFilePath: string | null = null;
+    let keptPending = false;
 
     await this.log({ stage: 'submit', count: snapshot.inputs.length, status: `${entry}:${remote ? 'plan' : 'run'}` });
 
@@ -385,15 +398,18 @@ export class ShellCoordinator {
         }
         report.decision = decision;
         if (!decision.approved && !decision.keepPending) {
-          // Escape/close: no authorization and no run.
+          // Escape/close: no authorization and no run. Nothing was converted, so it is said so and recorded as
+          // cancelled, never as the pending outcome of Keep pending, which did convert (REQ-SHL-07 distinct outcomes).
+          this.deps.notify('shell.notice.consentDismissed');
           await this.log({ stage: 'approve', count: needingConsent.length, status: 'dismissed' });
-          await this.record(snapshot, 'pending_consent');
+          await this.record(snapshot, 'cancelled');
           return report;
         }
         if (!decision.approved) {
           // Owner decision R37: Keep pending replays the original invocation without any authorization argument, so the
           // engine converts every no-OCR part now and writes pending markers for the OCR units (SPEC REQ-APR-03: exit 3,
           // no egress). The destination is revalidated before that spawn below, like any unauthorized run.
+          keptPending = true;
           await this.log({ stage: 'approve', count: needingConsent.length, status: 'kept_pending' });
         } else {
           const approvable = new Set(needingConsent.map((p) => p.plan_hash));
@@ -430,8 +446,12 @@ export class ShellCoordinator {
       return report;
     }
     report.pendingShown = run.outcome === 'pending_consent' || run.events.some((e) => (e.ev === 'error' && APPROVAL_CODES.has(e.code)) || e.ev === 'approve_required');
-    for (const key of run.diagnostics) this.deps.notify(key);
-    if (run.outcome === 'complete') this.deps.notify('shell.notice.jobDone', { outcome: run.outcome });
+    // After Keep pending the engine's E_APPROVAL_REQUIRED is the expected result of the user's own choice, not a request
+    // to review a Plan now: it is replaced by one notice saying what happened and how to approve later.
+    const diagnostics = keptPending ? run.diagnostics.filter((key) => key !== KEPT_PENDING_DIAGNOSTIC) : run.diagnostics;
+    for (const key of diagnostics) this.deps.notify(key);
+    if (keptPending && run.stdout?.ok) this.deps.notify('shell.notice.keptPending');
+    if (run.outcome === 'complete') this.deps.notify('shell.notice.jobDone');
     // Concise per-file list from the decoded report only (R32); a forced or report-less end shows nothing invented.
     if (run.stdout?.ok) this.deps.results?.(buildResultsView(run.stdout.value, run.outcome));
     await this.log({ stage: 'run', code: run.startupError?.code, count: run.events.filter((e) => e.ev === 'file_end').length, status: `${run.termination}:${run.outcome}` });

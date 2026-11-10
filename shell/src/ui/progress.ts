@@ -9,7 +9,13 @@
  * is retained (O(1) work and memory per event).
  */
 import type { ProgressEvent, Stage } from '../pure/framing';
-import { formatMessage, type UiLocale } from '../pure/i18n';
+import { dictionary, formatMessage, type UiLocale } from '../pure/i18n';
+
+/** Localized engine stage (`shell.progress.stage.<stage>`); a stage without a string is shown as its literal token. */
+export function stageText(locale: UiLocale, stage: Stage): string {
+  const key = `shell.progress.stage.${stage}`;
+  return dictionary(locale)[key] !== undefined ? formatMessage(locale, key) : stage;
+}
 
 export interface ProgressSummary {
   /** Latest `stage` event, if any. */
@@ -174,7 +180,7 @@ export class JobStatusBar implements ProgressSink {
     const s = this.summary;
     this.detailsEl.setText(
       this.t('shell.progress.details', {
-        stage: s.stage ?? this.t('shell.progress.starting'),
+        stage: s.stage ? stageText(this.deps.locale(), s.stage) : this.t('shell.progress.starting'),
         filesEnded: String(s.filesEnded),
         filesTotal: s.filesTotal === null ? '?' : String(s.filesTotal),
         done: String(s.unitsDone),

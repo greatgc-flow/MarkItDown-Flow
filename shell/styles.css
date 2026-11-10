@@ -26,7 +26,6 @@
   align-items: baseline;
   font-size: var(--font-ui-small);
   line-height: var(--line-height-tight);
-  word-break: break-all;
 }
 
 .mdflow-kv-key {
@@ -34,9 +33,17 @@
   flex: 0 0 auto;
 }
 
+/* Long paths and versions wrap anywhere; keys never break mid-word. */
 .mdflow-kv-value {
   font-family: var(--font-monospace);
+  overflow-wrap: anywhere;
+  min-width: 0;
   user-select: text;
+}
+
+/* Wider dialogs (consent, results, history, setup) so multi-column tables are not squeezed. */
+.modal.mdflow-modal-wide {
+  width: min(92vw, 960px);
 }
 
 .mdflow-table-scroll {
@@ -107,14 +114,27 @@
   word-break: break-word;
 }
 
+/* Results "Issues": one line per code, the localized message in the UI font. */
+.mdflow-issue + .mdflow-issue {
+  margin-top: var(--size-2-1);
+}
+
+.mdflow-issue-message {
+  font-family: var(--font-interface);
+  color: var(--text-muted);
+}
+
 .mdflow-badge {
   font-size: var(--font-ui-smaller);
   font-weight: var(--font-medium);
   white-space: nowrap;
 }
 
+/* Attention badge: readable body text with a warning-coloured marker, not low-contrast warning-coloured text. */
 .mdflow-badge-attention {
-  color: var(--text-warning);
+  color: var(--text-normal);
+  border-left: 3px solid var(--text-warning);
+  padding-left: var(--size-4-1);
 }
 
 .mdflow-badge-muted {
@@ -209,28 +229,50 @@
   color: var(--text-muted);
 }
 
+/*
+ * Warnings read like callouts: body text in the normal colour (warning-coloured paragraphs fall below 4.5:1 contrast
+ * in the light theme), the warning colour only in the left border.
+ */
 .mdflow-consent-billing,
 .mdflow-consent-ack,
 .mdflow-consent-warning,
 .mdflow-setup-warning {
-  color: var(--text-warning);
+  color: var(--text-normal);
   font-size: var(--font-ui-small);
-}
-
-.mdflow-consent-billing,
-.mdflow-consent-ack {
   padding: var(--size-4-2) var(--size-4-3);
   border-left: 3px solid var(--text-warning);
   background-color: var(--background-secondary);
   border-radius: var(--radius-s);
 }
 
+.mdflow-consent-summary-scroll {
+  max-height: 35vh;
+}
+
+.mdflow-consent-details-all {
+  margin-top: var(--size-4-3);
+}
+
+.mdflow-consent-details-all > summary {
+  cursor: pointer;
+  font-size: var(--font-ui-small);
+  color: var(--text-muted);
+}
+
 .mdflow-consent-files {
   max-height: 40vh;
   overflow-y: auto;
-  margin-top: var(--size-4-3);
+  margin-top: var(--size-4-2);
   border: 1px solid var(--background-modifier-border);
   border-radius: var(--radius-m);
+}
+
+/* The decision buttons stay reachable however long the dialog is. */
+.mdflow-consent-buttons {
+  position: sticky;
+  bottom: 0;
+  padding: var(--size-4-2) 0;
+  background-color: var(--background-primary);
 }
 
 .mdflow-consent-file {
@@ -253,10 +295,10 @@
   color: var(--text-faint);
 }
 
+/* Labels and sentences in the UI font (Hangul in monospace reads poorly); only the values are monospace. */
 .mdflow-consent-row {
-  font-family: var(--font-monospace);
+  font-family: inherit;
   font-size: var(--font-ui-smaller);
-  word-break: break-all;
   padding-left: var(--size-4-4);
 }
 
@@ -264,9 +306,14 @@
   color: var(--text-muted);
 }
 
+.mdflow-consent-value {
+  font-family: var(--font-monospace);
+  overflow-wrap: anywhere;
+}
+
+/* No italic: synthetic oblique Hangul is hard to read. */
 .mdflow-consent-informational {
   color: var(--text-muted);
-  font-style: italic;
   font-size: var(--font-ui-smaller);
   padding-left: var(--size-4-4);
 }
@@ -361,11 +408,4 @@
   font-family: var(--font-monospace);
   font-size: var(--font-ui-smaller);
   word-break: break-all;
-}
-
-.mdflow-drop-buttons {
-  display: flex;
-  gap: var(--size-4-2);
-  justify-content: flex-end;
-  margin-top: var(--size-4-4);
 }

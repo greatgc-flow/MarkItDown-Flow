@@ -4,7 +4,7 @@
  * error with its fix command (R33c), probe status, provider/tool variable
  * presence and copyable external bootstrap instructions, in four sections.
  */
-import { type App, Modal } from 'obsidian';
+import { type App, Modal, Notice } from 'obsidian';
 import { formatMessage, type UiLocale } from '../pure/i18n';
 import { collectSetupDiagnostics, type SetupDeps, type SetupDiagnostics } from '../process/setup';
 import { TOOL_INFO_KEYS, type VersionInfo } from '../process/version-gate';
@@ -56,6 +56,11 @@ export class SetupModal extends Modal {
     return formatMessage(this.deps.locale, key, params);
   }
 
+  /** True while a version check runs (the modal says so and Refresh is disabled). */
+  get checking(): boolean {
+    return this.refreshing !== null;
+  }
+
   /** Re-run the version probe(s) and re-render. */
   async refresh(): Promise<void> {
     if (this.refreshing) return this.refreshing;
@@ -63,22 +68,30 @@ export class SetupModal extends Modal {
       const diagnostics = await collectSetupDiagnostics(this.deps);
       this.current = diagnostics;
       this.deps.onDiagnostics?.(diagnostics);
-      this.render();
     })().finally(() => {
       this.refreshing = null;
+      this.render();
     });
+    this.render();
     return this.refreshing;
   }
 
-  /** Copy buttons: write the rendered instruction text to the clipboard, nothing else. */
+  /** Copy buttons: write the rendered instruction text to the clipboard, nothing else, then confirm it. */
   async copyInstructions(target: 'windows' | 'posix'): Promise<void> {
     if (!this.current) return;
     await this.deps.writeClipboard(this.current.instructions[target]);
+    new Notice(this.t('shell.setup.copied'));
   }
 
   async copyDiagnostics(): Promise<void> {
     if (!this.current) return;
     await this.deps.writeClipboard(this.current.summary);
+    new Notice(this.t('shell.setup.copied'));
+  }
+
+  /** `present`/`absent` and bootstrap probe results as localized display words; the copied summary stays English. */
+  private presenceText(presence: string): string {
+    return presence === 'present' || presence === 'absent' ? this.t(`shell.setup.presence.${presence}`) : presence;
   }
 
   private toolText(d: SetupDiagnostics, tool: OptionalTool): string {
@@ -104,6 +117,7 @@ export class SetupModal extends Modal {
     this.heading(contentEl, 'shell.setup.section.interpreter');
     this.keyValue(contentEl, this.t('shell.setup.interpreter'), this.deps.enginePython ?? '-', 'mdflow-setup-interpreter');
     if (!this.deps.enginePython) contentEl.createEl('p', { cls: 'mdflow-setup-warning', text: this.t('shell.setup.unconfigured') });
+    if (this.checking) contentEl.createEl('p', { cls: 'mdflow-muted mdflow-setup-checking', text: this.t('shell.setup.checking'), attr: { 'aria-live': 'polite' } });
     if (d?.gate) {
       // M6-01: "no answer in time" is not a compatibility verdict; say so and point at Refresh.
       const status = d.gate.enabled
@@ -137,18 +151,18 @@ export class SetupModal extends Modal {
         const probes = contentEl.createDiv({ cls: 'mdflow-setup-probes' });
         probes.createEl('p', { cls: 'mdflow-muted', text: this.t('shell.setup.bootstrapProbes') });
         for (const probe of d.bootstrapProbes) {
-          this.keyValue(probes, `${probe.command} ${probe.args.join(' ')}`, `${probe.result}${probe.version ? ` ${probe.version}` : ''}`);
+          this.keyValue(probes, `${probe.command} ${probe.args.join(' ')}`, `${this.t(`shell.setup.probeResult.${probe.result}`)}${probe.version ? ` ${probe.version}` : ''}`);
         }
       }
 
       this.heading(contentEl, 'shell.setup.section.environment');
-      contentEl.createEl('p', { text: this.t('shell.setup.apiKey', { presence: d.apiKey }) });
+      contentEl.createEl('p', { text: this.t('shell.setup.apiKey', { presence: this.presenceText(d.apiKey) }) });
       contentEl.createEl('p', { cls: 'mdflow-muted', text: this.t('shell.setup.providerEnv') });
       const envList = contentEl.createDiv({ cls: 'mdflow-setup-env' });
-      for (const [name, presence] of Object.entries(d.providerEnv)) this.keyValue(envList, name, presence);
+      for (const [name, presence] of Object.entries(d.providerEnv)) this.keyValue(envList, name, this.presenceText(presence));
       contentEl.createEl('p', { cls: 'mdflow-muted', text: this.t('shell.setup.toolEnv') });
       const toolList = contentEl.createDiv({ cls: 'mdflow-setup-env mdflow-setup-tool-env' });
-      for (const [name, presence] of Object.entries(d.toolEnv)) this.keyValue(toolList, name, presence);
+      for (const [name, presence] of Object.entries(d.toolEnv)) this.keyValue(toolList, name, this.presenceText(presence));
       contentEl.createEl('p', { cls: 'mdflow-muted', text: this.t('shell.setup.launchHint') });
 
       this.heading(contentEl, 'shell.setup.section.instructions');
@@ -167,14 +181,16 @@ export class SetupModal extends Modal {
     buttons.createEl('button', { text: this.t('shell.setup.copyDiagnostics'), attr: { type: 'button' } }).addEventListener('click', () => {
       void this.copyDiagnostics();
     });
-    buttons.createEl('button', { text: this.t('shell.setup.refresh'), cls: 'mod-cta', attr: { type: 'button' } }).addEventListener('click', () => {
+    const refresh = buttons.createEl('button', { text: this.t('shell.setup.refresh'), cls: 'mod-cta', attr: { type: 'button' } });
+    refresh.disabled = this.checking;
+    refresh.addEventListener('click', () => {
       void this.refresh();
     });
   }
 
   override onOpen(): void {
     this.titleEl.setText(this.t('shell.setup.title'));
-    this.render();
+    this.modalEl.addClass('mdflow-modal-wide');
     void this.refresh();
   }
 

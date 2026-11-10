@@ -111,6 +111,9 @@ export function buildConsentView(plans: readonly Plan[], destinationDir: string)
 
 type Resolver = (decision: ConsentDecision) => void;
 
+/** Element id of the fixed Keep pending hint; the button names it in `aria-describedby` (one consent modal at a time). */
+const KEEP_HINT_ID = 'mdflow-consent-keep-hint';
+
 export class ConsentModal extends Modal {
   private resolveDecision!: Resolver;
   private readonly decisionPromise: Promise<ConsentDecision>;
@@ -166,7 +169,9 @@ export class ConsentModal extends Modal {
   }
 
   private renderSummary(parent: HTMLElement): void {
-    const table = parent.createEl('table', { cls: 'mdflow-table mdflow-consent-summary' });
+    // Bounded, scrollable table: 50 files never push the decision buttons off-screen.
+    const wrap = parent.createDiv({ cls: 'mdflow-table-scroll mdflow-consent-summary-scroll' });
+    const table = wrap.createEl('table', { cls: 'mdflow-table mdflow-consent-summary' });
     const head = table.createEl('thead').createEl('tr');
     for (const column of ['file', 'label', 'units', 'destination', 'cost', 'status']) {
       head.createEl('th', { text: this.t(`shell.consent.col.${column}`), attr: { scope: 'col' } });
@@ -197,7 +202,10 @@ export class ConsentModal extends Modal {
   }
 
   private renderDetails(parent: HTMLElement): void {
-    const list = parent.createDiv({ cls: 'mdflow-consent-files' });
+    // One outer, collapsed group holds every per-file Plan, so the dialog has a single secondary scroll area.
+    const all = parent.createEl('details', { cls: 'mdflow-consent-details-all' });
+    all.createEl('summary', { text: this.t('shell.consent.detailsAll', { count: String(this.view.files.length) }) });
+    const list = all.createDiv({ cls: 'mdflow-consent-files' });
     for (const file of this.view.files) {
       const section = list.createEl('details', { cls: 'mdflow-consent-file' });
       const summary = section.createEl('summary');
@@ -232,6 +240,7 @@ export class ConsentModal extends Modal {
   override onOpen(): void {
     const { contentEl, titleEl } = this;
     titleEl.setText(this.t('shell.consent.title'));
+    this.modalEl.addClass('mdflow-modal-wide');
     contentEl.empty();
     contentEl.addClass('mdflow-consent');
     contentEl.createEl('p', {
@@ -244,11 +253,15 @@ export class ConsentModal extends Modal {
     contentEl.createEl('p', { cls: 'mdflow-consent-billing', text: this.t(this.view.billingNoticeKey) });
     if (this.view.requiresAcknowledgement) contentEl.createEl('p', { cls: 'mdflow-consent-ack', text: this.t('shell.consent.acknowledge') });
     this.renderDetails(contentEl);
-    contentEl.createEl('p', { cls: 'mdflow-muted mdflow-consent-keep-hint', text: this.t('shell.consent.keepPendingHint') });
+    contentEl.createEl('p', { cls: 'mdflow-muted mdflow-consent-keep-hint', text: this.t('shell.consent.keepPendingHint'), attr: { id: KEEP_HINT_ID } });
     const buttons = contentEl.createDiv({ cls: 'mdflow-buttons mdflow-consent-buttons' });
     const approve = buttons.createEl('button', { text: this.t('shell.consent.approve'), cls: 'mdflow-consent-approve', attr: { type: 'button' } });
     approve.addEventListener('click', () => this.approve());
-    const keep = buttons.createEl('button', { text: this.t('shell.consent.keepPending'), cls: 'mod-cta mdflow-consent-keep', attr: { type: 'button' } });
+    const keep = buttons.createEl('button', {
+      text: this.t('shell.consent.keepPending'),
+      cls: 'mod-cta mdflow-consent-keep',
+      attr: { type: 'button', 'aria-describedby': KEEP_HINT_ID },
+    });
     keep.addEventListener('click', () => this.keepPending());
     keep.focus();
   }
