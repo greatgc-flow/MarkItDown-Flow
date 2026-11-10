@@ -501,8 +501,7 @@ def run(roots: Sequence[Path], options: dict, *, provider=None,
         public_options.update(preconvert_legacy=True, preconvert_timeout_s=opts['preconvert_timeout_s'])
     for key in ("cache", "out"):
         if opts.get(key):
-            path, home = str(opts[key]), str(Path.home())
-            public_options[key] = "~" + path[len(home):] if path == home or path.startswith(home + os.sep) else path
+            public_options[key] = report.home_relative(str(opts[key]))
     value = dict(v=1, mdflow=__version__, started=started, finished=started, options=public_options,
                  files=[], skipped=[], exit=0)
     cancelled = False

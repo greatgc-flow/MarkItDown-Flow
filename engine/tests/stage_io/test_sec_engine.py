@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from mdflow import cli, convert, exiftool, ledger, providers, redact
+from mdflow import cli, convert, exiftool, ledger, plan, providers, redact
 from mdflow.providers import command as command_module
 from mdflow.providers.command import CommandProvider
 
@@ -92,10 +92,13 @@ def test_T_SEC_61_exiftool_and_soffice_lookups_never_run_a_program_planted_in_th
 @pytest.mark.req("REQ-SEC-03")
 @pytest.mark.cov("S10", "FM9")
 @pytest.mark.fx("FX-63")
-def test_T_SEC_62_command_program_is_pinned_to_an_absolute_path_in_the_destination(tmp_path, monkeypatch):
+@pytest.mark.parametrize("folder", ("home", "home-sibling"))
+def test_T_SEC_62_command_program_is_pinned_with_home_relative_destination(tmp_path, monkeypatch, folder):
+    home = tmp_path / "home"
+    monkeypatch.setattr(Path, "home", classmethod(lambda cls: home))
     _program(tmp_path / "work", "ocrtool")
-    one = _program(tmp_path / "bin1", "ocrtool")
-    _program(tmp_path / "bin2", "ocrtool")
+    one = _program(tmp_path / folder / "bin1", "ocrtool")
+    two = _program(tmp_path / folder / "bin2", "ocrtool")
     monkeypatch.chdir(tmp_path / "work")
     seen = []
 
@@ -108,12 +111,19 @@ def test_T_SEC_62_command_program_is_pinned_to_an_absolute_path_in_the_destinati
     first = CommandProvider(command="ocrtool --x {input}", egress=False, model="m")
     assert first.transcribe(dict(mime="image/png"), b"png", None)["status"] == "failed"
     assert os.path.isabs(seen[0][0]) and Path(seen[0][0]).samefile(one)
-    assert json.loads(first.meta["destination"][len("command:"):])[0] == seen[0][0]
-    monkeypatch.setenv("PATH", str(tmp_path / "bin2"))
+    shown = json.loads(first.meta["destination"][len("command:"):])[0]
+    assert Path(shown) == (Path("~") / one.relative_to(home) if folder == "home" else one)
+    monkeypatch.setenv("PATH", str(two.parent))
     second = CommandProvider(command="ocrtool --x {input}", egress=False, model="m")
     assert first.meta["destination"] != second.meta["destination"]
     assert ledger.provider_fingerprint(first.meta, "p1") != ledger.provider_fingerprint(second.meta, "p1"), \
         "a different same-named program invalidates approvals and cached results"
+    options = dict(file=dict(path="a.pdf", sha256="a" * 64, bytes=1, format="pdf"),
+                   classification=dict(route="NATIVE", need="PARTIAL", label="M", action="convert_and_ocr",
+                                       decision="ocr_recommended", coverage_state="complete"))
+    plans = [plan.plan(dict(units=[], oversize=False), {}, {}, provider.meta, options)
+             for provider in (first, second)]
+    assert plans[0]["plan_hash"] != plans[1]["plan_hash"], "program changes invalidate approval hashes"
     monkeypatch.setenv("PATH", str(tmp_path / "nowhere"))
     seen.clear()
     missing = CommandProvider(command="ocrtool {input}", egress=False, model="m")

@@ -1,116 +1,116 @@
-{"v":1,"ev":"run_start","ts":"2026-11-09T13:30:26+00:00","files":7,"provider":"none"}
-{"v":1,"ev":"file_start","ts":"2026-11-09T13:30:26+00:00","file":"b c.docx","index":1,"total":7}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:26+00:00","file":"b c.docx","stage":"sniff","state":"end","ms":0}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:26+00:00","file":"b c.docx","stage":"triage","state":"end","ms":143}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:26+00:00","file":"b c.docx","stage":"classify","state":"end","ms":0}
-{"v":1,"ev":"warning","ts":"2026-11-09T13:30:26+00:00","file":"b c.docx","code":"W_REVIEW_PRIORITY","message":"W review priority."}
-{"v":1,"ev":"classified","ts":"2026-11-09T13:30:26+00:00","file":"b c.docx","route":"NATIVE","need":"PARTIAL","label":"M","action":"convert_and_ocr"}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:26+00:00","file":"b c.docx","stage":"select","state":"end","ms":0}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:26+00:00","file":"b c.docx","stage":"convert","state":"end","ms":247}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:26+00:00","file":"b c.docx","stage":"render","state":"end","ms":1}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:26+00:00","file":"b c.docx","stage":"lookup","state":"end","ms":0}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:26+00:00","file":"b c.docx","stage":"plan","state":"end","ms":0}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:26+00:00","file":"b c.docx","stage":"approve","state":"end","ms":0}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:26+00:00","file":"b c.docx","stage":"transcribe","state":"end","ms":0}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:26+00:00","file":"b c.docx","unit":"word/media/image1.png","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:26+00:00","file":"b c.docx","unit":"word/media/image2.png","state":"pending","code":null}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:26+00:00","file":"b c.docx","stage":"assemble","state":"end","ms":0}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:26+00:00","file":"b c.docx","stage":"write","state":"end","ms":10}
-{"v":1,"ev":"file_end","ts":"2026-11-09T13:30:26+00:00","file":"b c.docx","outputs":["b c.docx.md"],"units":{"total":2,"done":0,"pending":2,"failed":0}}
-{"v":1,"ev":"file_start","ts":"2026-11-09T13:30:26+00:00","file":"memo.txt","index":2,"total":7}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:26+00:00","file":"memo.txt","stage":"sniff","state":"end","ms":0}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:26+00:00","file":"memo.txt","stage":"triage","state":"end","ms":2}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:26+00:00","file":"memo.txt","stage":"classify","state":"end","ms":0}
-{"v":1,"ev":"classified","ts":"2026-11-09T13:30:26+00:00","file":"memo.txt","route":"NATIVE","need":"NONE","label":"T","action":"convert_only"}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:26+00:00","file":"memo.txt","stage":"select","state":"end","ms":0}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:26+00:00","file":"memo.txt","stage":"convert","state":"end","ms":41}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:26+00:00","file":"memo.txt","stage":"render","state":"end","ms":0}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:26+00:00","file":"memo.txt","stage":"lookup","state":"end","ms":0}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:26+00:00","file":"memo.txt","stage":"plan","state":"end","ms":0}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:26+00:00","file":"memo.txt","stage":"approve","state":"end","ms":0}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:26+00:00","file":"memo.txt","stage":"transcribe","state":"end","ms":0}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:26+00:00","file":"memo.txt","stage":"assemble","state":"end","ms":0}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:26+00:00","file":"memo.txt","stage":"write","state":"end","ms":4}
-{"v":1,"ev":"file_end","ts":"2026-11-09T13:30:26+00:00","file":"memo.txt","outputs":["memo.txt.md"],"units":{"total":0,"done":0,"pending":0,"failed":0}}
-{"v":1,"ev":"file_start","ts":"2026-11-09T13:30:26+00:00","file":"sub/a.pdf","index":3,"total":7}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:26+00:00","file":"sub/a.pdf","stage":"sniff","state":"end","ms":0}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:26+00:00","file":"sub/a.pdf","stage":"triage","state":"end","ms":27}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:26+00:00","file":"sub/a.pdf","stage":"classify","state":"end","ms":0}
-{"v":1,"ev":"classified","ts":"2026-11-09T13:30:26+00:00","file":"sub/a.pdf","route":"NATIVE","need":"PARTIAL","label":"M","action":"convert_and_ocr"}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:26+00:00","file":"sub/a.pdf","stage":"select","state":"end","ms":0}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:26+00:00","file":"sub/a.pdf","stage":"convert","state":"end","ms":153}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:26+00:00","file":"sub/a.pdf","stage":"render","state":"end","ms":52}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:26+00:00","file":"sub/a.pdf","stage":"lookup","state":"end","ms":0}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:26+00:00","file":"sub/a.pdf","stage":"plan","state":"end","ms":0}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:26+00:00","file":"sub/a.pdf","stage":"approve","state":"end","ms":0}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:26+00:00","file":"sub/a.pdf","stage":"transcribe","state":"end","ms":0}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:26+00:00","file":"sub/a.pdf","unit":"p2","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:26+00:00","file":"sub/a.pdf","unit":"p4","state":"pending","code":null}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:26+00:00","file":"sub/a.pdf","stage":"assemble","state":"end","ms":0}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:26+00:00","file":"sub/a.pdf","stage":"write","state":"end","ms":3}
-{"v":1,"ev":"file_end","ts":"2026-11-09T13:30:26+00:00","file":"sub/a.pdf","outputs":["sub/a.pdf.md"],"units":{"total":2,"done":0,"pending":2,"failed":0}}
-{"v":1,"ev":"file_start","ts":"2026-11-09T13:30:26+00:00","file":"보고서/3분기 결산.pdf","index":4,"total":7}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:26+00:00","file":"보고서/3분기 결산.pdf","stage":"sniff","state":"end","ms":0}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:26+00:00","file":"보고서/3분기 결산.pdf","stage":"triage","state":"end","ms":9}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:26+00:00","file":"보고서/3분기 결산.pdf","stage":"classify","state":"end","ms":0}
-{"v":1,"ev":"classified","ts":"2026-11-09T13:30:26+00:00","file":"보고서/3분기 결산.pdf","route":"NATIVE","need":"FULL","label":"S","action":"convert_and_ocr"}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:26+00:00","file":"보고서/3분기 결산.pdf","stage":"select","state":"end","ms":0}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:26+00:00","file":"보고서/3분기 결산.pdf","stage":"convert","state":"end","ms":107}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:26+00:00","file":"보고서/3분기 결산.pdf","stage":"render","state":"end","ms":80}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:26+00:00","file":"보고서/3분기 결산.pdf","stage":"lookup","state":"end","ms":0}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:26+00:00","file":"보고서/3분기 결산.pdf","stage":"plan","state":"end","ms":0}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:26+00:00","file":"보고서/3분기 결산.pdf","stage":"approve","state":"end","ms":0}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:26+00:00","file":"보고서/3분기 결산.pdf","stage":"transcribe","state":"end","ms":0}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:26+00:00","file":"보고서/3분기 결산.pdf","unit":"p1","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:26+00:00","file":"보고서/3분기 결산.pdf","unit":"p2","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:26+00:00","file":"보고서/3분기 결산.pdf","unit":"p3","state":"pending","code":null}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:26+00:00","file":"보고서/3분기 결산.pdf","stage":"assemble","state":"end","ms":0}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:26+00:00","file":"보고서/3분기 결산.pdf","stage":"write","state":"end","ms":3}
-{"v":1,"ev":"file_end","ts":"2026-11-09T13:30:26+00:00","file":"보고서/3분기 결산.pdf","outputs":["보고서/3분기 결산.pdf.md"],"units":{"total":3,"done":0,"pending":3,"failed":0}}
-{"v":1,"ev":"file_start","ts":"2026-11-09T13:30:26+00:00","file":"broken.pdf","index":5,"total":7}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:26+00:00","file":"broken.pdf","stage":"sniff","state":"end","ms":0}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:27+00:00","file":"broken.pdf","stage":"triage","state":"end","ms":2}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:27+00:00","file":"broken.pdf","stage":"classify","state":"end","ms":0}
-{"v":1,"ev":"classified","ts":"2026-11-09T13:30:27+00:00","file":"broken.pdf","route":"NATIVE","need":"UNKNOWN","label":"U","action":"report_only"}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:27+00:00","file":"broken.pdf","stage":"select","state":"end","ms":0}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:27+00:00","file":"broken.pdf","stage":"convert","state":"end","ms":1}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:27+00:00","file":"broken.pdf","stage":"lookup","state":"end","ms":0}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:27+00:00","file":"broken.pdf","stage":"plan","state":"end","ms":0}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:27+00:00","file":"broken.pdf","stage":"approve","state":"end","ms":0}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:27+00:00","file":"broken.pdf","stage":"transcribe","state":"end","ms":0}
-{"v":1,"ev":"file_end","ts":"2026-11-09T13:30:27+00:00","file":"broken.pdf","outputs":[],"units":{"total":0,"done":0,"pending":0,"failed":0}}
-{"v":1,"ev":"file_start","ts":"2026-11-09T13:30:27+00:00","file":"empty.pdf","index":6,"total":7}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:27+00:00","file":"empty.pdf","stage":"sniff","state":"end","ms":0}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:27+00:00","file":"empty.pdf","stage":"triage","state":"end","ms":1}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:27+00:00","file":"empty.pdf","stage":"classify","state":"end","ms":0}
-{"v":1,"ev":"classified","ts":"2026-11-09T13:30:27+00:00","file":"empty.pdf","route":"UNSUPPORTED","need":"UNKNOWN","label":"X","action":"report_only"}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:27+00:00","file":"empty.pdf","stage":"select","state":"end","ms":0}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:27+00:00","file":"empty.pdf","stage":"convert","state":"end","ms":1}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:27+00:00","file":"empty.pdf","stage":"lookup","state":"end","ms":0}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:27+00:00","file":"empty.pdf","stage":"plan","state":"end","ms":0}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:27+00:00","file":"empty.pdf","stage":"approve","state":"end","ms":0}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:27+00:00","file":"empty.pdf","stage":"transcribe","state":"end","ms":0}
-{"v":1,"ev":"file_end","ts":"2026-11-09T13:30:27+00:00","file":"empty.pdf","outputs":[],"units":{"total":0,"done":0,"pending":0,"failed":0}}
-{"v":1,"ev":"file_start","ts":"2026-11-09T13:30:27+00:00","file":"garbled.docx","index":7,"total":7}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:27+00:00","file":"garbled.docx","stage":"sniff","state":"end","ms":0}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:27+00:00","file":"garbled.docx","stage":"triage","state":"end","ms":90}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:27+00:00","file":"garbled.docx","stage":"classify","state":"end","ms":0}
-{"v":1,"ev":"warning","ts":"2026-11-09T13:30:27+00:00","file":"garbled.docx","code":"W_UNRESOLVED_EMBED","message":"W unresolved embed."}
-{"v":1,"ev":"warning","ts":"2026-11-09T13:30:27+00:00","file":"garbled.docx","code":"W_REVIEW_PRIORITY","message":"W review priority."}
-{"v":1,"ev":"warning","ts":"2026-11-09T13:30:27+00:00","file":"garbled.docx","code":"W_TRIAGE_PARTIAL","message":"W triage partial."}
-{"v":1,"ev":"classified","ts":"2026-11-09T13:30:27+00:00","file":"garbled.docx","route":"NATIVE","need":"UNKNOWN","label":"U","action":"convert_and_ocr"}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:27+00:00","file":"garbled.docx","stage":"select","state":"end","ms":0}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:27+00:00","file":"garbled.docx","stage":"convert","state":"end","ms":47}
-{"v":1,"ev":"error","ts":"2026-11-09T13:30:27+00:00","file":"garbled.docx","code":"E_CONVERT_FAIL","message":"Core conversion failed (FileConversionException)"}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:27+00:00","file":"garbled.docx","stage":"render","state":"end","ms":1}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:27+00:00","file":"garbled.docx","stage":"lookup","state":"end","ms":0}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:27+00:00","file":"garbled.docx","stage":"plan","state":"end","ms":0}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:27+00:00","file":"garbled.docx","stage":"approve","state":"end","ms":0}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:27+00:00","file":"garbled.docx","stage":"transcribe","state":"end","ms":0}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:27+00:00","file":"garbled.docx","unit":"word/media/image1.png","state":"pending","code":null}
-{"v":1,"ev":"unit","ts":"2026-11-09T13:30:27+00:00","file":"garbled.docx","unit":"word/media/image2.png","state":"pending","code":null}
-{"v":1,"ev":"warning","ts":"2026-11-09T13:30:27+00:00","file":"garbled.docx","code":"W_MEDIA_UNMAPPED","message":"Media has no matching body link."}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:27+00:00","file":"garbled.docx","stage":"assemble","state":"end","ms":0}
-{"v":1,"ev":"stage","ts":"2026-11-09T13:30:27+00:00","file":"garbled.docx","stage":"write","state":"end","ms":3}
-{"v":1,"ev":"file_end","ts":"2026-11-09T13:30:27+00:00","file":"garbled.docx","outputs":["garbled.docx.md"],"units":{"total":2,"done":0,"pending":2,"failed":0}}
-{"v":1,"ev":"run_end","ts":"2026-11-09T13:30:27+00:00","exit":2,"files_ok":4,"files_failed":3,"provider_calls":0}
+{"v":1,"ev":"run_start","ts":"2026-11-10T13:32:46+00:00","files":7,"provider":"none"}
+{"v":1,"ev":"file_start","ts":"2026-11-10T13:32:46+00:00","file":"b c.docx","index":1,"total":7}
+{"v":1,"ev":"stage","ts":"2026-11-10T13:32:46+00:00","file":"b c.docx","stage":"sniff","state":"end","ms":0}
+{"v":1,"ev":"stage","ts":"2026-11-10T13:32:46+00:00","file":"b c.docx","stage":"triage","state":"end","ms":128}
+{"v":1,"ev":"stage","ts":"2026-11-10T13:32:46+00:00","file":"b c.docx","stage":"classify","state":"end","ms":0}
+{"v":1,"ev":"warning","ts":"2026-11-10T13:32:46+00:00","file":"b c.docx","code":"W_REVIEW_PRIORITY","message":"W review priority."}
+{"v":1,"ev":"classified","ts":"2026-11-10T13:32:46+00:00","file":"b c.docx","route":"NATIVE","need":"PARTIAL","label":"M","action":"convert_and_ocr"}
+{"v":1,"ev":"stage","ts":"2026-11-10T13:32:46+00:00","file":"b c.docx","stage":"select","state":"end","ms":0}
+{"v":1,"ev":"stage","ts":"2026-11-10T13:32:46+00:00","file":"b c.docx","stage":"convert","state":"end","ms":250}
+{"v":1,"ev":"stage","ts":"2026-11-10T13:32:46+00:00","file":"b c.docx","stage":"render","state":"end","ms":2}
+{"v":1,"ev":"stage","ts":"2026-11-10T13:32:46+00:00","file":"b c.docx","stage":"lookup","state":"end","ms":0}
+{"v":1,"ev":"stage","ts":"2026-11-10T13:32:46+00:00","file":"b c.docx","stage":"plan","state":"end","ms":0}
+{"v":1,"ev":"stage","ts":"2026-11-10T13:32:46+00:00","file":"b c.docx","stage":"approve","state":"end","ms":0}
+{"v":1,"ev":"stage","ts":"2026-11-10T13:32:46+00:00","file":"b c.docx","stage":"transcribe","state":"end","ms":0}
+{"v":1,"ev":"unit","ts":"2026-11-10T13:32:46+00:00","file":"b c.docx","unit":"word/media/image1.png","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T13:32:46+00:00","file":"b c.docx","unit":"word/media/image2.png","state":"pending","code":null}
+{"v":1,"ev":"stage","ts":"2026-11-10T13:32:46+00:00","file":"b c.docx","stage":"assemble","state":"end","ms":0}
+{"v":1,"ev":"stage","ts":"2026-11-10T13:32:46+00:00","file":"b c.docx","stage":"write","state":"end","ms":8}
+{"v":1,"ev":"file_end","ts":"2026-11-10T13:32:46+00:00","file":"b c.docx","outputs":["b c.docx.md"],"units":{"total":2,"done":0,"pending":2,"failed":0}}
+{"v":1,"ev":"file_start","ts":"2026-11-10T13:32:46+00:00","file":"memo.txt","index":2,"total":7}
+{"v":1,"ev":"stage","ts":"2026-11-10T13:32:46+00:00","file":"memo.txt","stage":"sniff","state":"end","ms":0}
+{"v":1,"ev":"stage","ts":"2026-11-10T13:32:46+00:00","file":"memo.txt","stage":"triage","state":"end","ms":3}
+{"v":1,"ev":"stage","ts":"2026-11-10T13:32:46+00:00","file":"memo.txt","stage":"classify","state":"end","ms":0}
+{"v":1,"ev":"classified","ts":"2026-11-10T13:32:46+00:00","file":"memo.txt","route":"NATIVE","need":"NONE","label":"T","action":"convert_only"}
+{"v":1,"ev":"stage","ts":"2026-11-10T13:32:46+00:00","file":"memo.txt","stage":"select","state":"end","ms":0}
+{"v":1,"ev":"stage","ts":"2026-11-10T13:32:46+00:00","file":"memo.txt","stage":"convert","state":"end","ms":44}
+{"v":1,"ev":"stage","ts":"2026-11-10T13:32:46+00:00","file":"memo.txt","stage":"render","state":"end","ms":0}
+{"v":1,"ev":"stage","ts":"2026-11-10T13:32:46+00:00","file":"memo.txt","stage":"lookup","state":"end","ms":0}
+{"v":1,"ev":"stage","ts":"2026-11-10T13:32:46+00:00","file":"memo.txt","stage":"plan","state":"end","ms":0}
+{"v":1,"ev":"stage","ts":"2026-11-10T13:32:46+00:00","file":"memo.txt","stage":"approve","state":"end","ms":0}
+{"v":1,"ev":"stage","ts":"2026-11-10T13:32:46+00:00","file":"memo.txt","stage":"transcribe","state":"end","ms":0}
+{"v":1,"ev":"stage","ts":"2026-11-10T13:32:46+00:00","file":"memo.txt","stage":"assemble","state":"end","ms":0}
+{"v":1,"ev":"stage","ts":"2026-11-10T13:32:46+00:00","file":"memo.txt","stage":"write","state":"end","ms":5}
+{"v":1,"ev":"file_end","ts":"2026-11-10T13:32:46+00:00","file":"memo.txt","outputs":["memo.txt.md"],"units":{"total":0,"done":0,"pending":0,"failed":0}}
+{"v":1,"ev":"file_start","ts":"2026-11-10T13:32:46+00:00","file":"sub/a.pdf","index":3,"total":7}
+{"v":1,"ev":"stage","ts":"2026-11-10T13:32:46+00:00","file":"sub/a.pdf","stage":"sniff","state":"end","ms":0}
+{"v":1,"ev":"stage","ts":"2026-11-10T13:32:46+00:00","file":"sub/a.pdf","stage":"triage","state":"end","ms":26}
+{"v":1,"ev":"stage","ts":"2026-11-10T13:32:46+00:00","file":"sub/a.pdf","stage":"classify","state":"end","ms":0}
+{"v":1,"ev":"classified","ts":"2026-11-10T13:32:46+00:00","file":"sub/a.pdf","route":"NATIVE","need":"PARTIAL","label":"M","action":"convert_and_ocr"}
+{"v":1,"ev":"stage","ts":"2026-11-10T13:32:46+00:00","file":"sub/a.pdf","stage":"select","state":"end","ms":0}
+{"v":1,"ev":"stage","ts":"2026-11-10T13:32:46+00:00","file":"sub/a.pdf","stage":"convert","state":"end","ms":161}
+{"v":1,"ev":"stage","ts":"2026-11-10T13:32:46+00:00","file":"sub/a.pdf","stage":"render","state":"end","ms":62}
+{"v":1,"ev":"stage","ts":"2026-11-10T13:32:46+00:00","file":"sub/a.pdf","stage":"lookup","state":"end","ms":0}
+{"v":1,"ev":"stage","ts":"2026-11-10T13:32:46+00:00","file":"sub/a.pdf","stage":"plan","state":"end","ms":0}
+{"v":1,"ev":"stage","ts":"2026-11-10T13:32:46+00:00","file":"sub/a.pdf","stage":"approve","state":"end","ms":0}
+{"v":1,"ev":"stage","ts":"2026-11-10T13:32:46+00:00","file":"sub/a.pdf","stage":"transcribe","state":"end","ms":0}
+{"v":1,"ev":"unit","ts":"2026-11-10T13:32:46+00:00","file":"sub/a.pdf","unit":"p2","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T13:32:46+00:00","file":"sub/a.pdf","unit":"p4","state":"pending","code":null}
+{"v":1,"ev":"stage","ts":"2026-11-10T13:32:46+00:00","file":"sub/a.pdf","stage":"assemble","state":"end","ms":0}
+{"v":1,"ev":"stage","ts":"2026-11-10T13:32:46+00:00","file":"sub/a.pdf","stage":"write","state":"end","ms":3}
+{"v":1,"ev":"file_end","ts":"2026-11-10T13:32:46+00:00","file":"sub/a.pdf","outputs":["sub/a.pdf.md"],"units":{"total":2,"done":0,"pending":2,"failed":0}}
+{"v":1,"ev":"file_start","ts":"2026-11-10T13:32:46+00:00","file":"보고서/3분기 결산.pdf","index":4,"total":7}
+{"v":1,"ev":"stage","ts":"2026-11-10T13:32:46+00:00","file":"보고서/3분기 결산.pdf","stage":"sniff","state":"end","ms":0}
+{"v":1,"ev":"stage","ts":"2026-11-10T13:32:46+00:00","file":"보고서/3분기 결산.pdf","stage":"triage","state":"end","ms":10}
+{"v":1,"ev":"stage","ts":"2026-11-10T13:32:46+00:00","file":"보고서/3분기 결산.pdf","stage":"classify","state":"end","ms":0}
+{"v":1,"ev":"classified","ts":"2026-11-10T13:32:46+00:00","file":"보고서/3분기 결산.pdf","route":"NATIVE","need":"FULL","label":"S","action":"convert_and_ocr"}
+{"v":1,"ev":"stage","ts":"2026-11-10T13:32:46+00:00","file":"보고서/3분기 결산.pdf","stage":"select","state":"end","ms":0}
+{"v":1,"ev":"stage","ts":"2026-11-10T13:32:46+00:00","file":"보고서/3분기 결산.pdf","stage":"convert","state":"end","ms":135}
+{"v":1,"ev":"stage","ts":"2026-11-10T13:32:46+00:00","file":"보고서/3분기 결산.pdf","stage":"render","state":"end","ms":92}
+{"v":1,"ev":"stage","ts":"2026-11-10T13:32:46+00:00","file":"보고서/3분기 결산.pdf","stage":"lookup","state":"end","ms":0}
+{"v":1,"ev":"stage","ts":"2026-11-10T13:32:46+00:00","file":"보고서/3분기 결산.pdf","stage":"plan","state":"end","ms":0}
+{"v":1,"ev":"stage","ts":"2026-11-10T13:32:46+00:00","file":"보고서/3분기 결산.pdf","stage":"approve","state":"end","ms":0}
+{"v":1,"ev":"stage","ts":"2026-11-10T13:32:46+00:00","file":"보고서/3분기 결산.pdf","stage":"transcribe","state":"end","ms":0}
+{"v":1,"ev":"unit","ts":"2026-11-10T13:32:46+00:00","file":"보고서/3분기 결산.pdf","unit":"p1","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T13:32:46+00:00","file":"보고서/3분기 결산.pdf","unit":"p2","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T13:32:46+00:00","file":"보고서/3분기 결산.pdf","unit":"p3","state":"pending","code":null}
+{"v":1,"ev":"stage","ts":"2026-11-10T13:32:46+00:00","file":"보고서/3분기 결산.pdf","stage":"assemble","state":"end","ms":0}
+{"v":1,"ev":"stage","ts":"2026-11-10T13:32:46+00:00","file":"보고서/3분기 결산.pdf","stage":"write","state":"end","ms":4}
+{"v":1,"ev":"file_end","ts":"2026-11-10T13:32:46+00:00","file":"보고서/3분기 결산.pdf","outputs":["보고서/3분기 결산.pdf.md"],"units":{"total":3,"done":0,"pending":3,"failed":0}}
+{"v":1,"ev":"file_start","ts":"2026-11-10T13:32:46+00:00","file":"broken.pdf","index":5,"total":7}
+{"v":1,"ev":"stage","ts":"2026-11-10T13:32:46+00:00","file":"broken.pdf","stage":"sniff","state":"end","ms":0}
+{"v":1,"ev":"stage","ts":"2026-11-10T13:32:46+00:00","file":"broken.pdf","stage":"triage","state":"end","ms":1}
+{"v":1,"ev":"stage","ts":"2026-11-10T13:32:46+00:00","file":"broken.pdf","stage":"classify","state":"end","ms":0}
+{"v":1,"ev":"classified","ts":"2026-11-10T13:32:46+00:00","file":"broken.pdf","route":"NATIVE","need":"UNKNOWN","label":"U","action":"report_only"}
+{"v":1,"ev":"stage","ts":"2026-11-10T13:32:46+00:00","file":"broken.pdf","stage":"select","state":"end","ms":0}
+{"v":1,"ev":"stage","ts":"2026-11-10T13:32:46+00:00","file":"broken.pdf","stage":"convert","state":"end","ms":1}
+{"v":1,"ev":"stage","ts":"2026-11-10T13:32:46+00:00","file":"broken.pdf","stage":"lookup","state":"end","ms":0}
+{"v":1,"ev":"stage","ts":"2026-11-10T13:32:46+00:00","file":"broken.pdf","stage":"plan","state":"end","ms":0}
+{"v":1,"ev":"stage","ts":"2026-11-10T13:32:46+00:00","file":"broken.pdf","stage":"approve","state":"end","ms":0}
+{"v":1,"ev":"stage","ts":"2026-11-10T13:32:46+00:00","file":"broken.pdf","stage":"transcribe","state":"end","ms":0}
+{"v":1,"ev":"file_end","ts":"2026-11-10T13:32:46+00:00","file":"broken.pdf","outputs":[],"units":{"total":0,"done":0,"pending":0,"failed":0}}
+{"v":1,"ev":"file_start","ts":"2026-11-10T13:32:46+00:00","file":"empty.pdf","index":6,"total":7}
+{"v":1,"ev":"stage","ts":"2026-11-10T13:32:46+00:00","file":"empty.pdf","stage":"sniff","state":"end","ms":0}
+{"v":1,"ev":"stage","ts":"2026-11-10T13:32:46+00:00","file":"empty.pdf","stage":"triage","state":"end","ms":1}
+{"v":1,"ev":"stage","ts":"2026-11-10T13:32:46+00:00","file":"empty.pdf","stage":"classify","state":"end","ms":0}
+{"v":1,"ev":"classified","ts":"2026-11-10T13:32:46+00:00","file":"empty.pdf","route":"UNSUPPORTED","need":"UNKNOWN","label":"X","action":"report_only"}
+{"v":1,"ev":"stage","ts":"2026-11-10T13:32:46+00:00","file":"empty.pdf","stage":"select","state":"end","ms":0}
+{"v":1,"ev":"stage","ts":"2026-11-10T13:32:46+00:00","file":"empty.pdf","stage":"convert","state":"end","ms":1}
+{"v":1,"ev":"stage","ts":"2026-11-10T13:32:46+00:00","file":"empty.pdf","stage":"lookup","state":"end","ms":0}
+{"v":1,"ev":"stage","ts":"2026-11-10T13:32:46+00:00","file":"empty.pdf","stage":"plan","state":"end","ms":0}
+{"v":1,"ev":"stage","ts":"2026-11-10T13:32:46+00:00","file":"empty.pdf","stage":"approve","state":"end","ms":0}
+{"v":1,"ev":"stage","ts":"2026-11-10T13:32:46+00:00","file":"empty.pdf","stage":"transcribe","state":"end","ms":0}
+{"v":1,"ev":"file_end","ts":"2026-11-10T13:32:46+00:00","file":"empty.pdf","outputs":[],"units":{"total":0,"done":0,"pending":0,"failed":0}}
+{"v":1,"ev":"file_start","ts":"2026-11-10T13:32:46+00:00","file":"garbled.docx","index":7,"total":7}
+{"v":1,"ev":"stage","ts":"2026-11-10T13:32:46+00:00","file":"garbled.docx","stage":"sniff","state":"end","ms":0}
+{"v":1,"ev":"stage","ts":"2026-11-10T13:32:47+00:00","file":"garbled.docx","stage":"triage","state":"end","ms":103}
+{"v":1,"ev":"stage","ts":"2026-11-10T13:32:47+00:00","file":"garbled.docx","stage":"classify","state":"end","ms":0}
+{"v":1,"ev":"warning","ts":"2026-11-10T13:32:47+00:00","file":"garbled.docx","code":"W_UNRESOLVED_EMBED","message":"W unresolved embed."}
+{"v":1,"ev":"warning","ts":"2026-11-10T13:32:47+00:00","file":"garbled.docx","code":"W_REVIEW_PRIORITY","message":"W review priority."}
+{"v":1,"ev":"warning","ts":"2026-11-10T13:32:47+00:00","file":"garbled.docx","code":"W_TRIAGE_PARTIAL","message":"W triage partial."}
+{"v":1,"ev":"classified","ts":"2026-11-10T13:32:47+00:00","file":"garbled.docx","route":"NATIVE","need":"UNKNOWN","label":"U","action":"convert_and_ocr"}
+{"v":1,"ev":"stage","ts":"2026-11-10T13:32:47+00:00","file":"garbled.docx","stage":"select","state":"end","ms":0}
+{"v":1,"ev":"stage","ts":"2026-11-10T13:32:47+00:00","file":"garbled.docx","stage":"convert","state":"end","ms":50}
+{"v":1,"ev":"error","ts":"2026-11-10T13:32:47+00:00","file":"garbled.docx","code":"E_CONVERT_FAIL","message":"Core conversion failed (FileConversionException)"}
+{"v":1,"ev":"stage","ts":"2026-11-10T13:32:47+00:00","file":"garbled.docx","stage":"render","state":"end","ms":1}
+{"v":1,"ev":"stage","ts":"2026-11-10T13:32:47+00:00","file":"garbled.docx","stage":"lookup","state":"end","ms":0}
+{"v":1,"ev":"stage","ts":"2026-11-10T13:32:47+00:00","file":"garbled.docx","stage":"plan","state":"end","ms":0}
+{"v":1,"ev":"stage","ts":"2026-11-10T13:32:47+00:00","file":"garbled.docx","stage":"approve","state":"end","ms":0}
+{"v":1,"ev":"stage","ts":"2026-11-10T13:32:47+00:00","file":"garbled.docx","stage":"transcribe","state":"end","ms":0}
+{"v":1,"ev":"unit","ts":"2026-11-10T13:32:47+00:00","file":"garbled.docx","unit":"word/media/image1.png","state":"pending","code":null}
+{"v":1,"ev":"unit","ts":"2026-11-10T13:32:47+00:00","file":"garbled.docx","unit":"word/media/image2.png","state":"pending","code":null}
+{"v":1,"ev":"warning","ts":"2026-11-10T13:32:47+00:00","file":"garbled.docx","code":"W_MEDIA_UNMAPPED","message":"Media has no matching body link."}
+{"v":1,"ev":"stage","ts":"2026-11-10T13:32:47+00:00","file":"garbled.docx","stage":"assemble","state":"end","ms":0}
+{"v":1,"ev":"stage","ts":"2026-11-10T13:32:47+00:00","file":"garbled.docx","stage":"write","state":"end","ms":4}
+{"v":1,"ev":"file_end","ts":"2026-11-10T13:32:47+00:00","file":"garbled.docx","outputs":["garbled.docx.md"],"units":{"total":2,"done":0,"pending":2,"failed":0}}
+{"v":1,"ev":"run_end","ts":"2026-11-10T13:32:47+00:00","exit":2,"files_ok":4,"files_failed":3,"provider_calls":0}

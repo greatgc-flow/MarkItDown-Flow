@@ -2,7 +2,7 @@
 
 Engine release/reference baseline: **Core 0.3.7** (published on PyPI), SPEC DRAFT-3.8; runtime compatibility is `>=0.3.7,<0.4`. GOLDEN.lock uses producer 0.3.7, and `engine/requirements-reference.txt` pins the published Core hashes.
 
-FX-71 protocol fixtures were first recorded on a supported host (Python 3.14.10, Core 0.3.6) and published to `shell/test/fixtures/fx71`; all streams were re-recorded under Core 0.3.7 in commit 0461501. Round 9's absolute command path changes the `consent-*` command-provider streams, which must be re-recorded ([90_ACCEPTANCE.md](90_ACCEPTANCE.md) §6.1).
+FX-71 protocol fixtures were first recorded on a supported host (Python 3.14.10, Core 0.3.6) and published to `shell/test/fixtures/fx71`; all streams were then re-recorded from the real engine at the round-11 candidate under Core 0.3.7 (after the round-9/10/11 engine changes). The command provider's destination is home-relative (`~\bin\python.CMD` shim under the recording HOME) and the recorder's leak check rejects any absolute path outside `~` ([90_ACCEPTANCE.md](90_ACCEPTANCE.md) §6.1).
 
 Release rule (R35, owner decision): 2.0.0 ships at `SCORE 99/100 (automated 93/93, manual 6/7); MAN-04 deferred: post-release (R35)`; the owner supplies MAN-04 after publication (`trace.py score --post-release`). argon's earlier 89/100 HOLD in [FINAL_argon_acceptance.md](review/FINAL_argon_acceptance.md) predates R35 and is superseded.
 
