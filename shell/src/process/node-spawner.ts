@@ -16,6 +16,12 @@ function childProcess(): ChildProcessModule {
   return childProcessModule;
 }
 
+/** Absolute System32 path: a bare `taskkill` would be searched in the current folder first. */
+export function taskkillPath(env: NodeJS.ProcessEnv = process.env): string {
+  const root = env.SystemRoot ?? env.SYSTEMROOT ?? env.windir ?? env.WINDIR ?? 'C:\\Windows';
+  return `${root}\\System32\\taskkill.exe`;
+}
+
 class NodeChild implements ChildHandle {
   readonly pid: number | null;
   private exitListeners: ((status: ExitStatus) => void)[] = [];
@@ -69,7 +75,7 @@ class NodeChild implements ChildHandle {
     if (pid !== null) {
       try {
         if (process.platform === 'win32') {
-          const result = childProcess().spawnSync('taskkill', ['/PID', String(pid), '/T', '/F'], { windowsHide: true, stdio: 'ignore' });
+          const result = childProcess().spawnSync(taskkillPath(), ['/PID', String(pid), '/T', '/F'], { windowsHide: true, stdio: 'ignore' });
           if (result.status === 0) return;
         } else {
           process.kill(-pid, 'SIGKILL'); // the child leads its own process group (see spawn)

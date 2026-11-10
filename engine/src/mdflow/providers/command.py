@@ -61,11 +61,17 @@ def canonical_destination(argv_template: Sequence[str]) -> str:
                                   sort_keys=True, separators=(",", ":"), ensure_ascii=False)
 
 
+def _taskkill_path() -> str:
+    """Absolute System32 path: a bare name would search the current folder first on Windows."""
+    root = os.environ.get('SystemRoot') or os.environ.get('windir') or 'C:\\Windows'
+    return os.path.join(root, 'System32', 'taskkill.exe')
+
+
 def _kill_tree(child: subprocess.Popen) -> None:
     """Kill the command AND its descendants (a timed-out template must not leave processes running)."""
     try:
         if os.name == 'nt':
-            subprocess.run(['taskkill', '/PID', str(child.pid), '/T', '/F'], stdin=subprocess.DEVNULL,
+            subprocess.run([_taskkill_path(), '/PID', str(child.pid), '/T', '/F'], stdin=subprocess.DEVNULL,
                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=10, check=False)
         else:
             import signal

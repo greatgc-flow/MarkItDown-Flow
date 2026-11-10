@@ -477,6 +477,7 @@ Every REQ id defined in `10_SPEC.md` (incl. new REQ-SNF-09), `20_SHELL.md` (SHL-
 |---|---|---|
 | T-TRX-80 | REQ-GEN-09, REQ-SEC-04 | M2 regression: inherited_stdout_cannot_block_timeout_or_leave_reader. |
 | T-TRX-81 | REQ-GEN-09, REQ-SEC-04 | Round-12 A4: a command-provider timeout kills the command's whole process tree (no descendant survives). |
+| T-TRX-82 | REQ-GEN-09, REQ-SEC-04 | Round-13 a1: the Windows tree kill runs `taskkill` by its absolute `%SystemRoot%\System32` path, never a bare name searched in the current folder. |
 | T-RND-80 | REQ-RND-05, REQ-WRT-02 | M2 regression: render_setup_failure_is_per_unit_and_sibling_continues. |
 | T-RND-81 | REQ-MAP-05, REQ-RND-03, REQ-TRX-01, REQ-ASM-06 | M2 regression: hwp_equal_payloads_keep_stored_refusal_through_pipeline. |
 | T-RND-82 | REQ-MAP-05, REQ-CNV-03, REQ-RND-03 | M2 regression: real_hwp_extraction_renders_parser_payload_only. |

@@ -49,6 +49,26 @@ def test_T_TRX_81_command_timeout_kills_the_whole_process_tree(tmp_path):
     assert not marker.exists(), 'a descendant of the timed-out command survived'
 
 
+@pytest.mark.req('REQ-GEN-09', 'REQ-SEC-04')
+@pytest.mark.cov('S10', 'FM7')
+@pytest.mark.fx('FX-63')
+def test_T_TRX_82_windows_tree_kill_uses_the_absolute_system32_taskkill(monkeypatch):
+    from types import SimpleNamespace
+    from mdflow.providers import command
+
+    monkeypatch.setenv('SystemRoot', r'C:\TestWindows')
+    assert command._taskkill_path() == os.path.join(r'C:\TestWindows', 'System32', 'taskkill.exe')
+    monkeypatch.delenv('SystemRoot')
+    monkeypatch.delenv('windir', raising=False)
+    assert command._taskkill_path() == os.path.join('C:\\Windows', 'System32', 'taskkill.exe')
+    calls = []
+    monkeypatch.setattr(command.subprocess, 'run', lambda argv, **kwargs: calls.append(argv))
+    monkeypatch.setattr(command.os, 'name', 'nt')
+    command._kill_tree(SimpleNamespace(pid=4242, poll=lambda: 0, kill=lambda: None))
+    assert calls == [[command._taskkill_path(), '/PID', '4242', '/T', '/F']]
+    assert calls[0][0] != 'taskkill' and 'System32' in calls[0][0] and calls[0][0].endswith('taskkill.exe')
+
+
 @pytest.mark.req('REQ-RND-05', 'REQ-WRT-02')
 @pytest.mark.cov('S6', 'FM5')
 @pytest.mark.fx('FX-09', 'FX-65')

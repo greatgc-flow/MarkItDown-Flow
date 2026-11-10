@@ -154,7 +154,7 @@ REQ-PKG-22 MUST: Provide the R35/R36 named-peer evidence path producing `named-r
 | Fable X-17 | Missing-dependency test accepted; asserted mandatory HWP extra rejected below. |
 | Fable X-27/X-34/X-35 | Fixed for packaging: diagnostics-only setup, verified runner labels, R15/R16/17/18 and full release asset/checklist requirements. Acceptance-file edits remain open. |
 | ag orphan AC-023; cx R3-26 | Packaging requirements/oracles now explicit; generated marker coverage required. Existing engine/acceptance gaps remain open, not declared covered by these tables. |
-| R5-N07 / SHL-REV-06 | Cooperative versus forced cancellation tests gate release. Shell command provider cut; no Job Object/taskkill subsystem or synthetic exit 130. Engine alignment is in SPEC DRAFT-3.5 (8.2/10.3); real-OS runs remain G-09. |
+| R5-N07 / SHL-REV-06 | Cooperative versus forced cancellation tests gate release. Shell command provider cut; no Job Object subsystem or synthetic exit 130 (round-12 A4 added a small tree kill instead: `taskkill /T /F` by absolute System32 path on Windows, a process group on POSIX). Engine alignment is in SPEC DRAFT-3.5 (8.2/10.3); real-OS runs remain G-09. |
 | R5-N08/N09 | Separate Core/mdflow collectors; cut full-Plan progress payload, use bounded summaries plus full `plan` stdout. The envelope follows SPEC DRAFT-3.5. |
 | R5-N10 / SHL-REV-05 | Same-root batch replay and one modal; repeatable per-file hashes, no run hash/barrier or custom manifest. Option/schema checks follow SPEC DRAFT-3.5. |
 | R5-N11 / cc mismatch | Complete SPEC version response and active code-set equality required; stale rejection withdrawn. Fixtures are generated from the real engine (SPEC DRAFT-3.5). |

@@ -256,9 +256,10 @@ separators (zip members as `<container>/<member>`).
 row, XLSX empty cells and whole numbers, and TSV tables (markitdown-gc issues
 #68, #69, #70, #71). These output gaps remain:
 
-- PDF headings can still come out as plain paragraphs, not Markdown headings:
-  the engine converts PDFs one page at a time, so the outline headings that
-  Core 0.3.8 emits for a whole document may not reach the output.
+- PDF headings (bookmarks) reach the output when Core 0.3.9 converts the PDF as
+  a whole and its page breaks match the real pages. When they do not match, the
+  engine falls back to one page at a time and the headings can come out as
+  plain paragraphs.
 - XML content is emitted as raw text, not as structure.
 
 exiftool metadata (R31) is added only for standalone `png`, `jpg` and `jpeg`

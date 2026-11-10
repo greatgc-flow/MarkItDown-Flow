@@ -13,7 +13,7 @@ import * as path from 'node:path';
 import { req } from './req';
 import { CANCEL_GRACE_MS, COOPERATIVE_EXIT, EngineRun, type EngineResult, recoverStaleSpools } from '../src/process/engine-process';
 import { ENGINE_ARGV_PREFIX } from '../src/process/launcher';
-import { NodeSpawner, systemClock } from '../src/process/node-spawner';
+import { NodeSpawner, systemClock, taskkillPath } from '../src/process/node-spawner';
 import type { SpawnRequest } from '../src/process/types';
 import type { RunReport } from '../src/pure/protocol';
 import { FakeClock, flush } from './fixtures/fake-clock';
@@ -216,6 +216,30 @@ process.on("SIGTERM", () => {}); setInterval(() => {}, 1000);
   expect(pidAlive(pid)).toBe(false);
   for (let i = 0; i < 50 && pidAlive(grandchildPid); i += 1) await new Promise<void>((resolve) => setTimeout(resolve, 100));
   expect(pidAlive(grandchildPid)).toBe(false);
+});
+
+it(R('JT-16 the Windows tree kill runs taskkill by its absolute System32 path, never a bare name searched in the current folder'), () => {
+  expect(taskkillPath({ SystemRoot: 'C:\\TestWindows' })).toBe('C:\\TestWindows\\System32\\taskkill.exe');
+  expect(taskkillPath({ windir: 'D:\\Win' })).toBe('D:\\Win\\System32\\taskkill.exe');
+  expect(taskkillPath({})).toBe('C:\\Windows\\System32\\taskkill.exe');
+  const cp = require('node:child_process') as typeof import('node:child_process');
+  const real = cp.spawnSync;
+  const calls: unknown[][] = [];
+  const platform = Object.getOwnPropertyDescriptor(process, 'platform') as PropertyDescriptor;
+  const child = new NodeSpawner().spawn(nodeChild(STUBBORN_CHILD));
+  try {
+    (cp as { spawnSync: unknown }).spawnSync = (...args: unknown[]) => { calls.push(args); return { status: 0 }; };
+    Object.defineProperty(process, 'platform', { value: 'win32' });
+    child.terminate();
+  } finally {
+    Object.defineProperty(process, 'platform', platform);
+    (cp as { spawnSync: unknown }).spawnSync = real;
+    child.terminate();
+  }
+  expect(calls).toHaveLength(1);
+  expect(calls[0][0]).toBe(taskkillPath());
+  expect(calls[0][0]).not.toBe('taskkill');
+  expect(calls[0][1]).toEqual(['/PID', String(child.pid), '/T', '/F']);
 });
 
 if (POSIX) {
