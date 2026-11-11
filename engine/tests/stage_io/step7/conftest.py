@@ -13,6 +13,10 @@ from types import SimpleNamespace
 import pytest
 
 
+# Hang guard only (no test asserts speed): slow hosted Windows runners exceeded 30 s once (run 42941950822).
+HANG_GUARD_S = 120
+
+
 @pytest.fixture(scope="session")
 def step7_data(repo_root):
     path = repo_root / "engine/tests/fixtures/gen_core.py"
@@ -158,7 +162,7 @@ for _name in ('getaddrinfo', 'gethostbyname', 'gethostbyname_ex'):
     def run(*args, env=None, prelude="", allowed_hosts=(), expected=None):
         proc = subprocess.run(argv(*args, prelude=prelude, allowed_hosts=allowed_hosts),
                               env=dict(environment, **(env or {})), cwd=tmp_path,
-                              capture_output=True, text=True, encoding="utf-8", timeout=30)
+                              capture_output=True, text=True, encoding="utf-8", timeout=HANG_GUARD_S)
         if expected is not None:
             assert proc.returncode == expected, (proc.stdout, proc.stderr)
         return proc
