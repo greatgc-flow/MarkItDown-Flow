@@ -35,6 +35,7 @@ from __future__ import annotations
 
 import argparse
 import base64
+from functools import partial
 import hashlib
 import importlib.util
 import json
@@ -176,14 +177,6 @@ def _with_inserted_line(parent: bytes, size: int) -> bytes:
     return join_lines([*lines[:2], _padded_warning(json.loads(lines[1])["ts"], size), *lines[2:]])
 
 
-def t_line_exact_limit(parent: bytes) -> bytes:
-    return _with_inserted_line(parent, LINE_LIMIT)  # the allowed boundary
-
-
-def t_line_over_limit(parent: bytes) -> bytes:
-    return _with_inserted_line(parent, LINE_LIMIT + 1)  # first rejected size
-
-
 def t_unterminated_oversize(parent: bytes) -> bytes:
     lines = lines_of(parent)
     return join_lines(lines[:2]) + _padded_warning(json.loads(lines[1])["ts"], 70000)  # no newline
@@ -196,14 +189,6 @@ def _truncate(parent: bytes, percent: int) -> bytes:
     return parent[:starts[0] + 1] if starts else parent[:cut]
 
 
-def t_truncate_report(parent: bytes) -> bytes:
-    return _truncate(parent, 60)
-
-
-def t_truncate_plan(parent: bytes) -> bytes:
-    return _truncate(parent, 55)
-
-
 def t_triage_extra(parent: bytes) -> bytes:
     report = json.loads(parent)
     for entry in report["files"]:
@@ -213,36 +198,22 @@ def t_triage_extra(parent: bytes) -> bytes:
 
 
 VERSION_KEYS = ("mdflow", "markitdown-gc", "pypdfium2", "pillow", "python", "platform", "protocol", "triage_schema")
-VERSION_VARIANTS = ["protocol-2", "schema-2", "wrong-pillow", "wrong-renderer", "core-out-of-range",
-                    "core-unavailable", "python-3.15",
-                    "protocol-string", "unknown-optional-field", *[f"missing-{k}" for k in VERSION_KEYS]]
+# variant -> field overrides ("wrong-*": first excluded versions, independent of the resolved supported endpoint)
+VERSION_OVERRIDES = {"protocol-2": {"protocol": 2}, "schema-2": {"triage_schema": 2},
+                     "wrong-pillow": {"pillow": "14.0.0"}, "wrong-renderer": {"pypdfium2": "6.0.0"},
+                     "core-out-of-range": {"markitdown-gc": "0.4.0"}, "core-unavailable": {"markitdown-gc": "unavailable"},
+                     "python-3.15": {"python": "3.15.2"}, "unknown-optional-field": {"future_optional": {"ignored": True}}}
+VERSION_VARIANTS = [*VERSION_OVERRIDES, "protocol-string", *[f"missing-{k}" for k in VERSION_KEYS]]
 
 
 def version_variant(name: str, parent: bytes) -> bytes:
     data = json.loads(parent)
-    if name == "protocol-2":
-        data["protocol"] = 2
-    elif name == "schema-2":
-        data["triage_schema"] = 2
-    elif name == "wrong-pillow":
-        # First excluded versions, independent of the resolved supported endpoint.
-        data["pillow"] = "14.0.0"
-    elif name == "wrong-renderer":
-        data["pypdfium2"] = "6.0.0"
-    elif name == "core-out-of-range":
-        data["markitdown-gc"] = "0.4.0"
-    elif name == "core-unavailable":
-        data["markitdown-gc"] = "unavailable"
-    elif name == "python-3.15":
-        data["python"] = "3.15.2"
-    elif name == "protocol-string":
+    if name == "protocol-string":
         data["protocol"] = str(data["protocol"])
-    elif name == "unknown-optional-field":
-        data["future_optional"] = {"ignored": True}
     elif name.startswith("missing-"):
         del data[name.removeprefix("missing-")]
     else:
-        raise KeyError(name)
+        data.update(VERSION_OVERRIDES[name])  # KeyError for an unknown variant
     return (json.dumps(data, ensure_ascii=False, indent=2) + "\n").encode("utf-8")
 
 
@@ -250,8 +221,9 @@ def version_variant(name: str, parent: bytes) -> bytes:
 DERIVED: dict[str, tuple[str, str, object, str]] = {}
 
 
-def _derive(name, parent, fn, description):
-    DERIVED[name] = (parent, fn.__name__, fn, description)
+def _derive(name, parent, fn, description, label=None):
+    """``label`` is the manifest's transform name for a ``partial`` (which has no ``__name__``)."""
+    DERIVED[name] = (parent, label or fn.__name__, fn, description)
 
 
 _AP = "approve-required.progress.jsonl"
@@ -259,26 +231,21 @@ _derive("approve-required.crlf.jsonl", _AP, t_crlf, "LF to CRLF")
 _derive("approve-required.split.json", _AP, t_split, "UTF-8 / line-break split chunks (LF)")
 _derive("approve-required.crlf.split.json", _AP, t_split_crlf, "UTF-8 / CR|LF split chunks (CRLF)")
 _derive("approve-required.unknown-events.jsonl", _AP, t_unknown_events, "unknown ev values + additive field inserted")
-_derive("approve-required.line-65536.jsonl", _AP, t_line_exact_limit, "one valid line of exactly 65536 bytes (allowed)")
-_derive("approve-required.line-65537.jsonl", _AP, t_line_over_limit, "one line of 65537 bytes (over the limit)")
+_derive("approve-required.line-65536.jsonl", _AP, partial(_with_inserted_line, size=LINE_LIMIT),
+        "one valid line of exactly 65536 bytes (allowed)", "t_line_exact_limit")
+_derive("approve-required.line-65537.jsonl", _AP, partial(_with_inserted_line, size=LINE_LIMIT + 1),
+        "one line of 65537 bytes (over the limit)", "t_line_over_limit")
 _derive("approve-required.unterminated-70000.jsonl", _AP, t_unterminated_oversize, "70000-byte unterminated tail line")
 _derive("plan-mixed.split.json", "plan-mixed.stdout.json", t_split, "split chunks of pretty Plan stdout")
-_derive("plan-mixed.truncated.stdout.json", "plan-mixed.stdout.json", t_truncate_plan, "truncated plan stdout")
-_derive("run-mixed.truncated.stdout.json", "run-mixed.stdout.json", t_truncate_report, "truncated run report")
+_derive("plan-mixed.truncated.stdout.json", "plan-mixed.stdout.json", partial(_truncate, percent=55),
+        "truncated plan stdout", "t_truncate_plan")
+_derive("run-mixed.truncated.stdout.json", "run-mixed.stdout.json", partial(_truncate, percent=60),
+        "truncated run report", "t_truncate_report")
 _derive("run-corrupt.triage-extra.stdout.json", "run-corrupt.stdout.json", t_triage_extra,
         "unknown Core field added inside files[].triage")
-
-
-def _variant(variant):
-    def transform(parent: bytes) -> bytes:
-        return version_variant(variant, parent)
-    transform.__name__ = "version_variant:" + variant
-    return transform
-
-
 for _variant_name in VERSION_VARIANTS:
-    _derive(f"version.{_variant_name}.json", "version.json", _variant(_variant_name),
-            f"version response variant: {_variant_name}")
+    _derive(f"version.{_variant_name}.json", "version.json", partial(version_variant, _variant_name),
+            f"version response variant: {_variant_name}", "version_variant:" + _variant_name)
 
 
 # ------------------------------------------------------------------- recording
@@ -358,10 +325,7 @@ class Recorder:
 
     # inputs ---------------------------------------------------------------
     def put(self, root: str, rel: str, fx: str, **kwargs) -> None:
-        generated = self.gen.generate(fx, self.work / "scratch", **kwargs)
-        target = self.work / root / rel
-        target.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copyfile(generated, target)
+        self.put_bytes(root, rel, Path(self.gen.generate(fx, self.work / "scratch", **kwargs)).read_bytes())
 
     def put_bytes(self, root: str, rel: str, data: bytes) -> None:
         target = self.work / root / rel

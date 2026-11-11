@@ -115,13 +115,13 @@ def rebind_yaml(text: str, old: str, new: str, line: str) -> str:
     """Line-level edit of the attest subset (top-level ``commit:`` scalar, ``evidence:`` block list)."""
     lines = text.split('\n')
     commits = [i for i, l in enumerate(lines) if COMMIT_LINE.match(l)]
-    if len(commits) != 1 or COMMIT_LINE.match(lines[commits[0]])[2] != old:
+    match = COMMIT_LINE.match(lines[commits[0]]) if len(commits) == 1 else None
+    if not match or match[2] != old:
         raise ValueError(f'not bound to {old}')
     nested = [i + 1 for i, l in enumerate(lines) if i != commits[0] and NESTED_COMMIT.match(l) and old in l]
     if nested:
         raise ValueError(f'nested commit field bound to {old} on line {nested[0]} (YAML: only the top-level '
                          'commit is rebound; re-review or edit by hand)')
-    match = COMMIT_LINE.match(lines[commits[0]])
     lines[commits[0]] = f'commit: {match[1]}{new}{match[1]}' + (f' {match[3]}' if match[3] else '')
     keys = [i for i, l in enumerate(lines) if EVIDENCE_KEY.match(l)]
     if len(keys) != 1:

@@ -1,7 +1,6 @@
 """Assemble, hash and verify one release candidate; never publish or rebuild in verify mode."""
 from __future__ import annotations
 import argparse
-import hashlib
 import json
 import os
 from pathlib import Path
@@ -10,14 +9,11 @@ import shutil
 import subprocess
 import sys
 import zipfile
-from build_engine import ASSETS, SUBJECTS, WHEEL, REFERENCE, build, reference
+from build_engine import ASSETS, SUBJECTS, WHEEL, REFERENCE, build, reference, digest as sha
 
 ROOT = Path(__file__).resolve().parents[1]
 COMMANDS = ('convert-file', 'convert-folder', 'convert-url', 'view-conversion-history',
             'open-log-folder', 'run-image-pipeline-selftest')
-
-def sha(path):
-    return hashlib.sha256(path.read_bytes()).hexdigest()
 
 def versions(tag):
     try:

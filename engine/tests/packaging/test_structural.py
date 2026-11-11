@@ -132,6 +132,10 @@ def test_PT_40_recorder_imports_engine_src_through_an_isolated_bootstrap_without
         assert record.main(args) == 0
     assert calls == [REPO / 'engine/src', None, src]
     assert verified == [REPO / 'engine/src', None, src, REPO / 'engine/src', None]
+    # The committed FX-71 fixtures are bound to THIS engine/src: any engine change must re-record them.
+    committed = json.loads((REPO / 'shell/test/fixtures/fx71/manifest.json').read_text(encoding='utf-8'))
+    assert committed['engine_source'] == record.source_digest(record.package_dir(REPO / 'engine/src')), \
+        'engine/src changed since FX-71 was recorded: python -I tools/record_protocol.py --engine-src engine/src'
 
 
 OLD_FILES = {
