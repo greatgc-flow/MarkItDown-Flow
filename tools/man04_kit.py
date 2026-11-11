@@ -11,7 +11,6 @@ the file shape, not that a human saw anything.
 """
 from __future__ import annotations
 import argparse
-import hashlib
 import importlib.util
 import json
 from pathlib import Path
@@ -22,7 +21,7 @@ import sys
 
 TOOLS = Path(__file__).resolve().parent
 sys.path.insert(0, str(TOOLS))
-from build_engine import ASSETS, SUBJECTS, WHEEL  # noqa: E402
+from build_engine import ASSETS, SUBJECTS, WHEEL, digest  # noqa: E402
 import release_evidence  # noqa: E402
 
 ROOT = TOOLS.parent
@@ -36,19 +35,6 @@ class KitError(Exception):
     pass
 
 
-def sha256(path: Path) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest()
-
-
-def read_record(path: Path) -> dict:
-    text = path.read_text(encoding='utf-8')
-    try:
-        return json.loads(text)
-    except ValueError:
-        import yaml  # requirements-build.txt, same fallback as tools/release_evidence.py
-        return yaml.safe_load(text)
-
-
 def verify_assets(folder: Path) -> dict[str, str]:
     """SHA-256 of every subject; raises KitError if one is missing or differs from SHA256SUMS."""
     missing = [name for name in SUBJECTS if not (folder / name).is_file()]
@@ -56,10 +42,10 @@ def verify_assets(folder: Path) -> dict[str, str]:
         raise KitError(f'missing release assets: {", ".join(missing)}')
     listed = {}
     for line in (folder / 'SHA256SUMS').read_text(encoding='utf-8').splitlines():
-        digest, _, name = line.partition('  ')
-        if digest and name:
-            listed[name.strip()] = digest.strip().lower()
-    actual = {name: sha256(folder / name) for name in SUBJECTS}
+        listed_digest, _, name = line.partition('  ')
+        if listed_digest and name:
+            listed[name.strip()] = listed_digest.strip().lower()
+    actual = {name: digest(folder / name) for name in SUBJECTS}
     bad = [name for name in ASSETS if listed.get(name) != actual[name]]
     if bad:
         raise KitError(f'SHA256SUMS mismatch (or entry missing) for: {", ".join(bad)}')
@@ -156,7 +142,7 @@ def run(args, provision=provision_engine) -> int:
     plugin = install_plugin(folder, vault)
     engine = provision(folder, work, args.python)
     record_path = args.record or Path.cwd() / 'release_rehearsal.yml'
-    record = read_record(record_path if record_path.is_file() else TEMPLATE)
+    record = release_evidence.read_record(record_path if record_path.is_file() else TEMPLATE)
     update_record(record, os_name=os_name, channel=args.channel, hashes=hashes, engine=engine)
     record_path.write_text(json.dumps(record, indent=2, ensure_ascii=False, default=str) + '\n', encoding='utf-8')
     print(f'SHA256SUMS verified for {len(ASSETS)} assets; plugin installed in {plugin}')

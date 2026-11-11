@@ -49,8 +49,7 @@ def review_record(data, expected_commit, problems, *, verdict=True):
         problems.append('review must bind the candidate commit')
     if verdict and data.get('verdict') != 'PASS':
         problems.append('peer PASS verdict required')
-    if (not isinstance(data.get('evidence'), list) or not data['evidence'] or
-            any(not isinstance(v, str) or not v.strip() for v in data['evidence'])):
+    if not (_text_list(data.get('evidence')) and data['evidence']):
         problems.append('nonempty evidence references required')
     return data
 
@@ -81,11 +80,8 @@ def validate_extra(filename: str, data, expected_commit: str, *, root: Path, exe
             problems.append('generator commit must bind the candidate commit')
         for identity in sorted(identities):
             row = required(data.get(identity), ('command', 'stdout', 'exit', 'expected', 'commit', 'sources'), problems)
-            if (type(row.get('exit')) is not int or row['exit'] != 0 or
-                    not isinstance(row.get('command'), str) or not row['command'].strip() or
-                    not isinstance(row.get('stdout'), str) or not row['stdout'].strip() or
-                    not isinstance(row.get('expected'), str) or not row['expected'].strip() or
-                    row.get('commit') != expected_commit):
+            if not (_zero(row.get('exit')) and all(_text(row.get(k)) for k in ('command', 'stdout', 'expected'))
+                    and row.get('commit') == expected_commit):
                 problems.append(f'{identity}: candidate-bound successful receipt summary required')
             sources = row.get('sources')
             if not isinstance(sources, list) or not sources:
@@ -134,7 +130,7 @@ def validate_extra(filename: str, data, expected_commit: str, *, root: Path, exe
             verification = row.get('verification', {})
             if (not sha or row.get('sha') != sha or not isinstance(verification, dict) or
                     verification.get('command') != f"gh api repos/{row.get('action')}/commits/{sha}" or
-                    type(verification.get('exit')) is not int or verification['exit'] != 0 or
+                    not _zero(verification.get('exit')) or
                     not isinstance(verification.get('stdout'), dict) or verification['stdout'].get('sha') != sha):
                 problems.append('action SHA verification missing or different from the table')
             checks(row, ACTION_CHECKS, problems)
@@ -179,7 +175,7 @@ def validate_extra(filename: str, data, expected_commit: str, *, root: Path, exe
             if not isinstance(run, dict):
                 problems.append('invalid install report')
                 continue
-            if run.get('commit') != expected_commit or type(run.get('exit')) is not int or run['exit'] != 0:
+            if run.get('commit') != expected_commit or not _zero(run.get('exit')):
                 problems.append('candidate-bound successful install required')
             items = run.get('report', {}).get('install', [])
             core = [i.get('metadata', {}) for i in items if i.get('metadata', {}).get('name') == 'markitdown-gc']
@@ -283,6 +279,24 @@ def produce_extras(root: Path, source: Path, output: Path, expected_commit: str,
 class CleanupRefused(Exception):
     """Verification, rollback-window, ownership or containment check failed."""
 
+def _text(value) -> bool:
+    return isinstance(value, str) and bool(value.strip())
+
+def _text_list(value) -> bool:
+    return isinstance(value, list) and all(_text(v) for v in value)
+
+def _zero(value) -> bool:
+    return type(value) is int and value == 0
+
+def read_record(path: Path):
+    """JSON, or YAML (requirements-build.txt; never an engine runtime dependency)."""
+    source = path.read_text(encoding='utf-8')
+    try:
+        return json.loads(source)
+    except ValueError:
+        import yaml
+        return yaml.safe_load(source)
+
 def required(data, keys, problems):
     if not isinstance(data, dict):
         problems.append('expected an object')
@@ -348,8 +362,7 @@ def validate_rehearsal(data: dict, *, minimum_version=None) -> list[str]:
     cells = []
     for run in data.get('runs', []) if isinstance(data.get('runs'), list) else []:
         run = required(run, ('os', 'obsidian_channel', 'obsidian_version', 'python', 'engine', 'core', 'downloads', 'checks'), problems)
-        if not all(isinstance(run.get(k), str) and run[k].strip() for k in
-                   ('os', 'obsidian_channel', 'obsidian_version', 'python', 'engine', 'core')):
+        if not all(_text(run.get(k)) for k in ('os', 'obsidian_channel', 'obsidian_version', 'python', 'engine', 'core')):
             problems.append('run identifiers and runtime versions must be nonempty strings')
             continue
         cells.append((run.get('os'), run.get('obsidian_channel')))
@@ -373,11 +386,11 @@ def validate_postdeploy(data: dict) -> list[str]:
     cells, failed = [], False
     for env in data.get('environments', []) if isinstance(data.get('environments'), list) else []:
         env = required(env, ('os', 'vault', 'app_version', 'python', 'unexpected_egress', 'checks'), problems)
-        if not all(isinstance(env.get(k), str) and env[k].strip() for k in ('os', 'vault', 'app_version', 'python')):
+        if not all(_text(env.get(k)) for k in ('os', 'vault', 'app_version', 'python')):
             problems.append('environment identifiers and versions must be nonempty strings')
             continue
         cells.append((env.get('os'), env.get('vault')))
-        if type(env.get('unexpected_egress')) is not int or env['unexpected_egress'] != 0:
+        if not _zero(env.get('unexpected_egress')):
             problems.append('unexpected egress')
         checks(env, POSTDEPLOY, problems, allow_failure=True)
         failed |= isinstance(env.get('checks'), dict) and any(v == 'FAIL' for v in env['checks'].values())
@@ -411,8 +424,7 @@ def validate_rollback(data: dict) -> list[str]:
     runtime = required(data.get('runtime_rollback'), ('previous_venv_selected', 'incompatible_interpreter_rejected'), problems)
     if any(runtime.get(k) is not True for k in ('previous_venv_selected', 'incompatible_interpreter_rejected')):
         problems.append('retained interpreter must pass rollback checks')
-    if (not isinstance(data.get('manual_credential_reconfiguration'), list) or
-            any(not isinstance(v, str) or not v.strip() for v in data.get('manual_credential_reconfiguration', []))):
+    if not _text_list(data.get('manual_credential_reconfiguration')):
         problems.append('credential reconfiguration must be recorded explicitly')
     return problems
 
@@ -472,13 +484,7 @@ def main(argv=None):
         produce_extras(Path(__file__).resolve().parents[1], args.source, args.output, args.commit, executions=args.executions)
         print('Four extra evidence files validated; peer verdicts preserved.')
         return 0
-    source = args.record.read_text(encoding='utf-8')
-    try:
-        record = json.loads(source)
-    except ValueError:
-        import yaml  # requirements-build.txt; never an engine runtime dependency
-        record = yaml.safe_load(source)
-    problems = globals()[f'validate_{args.kind}'](record)
+    problems = globals()[f'validate_{args.kind}'](read_record(args.record))
     print('\n'.join(problems) if problems else 'Schema valid; claims require independent verification.')
     return int(bool(problems))
 

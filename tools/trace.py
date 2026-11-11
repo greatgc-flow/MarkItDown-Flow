@@ -25,6 +25,15 @@ RUNNERS = ('windows-2022', 'ubuntu-24.04', 'macos-26')
 ENGINE_PYTHONS = ('3.10', '3.14')
 
 
+def _read_json(path: Path):
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _write_json(path: Path, data, *, ensure_ascii=False) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(data, ensure_ascii=ensure_ascii, indent=2) + "\n", encoding="utf-8")
+
+
 def requirement_registry(root: Path) -> dict[str, dict]:
     """Read definitions only, excluding deleted requirements and prose mentions."""
     definitions = {}
@@ -292,35 +301,26 @@ def matrix_problems(root: Path, tests: list[dict]) -> list[str]:
                     tuple(reversed(owner.split(":"))) if re.fullmatch(r"S\d+:K\d{2}", owner) else None
                 if target is None or target not in covered_class:
                     problems.append(f"class_stage owner is not a covered cell: {owner!r} for {klass}:{stage}")
-    for stage in MATRIX_STAGES:
-        for mode in MATRIX_FMS:
-            cell = (stage, mode)
-            if cell in FLOOR_STAGE_FM and cell not in covered_fm:
-                problems.append(f"floor cell not covered: {stage}:{mode}")
-            if cell in FLOOR_STAGE_FM and cell in na_fm:
-                problems.append(f"floor cell declared N/A: {stage}:{mode}")
-            if cell not in covered_fm and cell not in na_fm:
-                problems.append(f"stage x failure-mode cell neither covered nor N/A: {stage}:{mode}")
-            if cell in covered_fm and cell in na_fm:
-                problems.append(f"stage x failure-mode cell both covered and declared N/A: {stage}:{mode}")
-    for klass in MATRIX_CLASSES:
-        for stage in MATRIX_STAGES:
-            cell = (klass, stage)
-            if cell in FLOOR_CLASS_STAGE and cell not in covered_class:
-                problems.append(f"floor class cell not covered: {klass}:{stage}")
-            if cell in FLOOR_CLASS_STAGE and cell in na_class:
-                problems.append(f"floor class cell declared N/A: {klass}:{stage}")
-            if cell not in covered_class and cell not in na_class:
-                problems.append(f"class x stage cell neither covered nor N/A: {klass}:{stage}")
-            if cell in covered_class and cell in na_class:
-                problems.append(f"class x stage cell both covered and declared N/A: {klass}:{stage}")
+    for floor_label, label, floor, covered, na, cells in (
+            ("floor cell", "stage x failure-mode cell", FLOOR_STAGE_FM, covered_fm, na_fm,
+             [(s, m) for s in MATRIX_STAGES for m in MATRIX_FMS]),
+            ("floor class cell", "class x stage cell", FLOOR_CLASS_STAGE, covered_class, na_class,
+             [(k, s) for k in MATRIX_CLASSES for s in MATRIX_STAGES])):
+        for cell in cells:
+            name = ":".join(cell)
+            if cell in floor and cell not in covered:
+                problems.append(f"{floor_label} not covered: {name}")
+            if cell in floor and cell in na:
+                problems.append(f"{floor_label} declared N/A: {name}")
+            if cell not in covered and cell not in na:
+                problems.append(f"{label} neither covered nor N/A: {name}")
+            if cell in covered and cell in na:
+                problems.append(f"{label} both covered and declared N/A: {name}")
     return problems
 
 
 def write_registry(root: Path, requirements: dict, tests: list[dict]) -> None:
-    path = root / "build/trace/registry.json"
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps({"v": 1, "requirements": requirements, "tests": tests}, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    _write_json(root / "build/trace/registry.json", {"v": 1, "requirements": requirements, "tests": tests})
 
 
 def _stem(junit_name: str) -> str:
@@ -355,9 +355,7 @@ def suite_digest(root: Path) -> str:
 
 def write_collection(path: Path, tests: list[dict], commit: str, *, root: Path = ROOT) -> None:
     """Called by a separate, fixed full-root collection (or explicit synthetic tests)."""
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(dict(v=1, scope='engine/tests', commit=commit,
-        suite_sha256=suite_digest(root), tests=tests), ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+    _write_json(path, dict(v=1, scope='engine/tests', commit=commit, suite_sha256=suite_digest(root), tests=tests))
 
 
 def shell_suite_digest(root: Path) -> str:
@@ -370,9 +368,7 @@ def shell_suite_digest(root: Path) -> str:
 
 
 def write_shell_collection(path: Path, tests: list[dict], commit: str, *, root: Path = ROOT) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(dict(v=1, scope='shell/test', commit=commit,
-        suite_sha256=shell_suite_digest(root), tests=tests), ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+    _write_json(path, dict(v=1, scope='shell/test', commit=commit, suite_sha256=shell_suite_digest(root), tests=tests))
     # Seal the independently collected universe, never regenerate it from JUnit.
     junit = 'junit-' + path.name.removeprefix('collection-').removesuffix('.json') + '.xml'
     write_execution_registry(path.parent, junit, tests, commit)
@@ -391,7 +387,7 @@ def collect_shell(destination: Path, commit: str, *, root: Path = ROOT) -> None:
             capture_output=True, text=True, encoding='utf-8', timeout=120)
         if done.returncode:
             raise ValueError('independent Jest collection failed: ' + done.stdout[-1000:] + done.stderr[-3000:])
-        collected = json.loads(raw.read_text(encoding='utf-8'))
+        collected = _read_json(raw)
         records = []
         for suite in collected['testResults']:
             source = Path(suite['name']).relative_to(root).as_posix()
@@ -435,11 +431,9 @@ def collect_complete(destination: Path, commit: str, *, root: Path = ROOT) -> No
 
 
 def write_execution_registry(evidence: Path, junit_name: str, tests: list[dict], commit: str) -> None:
-    evidence.mkdir(parents=True, exist_ok=True)
     canonical = collection_path(evidence, junit_name).read_bytes()
-    execution_registry_path(evidence, junit_name).write_text(
-        json.dumps(dict(v=3, commit=commit, tests=tests,
-            collection_sha256=hashlib.sha256(canonical).hexdigest()), ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+    _write_json(execution_registry_path(evidence, junit_name),
+                dict(v=3, commit=commit, tests=tests, collection_sha256=hashlib.sha256(canonical).hexdigest()))
 
 
 def execution_receipt(evidence: Path, junit_name: str, expected_commit: str, *, root: Path = ROOT) -> tuple[list[dict], dict]:
@@ -448,7 +442,7 @@ def execution_receipt(evidence: Path, junit_name: str, expected_commit: str, *, 
     Missing parameters are found against a separate complete collection, even
     when restricted execution omitted them from both its registry and JUnit.
     """
-    manifest = json.loads(execution_registry_path(evidence, junit_name).read_text(encoding='utf-8'))
+    manifest = _read_json(execution_registry_path(evidence, junit_name))
     if not isinstance(manifest, dict) or manifest.get('v') != 3 or not expected_commit or manifest.get('commit') != expected_commit:
         raise ValueError('collection registry version/commit differs')
     canonical_bytes = collection_path(evidence, junit_name).read_bytes()
@@ -617,15 +611,10 @@ def report(root: Path, destination: Path) -> dict:
             continue
         stage, failure = values[0]
         fm.setdefault(f"{stage}:{failure}", []).append(test["nodeid"])
-        covered = test_classes(test, classes, include_schema=True)
-        for klass in covered:
-            ks.setdefault(f"{klass}:{stage}", []).append(test["nodeid"])
-        for klass in test_classes(test, classes):
-            execution.setdefault(f'{klass}:{stage}', []).append(test['nodeid'])
-        for klass, extra_stage in sorted(extra_cells(test, include_schema=True)):
-            ks.setdefault(f"{klass}:{extra_stage}", []).append(test["nodeid"])
-        for klass, extra_stage in sorted(extra_cells(test)):
-            execution.setdefault(f'{klass}:{extra_stage}', []).append(test['nodeid'])
+        for table, schema in ((ks, True), (execution, False)):
+            cells = [(k, stage) for k in test_classes(test, classes, include_schema=schema)]
+            for klass, cell_stage in cells + sorted(extra_cells(test, include_schema=schema)):
+                table.setdefault(f"{klass}:{cell_stage}", []).append(test["nodeid"])
     def grid(keys, covered, kind, axes):
         result = {}
         for key in keys:
@@ -643,8 +632,7 @@ def report(root: Path, destination: Path) -> dict:
               "automated": {"registration_only": True, 'class_stage_includes_schema_equivalences': True,
                             'execution_requires_junit': True, "problems": matrix_problems(root, tests)},
               "manual": {k: {"status": "requires named review", "file": v} for k, v in MANUAL_FILES.items()}}
-    destination.parent.mkdir(parents=True, exist_ok=True)
-    destination.write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
+    _write_json(destination, result, ensure_ascii=True)
     return result
 
 
@@ -661,14 +649,14 @@ def required_executions(evidence: Path, expected_commit: str) -> list[str]:
                 receipt = execution_receipt(evidence, path.name, expected_commit)
                 if not rows_passed(expected, receipt) or not all(receipt[1].values()):
                     raise ValueError('missing, failed, skipped or deselected engine parameter')
-                runtime = json.loads((evidence / f'runtime-{runner}-py{py}.json').read_text(encoding='utf-8'))
+                runtime = _read_json(evidence / f'runtime-{runner}-py{py}.json')
                 if runtime.get('commit') != expected_commit or runtime.get('installed') is not True:
                     raise ValueError('installed import/commit receipt differs')
             except (OSError, ValueError, KeyError, TypeError, ET.ParseError) as error:
                 problems.append(f'{runner}/py{py}: {error}')
         for py in ('3.11', '3.12', '3.13'):
             try:
-                smoke = json.loads((evidence / f'smoke-{runner}-py{py}.json').read_text(encoding='utf-8'))
+                smoke = _read_json(evidence / f'smoke-{runner}-py{py}.json')
                 if smoke.get('commit') != expected_commit or smoke.get('exit') != 0:
                     raise ValueError('missing successful candidate-bound smoke')
             except (OSError, ValueError) as error:
@@ -748,7 +736,7 @@ def oracle_receipts(root: Path, evidence: Path, expected_commit: str, *, defer_r
                 else:
                     sources.add('junit-contract-max.json')
                     try:
-                        dedup = json.loads((evidence / 'junit-contract-max.json').read_text(encoding='utf-8'))
+                        dedup = _read_json(evidence / 'junit-contract-max.json')
                         outcomes.append(dedup.get('version') == '0.3.9' and dedup.get('deduplicated_with') == 'contract-min')
                     except (OSError, ValueError, AttributeError):
                         outcomes.append(False)
@@ -763,7 +751,7 @@ def oracle_receipts(root: Path, evidence: Path, expected_commit: str, *, defer_r
 def score(root: Path, evidence: Path, reviews: Path, expected_commit: str) -> dict:
     """Score complete per-cell executions plus separate command-oracle evidence."""
     try:
-        oracles = json.loads((evidence / "oracles.json").read_text(encoding="utf-8"))
+        oracles = _read_json(evidence / "oracles.json")
     except (OSError, ValueError):
         oracles = {}
     gates = oracle_receipts(root, evidence, expected_commit)
@@ -852,8 +840,7 @@ def main(argv: list[str] | None = None) -> int:
         return int(bool(errors))
     if args.command == "score":
         result = score(ROOT, args.evidence, args.attest_dir, args.commit)
-        args.evidence.mkdir(parents=True, exist_ok=True)
-        (args.evidence / "acceptance.json").write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
+        _write_json(args.evidence / "acceptance.json", result, ensure_ascii=True)
         print(result["score"])
         return int(bool(publication_problems(result)) or
                    (args.post_release and result['manual'][-1]['status'] != 'PASS'))
