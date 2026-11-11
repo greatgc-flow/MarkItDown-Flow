@@ -4,6 +4,7 @@ import argparse
 import base64
 import csv
 import hashlib
+import re
 import io
 import importlib.metadata as metadata
 import os
@@ -24,6 +25,20 @@ SUBJECTS = (*ASSETS, 'SHA256SUMS')
 
 def digest(path):
     return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def read_sums(folder):
+    """Strict SHA256SUMS: exactly one lowercase SHA-256 per release asset, nothing else."""
+    sums = {}
+    for line in (folder / 'SHA256SUMS').read_text(encoding='utf-8').splitlines():
+        h, _, name = line.partition('  ')
+        if name not in ASSETS or name in sums or not re.fullmatch('[0-9a-f]{64}', h):
+            raise ValueError('invalid checksum inventory')
+        sums[name] = h
+    missing = [name for name in ASSETS if name not in sums]
+    if missing:
+        raise ValueError(f'missing checksum subject: {", ".join(missing)}')
+    return sums
 
 
 def canonical_wheel(wheel):

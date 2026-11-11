@@ -21,7 +21,7 @@ import sys
 
 TOOLS = Path(__file__).resolve().parent
 sys.path.insert(0, str(TOOLS))
-from build_engine import ASSETS, SUBJECTS, WHEEL, digest  # noqa: E402
+from build_engine import ASSETS, SUBJECTS, WHEEL, digest, read_sums  # noqa: E402
 import release_evidence  # noqa: E402
 
 ROOT = TOOLS.parent
@@ -40,15 +40,14 @@ def verify_assets(folder: Path) -> dict[str, str]:
     missing = [name for name in SUBJECTS if not (folder / name).is_file()]
     if missing:
         raise KitError(f'missing release assets: {", ".join(missing)}')
-    listed = {}
-    for line in (folder / 'SHA256SUMS').read_text(encoding='utf-8').splitlines():
-        listed_digest, _, name = line.partition('  ')
-        if listed_digest and name:
-            listed[name.strip()] = listed_digest.strip().lower()
+    try:
+        listed = read_sums(folder)
+    except ValueError as error:
+        raise KitError(f'SHA256SUMS: {error}') from None
     actual = {name: digest(folder / name) for name in SUBJECTS}
-    bad = [name for name in ASSETS if listed.get(name) != actual[name]]
+    bad = [name for name in ASSETS if listed[name] != actual[name]]
     if bad:
-        raise KitError(f'SHA256SUMS mismatch (or entry missing) for: {", ".join(bad)}')
+        raise KitError(f'SHA256SUMS mismatch for: {", ".join(bad)}')
     return actual
 
 
