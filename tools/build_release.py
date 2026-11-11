@@ -9,7 +9,7 @@ import shutil
 import subprocess
 import sys
 import zipfile
-from build_engine import ASSETS, SUBJECTS, WHEEL, REFERENCE, build, reference, digest as sha
+from build_engine import ASSETS, SUBJECTS, WHEEL, REFERENCE, build, reference, read_sums, digest as sha
 
 ROOT = Path(__file__).resolve().parents[1]
 COMMANDS = ('convert-file', 'convert-folder', 'convert-url', 'view-conversion-history',
@@ -36,15 +36,7 @@ def versions(tag):
 
 def verify(folder):
     folder = folder.resolve(strict=True)
-    sums = {}
-    for line in (folder / 'SHA256SUMS').read_text().splitlines():
-        h, name = line.split('  ')
-        if name not in ASSETS or name in sums or not re.fullmatch('[0-9a-f]{64}', h):
-            raise ValueError('invalid checksum inventory')
-        sums[name] = h
-    if set(sums) != set(ASSETS):
-        raise ValueError('missing checksum subject')
-    for name, expected in sums.items():
+    for name, expected in read_sums(folder).items():
         path = folder / name
         if path.is_symlink() or sha(path) != expected:
             raise ValueError(f'changed candidate bytes: {name}')

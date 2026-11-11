@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+Internal only, no user-visible change: engine refactors (declarative well-typed checks in
+classification, shared provider error helper), slimmer release and evidence tooling (one strict
+`SHA256SUMS` reader), FX-71 fixtures re-recorded and guarded against engine source drift.
+
 ## 2.0.0 — Zero-base renewal (released 2026-11-11)
 
 Major version: a clean-room Obsidian shell (`shell/`) over a new Python engine
