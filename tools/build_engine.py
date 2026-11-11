@@ -4,12 +4,12 @@ import argparse
 import base64
 import csv
 import hashlib
-import re
 import io
 import importlib.metadata as metadata
 import os
 from pathlib import Path
 import platform
+import re
 import shutil
 import subprocess
 import sys
