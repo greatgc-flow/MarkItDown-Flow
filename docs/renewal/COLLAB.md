@@ -88,6 +88,11 @@ Traceability is generated, not hand-kept: `python tools/trace.py check` must rep
   PR #16. Round 17 (main 6b39492, after simplicity PR #17): goal 99 · vertical 100 · horizontal 100 · TDD 100 ·
   security 100 · docs 100 · release 99 · simplicity 99 (mean ≈ 99.6). No agent-fixable deduction remains:
   MAN-04 and REQ-PKG-19/21 are owner-only, evidence-tooling size is the owner decision R35/R36.
+- Round 18 (main b41d213, after owner-approved evidence-tooling slimming PR #19, which also re-recorded FX-71
+  after the PR #17 engine refactor and added the PT-40 drift guard): 99 · 100 · 100 · 100 · 100 · 100 · 99 · 99
+  (one duplicated SHA256SUMS parser). Round 19 (main a554ffc, PR #20 one strict `read_sums`): goal 99 ·
+  vertical 100 · horizontal 100 · TDD 100 · security 100 · docs 100 · release 99 · simplicity 100
+  (mean ≈ 99.75). The only remaining deduction is MAN-04 (owner-only); REQ-PKG-19/21 are unscored owner evidence.
 - Named reviews bound to the released commit edc0ca6 (evidence run 42885992301): MAN-01 cx (delta
   re-review), MAN-02 ag argon (README), MAN-03 ag flash (292 rows; reviewer confirmed it holds for
   edc0ca6), actions/listing/pkg04 and oracles spot checks cc. MAN-04 is deferred to the owner (R35).
