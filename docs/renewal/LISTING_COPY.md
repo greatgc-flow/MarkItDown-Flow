@@ -31,6 +31,7 @@ retention, migration and rollback.
 - Confirm the published metadata and release actually match before requesting
   another review. A passing GitHub CI run is not an Obsidian review verdict.
 - Run the MAN-04 real-Obsidian minimum/current checks, including saving settings
-  over an existing data.json on Windows, macOS and Linux. If the host adapter
-  refuses rename-over-existing, saving must report failure and preserve the old
-  file; never introduce a delete-before-rename fallback.
+  over an existing data.json on Windows, macOS and Linux. Obsidian's adapter
+  `rename` refuses an existing destination (verified in the 1.15.1 app bundle), so
+  the store moves the original aside to `data.json.bak` before the swap and
+  restores it on failure; never introduce a delete-before-rename fallback.

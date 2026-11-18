@@ -2,10 +2,16 @@
 
 ## Unreleased
 
-- Preserve existing settings when staging or replacement fails: no target deletion
-  before rename, best-effort cleanup of partial staging, and serialized saves.
-- Add filesystem-backed tests for the production settings store, including rename
-  failure, partial writes, cleanup failure and overlapping requests.
+- Preserve existing settings when staging or replacement fails, and keep saving
+  working under Obsidian's adapter, whose `rename` refuses an existing destination:
+  the original moves aside to `data.json.bak` (never deleted first), the staged file
+  takes its place, then the backup is removed; any failure restores the original, an
+  interrupted swap is read back from the backup, and reads and saves are serialized.
+  A backup that cannot be removed is overwritten with the new settings so no raw v1
+  settings remain; if even that fails, the save is reported as failed.
+- Add filesystem-backed tests for the production settings store with Obsidian's rename
+  semantics, including rename and swap failure, partial writes, cleanup failure,
+  interrupted swaps and overlapping requests.
 - Add replacement listing copy for v2; external service metadata still needs to be
   updated separately. Existing published release assets are unchanged.
 

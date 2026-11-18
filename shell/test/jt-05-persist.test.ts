@@ -171,3 +171,16 @@ it(R('JT-05 retained strings in the snapshot have known credential values remove
   const text = JSON.stringify(buildSnapshot(raw));
   expect(sentinelsIn(text)).toEqual([]);
 });
+
+it(R('JT-05 an unreadable store (raw backup that cannot be discarded) blocks jobs, warns and writes nothing'), async () => {
+  const writes: string[] = [];
+  const store = {
+    read: async () => { throw new Error('backup write failed'); },
+    write: async (name: string) => { writes.push(name); },
+    list: async () => [],
+  };
+  const outcome = await persistMigration(store as never);
+  expect(outcome).toEqual(expect.objectContaining({ ok: false, jobsBlocked: true, unsanitizedDiskWarning: true, diskSanitized: false, writes: [] }));
+  expect(outcome.noticeKeys).toEqual(['shell.SETTINGS']);
+  expect(writes).toEqual([]);
+});
