@@ -151,7 +151,7 @@ def test_PT_01_direct_wheel_inventory_wheel_metadata_and_run_outside_the_source_
     requires = {re.match(r"Requires-Dist:\s*([A-Za-z0-9_.\-]+)", line)[1].lower()
                 for line in metadata.splitlines() if line.startswith("Requires-Dist:")}
     assert requires == {"markitdown-gc", "pypdfium2", "pillow"}, f"runtime dependency policy differs: {requires}"
-    assert re.search(r"^Version: 2\.0\.0$", metadata, re.M) and re.search(r"^Name: mdflow$", metadata, re.M | re.I)
+    assert re.search(r"^Version: 2\.0\.1$", metadata, re.M) and re.search(r"^Name: mdflow$", metadata, re.M | re.I)
     assert "Root-Is-Purelib: true" in wheel_meta and "Tag: py3-none-any" in wheel_meta
     # Import and run from the fresh compatibility environment, cwd outside the source tree.
     probe = subprocess.run([str(packaged_venv.python), "-I", "-X", "utf8", "-c",
@@ -175,7 +175,7 @@ def test_PT_02_reference_is_exact_hash_checked_wheel_only_and_a_changed_wheel_fa
     entries = parse_lock(lock)
     assert entries
     engine = [e for e in entries if "mdflow-2.0.1-py3-none-any.whl" in e[0]]
-    assert len(engine) == 1 and re.match(r"^(mdflow\s*@\s*)?\./mdflow-2\.0\.0-py3-none-any\.whl$", engine[0][0]), \
+    assert len(engine) == 1 and re.match(r"^(mdflow\s*@\s*)?\./mdflow-2\.0\.1-py3-none-any\.whl$", engine[0][0]), \
         "the engine must be the local wheel path ./mdflow-2.0.1-py3-none-any.whl"
     assert engine[0][1] == [sha(wheel)], "locked engine hash differs from the attached release wheel"
     problems = []
