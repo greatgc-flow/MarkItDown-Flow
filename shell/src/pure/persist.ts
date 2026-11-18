@@ -115,7 +115,13 @@ function failure(writes: StoreFile[]): PersistOutcome {
  * Idempotent on schema 2; never writes a recovery placeholder.
  */
 export async function persistMigration(store: SettingsStore): Promise<PersistOutcome> {
-  const text = await store.read('data.json');
+  let text: string | null;
+  try {
+    text = await store.read('data.json');
+  } catch {
+    // Unreadable disk state (or a raw backup that cannot be discarded): block jobs, warn, write nothing.
+    return failure([]);
+  }
   let raw: unknown = null;
   if (text !== null) {
     try {
