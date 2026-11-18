@@ -21,12 +21,12 @@ import sys
 
 TOOLS = Path(__file__).resolve().parent
 sys.path.insert(0, str(TOOLS))
-from build_engine import ASSETS, SUBJECTS, WHEEL, digest, read_sums  # noqa: E402
+from build_engine import ASSETS, SUBJECTS, VERSION, WHEEL, digest, read_sums  # noqa: E402
 import release_evidence  # noqa: E402
 
 ROOT = TOOLS.parent
 TEMPLATE = ROOT / 'docs/renewal/manual-templates/release_rehearsal.yml'
-TAG = '2.0.0'
+TAG = VERSION
 PLUGIN_ID = 'markitdown-flow'
 OS_NAMES = {'Windows': 'windows', 'Darwin': 'macos', 'Linux': 'linux'}
 

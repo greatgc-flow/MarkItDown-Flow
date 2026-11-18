@@ -29,7 +29,10 @@ def main():
     version = subprocess.check_output(['gh', '--version'], text=True).splitlines()[0]
     candidate['verifier'] = {'gh': version, 'source_digest': commit, 'signer_workflow': candidate['signer_workflow']}
     (folder / 'release-candidate.json').write_text(json.dumps(candidate, indent=2) + '\n')
-    notes = ('MarkItDown Flow 2.0.0\n\nMajor-version migration: install the engine externally in a new venv '
+    notes = ('MarkItDown Flow 2.0.1\n\nPatch release: settings are preserved when a save fails, and saving works '
+             "under Obsidian's rename semantics. The engine is unchanged in behaviour; an installed 2.0.0 engine "
+             'stays compatible, so updating it is optional. '
+             'Migration from 1.x is as for 2.0.0: install the engine externally in a new venv '
              'using the release wheel and BOOTSTRAP.md, then choose its interpreter. Audio/YouTube, Azure fallback '
              'routing and old wrapper settings are removed; review README disclosures before OCR. '
              'Keep 1.0.8 assets and the sanitized v1 settings snapshot for rollback. '

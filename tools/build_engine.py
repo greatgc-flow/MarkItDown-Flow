@@ -5,6 +5,7 @@ import base64
 import csv
 import hashlib
 import io
+import json
 import importlib.metadata as metadata
 import os
 from pathlib import Path
@@ -17,7 +18,8 @@ import tempfile
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
-WHEEL = 'mdflow-2.0.0-py3-none-any.whl'
+VERSION = json.loads((ROOT / 'manifest.json').read_text(encoding='utf-8-sig'))['version']
+WHEEL = f'mdflow-{VERSION}-py3-none-any.whl'
 REFERENCE = 'reference-requirements.txt'
 ASSETS = ('main.js', 'manifest.json', 'styles.css', WHEEL, REFERENCE, 'BOOTSTRAP.md', 'NOTICE.txt', 'LICENSE')
 SUBJECTS = (*ASSETS, 'SHA256SUMS')
@@ -43,7 +45,7 @@ def read_sums(folder):
 
 def canonical_wheel(wheel):
     """Seal host-independent ZIP metadata, LF text, and stored (codec-free) bytes."""
-    record = 'mdflow-2.0.0.dist-info/RECORD'
+    record = f'mdflow-{VERSION}.dist-info/RECORD'
     with zipfile.ZipFile(wheel) as archive:
         members = {name: archive.read(name) for name in archive.namelist() if name != record}
     for name, data in members.items():
@@ -81,7 +83,7 @@ def build(output: Path):
     with zipfile.ZipFile(wheel) as archive:
         if any(n.endswith(('.so', '.pyd', '.dll', '.dylib', '.pyc')) for n in archive.namelist()):
             raise ValueError('mdflow wheel must be pure Python')
-        wm = archive.read('mdflow-2.0.0.dist-info/WHEEL').decode()
+        wm = archive.read(f'mdflow-{VERSION}.dist-info/WHEEL').decode()
         if 'Root-Is-Purelib: true' not in wm or 'Tag: py3-none-any' not in wm:
             raise ValueError('unexpected wheel metadata')
     return wheel
