@@ -1,5 +1,5 @@
 # MAN-02  R16 README disclosure review.   Validated by: python tools/trace.py attest MAN-02
-# Copy to release-evidence/2.0.0/R16_readme_review.yml, then replace every angle-bracket placeholder and every
+# Copy to release-evidence/2.0.1/R16_readme_review.yml, then replace every angle-bracket placeholder and every
 # unfilled result value. Open the README at the candidate commit and the plugin as configured; cite the exact
 # README heading or anchor for each disclosure and confirm it matches the actual behavior.
 id: MAN-02

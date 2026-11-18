@@ -28,7 +28,7 @@ jobs:
           node-version: '24.22.2'
       - run: python -m pip install "--only-binary=:all:" -r engine/requirements-build.txt
       - name: Build candidate once (publication uses these exact bytes)
-        run: python tools/build_release.py --tag 2.0.0
+        run: python tools/build_release.py --tag "$(python -c "import json;print(json.load(open('manifest.json'))['version'])")"
       - name: Reference-target complete closure and tamper checks
         env:
           MDFLOW_RELEASE_BUNDLE: ${{ github.workspace }}/build/candidate

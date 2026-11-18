@@ -8,7 +8,7 @@ reviewer에는 동료/프로필/모델을 기록합니다(예: `cx/cx.effort/gpt
 
 ## Before publication
 
-1. Obtain the full 40-hex candidate commit and existing `2.0.0` tag. Keep the tag fixed. Required CI
+1. Obtain the full 40-hex candidate commit and existing `2.0.1` tag. Keep the tag fixed. Required CI
    produces `acceptance-evidence`; release CI freezes tested bytes into `frozen-candidate` before
    attestation. An initial release run can stop for missing peer evidence. Keep its artifacts, or use a
    standalone CI run at the same commit. Record the run containing `acceptance-evidence` as `ci-run`.
@@ -17,7 +17,7 @@ reviewer에는 동료/프로필/모델을 기록합니다(예: `cx/cx.effort/gpt
    Changing the candidate requires fresh CI/reviews. The evidence branch may add review files; the
    evidence workflow validates them with a separate checkout of the exact candidate commit.
 3. Copy the three pre-publication YAML templates and four JSON templates from
-   `docs/renewal/manual-templates/` to `release-evidence/2.0.0/`. Keep filenames. Leave
+   `docs/renewal/manual-templates/` to `release-evidence/2.0.1/`. Keep filenames. Leave
    `release_rehearsal.yml` out until the owner performs MAN-04 after release. Each peer writes a
    `reviewer` such as `cx/cx.effort/gpt-6.1-sol`, ISO `date`, exact candidate `commit`, reviewed inputs,
    checks, evidence references and verdict. Replace placeholders/TODO only after review.
@@ -40,15 +40,15 @@ reviewer에는 동료/프로필/모델을 기록합니다(예: `cx/cx.effort/gpt
 
    ```sh
    python -m pip install -r engine/requirements-build.txt
-   python tools/trace.py attest MAN-01 --attest-dir release-evidence/2.0.0 --commit <candidate-sha>
-   python tools/trace.py attest MAN-02 --attest-dir release-evidence/2.0.0 --commit <candidate-sha>
-   python tools/trace.py attest MAN-03 --attest-dir release-evidence/2.0.0 --commit <candidate-sha>
+   python tools/trace.py attest MAN-01 --attest-dir release-evidence/2.0.1 --commit <candidate-sha>
+   python tools/trace.py attest MAN-02 --attest-dir release-evidence/2.0.1 --commit <candidate-sha>
+   python tools/trace.py attest MAN-03 --attest-dir release-evidence/2.0.1 --commit <candidate-sha>
    ```
 
 7. Run `evidence.yml` from the branch containing the filled records:
 
    ```sh
-   gh workflow run evidence.yml --ref evidence/2.0.0 -f path=release-evidence/2.0.0 -f candidate=2.0.0 -f ci-run=<candidate-ci-run-id>
+   gh workflow run evidence.yml --ref evidence/2.0.1 -f path=release-evidence/2.0.1 -f candidate=2.0.1 -f ci-run=<candidate-ci-run-id>
    ```
 
    It checks folder containment and CI-run commit, checks out candidate tooling separately, downloads
@@ -61,7 +61,7 @@ reviewer에는 동료/프로필/모델을 기록합니다(예: `cx/cx.effort/gpt
 8. Run the tagged release workflow:
 
    ```sh
-   gh workflow run release.yml --ref 2.0.0 -f evidence-run=<evidence-run-id>
+   gh workflow run release.yml --ref 2.0.1 -f evidence-run=<evidence-run-id>
    ```
 
    It downloads into `build/manual/`, verifies six targets and seals
@@ -75,7 +75,7 @@ All four files are mandatory gate inputs and are uploaded by `evidence.yml`.
 The workflow invokes this producer using the downloaded candidate CI artifact in `build/executions/`:
 
 ```sh
-python tools/release_evidence.py produce --source release-evidence/2.0.0 --output build/evidence --executions build/executions --commit <candidate-sha>
+python tools/release_evidence.py produce --source release-evidence/2.0.1 --output build/evidence --executions build/executions --commit <candidate-sha>
 ```
 
 `validate_extra` is the executable contract. Common peer fields: `reviewer` (peer/profile/model),
@@ -88,7 +88,7 @@ Unfilled placeholders, TODO, failed verdicts and stale commits are rejected.
 | `oracles.json` / `docs/renewal/manual-templates/oracles.json` | Automatic CI receipt summaries + peer spot checks | Top-level peer fields are reviewer/date/commit/evidence/spot_checks. Generated fields are `generator_commit` (candidate tooling commit) and exactly G-01..G-17 records with candidate `commit`, receipt-evaluation `command`, generated `stdout`, integer `exit: 0`, `result`, acceptance `expected`, and `sources[]` (`path`, SHA256 `sha256`). Paths are relative to the retained `receipts/` directory. Validator rejects missing/changed raw files, hash mismatch, stale commits and fewer than three distinct valid spot checks. |
 | `actions-review.json` / `docs/renewal/manual-templates/actions-review.json` | Automatic identity + peer workflow review | Common peer fields and `actions[]`, exactly one row per section 4 action: `action`, exact table `sha`, nonempty `evidence[]`, peer PASS `checks.ownership` (official actions org) and `checks.workflow_permissions` (least privilege in our workflows). Automatic workflow/table checks and `gh api repos/<action>/commits/<sha>` identity verification remain unchanged. Trust GitHub-owned action implementation/runtime/dependencies under the explicit section 4 assumption; no dist-source audit is required. |
 | `pkg04_core_artifacts.json` / `docs/renewal/manual-templates/pkg04_core_artifacts.json` | Automatic PyPI/CI facts + peer license review | Common peer fields; `package: markitdown-gc`, `version: 0.3.8`, official versioned JSON `source`; unchanged automatic `artifacts[]` inventory (filename, URL, SHA256, size, package type, yanked flag; at least one wheel). The only peer check is `checks.artifact_licenses: PASS`. Six automatic `install_reports[]` rows carry `target`, candidate `commit`, `exit: 0` and unchanged pip `report.install[]` metadata/download URLs/SHA256 hashes. Target keys are derived from successful candidate CI runtime/install reports. Each resolves one compatible Core. |
-| `listing-review.json` / `docs/renewal/manual-templates/listing-review.json` | Peer | Common peer fields, `listing: {id: markitdown-flow, version: 2.0.0}`, unchanged PASS checks: `identity`, `manifest_versions`, `description`, `commands`, `desktop_only`, `readme_disclosures`. Cite candidate manifest/versions/README against public Obsidian submission requirements. No listing-owner access is required. Listing installation and owner-only checks stay post-release REQ-PKG-19. |
+| `listing-review.json` / `docs/renewal/manual-templates/listing-review.json` | Peer | Common peer fields, `listing: {id: markitdown-flow, version: 2.0.1}`, unchanged PASS checks: `identity`, `manifest_versions`, `description`, `commands`, `desktop_only`, `readme_disclosures`. Cite candidate manifest/versions/README against public Obsidian submission requirements. No listing-owner access is required. Listing installation and owner-only checks stay post-release REQ-PKG-19. |
 
 Six exact target keys: `windows-2022:x64:py3.10`, `windows-2022:x64:py3.14`,
 `ubuntu-24.04:x64:py3.10`, `ubuntu-24.04:x64:py3.14`, `macos-26:arm64:py3.10`, `macos-26:arm64:py3.14`.
@@ -114,7 +114,7 @@ When a new candidate commit leaves every path a review attests byte-identical, r
 instead of repeating the review:
 
 ```sh
-python tools/rebind_evidence.py --folder release-evidence/2.0.0 --from <old-sha> --to <new-sha>
+python tools/rebind_evidence.py --folder release-evidence/2.0.1 --from <old-sha> --to <new-sha>
 ```
 
 Attested paths: MAN-01 `shell/src` and `shell/styles.css`; MAN-02 `README.md`; MAN-03
@@ -169,7 +169,7 @@ python tools/man04_kit.py run --channel minimum      # then again with --channel
 python tools/man04_kit.py validate release_rehearsal.yml --commit <CANDIDATE COMMIT SHA>
 ```
 
-`run` downloads the 2.0.0 assets with `gh release download` (add `--repo OWNER/REPO` if `gh` cannot tell the
+`run` downloads the 2.0.1 assets with `gh release download` (add `--repo OWNER/REPO` if `gh` cannot tell the
 repository, or `--assets DIR` for an already downloaded folder), verifies them against `SHA256SUMS`, installs
 the plugin into a throwaway vault `<work>/vault/.obsidian/plugins/markitdown-flow` (`<work>` defaults to
 `~/mdflow-man04/<os>-<channel>`), builds a fresh venv per `BOOTSTRAP.md` (`pip check`, `selftest`, `version`;

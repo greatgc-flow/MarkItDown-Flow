@@ -1,6 +1,6 @@
 {
   "name": "markitdown-flow-shell",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "private": true,
   "description": "Obsidian shell for MarkItDown-Flow v2 (clean-room, 20_SHELL.md).",
   "license": "MIT",

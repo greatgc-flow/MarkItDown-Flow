@@ -10,7 +10,7 @@ import shutil
 import subprocess
 from urllib.request import urlopen
 
-from build_engine import SUBJECTS
+from build_engine import SUBJECTS, VERSION
 OSES = {'windows', 'macos', 'linux'}
 REHEARSAL = {'fresh_install', 'upgrade_from_1_0_8', 'rollback', 'consent_dismiss', 'consent_approve',
              'mixed_document_mock_ocr', 'warm_rerun', 'cancel_restart', 'terminal_env_launch', 'commands', 'en_ko'}
@@ -137,7 +137,7 @@ def validate_extra(filename: str, data, expected_commit: str, *, root: Path, exe
             if not isinstance(row.get('evidence'), list) or not row['evidence']:
                 problems.append('per-action ownership/workflow permissions review references required')
     elif filename == 'listing-review.json':
-        if data.get('listing') != {'id': 'markitdown-flow', 'version': '2.0.0'}:
+        if data.get('listing') != {'id': 'markitdown-flow', 'version': VERSION}:
             problems.append('wrong candidate listing identity/version')
         checks(data, LISTING_CHECKS, problems)
     else:
@@ -357,8 +357,8 @@ def validate_rehearsal(data: dict, *, minimum_version=None) -> list[str]:
     commit(data, problems)
     if data.get('id') != 'MAN-04' or data.get('verdict') != 'PASS':
         problems.append('MAN-04 PASS verdict required')
-    if any(data.get(k) != '2.0.0' for k in ('candidate_tag', 'manifest_version', 'versions_json_entry')):
-        problems.append('all release versions must equal 2.0.0')
+    if any(data.get(k) != VERSION for k in ('candidate_tag', 'manifest_version', 'versions_json_entry')):
+        problems.append(f'all release versions must equal {VERSION}')
     cells = []
     for run in data.get('runs', []) if isinstance(data.get('runs'), list) else []:
         run = required(run, ('os', 'obsidian_channel', 'obsidian_version', 'python', 'engine', 'core', 'downloads', 'checks'), problems)
@@ -368,7 +368,7 @@ def validate_rehearsal(data: dict, *, minimum_version=None) -> list[str]:
         cells.append((run.get('os'), run.get('obsidian_channel')))
         if minimum_version and run.get('obsidian_channel') == 'minimum' and run.get('obsidian_version') != minimum_version:
             problems.append('MAN-04 minimum Obsidian version differs from candidate manifest')
-        if run.get('engine') != '2.0.0' or run.get('core') != '0.3.9':
+        if run.get('engine') != VERSION or run.get('core') != '0.3.9':
             problems.append('rehearsal must use the exact engine/Core')
         assets(run.get('downloads'), SUBJECTS, problems)
         checks(run, REHEARSAL, problems)
@@ -380,7 +380,7 @@ def validate_postdeploy(data: dict) -> list[str]:
     problems = []
     data = required(data, ('listing', 'commit', 'installed_assets', 'environments', 'critical_failed', 'rollback_triggered'), problems)
     commit(data, problems)
-    if data.get('listing') != {'id': 'markitdown-flow', 'version': '2.0.0'}:
+    if data.get('listing') != {'id': 'markitdown-flow', 'version': VERSION}:
         problems.append('wrong listing identity/version')
     assets(data.get('installed_assets'), SUBJECTS[:-1], problems, matching=True)
     cells, failed = [], False

@@ -124,7 +124,7 @@ export class ShellSettingsTab extends PluginSettingTab {
     section('engine');
     new Setting(containerEl).setName(t('shell.settings.enginePython')).setDesc(t('shell.settings.enginePythonNote')).addText((text) => {
       // Example path in the user's OS form, matching the SetupModal's bootstrap recipe.
-      text.setPlaceholder(Platform.isWin ? 'C:\\mdflow-venvs\\2.0.0\\Scripts\\python.exe' : '/path/to/mdflow-venvs/2.0.0/bin/python');
+      text.setPlaceholder(Platform.isWin ? 'C:\\mdflow-venvs\\2.0.1\\Scripts\\python.exe' : '/path/to/mdflow-venvs/2.0.1/bin/python');
       text.setValue(current.enginePython ?? '');
       this.committed(text, () => saved().enginePython ?? '', (value) => {
         const trimmed = value.trim();

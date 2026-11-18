@@ -9,7 +9,7 @@ import shutil
 import subprocess
 import sys
 import zipfile
-from build_engine import ASSETS, SUBJECTS, WHEEL, REFERENCE, build, reference, read_sums, digest as sha
+from build_engine import ASSETS, SUBJECTS, VERSION, WHEEL, REFERENCE, build, reference, read_sums, digest as sha
 
 ROOT = Path(__file__).resolve().parents[1]
 COMMANDS = ('convert-file', 'convert-folder', 'convert-url', 'view-conversion-history',
@@ -24,8 +24,8 @@ def versions(tag):
     shell = json.loads((ROOT / 'shell/package.json').read_text(encoding='utf-8-sig'))
     engine = tomllib.loads((ROOT / 'engine/pyproject.toml').read_text(encoding='utf-8'))['project']['version']
     prior = json.loads((ROOT / 'versions.json').read_text(encoding='utf-8'))
-    if not tag or tag.startswith('v') or not (tag == manifest['version'] == shell['version'] == engine == '2.0.0'):
-        raise ValueError('tag must equal manifest/package/engine version 2.0.0 (no v prefix)')
+    if not tag or tag.startswith('v') or not (tag == manifest['version'] == shell['version'] == engine == VERSION):
+        raise ValueError(f'tag must equal manifest/package/engine version {VERSION} (no v prefix)')
     if manifest['id'] != 'markitdown-flow' or manifest['isDesktopOnly'] is not True:
         raise ValueError('wrong plugin identity/desktop flag')
     if prior.get(tag) != manifest['minAppVersion']:
