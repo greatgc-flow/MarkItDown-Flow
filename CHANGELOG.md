@@ -1,6 +1,8 @@
 # Changelog
 
-## Unreleased
+## 2.0.1 — Settings save fix (2026-11-18)
+
+Patch release. An installed 2.0.0 engine stays compatible (`>=2.0.0,<2.1.0`); updating it is optional.
 
 - Preserve existing settings when staging or replacement fails, and keep saving
   working under Obsidian's adapter, whose `rename` refuses an existing destination:
@@ -12,8 +14,8 @@
 - Add filesystem-backed tests for the production settings store with Obsidian's rename
   semantics, including rename and swap failure, partial writes, cleanup failure,
   interrupted swaps and overlapping requests.
-- Add replacement listing copy for v2; external service metadata still needs to be
-  updated separately. Existing published release assets are unchanged.
+- Add replacement listing copy for v2 (`docs/renewal/LISTING_COPY.md`); external service
+  metadata is updated separately.
 
 Internal changes: engine refactors (declarative well-typed checks in
 classification, shared provider error helper), slimmer release and evidence tooling (one strict
