@@ -9,6 +9,9 @@ import type { SettingsStore, StoreFile } from '../pure/persist';
 const STORE_FILES: readonly StoreFile[] = ['data.json', 'data.v1.json'];
 
 export class VaultDataStore implements SettingsStore {
+  private writes: Promise<void> = Promise.resolve();
+  private sequence = 0;
+
   constructor(
     private readonly adapter: DataAdapter,
     private readonly pluginDirVaultRelative: string,
@@ -24,18 +27,26 @@ export class VaultDataStore implements SettingsStore {
     return this.adapter.read(path);
   }
 
-  async write(name: StoreFile, text: string): Promise<void> {
+  write(name: StoreFile, text: string): Promise<void> {
+    const write = this.writes.then(() => this.replace(name, text));
+    // A failed save must reject its caller without poisoning subsequent saves.
+    this.writes = write.catch(() => undefined);
+    return write;
+  }
+
+  private async replace(name: StoreFile, text: string): Promise<void> {
     const target = this.at(name);
-    const temp = this.at(`${name}.tmp-${Date.now().toString(36)}`);
-    await this.adapter.write(temp, text);
+    const temp = this.at(`${name}.tmp-${Date.now().toString(36)}-${++this.sequence}`);
     try {
-      if (await this.adapter.exists(target)) await this.adapter.remove(target);
+      await this.adapter.write(temp, text);
+      // Desktop rename replaces the destination. Never remove the original first:
+      // an adapter that cannot replace must fail with the old settings intact.
       await this.adapter.rename(temp, target);
     } catch (error) {
       try {
         await this.adapter.remove(temp);
       } catch {
-        // Leave the temp file if even removal fails; it never shadows the target.
+        // A leftover staging file must never mask the original save error.
       }
       throw error;
     }

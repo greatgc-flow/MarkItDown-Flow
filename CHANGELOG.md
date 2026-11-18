@@ -2,7 +2,14 @@
 
 ## Unreleased
 
-Internal only, no user-visible change: engine refactors (declarative well-typed checks in
+- Preserve existing settings when staging or replacement fails: no target deletion
+  before rename, best-effort cleanup of partial staging, and serialized saves.
+- Add filesystem-backed tests for the production settings store, including rename
+  failure, partial writes, cleanup failure and overlapping requests.
+- Add replacement listing copy for v2; external service metadata still needs to be
+  updated separately. Existing published release assets are unchanged.
+
+Internal changes: engine refactors (declarative well-typed checks in
 classification, shared provider error helper), slimmer release and evidence tooling (one strict
 `SHA256SUMS` reader), FX-71 fixtures re-recorded and guarded against engine source drift.
 
