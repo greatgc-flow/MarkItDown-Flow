@@ -48,7 +48,7 @@ def test_T_GEN_55_release_assembles_fresh_root_bundle(tmp_path, monkeypatch, pro
     monkeypatch.setattr(release, 'build', build)
     expected = WheelBoundary if produces_main else ValueError
     with pytest.raises(expected):
-        release.assemble(output, '2.0.1', 'a' * 40, 'owner/repo')
+        release.assemble(output, '2.0.2', 'a' * 40, 'owner/repo')
     assert commands == [['ci'], ['run', 'typecheck'], ['run', 'build']]
 
 
@@ -75,11 +75,11 @@ def test_T_GEN_54_r27_wheel_reproducible_and_every_frozen_asset_rejects_tamperin
     builder.canonical_wheel(other)
     assert other.read_bytes() == canonical
     with zipfile.ZipFile(wheel) as archive:
-        metadata = archive.read('mdflow-2.0.1.dist-info/METADATA').decode()
+        metadata = archive.read('mdflow-2.0.2.dist-info/METADATA').decode()
         dependency, = [line for line in metadata.splitlines() if line.startswith('Requires-Dist: markitdown-gc')]
         assert 'markitdown-gc' in dependency and '>=0.3.9' in dependency and '<0.4' in dependency
         assert 'pypdfium2<6,>=5' in metadata and 'pillow<14,>=11' in metadata.lower()
-        assert 'Tag: py3-none-any' in archive.read('mdflow-2.0.1.dist-info/WHEEL').decode()
+        assert 'Tag: py3-none-any' in archive.read('mdflow-2.0.2.dist-info/WHEEL').decode()
     with pytest.raises(ValueError, match='refusing to replace'):
         builder.build(first)
     # Synthetic plugin bytes exercise verification only; never publication.
@@ -93,7 +93,7 @@ def test_T_GEN_54_r27_wheel_reproducible_and_every_frozen_asset_rejects_tamperin
 
     def freeze():
         (first / 'SHA256SUMS').write_text(''.join(f'{sha256_file(first / n)}  {n}\n' for n in ASSETS), encoding='utf-8')
-        candidate = {'tag': '2.0.1', 'reference_sha256': sha256_file(first / REFERENCE),
+        candidate = {'tag': '2.0.2', 'reference_sha256': sha256_file(first / REFERENCE),
                      'draft_release': {'assets': [{'name': n, 'sha256': sha256_file(first / n)} for n in SUBJECTS]}}
         (first / 'release-candidate.json').write_text(json.dumps(candidate), encoding='utf-8')
 

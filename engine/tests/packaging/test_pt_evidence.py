@@ -123,11 +123,11 @@ def test_PT_04_public_artifact_license_and_target_wheel_evidence(attest_dir):
 
 def rehearsal_sample():
     runs = [{"os": o, "obsidian_channel": c, "obsidian_version": "1.8.9" if c == "current" else "1.6.0",
-             "python": "3.14.0", "engine": "2.0.1", "core": "0.3.9",
+             "python": "3.14.0", "engine": "2.0.2", "core": "0.3.9",
              "downloads": [{"asset": a, "sha256": HEX} for a in ASSETS],
              "checks": {name: "PASS" for name in REHEARSAL_CHECKS}} for o in OSES for c in CHANNELS]
     return {"id": "MAN-04", "reviewer": "Named Reviewer", "date": "2026-11-09", "commit": "a" * 40,
-            "candidate_tag": "2.0.1", "manifest_version": "2.0.1", "versions_json_entry": "2.0.1",
+            "candidate_tag": "2.0.2", "manifest_version": "2.0.2", "versions_json_entry": "2.0.2",
             "runs": runs, "verdict": "PASS"}
 
 
@@ -164,7 +164,7 @@ def test_PT_18_rehearsal_checklist_schema_and_draft_release_is_the_tested_bytes(
 def postdeploy_sample():
     environments = [{"os": o, "vault": v, "app_version": "1.8.9", "python": "3.14.0", "unexpected_egress": 0,
                      "checks": {name: "PASS" for name in POSTDEPLOY_CHECKS}} for o in OSES for v in ("clean", "upgrade")]
-    return {"listing": {"id": "markitdown-flow", "version": "2.0.1"}, "commit": "a" * 40,
+    return {"listing": {"id": "markitdown-flow", "version": "2.0.2"}, "commit": "a" * 40,
             "installed_assets": [{"asset": a, "sha256": HEX, "matches_release": True} for a in ASSETS[:-1]],
             "environments": environments, "critical_failed": False, "rollback_triggered": False}
 

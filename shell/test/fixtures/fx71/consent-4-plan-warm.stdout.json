@@ -22,11 +22,11 @@
       "cost_hint": null,
       "max_batch": 1,
       "retries": 0,
-      "destination": "command:[\"~\\\\bin\\\\python.CMD\",\"ocr_echo.py\",\"{input}\"]",
+      "destination": "command:[\"~/bin/python\",\"ocr_echo.py\",\"{input}\"]",
       "proxy": null,
       "command_env_names": []
     },
-    "provider_fingerprint": "5ebfc02c0e1aa4e9e6bbccbabf707969cbad951cb3666d2255ba4b4185e1b167",
+    "provider_fingerprint": "89d7993dfd5358e5f4b4cbba5d6d0a55aa0542314b7d075e7ea4e233f8ba2e7d",
     "prompt_version": "p1",
     "dpi": 200,
     "units": [
@@ -82,7 +82,7 @@
     "uninspected_pages": 0,
     "frames_total": null
   },
-  "plan_hash": "6b717f27e4135ef393326b01ec95d137c4f6181f0316e2397d9400399794d03e"
+  "plan_hash": "5c6d854715b8ff3f9912f18b170250f69b70e5493cef62455c4fd64291f1acc8"
 }
 {
   "v": 1,
@@ -108,11 +108,11 @@
       "cost_hint": null,
       "max_batch": 1,
       "retries": 0,
-      "destination": "command:[\"~\\\\bin\\\\python.CMD\",\"ocr_echo.py\",\"{input}\"]",
+      "destination": "command:[\"~/bin/python\",\"ocr_echo.py\",\"{input}\"]",
       "proxy": null,
       "command_env_names": []
     },
-    "provider_fingerprint": "5ebfc02c0e1aa4e9e6bbccbabf707969cbad951cb3666d2255ba4b4185e1b167",
+    "provider_fingerprint": "89d7993dfd5358e5f4b4cbba5d6d0a55aa0542314b7d075e7ea4e233f8ba2e7d",
     "prompt_version": "p1",
     "dpi": 200,
     "units": [],
@@ -139,7 +139,7 @@
     "uninspected_pages": 0,
     "frames_total": null
   },
-  "plan_hash": "8ab1eca214447109fe027fa0cf2f68ceb557ec554b923e1b4de8bbdb146a1763"
+  "plan_hash": "7323d7d17396e8ae4fb42ea5ddd683fdb506011464339040b75723d04fb589f1"
 }
 {
   "v": 1,
@@ -165,11 +165,11 @@
       "cost_hint": null,
       "max_batch": 1,
       "retries": 0,
-      "destination": "command:[\"~\\\\bin\\\\python.CMD\",\"ocr_echo.py\",\"{input}\"]",
+      "destination": "command:[\"~/bin/python\",\"ocr_echo.py\",\"{input}\"]",
       "proxy": null,
       "command_env_names": []
     },
-    "provider_fingerprint": "5ebfc02c0e1aa4e9e6bbccbabf707969cbad951cb3666d2255ba4b4185e1b167",
+    "provider_fingerprint": "89d7993dfd5358e5f4b4cbba5d6d0a55aa0542314b7d075e7ea4e233f8ba2e7d",
     "prompt_version": "p1",
     "dpi": 200,
     "units": [
@@ -178,10 +178,10 @@
         "source_id": "p2",
         "page": 2,
         "status": "eligible",
-        "raster_sha256": "b1e4da256260c21ea37de42fcb4b8219583dfb6913284c1244911f60fc2e3411",
+        "raster_sha256": "9c7426b0040eefa798d55c3f47deb5208791cc925508616f1453c67a3a8aabba",
         "dpi": 200,
         "mime": "image/png",
-        "bytes": 26762,
+        "bytes": 26784,
         "priority": "normal",
         "priority_core": "high"
       },
@@ -190,10 +190,10 @@
         "source_id": "p4",
         "page": 4,
         "status": "eligible",
-        "raster_sha256": "b1e4da256260c21ea37de42fcb4b8219583dfb6913284c1244911f60fc2e3411",
+        "raster_sha256": "9c7426b0040eefa798d55c3f47deb5208791cc925508616f1453c67a3a8aabba",
         "dpi": 200,
         "mime": "image/png",
-        "bytes": 26762,
+        "bytes": 26784,
         "priority": "normal",
         "priority_core": "high"
       }
@@ -221,7 +221,7 @@
     "uninspected_pages": 0,
     "frames_total": null
   },
-  "plan_hash": "5336b6d59b7178f1cf8a9c9905fcda617efa993554cc283a9e5eb4216b4cbaaf"
+  "plan_hash": "6002164b577e45ef647ba70a7ce6846fbe35a7de35535ef81b395badd62b7115"
 }
 {
   "v": 1,
@@ -247,11 +247,11 @@
       "cost_hint": null,
       "max_batch": 1,
       "retries": 0,
-      "destination": "command:[\"~\\\\bin\\\\python.CMD\",\"ocr_echo.py\",\"{input}\"]",
+      "destination": "command:[\"~/bin/python\",\"ocr_echo.py\",\"{input}\"]",
       "proxy": null,
       "command_env_names": []
     },
-    "provider_fingerprint": "5ebfc02c0e1aa4e9e6bbccbabf707969cbad951cb3666d2255ba4b4185e1b167",
+    "provider_fingerprint": "89d7993dfd5358e5f4b4cbba5d6d0a55aa0542314b7d075e7ea4e233f8ba2e7d",
     "prompt_version": "p1",
     "dpi": 200,
     "units": [
@@ -260,10 +260,10 @@
         "source_id": "p1",
         "page": 1,
         "status": "eligible",
-        "raster_sha256": "b1e4da256260c21ea37de42fcb4b8219583dfb6913284c1244911f60fc2e3411",
+        "raster_sha256": "9c7426b0040eefa798d55c3f47deb5208791cc925508616f1453c67a3a8aabba",
         "dpi": 200,
         "mime": "image/png",
-        "bytes": 26762,
+        "bytes": 26784,
         "priority": "normal",
         "priority_core": "high"
       },
@@ -272,10 +272,10 @@
         "source_id": "p2",
         "page": 2,
         "status": "eligible",
-        "raster_sha256": "b1e4da256260c21ea37de42fcb4b8219583dfb6913284c1244911f60fc2e3411",
+        "raster_sha256": "9c7426b0040eefa798d55c3f47deb5208791cc925508616f1453c67a3a8aabba",
         "dpi": 200,
         "mime": "image/png",
-        "bytes": 26762,
+        "bytes": 26784,
         "priority": "normal",
         "priority_core": "high"
       },
@@ -284,10 +284,10 @@
         "source_id": "p3",
         "page": 3,
         "status": "eligible",
-        "raster_sha256": "b1e4da256260c21ea37de42fcb4b8219583dfb6913284c1244911f60fc2e3411",
+        "raster_sha256": "9c7426b0040eefa798d55c3f47deb5208791cc925508616f1453c67a3a8aabba",
         "dpi": 200,
         "mime": "image/png",
-        "bytes": 26762,
+        "bytes": 26784,
         "priority": "normal",
         "priority_core": "high"
       }
@@ -315,5 +315,5 @@
     "uninspected_pages": 0,
     "frames_total": null
   },
-  "plan_hash": "eafd04ccb90c0cebe66415c95c1605a1042656bbe444be4affc007eb6e9961dc"
+  "plan_hash": "2d35ed4c2872fdeafa7846f9bc48d2172a7e0cc0e522ab24a26e16ac5f670b24"
 }

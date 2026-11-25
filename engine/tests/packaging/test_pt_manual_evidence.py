@@ -89,7 +89,7 @@ def check_workflow():
     assert triggers(flow) == {"workflow_dispatch"}, "evidence.yml must be dispatch-only"
     on = flow.get("on", flow.get(True))
     inputs = on["workflow_dispatch"]["inputs"]
-    assert inputs["path"]["default"] == "release-evidence/2.0.1"
+    assert inputs["path"]["default"] == "release-evidence/2.0.2"
     assert flow.get("permissions") == {"contents": "read", "actions": "read"}
     assert 'permissions' not in job, 'no job-level elevation'
     WORKFLOW_TEXT = (REPO / WORKFLOW).read_text(encoding="utf-8")
@@ -207,8 +207,8 @@ def check_rehearsal_template(template):
         assert [d["asset"] for d in run["downloads"]] == list(SUBJECTS)
         assert set(run["checks"]) == set(tool.REHEARSAL), "template must list exactly the required rehearsal checks"
         assert set(run["checks"].values()) == {"TODO"}
-        assert run["engine"] == "2.0.1" and run["core"] == "0.3.9"
-    assert {template[k] for k in ("candidate_tag", "manifest_version", "versions_json_entry")} == {"2.0.1"}
+        assert run["engine"] == "2.0.2" and run["core"] == "0.3.9"
+    assert {template[k] for k in ("candidate_tag", "manifest_version", "versions_json_entry")} == {"2.0.2"}
     assert tool.validate_rehearsal(template), "the unfilled rehearsal must fail the schema validator"
     assert tool.validate_rehearsal(fill(deepcopy(template))) == []
 
@@ -220,7 +220,7 @@ def check_guide():
     text = GUIDE.read_text(encoding="utf-8")
     assert re.search(r"[가-힣]", text[:1500]), "a Korean summary must open the guide"
     for needle in ("MAN-01", "MAN-02", "MAN-03", "MAN-04", "implementer", "frozen-candidate", "evidence.yml",
-                   "release-evidence/2.0.1", "named-release-evidence", "gh workflow run release.yml",
+                   "release-evidence/2.0.2", "named-release-evidence", "gh workflow run release.yml",
                    "evidence-run", "minimum", "current", "manual-templates", *MANUAL_FILES.values()):
         assert needle in text, f"guide does not mention {needle!r}"
     for name in MANUAL_FILES.values():

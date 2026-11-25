@@ -85,7 +85,7 @@ it(R('JT-02 desktop registration snapshot equals the six inventory ids with no e
   const manifest = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, 'manifest.json'), 'utf8')) as { id: string; isDesktopOnly: boolean; version: string };
   expect(manifest.id).toBe('markitdown-flow');
   expect(manifest.isDesktopOnly).toBe(true);
-  expect(manifest.version).toBe('2.0.1');
+  expect(manifest.version).toBe('2.0.2');
   plugin.onunload();
 });
 

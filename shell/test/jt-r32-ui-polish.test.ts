@@ -71,6 +71,32 @@ function headersOf(table: FakeElement): string[] {
   return table.findAll((e) => e.tagName === 'th').map((e) => e.textContent);
 }
 
+it(R4('JT-04 setup and provider settings link to the release disclosures in English and Korean'), async () => {
+  for (const [locale, label] of [
+    ['en', 'Network use, file access and privacy (README)'],
+    ['ko', '네트워크 사용, 파일 접근 및 개인정보 안내 (README)'],
+  ] as const) {
+    const { plugin } = await loadPluginWith(mocked, settingsV2({ locale }));
+    const tab = asMockPlugin(plugin).settingTabs[0];
+    const { modal } = setupModalWith(versionResponse({}), [], locale);
+    const { version } = JSON.parse(fs.readFileSync(path.join(__dirname, '../../manifest.json'), 'utf8')) as { version: string };
+    const url = `https://github.com/greatgc-flow/MarkItDown-Flow/blob/${version}/README.md#network-services-and-purpose`;
+    try {
+      tab.display();
+      modal.open();
+      await modal.refresh();
+      for (const root of [tab.containerEl, modal.contentEl]) {
+        const links = asFake(root).findAll((el) => el.tagName === 'a' && el.getAttribute('href') === url);
+        expect(links.map((link) => link.textContent)).toEqual([label]);
+      }
+      expect(mockState.network).toEqual([]);
+    } finally {
+      modal.close();
+      plugin.unload();
+    }
+  }
+});
+
 // ----------------------------------------------------------------------------- JT-04 settings sections
 
 it(R4('JT-04 the settings tab groups every control under five headings (Engine, Conversion, OCR provider, Consent & privacy, Advanced) with short descriptions (R32)'), async () => {

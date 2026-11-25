@@ -29,14 +29,13 @@ def main():
     version = subprocess.check_output(['gh', '--version'], text=True).splitlines()[0]
     candidate['verifier'] = {'gh': version, 'source_digest': commit, 'signer_workflow': candidate['signer_workflow']}
     (folder / 'release-candidate.json').write_text(json.dumps(candidate, indent=2) + '\n')
-    notes = ('MarkItDown Flow 2.0.1\n\nPatch release: settings are preserved when a save fails, and saving works '
-             "under Obsidian's rename semantics. The engine is unchanged in behaviour; an installed 2.0.0 engine "
-             'stays compatible, so updating it is optional. '
-             'Migration from 1.x is as for 2.0.0: install the engine externally in a new venv '
-             'using the release wheel and BOOTSTRAP.md, then choose its interpreter. Audio/YouTube, Azure fallback '
-             'routing and old wrapper settings are removed; review README disclosures before OCR. '
-             'Keep 1.0.8 assets and the sanitized v1 settings snapshot for rollback. '
-             'Never pass schema-2 settings to v1. Published assets are immutable.\n')
+    notes = (f'MarkItDown Flow {tag}\n\n'
+             'Fix the Obsidian directory review error in the file and folder picker. '
+             'Link settings to privacy disclosures and disable native 1DS telemetry before engine startup. '
+             'Add official static-style lint and picker regression coverage. '
+             'Existing compatible 2.0.x engines continue to work. '
+             'For fresh installs and upgrades from 1.x, follow BOOTSTRAP.md and the migration instructions '
+             'in README.md. Retain the sanitized v1 snapshot and verified 1.0.8 assets for rollback.\n')
     with tempfile.TemporaryDirectory(prefix='mdflow-release-') as temp:
         work = Path(temp)
         body = work / 'notes.md'

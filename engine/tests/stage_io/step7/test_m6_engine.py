@@ -139,7 +139,7 @@ def test_T_CLI_87_slow_optional_tools_cannot_exhaust_version_gate(tmp_path, monk
     expected = [name for name in ('exiftool', 'libreoffice') if slow in {name, 'both'}]
     assert probe_problems(records, expected, exiftool.VERSION_TIMEOUT_S) == [], records
     value = json.loads(text)
-    assert value['mdflow'] == '2.0.1' and value['python'] and value['markitdown-gc']
+    assert value['mdflow'] == '2.0.2' and value['python'] and value['markitdown-gc']
     assert value['protocol'] == value['triage_schema'] == 1
     assert value['exiftool'] == value['libreoffice'] == 'unavailable'
     assert value['exiftool_status'] == value['libreoffice_status'] == 'unusable'

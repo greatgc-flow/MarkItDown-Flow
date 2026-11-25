@@ -1,4 +1,4 @@
-# MarkItDown Flow 2.0.1
+# MarkItDown Flow 2.0.2
 
 MarkItDown Flow converts local documents to Markdown and plans selective OCR for
 pages and images. The engine (`mdflow`, a Python CLI) uses `markitdown-gc`
@@ -9,7 +9,7 @@ virtual environment. Release verification is still pending; see
 ## Setup
 
 Download the standard plugin assets `main.js`, `manifest.json`, and `styles.css`
-from the same release. Download and verify `mdflow-2.0.1-py3-none-any.whl`, `BOOTSTRAP.md`, and
+from the same release. Download and verify `mdflow-2.0.2-py3-none-any.whl`, `BOOTSTRAP.md`, and
 `SHA256SUMS` separately. Follow [BOOTSTRAP.md](engine/BOOTSTRAP.md) in your own
 terminal, then enter the absolute venv Python path in the plugin settings
 ("Engine interpreter"; the value is saved when you leave the field or press
@@ -106,7 +106,13 @@ home folder as `~`.
 
 ## Telemetry
 
-There is no client telemetry. Local diagnostic logs help identify failures and
+There is no client telemetry. The plugin sets `ORT_DISABLE_TELEMETRY=1` before starting
+a Python process. The 2.0.2 command-line engine also sets it before loading Core.
+This opts out of ONNX Runtime's 1DS telemetry at initialization. Magika disables
+runtime telemetry events before it opens an inference session, including on Windows
+builds using the TraceLogging backend.
+
+Local diagnostic logs help identify failures and
 can include document names; review them before sharing. This statement describes
 the client only: configured OCR providers have their own logging, retention and
 privacy rules. Approval identifies the provider destination and selected data.

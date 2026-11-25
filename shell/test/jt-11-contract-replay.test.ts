@@ -177,7 +177,10 @@ it(R('JT-11 approved runs decode consent objects by plugin:modal and warm reruns
   const partial = await replay('report', recorded('consent-3-partial'));
   const partialReport = ok(partial.result.stdout);
   const approved = partialReport.files.find((f) => f.path === 'b c.docx');
-  expect(approved?.consent).toMatchObject({ plan_hash: '6b717f27e4135ef393326b01ec95d137c4f6181f0316e2397d9400399794d03e', by: 'plugin:modal' });
+  const planRun = await replay('plan', recorded('consent-1-plan'));
+  const plan = ok(planRun.result.stdout).find((entry) => entry.approved.file.path === 'b c.docx');
+  expect(plan?.plan_hash).toMatch(/^[0-9a-f]{64}$/);
+  expect(approved?.consent).toMatchObject({ plan_hash: plan?.plan_hash, by: 'plugin:modal' });
   expect(partialReport.files.filter((f) => f.consent === null).map((f) => f.path)).toEqual(['memo.txt', 'sub/a.pdf', '보고서/3분기 결산.pdf']);
   expect(partial.result.outcome).toBe('pending_consent');
   const warm = await replay('report', recorded('consent-6-warm'));

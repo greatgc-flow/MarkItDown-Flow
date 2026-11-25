@@ -162,6 +162,12 @@ jobs:
         with:
           node-version: '24.22.2'
           architecture: ${{ matrix.os == 'macos-26' && 'arm64' || 'x64' }}
+      - name: Obsidian static style rule
+        if: matrix.os == 'ubuntu-24.04'
+        working-directory: shell/scripts/obsidian-lint
+        run: |
+          npm ci --ignore-scripts
+          npm run lint
       - name: Shell production build and Jest
         working-directory: shell
         run: |

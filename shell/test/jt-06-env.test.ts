@@ -17,7 +17,7 @@ const OTHER_SECRET = 'SENTINEL-OTHER-SECRET-77aa';
 
 /** SPEC 8.2 allowlist (engine baseline) + UTF-8 settings. */
 const BASELINE = ['PATH', 'SYSTEMROOT', 'SYSTEMDRIVE', 'COMSPEC', 'HOME', 'USERPROFILE', 'TEMP', 'TMP', 'LANG', 'LC_ALL'];
-const UTF8_VARS = ['PYTHONUTF8', 'PYTHONIOENCODING'];
+const FIXED_ENGINE_VARS = ['PYTHONUTF8', 'PYTHONIOENCODING', 'ORT_DISABLE_TELEMETRY'];
 
 const hostEnv = {
   PATH: 'C:\\Windows;C:\\Python',
@@ -98,7 +98,7 @@ it(R('JT-06 absent key blocks remote execution for openai-compatible with locali
 it(R('JT-06 engine env for provider none is the baseline plus UTF-8 settings, with no secrets or Python path overrides'), () => {
   const env = scrubEngineEnv(hostEnv, 'none');
   for (const name of Object.keys(env)) {
-    expect([...BASELINE, ...UTF8_VARS]).toContain(name);
+    expect([...BASELINE, ...FIXED_ENGINE_VARS]).toContain(name);
   }
   expect(env.PATH).toBe(hostEnv.PATH);
   expect(env.SYSTEMROOT).toBe(hostEnv.SYSTEMROOT);
@@ -111,10 +111,18 @@ it(R('JT-06 engine env for provider none is the baseline plus UTF-8 settings, wi
   expect(JSON.stringify(env)).not.toContain(OTHER_SECRET);
 });
 
+it(R('JT-06 all engine processes disable ONNX telemetry even when the host enables it'), () => {
+  for (const host of [{}, { ORT_DISABLE_TELEMETRY: '0' }]) {
+    for (const provider of ['none', 'openai-compatible'] as const) {
+      expect(scrubEngineEnv(host, provider).ORT_DISABLE_TELEMETRY).toBe('1');
+    }
+  }
+});
+
 it(R('JT-06 engine env for openai-compatible forwards only the SPEC provider variables in addition'), () => {
   const env = scrubEngineEnv(hostEnv, 'openai-compatible');
   for (const name of Object.keys(env)) {
-    expect([...BASELINE, ...UTF8_VARS, ...PROVIDER_ENV_VARS]).toContain(name);
+    expect([...BASELINE, ...FIXED_ENGINE_VARS, ...PROVIDER_ENV_VARS]).toContain(name);
   }
   expect(env.MDFLOW_API_KEY).toBe(KEY_VALUE);
   expect(env.MDFLOW_BASE_URL).toBe(hostEnv.MDFLOW_BASE_URL);

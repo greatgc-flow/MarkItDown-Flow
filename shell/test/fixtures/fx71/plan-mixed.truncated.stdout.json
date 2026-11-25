@@ -178,10 +178,10 @@
         "source_id": "p2",
         "page": 2,
         "status": "eligible",
-        "raster_sha256": "b1e4da256260c21ea37de42fcb4b8219583dfb6913284c1244911f60fc2e3411",
+        "raster_sha256": "9c7426b0040eefa798d55c3f47deb5208791cc925508616f1453c67a3a8aabba",
         "dpi": 200,
         "mime": "image/png",
-        "bytes": 26762,
+        "bytes": 26784,
         "priority": "normal",
         "priority_core": "high"
       },
@@ -190,10 +190,10 @@
         "source_id": "p4",
         "page": 4,
         "status": "eligible",
-        "raster_sha256": "b1e4da256260c21ea37de42fcb4b8219583dfb6913284c1244911f60fc2e3411",
+        "raster_sha256": "9c7426b0040eefa798d55c3f47deb5208791cc925508616f1453c67a3a8aabba",
         "dpi": 200,
         "mime": "image/png",
-        "bytes": 26762,
+        "bytes": 26784,
         "priority": "normal",
         "priority_core": "high"
       }
@@ -221,7 +221,7 @@
     "uninspected_pages": 0,
     "frames_total": null
   },
-  "plan_hash": "f918a5c781905fce7e7eca0c08f41192e0e2d475f2867c9ad1f1e1514eb14e84"
+  "plan_hash": "78fdc98d4e87f98a9c82e6490ba6f705cefc2e8b51dbe4c133d5b05429c55f7b"
 }
 {
   "v": 1,

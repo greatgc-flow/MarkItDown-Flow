@@ -64,7 +64,6 @@ export function pickWithDomInput(doc: PickerDocument, mode: 'files' | 'folder', 
     input.type = 'file';
     input.multiple = mode === 'files';
     if (mode === 'folder') input.setAttribute('webkitdirectory', '');
-    input.setAttribute('style', 'display:none');
     let settled = false;
     const finish = (outcome: PickOutcome): void => {
       if (settled) return;

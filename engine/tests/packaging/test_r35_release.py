@@ -184,7 +184,7 @@ def test_PT_28_r35_gate_seals_deferral_publisher_enforces_it_and_rehearsal_stays
                 for i, w in enumerate((3, 2, 1, 1), 1)],
         post_release=[dict(id='MAN-04', status=DEFERRED), dict(id='REQ-PKG-19', status='pending: post-release'),
                       dict(id='REQ-PKG-21', status='pending: post-release')])
-    candidate = dict(commit=COMMIT, repo='owner/repo', tag='2.0.1')
+    candidate = dict(commit=COMMIT, repo='owner/repo', tag='2.0.2')
     folder = tmp_path / 'candidate'
     folder.mkdir()
     manual = tmp_path / 'manual'
@@ -193,7 +193,7 @@ def test_PT_28_r35_gate_seals_deferral_publisher_enforces_it_and_rehearsal_stays
     evidence.mkdir()
     for name in schema.EXTRA_FILES:
         (manual / name).write_text('{}')
-    for key, value in dict(GITHUB_REF_TYPE='tag', GITHUB_REF_NAME='2.0.1', GITHUB_SHA=COMMIT,
+    for key, value in dict(GITHUB_REF_TYPE='tag', GITHUB_REF_NAME='2.0.2', GITHUB_SHA=COMMIT,
                            GITHUB_REPOSITORY='owner/repo', GITHUB_RUN_ID='123').items():
         monkeypatch.setenv(key, value)
     monkeypatch.setattr(gate, 'verify', lambda path: deepcopy(candidate))

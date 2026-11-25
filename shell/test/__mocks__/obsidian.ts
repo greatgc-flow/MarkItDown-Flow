@@ -1200,7 +1200,7 @@ export function testManifest(overrides: Partial<ObsidianManifest> = {}): Obsidia
     id: 'markitdown-flow',
     name: 'MarkItDown Flow',
     author: 'test',
-    version: '2.0.1',
+    version: '2.0.2',
     minAppVersion: '1.6.0',
     description: 'Convert local documents to Markdown with OCR planning and selective transcription.',
     dir: '.obsidian/plugins/markitdown-flow',

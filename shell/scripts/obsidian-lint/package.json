@@ -1,0 +1,13 @@
+{
+  "name": "markitdown-flow-obsidian-lint",
+  "private": true,
+  "scripts": {
+    "lint": "cd ../../.. && node shell/scripts/obsidian-lint/node_modules/eslint/bin/eslint.js --config shell/scripts/obsidian-lint/eslint.config.mjs \"shell/src/**/*.ts\""
+  },
+  "devDependencies": {
+    "eslint": "9.39.4",
+    "eslint-plugin-obsidianmd": "0.6.0",
+    "typescript": "5.9.2",
+    "typescript-eslint": "8.70.1"
+  }
+}
