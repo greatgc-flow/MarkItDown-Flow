@@ -1,12 +1,13 @@
 {
   "reviewer": "release_reviewer/codex.independent/GPT-6",
   "date": "2026-11-25",
-  "commit": "a2b4e0eba59172bff0d04f5a4557a4ee63375f86",
+  "commit": "4cf945dab29597e01ecae2dea89801d96d93fab9",
   "evidence": [
     "Retrieved both public 0.3.9 archive bytes from PyPI and confirmed their exact lengths and SHA-256 against the version catalog. Read the LICENSE retained inside each archive. Both carry the MIT grant and Microsoft Corporation attribution.",
     "markitdown_gc-0.3.9-py3-none-any.whl SHA256 c6c13487fc3b5f4e52331e2f584a7bf5efb0c38132eb53815e5a69cc035733e6; license member markitdown_gc-0.3.9.dist-info/licenses/LICENSE",
     "markitdown_gc-0.3.9.tar.gz SHA256 4d0fdc6784f6dde250be518a460824967bea25d267d38219691cf9d7df20d251; license member markitdown_gc-0.3.9/LICENSE",
-    "Candidate tools/build_engine.py reads installed license files and metadata into NOTICE.txt. Six target install reports are produced by the evidence workflow from candidate CI."
+    "Candidate tools/build_engine.py reads installed license files and metadata into NOTICE.txt. Six target install reports are produced by the evidence workflow from candidate CI.",
+    "Independent delta review from a2b4e0eba59172bff0d04f5a4557a4ee63375f86 to 4cf945dab29597e01ecae2dea89801d96d93fab9. GitHub compare changed only shell/test/jt-r32-ui-polish.test.ts. The English and Korean assertions for both rendered links and absence of network requests still run under one static JT-04 title. All attested product, translation, listing, workflow, and dependency inputs are byte-identical. New CI execution is evaluated separately."
   ],
   "verdict": "PASS",
   "package": "markitdown-gc",

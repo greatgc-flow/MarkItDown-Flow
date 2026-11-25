@@ -1,13 +1,14 @@
 {
   "reviewer": "release_reviewer/codex.independent/GPT-6",
   "date": "2026-11-25",
-  "commit": "a2b4e0eba59172bff0d04f5a4557a4ee63375f86",
+  "commit": "4cf945dab29597e01ecae2dea89801d96d93fab9",
   "evidence": [
     "https://github.com/greatgc-flow/MarkItDown-Flow/blob/a2b4e0eba59172bff0d04f5a4557a4ee63375f86/manifest.json",
     "https://github.com/greatgc-flow/MarkItDown-Flow/blob/a2b4e0eba59172bff0d04f5a4557a4ee63375f86/versions.json",
     "https://github.com/greatgc-flow/MarkItDown-Flow/blob/a2b4e0eba59172bff0d04f5a4557a4ee63375f86/README.md",
     "https://github.com/greatgc-flow/MarkItDown-Flow/blob/a2b4e0eba59172bff0d04f5a4557a4ee63375f86/shell/src/ui/commands.ts",
-    "Compared the candidate with https://docs.obsidian.md/community-directory/submission-requirements-for-plugins and https://docs.obsidian.md/community-directory/developer-policies. markitdown-flow is the existing listing ID. Candidate version, package and compatibility mapping match; minimum 1.14.4 matches the pinned Obsidian API dependency. Description starts with an action, fits the character limit and ends with a period. isDesktopOnly is true for Node and local Python. All six IDs are local names so Obsidian adds its prefix once. README discloses network, filesystem, telemetry, cost/key and optional services. Official released-file scan and installation remain post-publication."
+    "Compared the candidate with https://docs.obsidian.md/community-directory/submission-requirements-for-plugins and https://docs.obsidian.md/community-directory/developer-policies. markitdown-flow is the existing listing ID. Candidate version, package and compatibility mapping match; minimum 1.14.4 matches the pinned Obsidian API dependency. Description starts with an action, fits the character limit and ends with a period. isDesktopOnly is true for Node and local Python. All six IDs are local names so Obsidian adds its prefix once. README discloses network, filesystem, telemetry, cost/key and optional services. Official released-file scan and installation remain post-publication.",
+    "Independent delta review from a2b4e0eba59172bff0d04f5a4557a4ee63375f86 to 4cf945dab29597e01ecae2dea89801d96d93fab9. GitHub compare changed only shell/test/jt-r32-ui-polish.test.ts. The English and Korean assertions for both rendered links and absence of network requests still run under one static JT-04 title. All attested product, translation, listing, workflow, and dependency inputs are byte-identical. New CI execution is evaluated separately."
   ],
   "verdict": "PASS",
   "listing": {

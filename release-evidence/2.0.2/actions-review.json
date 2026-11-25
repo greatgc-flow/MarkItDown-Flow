@@ -1,13 +1,14 @@
 {
   "reviewer": "release_reviewer/codex.independent/GPT-6",
   "date": "2026-11-25",
-  "commit": "a2b4e0eba59172bff0d04f5a4557a4ee63375f86",
+  "commit": "4cf945dab29597e01ecae2dea89801d96d93fab9",
   "evidence": [
     "Compared all workflow uses with the six full commit IDs in docs/renewal/25_PACKAGING.md section 4. Resolved each SHA through the corresponding official actions organization repository on GitHub on November 25.",
     "CI has contents:read. Evidence reads contents and actions for cross-run evidence. Release uses contents:read/actions:read by default; only the attestation job receives id-token:write and attestations:write, and only publication receives contents:write. Checkouts disable persisted credentials. Reusable candidate CI runs without publication permissions.",
     "https://github.com/greatgc-flow/MarkItDown-Flow/blob/a2b4e0eba59172bff0d04f5a4557a4ee63375f86/.github/workflows/ci.yml",
     "https://github.com/greatgc-flow/MarkItDown-Flow/blob/a2b4e0eba59172bff0d04f5a4557a4ee63375f86/.github/workflows/evidence.yml",
-    "https://github.com/greatgc-flow/MarkItDown-Flow/blob/a2b4e0eba59172bff0d04f5a4557a4ee63375f86/.github/workflows/release.yml"
+    "https://github.com/greatgc-flow/MarkItDown-Flow/blob/a2b4e0eba59172bff0d04f5a4557a4ee63375f86/.github/workflows/release.yml",
+    "Independent delta review from a2b4e0eba59172bff0d04f5a4557a4ee63375f86 to 4cf945dab29597e01ecae2dea89801d96d93fab9. GitHub compare changed only shell/test/jt-r32-ui-polish.test.ts. The English and Korean assertions for both rendered links and absence of network requests still run under one static JT-04 title. All attested product, translation, listing, workflow, and dependency inputs are byte-identical. New CI execution is evaluated separately."
   ],
   "verdict": "PASS",
   "actions": [

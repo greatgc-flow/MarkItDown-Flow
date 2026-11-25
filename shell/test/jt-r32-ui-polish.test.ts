@@ -71,11 +71,11 @@ function headersOf(table: FakeElement): string[] {
   return table.findAll((e) => e.tagName === 'th').map((e) => e.textContent);
 }
 
-for (const [locale, label] of [
-  ['en', 'Network use, file access and privacy (README)'],
-  ['ko', '네트워크 사용, 파일 접근 및 개인정보 안내 (README)'],
-] as const) {
-  it(R4(`JT-04 setup and provider settings link to this release's disclosures in ${locale}`), async () => {
+it(R4('JT-04 setup and provider settings link to the release disclosures in English and Korean'), async () => {
+  for (const [locale, label] of [
+    ['en', 'Network use, file access and privacy (README)'],
+    ['ko', '네트워크 사용, 파일 접근 및 개인정보 안내 (README)'],
+  ] as const) {
     const { plugin } = await loadPluginWith(mocked, settingsV2({ locale }));
     const tab = asMockPlugin(plugin).settingTabs[0];
     const { modal } = setupModalWith(versionResponse({}), [], locale);
@@ -94,8 +94,8 @@ for (const [locale, label] of [
       modal.close();
       plugin.unload();
     }
-  });
-}
+  }
+});
 
 // ----------------------------------------------------------------------------- JT-04 settings sections
 

@@ -1,7 +1,7 @@
 id: MAN-03
 reviewer: release_reviewer/codex.independent/GPT-6
 date: '2026-11-25'
-commit: a2b4e0eba59172bff0d04f5a4557a4ee63375f86
+commit: 4cf945dab29597e01ecae2dea89801d96d93fab9
 inputs:
 - https://github.com/greatgc-flow/MarkItDown-Flow/blob/a2b4e0eba59172bff0d04f5a4557a4ee63375f86/shell/src/pure/i18n.ts
 - https://github.com/greatgc-flow/MarkItDown-Flow/blob/a2b4e0eba59172bff0d04f5a4557a4ee63375f86/docs/renewal/10_SPEC.md#75-error-and-warning-codes-closed-list-with-exit-contribution
@@ -18,6 +18,7 @@ checks:
 - id: placeholders_and_parameters_preserved_in_both_languages
   result: PASS
 evidence:
+- "Independent delta review from a2b4e0eba59172bff0d04f5a4557a4ee63375f86 to 4cf945dab29597e01ecae2dea89801d96d93fab9. GitHub compare changed only shell/test/jt-r32-ui-polish.test.ts. The English and Korean assertions for both rendered links and absence of network requests still run under one static JT-04 title. All attested product, translation, listing, workflow, and dependency inputs are byte-identical. New CI execution is evaluated separately."
 - 'Bilingual independent reviewer read the English and Korean strings side by side for every key: 54 engine diagnostics
   (including both startup and runtime errors) and 239 shell keys, 293 EN/KO pairs. Checked the code families against
   SPEC section 7.5. Reviewed migration semantics, key source, no-egress pending action versus dismissal, possible

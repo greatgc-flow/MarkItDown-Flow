@@ -2,7 +2,7 @@ id: MAN-01
 implementer: Codex release implementer (/root); previous contributors recorded in the reviewed 2.0.1 MAN-01
 reviewer: release_reviewer/codex.independent/GPT-6
 date: '2026-11-25'
-commit: a2b4e0eba59172bff0d04f5a4557a4ee63375f86
+commit: 4cf945dab29597e01ecae2dea89801d96d93fab9
 inputs:
 - Previously reviewed 2.0.1 R15 clean-room attestation for commit 92ff82ecca5c2d495080ba261b78cc15216f5a78, and the
   complete v2 shell source, CSS and test diff from that commit to this candidate.
@@ -26,6 +26,7 @@ checks:
 - id: mit_credit_present_in_license
   result: PASS
 evidence:
+- "Independent delta review from a2b4e0eba59172bff0d04f5a4557a4ee63375f86 to 4cf945dab29597e01ecae2dea89801d96d93fab9. GitHub compare changed only shell/test/jt-r32-ui-polish.test.ts. The English and Korean assertions for both rendered links and absence of network requests still run under one static JT-04 title. All attested product, translation, listing, workflow, and dependency inputs are byte-identical. New CI execution is evaluated separately."
 - Reviewed the existing named R15 PASS at evidence/2.0.1 and the author-provenance limitations it records for the
   baseline. Independently inspected the full release delta. The picker removes a style assignment on a detached v2
   input. The functional additions are a fixed environment opt-out and a localized, versioned README anchor using the
