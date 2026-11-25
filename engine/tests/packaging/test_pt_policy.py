@@ -95,10 +95,7 @@ def readme_sections(text):
     return {k: "\n".join(v) for k, v in sections.items()}
 
 
-@pytest.mark.req("REQ-PKG-16")
-@pytest.mark.cov("S0", "FM9")
-@pytest.mark.parametrize("inherited", [None, "0"])
-def test_PT_16_engine_disables_native_telemetry_before_core_import(inherited):
+def assert_native_telemetry_disabled_before_core_import(inherited):
     env = dict(os.environ)
     env.pop("ORT_DISABLE_TELEMETRY", None)
     if inherited is not None:
@@ -120,6 +117,8 @@ assert os.environ.get('ORT_DISABLE_TELEMETRY') == '1'
 @pytest.mark.req("REQ-PKG-16")
 @pytest.mark.cov("S0", "FM9")
 def test_PT_16_readme_has_the_five_disclosures_and_code_has_no_telemetry_or_unplanned_sockets():
+    for inherited in (None, "0"):
+        assert_native_telemetry_disabled_before_core_import(inherited)
     readme = (REPO / "README.md").read_text(encoding="utf-8")
     sections = readme_sections(readme)
     missing = []
