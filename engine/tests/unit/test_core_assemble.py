@@ -168,7 +168,7 @@ def test_T_ASM_08_content_hash_exact_body_utf8_bytes(core_api, core_data):
 @pytest.mark.fx("FX-03")
 def test_T_ASM_09_pure_publication_decision_and_user_edit_guard(core_api, core_data):
     old, _ = run(core_api, core_data)
-    fresh, _ = run(core_api, core_data, now="2026-11-10T00:00:00+00:00", tools={"mdflow": "2.0.1"})
+    fresh, _ = run(core_api, core_data, now="2026-11-10T00:00:00+00:00", tools={"mdflow": "2.0.2"})
     assert core_api.assemble.publication_decision(old, fresh) == dict(write=False, issues=[])
     edited = old + "\nUser edit outside generated body\n"
     decision = core_api.assemble.publication_decision(edited, fresh)

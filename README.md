@@ -1,4 +1,4 @@
-# MarkItDown Flow 2.0.1
+# MarkItDown Flow 2.0.2
 
 MarkItDown Flow converts local documents to Markdown and plans selective OCR for
 pages and images. The engine (`mdflow`, a Python CLI) uses `markitdown-gc`
@@ -9,7 +9,7 @@ virtual environment. Release verification is still pending; see
 ## Setup
 
 Download the standard plugin assets `main.js`, `manifest.json`, and `styles.css`
-from the same release. Download and verify `mdflow-2.0.1-py3-none-any.whl`, `BOOTSTRAP.md`, and
+from the same release. Download and verify `mdflow-2.0.2-py3-none-any.whl`, `BOOTSTRAP.md`, and
 `SHA256SUMS` separately. Follow [BOOTSTRAP.md](engine/BOOTSTRAP.md) in your own
 terminal, then enter the absolute venv Python path in the plugin settings
 ("Engine interpreter"; the value is saved when you leave the field or press

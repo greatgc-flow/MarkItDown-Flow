@@ -1,6 +1,6 @@
 # Engine bootstrap
 
-Download the release wheel `mdflow-2.0.1-py3-none-any.whl`, `BOOTSTRAP.md`,
+Download the release wheel `mdflow-2.0.2-py3-none-any.whl`, `BOOTSTRAP.md`,
 `NOTICE.txt`, `LICENSE`, `SHA256SUMS` and provenance bundles from the same release
 host. Verify SHA-256 and attestations before installation. The commands below
 use the Python package index (PyPI) https://pypi.org/simple and download dependency
@@ -17,15 +17,15 @@ the matching venv prerequisite through your OS administrator/package manager.
 Windows PowerShell (replace both quoted directory paths):
 
 ```powershell
-Set-Location -LiteralPath 'C:\Downloads\mdflow-2.0.1-engine'
-py -3.14 -m venv 'C:\mdflow-venvs\2.0.1'
-& 'C:\mdflow-venvs\2.0.1\Scripts\python.exe' -m pip install --only-binary=:all: --index-url https://pypi.org/simple './mdflow-2.0.1-py3-none-any.whl' 'markitdown-gc>=0.3.9,<0.4'
+Set-Location -LiteralPath 'C:\Downloads\mdflow-2.0.2-engine'
+py -3.14 -m venv 'C:\mdflow-venvs\2.0.2'
+& 'C:\mdflow-venvs\2.0.2\Scripts\python.exe' -m pip install --only-binary=:all: --index-url https://pypi.org/simple './mdflow-2.0.2-py3-none-any.whl' 'markitdown-gc>=0.3.9,<0.4'
 if ($LASTEXITCODE -ne 0) { throw 'Wheel install failed' }
-& 'C:\mdflow-venvs\2.0.1\Scripts\python.exe' -m pip check
+& 'C:\mdflow-venvs\2.0.2\Scripts\python.exe' -m pip check
 if ($LASTEXITCODE -ne 0) { throw 'Dependency check failed' }
-& 'C:\mdflow-venvs\2.0.1\Scripts\python.exe' -I -m mdflow selftest
+& 'C:\mdflow-venvs\2.0.2\Scripts\python.exe' -I -m mdflow selftest
 if ($LASTEXITCODE -ne 0) { throw 'Engine selftest failed' }
-& 'C:\mdflow-venvs\2.0.1\Scripts\python.exe' -I -m mdflow version
+& 'C:\mdflow-venvs\2.0.2\Scripts\python.exe' -I -m mdflow version
 if ($LASTEXITCODE -ne 0) { throw 'Engine version check failed' }
 ```
 
@@ -33,12 +33,12 @@ Ubuntu/macOS POSIX shell:
 
 ```sh
 set -e
-cd '/path/to/mdflow-2.0.1-engine'
-python3.14 -m venv '/path/to/mdflow-venvs/2.0.1'
-'/path/to/mdflow-venvs/2.0.1/bin/python' -m pip install --only-binary=:all: --index-url https://pypi.org/simple './mdflow-2.0.1-py3-none-any.whl' 'markitdown-gc>=0.3.9,<0.4'
-'/path/to/mdflow-venvs/2.0.1/bin/python' -m pip check
-'/path/to/mdflow-venvs/2.0.1/bin/python' -I -m mdflow selftest
-'/path/to/mdflow-venvs/2.0.1/bin/python' -I -m mdflow version
+cd '/path/to/mdflow-2.0.2-engine'
+python3.14 -m venv '/path/to/mdflow-venvs/2.0.2'
+'/path/to/mdflow-venvs/2.0.2/bin/python' -m pip install --only-binary=:all: --index-url https://pypi.org/simple './mdflow-2.0.2-py3-none-any.whl' 'markitdown-gc>=0.3.9,<0.4'
+'/path/to/mdflow-venvs/2.0.2/bin/python' -m pip check
+'/path/to/mdflow-venvs/2.0.2/bin/python' -I -m mdflow selftest
+'/path/to/mdflow-venvs/2.0.2/bin/python' -I -m mdflow version
 ```
 
 Set `enginePython` to the resulting absolute `Scripts/python.exe` or `bin/python`
