@@ -119,6 +119,7 @@ it(R('JT-08 the DOM file picker opens a hidden multi-file input and resolves abs
   expect(inputs[0].type).toBe('file');
   expect(inputs[0].multiple).toBe(true);
   expect(inputs[0].attributes.webkitdirectory).toBeUndefined();
+  expect(inputs[0].attributes).not.toHaveProperty('style');
   expect(inputs[0].clicked).toBe(1);
   inputs[0].fire('change');
   await expect(pending).resolves.toEqual({ kind: 'selected', paths: [FILE_A, FILE_B] });
@@ -156,6 +157,7 @@ it(R('JT-08 the DOM folder picker uses webkitdirectory and derives the selected 
   const { doc, inputs } = fakeDocument(files);
   const pending = pickWithDomInput(doc, 'folder', pathOf);
   expect(inputs[0].attributes.webkitdirectory).toBeDefined();
+  expect(inputs[0].attributes).not.toHaveProperty('style');
   inputs[0].fire('change');
   await expect(pending).resolves.toEqual({ kind: 'selected', paths: [root] });
   expect(folderRootOf(`${root}${sep}sub${sep}a.pdf`, 'inbox/sub/a.pdf')).toBe(root);
