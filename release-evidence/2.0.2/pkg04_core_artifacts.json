@@ -1,7 +1,7 @@
 {
   "reviewer": "release_reviewer/codex.independent/GPT-6",
   "date": "2026-11-25",
-  "commit": "5a21c3a71b0ede6877c345ff38d187e28a77e1be",
+  "commit": "a2b4e0eba59172bff0d04f5a4557a4ee63375f86",
   "evidence": [
     "Retrieved both public 0.3.9 archive bytes from PyPI and confirmed their exact lengths and SHA-256 against the version catalog. Read the LICENSE retained inside each archive. Both carry the MIT grant and Microsoft Corporation attribution.",
     "markitdown_gc-0.3.9-py3-none-any.whl SHA256 c6c13487fc3b5f4e52331e2f584a7bf5efb0c38132eb53815e5a69cc035733e6; license member markitdown_gc-0.3.9.dist-info/licenses/LICENSE",

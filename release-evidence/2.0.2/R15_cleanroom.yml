@@ -2,7 +2,7 @@ id: MAN-01
 implementer: Codex release implementer (/root); previous contributors recorded in the reviewed 2.0.1 MAN-01
 reviewer: release_reviewer/codex.independent/GPT-6
 date: '2026-11-25'
-commit: 5a21c3a71b0ede6877c345ff38d187e28a77e1be
+commit: a2b4e0eba59172bff0d04f5a4557a4ee63375f86
 inputs:
 - Previously reviewed 2.0.1 R15 clean-room attestation for commit 92ff82ecca5c2d495080ba261b78cc15216f5a78, and the
   complete v2 shell source, CSS and test diff from that commit to this candidate.

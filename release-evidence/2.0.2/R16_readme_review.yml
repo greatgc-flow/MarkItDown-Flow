@@ -1,15 +1,15 @@
 id: MAN-02
 reviewer: release_reviewer/codex.independent/GPT-6
 date: '2026-11-25'
-commit: 5a21c3a71b0ede6877c345ff38d187e28a77e1be
+commit: a2b4e0eba59172bff0d04f5a4557a4ee63375f86
 inputs:
-- https://github.com/greatgc-flow/MarkItDown-Flow/blob/5a21c3a71b0ede6877c345ff38d187e28a77e1be/README.md
-- https://github.com/greatgc-flow/MarkItDown-Flow/blob/5a21c3a71b0ede6877c345ff38d187e28a77e1be/shell/src/ui/disclosures.ts
-- https://github.com/greatgc-flow/MarkItDown-Flow/blob/5a21c3a71b0ede6877c345ff38d187e28a77e1be/shell/src/ui/settings-tab.ts
-- https://github.com/greatgc-flow/MarkItDown-Flow/blob/5a21c3a71b0ede6877c345ff38d187e28a77e1be/shell/src/ui/setup-modal.ts
-- https://github.com/greatgc-flow/MarkItDown-Flow/blob/5a21c3a71b0ede6877c345ff38d187e28a77e1be/shell/src/ui/consent-modal.ts
-- https://github.com/greatgc-flow/MarkItDown-Flow/blob/5a21c3a71b0ede6877c345ff38d187e28a77e1be/engine/src/mdflow/providers/openai_compat.py
-- https://github.com/greatgc-flow/MarkItDown-Flow/blob/5a21c3a71b0ede6877c345ff38d187e28a77e1be/engine/src/mdflow/__init__.py
+- https://github.com/greatgc-flow/MarkItDown-Flow/blob/a2b4e0eba59172bff0d04f5a4557a4ee63375f86/README.md
+- https://github.com/greatgc-flow/MarkItDown-Flow/blob/a2b4e0eba59172bff0d04f5a4557a4ee63375f86/shell/src/ui/disclosures.ts
+- https://github.com/greatgc-flow/MarkItDown-Flow/blob/a2b4e0eba59172bff0d04f5a4557a4ee63375f86/shell/src/ui/settings-tab.ts
+- https://github.com/greatgc-flow/MarkItDown-Flow/blob/a2b4e0eba59172bff0d04f5a4557a4ee63375f86/shell/src/ui/setup-modal.ts
+- https://github.com/greatgc-flow/MarkItDown-Flow/blob/a2b4e0eba59172bff0d04f5a4557a4ee63375f86/shell/src/ui/consent-modal.ts
+- https://github.com/greatgc-flow/MarkItDown-Flow/blob/a2b4e0eba59172bff0d04f5a4557a4ee63375f86/engine/src/mdflow/providers/openai_compat.py
+- https://github.com/greatgc-flow/MarkItDown-Flow/blob/a2b4e0eba59172bff0d04f5a4557a4ee63375f86/engine/src/mdflow/__init__.py
 checks:
 - id: network_services_and_purpose
   readme_anchor: Network services and purpose

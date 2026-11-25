@@ -1,12 +1,12 @@
 {
   "reviewer": "release_reviewer/codex.independent/GPT-6",
   "date": "2026-11-25",
-  "commit": "5a21c3a71b0ede6877c345ff38d187e28a77e1be",
+  "commit": "a2b4e0eba59172bff0d04f5a4557a4ee63375f86",
   "evidence": [
-    "https://github.com/greatgc-flow/MarkItDown-Flow/blob/5a21c3a71b0ede6877c345ff38d187e28a77e1be/manifest.json",
-    "https://github.com/greatgc-flow/MarkItDown-Flow/blob/5a21c3a71b0ede6877c345ff38d187e28a77e1be/versions.json",
-    "https://github.com/greatgc-flow/MarkItDown-Flow/blob/5a21c3a71b0ede6877c345ff38d187e28a77e1be/README.md",
-    "https://github.com/greatgc-flow/MarkItDown-Flow/blob/5a21c3a71b0ede6877c345ff38d187e28a77e1be/shell/src/ui/commands.ts",
+    "https://github.com/greatgc-flow/MarkItDown-Flow/blob/a2b4e0eba59172bff0d04f5a4557a4ee63375f86/manifest.json",
+    "https://github.com/greatgc-flow/MarkItDown-Flow/blob/a2b4e0eba59172bff0d04f5a4557a4ee63375f86/versions.json",
+    "https://github.com/greatgc-flow/MarkItDown-Flow/blob/a2b4e0eba59172bff0d04f5a4557a4ee63375f86/README.md",
+    "https://github.com/greatgc-flow/MarkItDown-Flow/blob/a2b4e0eba59172bff0d04f5a4557a4ee63375f86/shell/src/ui/commands.ts",
     "Compared the candidate with https://docs.obsidian.md/community-directory/submission-requirements-for-plugins and https://docs.obsidian.md/community-directory/developer-policies. markitdown-flow is the existing listing ID. Candidate version, package and compatibility mapping match; minimum 1.14.4 matches the pinned Obsidian API dependency. Description starts with an action, fits the character limit and ends with a period. isDesktopOnly is true for Node and local Python. All six IDs are local names so Obsidian adds its prefix once. README discloses network, filesystem, telemetry, cost/key and optional services. Official released-file scan and installation remain post-publication."
   ],
   "verdict": "PASS",

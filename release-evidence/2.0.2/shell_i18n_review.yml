@@ -1,11 +1,11 @@
 id: MAN-03
 reviewer: release_reviewer/codex.independent/GPT-6
 date: '2026-11-25'
-commit: 5a21c3a71b0ede6877c345ff38d187e28a77e1be
+commit: a2b4e0eba59172bff0d04f5a4557a4ee63375f86
 inputs:
-- https://github.com/greatgc-flow/MarkItDown-Flow/blob/5a21c3a71b0ede6877c345ff38d187e28a77e1be/shell/src/pure/i18n.ts
-- https://github.com/greatgc-flow/MarkItDown-Flow/blob/5a21c3a71b0ede6877c345ff38d187e28a77e1be/docs/renewal/10_SPEC.md#75-error-and-warning-codes-closed-list-with-exit-contribution
-- https://github.com/greatgc-flow/MarkItDown-Flow/blob/5a21c3a71b0ede6877c345ff38d187e28a77e1be/shell/test/jt-shl-19-01-i18n.test.ts
+- https://github.com/greatgc-flow/MarkItDown-Flow/blob/a2b4e0eba59172bff0d04f5a4557a4ee63375f86/shell/src/pure/i18n.ts
+- https://github.com/greatgc-flow/MarkItDown-Flow/blob/a2b4e0eba59172bff0d04f5a4557a4ee63375f86/docs/renewal/10_SPEC.md#75-error-and-warning-codes-closed-list-with-exit-contribution
+- https://github.com/greatgc-flow/MarkItDown-Flow/blob/a2b4e0eba59172bff0d04f5a4557a4ee63375f86/shell/test/jt-shl-19-01-i18n.test.ts
 checks:
 - id: reviewer_reads_english_and_korean
   result: PASS
