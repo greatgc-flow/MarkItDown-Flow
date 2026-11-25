@@ -1,0 +1,15 @@
+{
+  "reviewer": "release_reviewer/codex.independent/GPT-6",
+  "date": "2026-11-25",
+  "commit": "4cf945dab29597e01ecae2dea89801d96d93fab9",
+  "evidence": [
+    "I reviewed the verifier source at b5e820dbb6e3d3e58150d8dd4d2032c4b92eecc6 and read the output of https://github.com/greatgc-flow/MarkItDown-Flow/actions/runs/45692717975/job/139482081511. It checked out the exact candidate and read acceptance-evidence artifact 15059301965, sha256:786066fb1fd768d250d3354eeccfb10c349efabe08a4a76c13ad177743dd808a, from push CI 45688907760.",
+    "On each of ubuntu-24.04, windows-2022 and macos-26, with both Python 3.10 and 3.14, the verifier parsed the candidate-bound complete collection, its digest-bound selection registry and actual JUnit nodeid/tid/result properties. Per target, all 108 expansions of 27 G-03 IDs, 35 of 15 G-05 IDs, and 14 of 10 G-06 IDs passed with no skip, failure or error. I checked the six individual source SHA-256 lines and each of the 18 gate-count lines.",
+    "I checked the single collected and passing JT-04 disclosure title on each of Windows, Linux and macOS. The exact-candidate producer reports G-10 and G-11 PASS. Thirteen of 17 gates pass at CI stage. G-12, G-13, G-15 and G-17 remain pending release execution."
+  ],
+  "spot_checks": [
+    "G-03",
+    "G-05",
+    "G-06"
+  ]
+}
