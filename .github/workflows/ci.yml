@@ -31,14 +31,19 @@ jobs:
           actual="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$CI_RUN" --jq '[.head_sha, .event, .conclusion] | join(" ")')"
           test "$actual" = "$CANDIDATE push success"
           echo "$actual"
-          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$CI_RUN/artifacts?name=acceptance-evidence" --jq '.artifacts[] | {id, name, digest, size_in_bytes}'
+          archive="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$CI_RUN/artifacts?name=acceptance-evidence" --jq '.artifacts[] | [.id, .digest] | @tsv')"
+          read -r artifact_id digest <<< "$archive"
+          test "$artifact_id" = 15059301965
+          test "$digest" = sha256:786066fb1fd768d250d3354eeccfb10c349efabe08a4a76c13ad177743dd808a
+          echo "$artifact_id $digest"
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
         with:
           github-token: ${{ github.token }}
           run-id: '45688907760'
           name: acceptance-evidence
           path: build/inspection
-      - run: python -m pip install --only-binary=:all: -r engine/requirements-build.txt
+      - run: |
+          python -m pip install --only-binary=:all: -r engine/requirements-build.txt
       - name: Cross-check raw receipts and evaluate all candidate gates
         run: |
           python - <<'PY'
