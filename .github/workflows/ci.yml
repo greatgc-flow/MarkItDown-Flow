@@ -1,328 +1,105 @@
-name: v2 candidate checks
+name: Inspect 2.0.2 candidate receipts
 
 on:
   push:
-  pull_request:
-  workflow_call:
+    branches: ['verify/2.0.2-receipts']
 
 permissions:
   contents: read
-
-defaults:
-  run:
-    shell: bash
+  actions: read
 
 jobs:
-  candidate:
+  inspect:
     runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
-        with:
-          python-version: '3.14'
-          architecture: x64
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version: '24.22.2'
-      - run: python -m pip install "--only-binary=:all:" -r engine/requirements-build.txt
-      - name: Build candidate once (publication uses these exact bytes)
-        run: python tools/build_release.py --tag "$(python -c "import json;print(json.load(open('manifest.json'))['version'])")"
-      - name: Reference-target complete closure and tamper checks
-        env:
-          MDFLOW_RELEASE_BUNDLE: ${{ github.workspace }}/build/candidate
-        run: |
-          python -m pip install --only-binary=:all: -r engine/requirements-test.txt
-          python -I -m pytest engine/tests/packaging -k PT_02 -q --junitxml=build/trace/junit-reference.xml
-      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        if: ${{ always() }}
-        with:
-          name: reference-evidence
-          path: |
-            build/trace/
-            !build/trace/redgreen/*-tmp/**
-          if-no-files-found: error
-      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: release-candidate
-          path: build/candidate/
-          if-no-files-found: error
-
-  pytest:
-    needs: candidate
-    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
     env:
-      MDFLOW_TEST_INSTALLED: '1'
-      MDFLOW_CI_TARGET: ${{ matrix.os }}
-    continue-on-error: ${{ matrix.python == '3.15' || matrix.os == 'macos-26-intel' }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [windows-2022, ubuntu-24.04, macos-26]
-        python: ['3.10', '3.14', '3.15']
-        include:
-          # Experimental Intel coverage: Magika has no ONNX Runtime wheel for Intel/Python 3.14.
-          - os: macos-26-intel
-            python: '3.12'
+      CANDIDATE: '4cf945dab29597e01ecae2dea89801d96d93fab9'
+      CI_RUN: '45688907760'
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
+          ref: '4cf945dab29597e01ecae2dea89801d96d93fab9'
           persist-credentials: false
-      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0
         with:
-          python-version: ${{ matrix.python }}
-          architecture: ${{ matrix.os == 'macos-26' && 'arm64' || 'x64' }}
-      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
-        with:
-          name: release-candidate
-          path: build/candidate/
-      - name: Record runtime, runner image and action identities
-        shell: bash
-        run: |
-          python -c "import platform,sys; print(sys.version); print(platform.machine()); print(platform.platform())"
-          echo "Runner image: $ImageOS $ImageVersion"
-          echo "checkout=3d3c42e5aac5ba805825da76410c181273ba90b1 setup-python=6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 download-artifact=9000827ccba6bdab643e8b6fd33ac0654aef8333 upload-artifact=cf430e030ddbb5b0abf93d22962f4752f3646cd9"
-      - name: Verify transfer and install release wheel with declared dependency policy
-        run: |
-          python -m pip install --only-binary=:all: -r engine/requirements-test.txt -r engine/requirements-build.txt
-          python tools/build_release.py --verify
-          python tools/packaged_check.py install --bundle build/candidate --venv build/compat-env
-          python tools/packaged_check.py install-current --bundle build/candidate
-      - name: Engine pytest including contract, security and offline mocks
-        run: python -I -m pytest engine/tests -m "not release and not soffice" --runxfail -q --junitxml=build/trace/junit-engine-${{ matrix.os }}-py${{ matrix.python }}.xml
-      - name: Installed Core contract
-        run: python -I -m pytest engine/tests/contract -q
-      - name: Packaged integration outside source tree (spaces and Korean paths)
+          python-version: '3.14'
+      - name: Verify candidate CI run and identify the archive
         env:
-          MDFLOW_RELEASE_BUNDLE: ${{ github.workspace }}/build/candidate
-        run: python -I -m pytest engine/tests/packaging -k "PT_01 or PT_05 or PT_06 or PT_08 or PT_14" -q --junitxml=build/trace/junit-pkg-${{ matrix.os }}-py${{ matrix.python }}.xml
-      - name: Preserve execution evidence even on failure
-        if: ${{ always() }}
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: engine-${{ matrix.os }}-py${{ matrix.python }}
-          path: |
-            build/trace/
-            !build/trace/redgreen/*-tmp/**
-          if-no-files-found: error
-
-  legacy-libreoffice:
-    name: legacy-libreoffice (ubuntu-24.04, 3.14)
-    needs: candidate
-    runs-on: ubuntu-24.04
-    env:
-      MDFLOW_TEST_INSTALLED: '1'
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
-        with:
-          python-version: '3.14'
-          architecture: x64
-      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
-        with:
-          name: release-candidate
-          path: build/candidate/
-      - name: Install headless LibreOffice legacy converters
+          GH_TOKEN: ${{ github.token }}
         run: |
-          sudo apt-get update
-          sudo apt-get install --no-install-recommends -y libreoffice-writer-nogui libreoffice-impress-nogui
-          soffice --headless --version
-      - name: Verify transfer and install release wheel
-        run: |
-          python -m pip install --only-binary=:all: -r engine/requirements-test.txt -r engine/requirements-build.txt
-          python tools/build_release.py --verify
-          python tools/packaged_check.py install-current --bundle build/candidate --venv build/legacy-libreoffice-env
-      - name: Real LibreOffice legacy conversion
-        run: python -I -m pytest engine/tests -m soffice --runxfail -q --junitxml=build/trace/junit-legacy-libreoffice-ubuntu-24.04-py3.14.xml
-      - name: Require zero skipped LibreOffice tests
-        run: python -c "import xml.etree.ElementTree as ET; cases = list(ET.parse('build/trace/junit-legacy-libreoffice-ubuntu-24.04-py3.14.xml').iter('testcase')); assert cases and all(c.find(k) is None for c in cases for k in ('skipped', 'failure', 'error')), 'LibreOffice tests must all execute and pass'"
-      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        if: ${{ always() }}
+          set -eu
+          actual="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$CI_RUN" --jq '[.head_sha, .event, .conclusion] | join(" ")')"
+          test "$actual" = "$CANDIDATE push success"
+          echo "$actual"
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$CI_RUN/artifacts?name=acceptance-evidence" --jq '.artifacts[] | {id, name, digest, size_in_bytes}'
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
         with:
-          name: legacy-libreoffice
-          path: |
-            build/trace/
-            !build/trace/redgreen/*-tmp/**
-          if-no-files-found: error
-
-  jest:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [windows-2022, ubuntu-24.04, macos-26]
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version: '24.22.2'
-          architecture: ${{ matrix.os == 'macos-26' && 'arm64' || 'x64' }}
-      - name: Obsidian static style rule
-        if: matrix.os == 'ubuntu-24.04'
-        working-directory: shell/scripts/obsidian-lint
-        run: |
-          npm ci --ignore-scripts
-          npm run lint
-      - name: Shell production build and Jest
-        working-directory: shell
-        run: |
-          node --version
-          npm --version
-          npm ci
-          npm run typecheck
-          npm run build
-          python ../tools/trace.py collect-shell --output ../build/trace/collection-shell-${{ matrix.os }}.json
-          npm test -- --ci --runInBand --json --outputFile=../build/trace/jest-${{ matrix.os }}.json
-          cp ../build/trace/junit-shell.xml ../build/trace/junit-shell-${{ matrix.os }}.xml
-          JEST_JUNIT_OUTPUT_NAME=junit-codes-${{ matrix.os }}.xml npm test -- --ci --runInBand -t JT-SHL-19-01
-      - name: Preserve full-suite results (code-set rerun is separate)
-        if: ${{ always() }}
-        shell: bash
-        run: test -s build/trace/junit-shell-${{ matrix.os }}.xml
-      - if: ${{ always() }}
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: shell-${{ matrix.os }}
-          path: |
-            build/trace/
-            !build/trace/redgreen/*-tmp/**
-          if-no-files-found: error
-
-  contract-min:
-    runs-on: macos-26
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
-        with:
-          python-version: '3.14'
-          architecture: arm64
-      - name: Install minimum Core 0.3.9 (also the reference producer)
-        run: |
-          python -m pip install --only-binary=:all: -r engine/requirements-test.txt "markitdown-gc==0.3.9"
-          python -m pip show markitdown-gc
-          python -I -m pytest engine/tests/contract -q --junitxml=build/trace/junit-contract-min.xml
-      - if: ${{ always() }}
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: contract-min
-          path: |
-            build/trace/
-            !build/trace/redgreen/*-tmp/**
-          if-no-files-found: error
-
-  contract-max:
-    needs: contract-min
-    runs-on: macos-26
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
-        with:
-          python-version: '3.14'
-          architecture: arm64
-      - name: Resolve newest compatible endpoint; errors fail the gate
-        run: |
-          python -m pip index versions markitdown-gc --index-url https://pypi.org/simple
-          python -m pip install --only-binary=:all: -r engine/requirements-test.txt "markitdown-gc>=0.3.9,<0.4"
-          python -m pip show markitdown-gc
-      - name: Deduplicate equal Core endpoints visibly
-        run: python tools/contract_endpoint.py --suite engine/tests/contract --pytest pytest --output build/trace/junit-contract-max.xml
-      - if: ${{ always() }}
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: contract-max
-          path: |
-            build/trace/
-            !build/trace/redgreen/*-tmp/**
-          if-no-files-found: error
-
-  smoke:
-    needs: candidate
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [windows-2022, ubuntu-24.04, macos-26]
-        python: ['3.11', '3.12', '3.13']
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
-        with:
-          python-version: ${{ matrix.python }}
-          architecture: ${{ matrix.os == 'macos-26' && 'arm64' || 'x64' }}
-      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
-        with:
-          name: release-candidate
-          path: build/candidate/
-      - name: Policy install, mdflow version and classify smoke
-        env:
-          MDFLOW_CI_TARGET: ${{ matrix.os }}
-        run: python tools/packaged_check.py smoke --bundle build/candidate --venv build/smoke-env
-      - if: ${{ always() }}
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: smoke-${{ matrix.os }}-py${{ matrix.python }}
-          path: |
-            build/trace/
-            !build/trace/redgreen/*-tmp/**
-          if-no-files-found: error
-
-  trace:
-    needs: [pytest, legacy-libreoffice, jest, contract-min, contract-max, smoke]
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
-        with:
-          python-version: '3.14'
-      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
-        with:
-          pattern: engine-*
-          path: build/trace/
-          merge-multiple: true
-      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
-        with:
-          pattern: shell-*
-          path: build/trace/
-          merge-multiple: true
-      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
-        with:
-          pattern: contract-*
-          path: build/trace/
-          merge-multiple: true
-      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
-        with:
-          name: reference-evidence
-          path: build/trace/
-      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
-        with:
-          name: legacy-libreoffice
-          path: build/trace/
-      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
-        with:
-          pattern: smoke-*
-          path: build/trace/
-          merge-multiple: true
-      - run: |
-          python -m pip install --only-binary=:all: -r engine/requirements-build.txt
-          python tools/trace.py check
-          python tools/trace.py report
-      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
+          github-token: ${{ github.token }}
+          run-id: '45688907760'
           name: acceptance-evidence
-          path: |
-            build/trace/
-            !build/trace/redgreen/*-tmp/**
-          if-no-files-found: error
+          path: build/inspection
+      - run: python -m pip install --only-binary=:all: -r engine/requirements-build.txt
+      - name: Cross-check raw receipts and evaluate all candidate gates
+        run: |
+          python - <<'PY'
+          import fnmatch
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+          import re
+          import subprocess
+          import sys
+          from xml.etree import ElementTree
+          
+          root = Path.cwd()
+          receipts = root / 'build/inspection'
+          commit = os.environ['CANDIDATE']
+          assert subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip() == commit
+          sys.path.insert(0, str(root / 'tools'))
+          from release_evidence import generate_oracles
+          from trace import execution_receipt
+          
+          selectors = {
+              'G-03': ['T-CLS-*', 'T-META-03', 'CT-02', 'CT-03', 'T-CLI-03'],
+              'G-05': ['T-ASM-06', 'T-ASM-15', 'T-ASM-16', 'T-RPT-02', 'T-MAP-*', 'T-TRX-01', 'T-SEL-04', 'T-CLS-12'],
+              'G-06': ['T-GEN-06', 'T-GEN-11', 'T-ASM-09', 'T-ASM-10', 'T-CNV-04', 'T-LKP-01', 'T-LKP-02', 'T-LKP-03', 'T-APR-06', 'T-TRX-06'],
+          }
+          for os_name in ('ubuntu-24.04', 'windows-2022', 'macos-26'):
+              for python in ('3.10', '3.14'):
+                  stem = f'engine-{os_name}-py{python}'
+                  collection_path = receipts / f'collection-{stem}.json'
+                  registry_path = receipts / f'registry-{stem}.json'
+                  xml_path = receipts / f'junit-{stem}.xml'
+                  collection = json.loads(collection_path.read_bytes())
+                  registry = json.loads(registry_path.read_bytes())
+                  assert collection['commit'] == registry['commit'] == commit
+                  assert hashlib.sha256(collection_path.read_bytes()).hexdigest() == registry['collection_sha256']
+                  collected = {r['nodeid']: r['tid'] for r in collection['tests']}
+                  selected = {r['nodeid']: r['tid'] for r in registry['tests'] if r['selected']}
+                  actual = {}
+                  for case in ElementTree.parse(xml_path).iter('testcase'):
+                      props = {p.get('name'): p.get('value') for p in case.findall('./properties/property')}
+                      node = props['nodeid']
+                      assert node not in actual
+                      actual[node] = (props['tid'], all(case.find(flag) is None for flag in ('failure', 'skipped', 'error')))
+                  assert actual.keys() == selected.keys()
+                  assert all(selected[node] == actual[node][0] for node in selected)
+                  print('SOURCE', stem, 'candidate', commit, 'junit-sha256', hashlib.sha256(xml_path.read_bytes()).hexdigest())
+                  for gate, patterns in selectors.items():
+                      matches = {n:t for n,t in collected.items() if any(fnmatch.fnmatchcase(t, p) for p in patterns)}
+                      assert all(any(fnmatch.fnmatchcase(t, p) for t in matches.values()) for p in patterns)
+                      assert all(actual.get(n) == (t, True) for n,t in matches.items())
+                      print('PEER-CHECK', gate, stem, 'cases', len(matches), 'ids', len(set(matches.values())), 'passed')
+              shell = f'junit-shell-{os_name}.xml'
+              rows, result = execution_receipt(receipts, shell, commit, root=root)
+              description = 'setup and provider settings link to the release disclosures in English and Korean'
+              matched = [r['nodeid'] for r in rows if r['tid'] == 'JT-04' and r['nodeid'].endswith(description)]
+              assert len(matched) == 1 and result.get(matched[0]) is True
+              print('SHELL-CHECK', os_name, matched[0], 'passed; total', sum(result.values()))
+          gates = generate_oracles(root, receipts, commit, {})
+          for key in sorted(k for k in gates if re.fullmatch(r'G-\d\d', k)):
+              print('RELEASE-CHECK', key, gates[key]['result'], 'source-files', len(gates[key]['sources']))
+          assert len([k for k in gates if re.fullmatch(r'G-\d\d', k)]) == 17
+          assert all(gates[g]['result'] != 'FAIL' for g in ('G-10', 'G-11'))
+          PY
