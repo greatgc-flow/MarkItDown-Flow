@@ -31,6 +31,7 @@ def main():
     (folder / 'release-candidate.json').write_text(json.dumps(candidate, indent=2) + '\n')
     notes = (f'MarkItDown Flow {tag}\n\n'
              'Fix the Obsidian directory review error in the file and folder picker. '
+             'Link settings to privacy disclosures and disable native 1DS telemetry before engine startup. '
              'Add official static-style lint and picker regression coverage. '
              'Existing compatible 2.0.x engines continue to work. '
              'For fresh installs and upgrades from 1.x, follow BOOTSTRAP.md and the migration instructions '

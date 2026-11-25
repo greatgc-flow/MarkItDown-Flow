@@ -5,6 +5,7 @@
  * presence and copyable external bootstrap instructions, in four sections.
  */
 import { type App, Modal, Notice } from 'obsidian';
+import { addDisclosureLink } from './disclosures';
 import { formatMessage, type UiLocale } from '../pure/i18n';
 import { collectSetupDiagnostics, type SetupDeps, type SetupDiagnostics } from '../process/setup';
 import { TOOL_INFO_KEYS, type VersionInfo } from '../process/version-gate';
@@ -112,6 +113,7 @@ export class SetupModal extends Modal {
     const { contentEl } = this;
     contentEl.empty();
     contentEl.addClass('mdflow-setup');
+    addDisclosureLink(contentEl, this.deps.locale);
     const d = this.current;
 
     this.heading(contentEl, 'shell.setup.section.interpreter');

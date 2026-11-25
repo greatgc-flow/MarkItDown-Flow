@@ -1,0 +1,52 @@
+id: MAN-02
+reviewer: release_reviewer/codex.independent/GPT-6
+date: '2026-11-25'
+commit: 5a21c3a71b0ede6877c345ff38d187e28a77e1be
+inputs:
+- https://github.com/greatgc-flow/MarkItDown-Flow/blob/5a21c3a71b0ede6877c345ff38d187e28a77e1be/README.md
+- https://github.com/greatgc-flow/MarkItDown-Flow/blob/5a21c3a71b0ede6877c345ff38d187e28a77e1be/shell/src/ui/disclosures.ts
+- https://github.com/greatgc-flow/MarkItDown-Flow/blob/5a21c3a71b0ede6877c345ff38d187e28a77e1be/shell/src/ui/settings-tab.ts
+- https://github.com/greatgc-flow/MarkItDown-Flow/blob/5a21c3a71b0ede6877c345ff38d187e28a77e1be/shell/src/ui/setup-modal.ts
+- https://github.com/greatgc-flow/MarkItDown-Flow/blob/5a21c3a71b0ede6877c345ff38d187e28a77e1be/shell/src/ui/consent-modal.ts
+- https://github.com/greatgc-flow/MarkItDown-Flow/blob/5a21c3a71b0ede6877c345ff38d187e28a77e1be/engine/src/mdflow/providers/openai_compat.py
+- https://github.com/greatgc-flow/MarkItDown-Flow/blob/5a21c3a71b0ede6877c345ff38d187e28a77e1be/engine/src/mdflow/__init__.py
+checks:
+- id: network_services_and_purpose
+  readme_anchor: Network services and purpose
+  result: PASS
+- id: outside_vault_access
+  readme_anchor: Outside-vault access
+  result: PASS
+- id: no_client_telemetry
+  readme_anchor: Telemetry
+  result: PASS
+- id: account_key_cost
+  readme_anchor: Account, API key and cost
+  result: PASS
+- id: migration_and_operation
+  readme_anchor: Migration and operation
+  result: PASS
+- id: setup_and_provider_ui_link_to_disclosures
+  readme_anchor: Network services and purpose
+  result: PASS
+evidence:
+- Reviewed the default none provider, optional approved openai-compatible raster requests, authorized URL/proxy scope
+  and CLI-only command provider. The shell cannot configure a command provider. README names external bootstrap and
+  user-selected execution. No automatic setup installer appears in the shell.
+- Reviewed vault output validation and selected external input access, local venv executable, optional tools, temporary
+  folders, cache and plugin-local logs. Provider key comes from the process environment; default none needs no provider
+  account. README discloses potential duplicate costs when remote requests fail or repeat; consent UI shows the destination,
+  billing warning and pending action.
+- Checked the static PT-16 policy and the runtime privacy boundary. Inspected actual ONNX Runtime 1.32.0 Linux native
+  library and verified the PyPI hashes of the macOS arm64 and Windows x64 3.14 wheels. Linux/macOS carry the native
+  1DS collector. The shell forces ORT_DISABLE_TELEMETRY=1 before launching jobs and probes, and the standalone 2.0.2
+  engine forces it on package initialization before Core imports the native backend. Magika 1.0.3 calls disable_telemetry_events
+  before InferenceSession; Windows official x64 wheel contains the Microsoft.ML.ONNXRuntime TraceLogging provider.
+  Reviewed the associated PT-16/JT-06 regressions. These are code and dependency checks, not a wire capture of every
+  operating system.
+- Reviewed v1-to-v2 migration/recovery and command registration, sanitized settings snapshots, external interpreter
+  setup, and the staged writes that preserve settings on failed saves. Existing command IDs are retained.
+- Independently verified SetupModal and the provider section both create a user-click anchor to the exact 2.0.2 README
+  section. The link uses noreferrer/noopener and excludes user paths, keys and provider data. Independently exercised
+  the EN/KO rendering assertions. The README subsequently explains all six relevant topics.
+verdict: PASS

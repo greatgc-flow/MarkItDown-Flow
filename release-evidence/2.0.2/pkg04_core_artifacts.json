@@ -1,0 +1,20 @@
+{
+  "reviewer": "release_reviewer/codex.independent/GPT-6",
+  "date": "2026-11-25",
+  "commit": "5a21c3a71b0ede6877c345ff38d187e28a77e1be",
+  "evidence": [
+    "Retrieved both public 0.3.9 archive bytes from PyPI and confirmed their exact lengths and SHA-256 against the version catalog. Read the LICENSE retained inside each archive. Both carry the MIT grant and Microsoft Corporation attribution.",
+    "markitdown_gc-0.3.9-py3-none-any.whl SHA256 c6c13487fc3b5f4e52331e2f584a7bf5efb0c38132eb53815e5a69cc035733e6; license member markitdown_gc-0.3.9.dist-info/licenses/LICENSE",
+    "markitdown_gc-0.3.9.tar.gz SHA256 4d0fdc6784f6dde250be518a460824967bea25d267d38219691cf9d7df20d251; license member markitdown_gc-0.3.9/LICENSE",
+    "Candidate tools/build_engine.py reads installed license files and metadata into NOTICE.txt. Six target install reports are produced by the evidence workflow from candidate CI."
+  ],
+  "verdict": "PASS",
+  "package": "markitdown-gc",
+  "version": "0.3.9",
+  "source": "https://pypi.org/pypi/markitdown-gc/0.3.9/json",
+  "artifacts": [],
+  "install_reports": [],
+  "checks": {
+    "artifact_licenses": "PASS"
+  }
+}

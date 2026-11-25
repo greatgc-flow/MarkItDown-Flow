@@ -1,23 +1,30 @@
-# MAN-03  English/Korean meaning review of every message-table row.   Validated by: python tools/trace.py attest MAN-03
 id: MAN-03
-reviewer: ag/ag.standard/gemini-3.8-flash-low
-date: '2026-11-18'
-commit: 0703db579152b41e5da136cc402783b51b728888
+reviewer: release_reviewer/codex.independent/GPT-6
+date: '2026-11-25'
+commit: 5a21c3a71b0ede6877c345ff38d187e28a77e1be
 inputs:
-  - shell/src message tables for en and ko at the candidate commit (dumped via esbuild bundle of shell/src/pure/i18n.ts, dictionary('en') and dictionary('ko'))
-  - docs/renewal/10_SPEC.md section 7.5 code table
+- https://github.com/greatgc-flow/MarkItDown-Flow/blob/5a21c3a71b0ede6877c345ff38d187e28a77e1be/shell/src/pure/i18n.ts
+- https://github.com/greatgc-flow/MarkItDown-Flow/blob/5a21c3a71b0ede6877c345ff38d187e28a77e1be/docs/renewal/10_SPEC.md#75-error-and-warning-codes-closed-list-with-exit-contribution
+- https://github.com/greatgc-flow/MarkItDown-Flow/blob/5a21c3a71b0ede6877c345ff38d187e28a77e1be/shell/test/jt-shl-19-01-i18n.test.ts
 checks:
-  - {id: reviewer_reads_english_and_korean, result: PASS}
-  - {id: english_meaning_correct_for_every_row, result: PASS}
-  - {id: korean_meaning_correct_for_every_row, result: PASS}
-  - {id: korean_equivalent_to_english_for_every_row, result: PASS}
-  - {id: placeholders_and_parameters_preserved_in_both_languages, result: PASS}
+- id: reviewer_reads_english_and_korean
+  result: PASS
+- id: english_meaning_correct_for_every_row
+  result: PASS
+- id: korean_meaning_correct_for_every_row
+  result: PASS
+- id: korean_equivalent_to_english_for_every_row
+  result: PASS
+- id: placeholders_and_parameters_preserved_in_both_languages
+  result: PASS
 evidence:
-  - "Delta re-attestation 2026-11-18, ag/ag.standard/gemini-3.8-flash-low (peerhub stream rel201-man03b), candidate 92ff82ecca5c2d495080ba261b78cc15216f5a78, baseline edc0ca6ba646a5eca990e9583e0197605b347951. shell/src/pure/i18n.ts has no diff between the two commits and the SPEC section 7.5 table is unchanged (SPEC diff touches only the Core reference row of section 12.9); the full shell/src diff was supplied so the absence of added/changed/removed message keys could be checked. Reviewer conclusion: The delta shows `shell/src/pure/i18n.ts` is completely untouched with no diff, and the only change in `docs/renewal/10_SPEC.md` updates the \"Core reference\" row in Section 12.9 without modifying Section 7.5's code table. The shell code diffs in `setup.ts`, `persist.ts`, `data-store.ts`, and `settings-tab.ts` introduce, modify, or delete zero message keys. Therefore, no en/ko string or Section 7.5 entry was changed, and the 292-row PASS baseline holds for 92ff82e. This is a delta confirmation; the 292-row en/ko review of 2.0.0 was not repeated. The reviewer replied headlessly (peers cannot write files); the orchestrator transcribed the verdict and evidence paragraph from the retained raw reply."
-  - "HISTORICAL EVIDENCE BELOW: wording from the 2.0.0 review (edc0ca6) and its predecessors; old unchanged-byte claims and validation results are not asserted for 2.0.1."
-  - "All 292 keys (engine + shell, after the round-9 UI/UX polish) paired as key / EN / KO; 0 keys missing in either language. Reviewed in three chunks (98 + 98 + 96 rows) by ag/ag.effort (peerhub streams mdf-m03r9b-1..3); each chunk returned 'CHUNK n: PASS' with no problem rows."
-  - "Each row checked for (a) English meaning, (b) Korean meaning and naturalness incl. Obsidian Korean UI terms (보관함), (c) EN/KO equivalence, (d) identical {placeholder} sets."
-  - "The orchestrator transcribed the reviewer's chunk verdicts into this record (ag cannot write files headlessly); the reviewer's raw replies are retained in the orchestrator scratch (m03_1..3.out)."
-  - "Rebound 2026-11-11 from 040c61085d1b04144e0cc812ebf5e605b8a8d9c2 to edc0ca6ba646a5eca990e9583e0197605b347951: shell/src/pure/i18n.ts identical apart from line endings (LF policy) and the SPEC 7.5 code table byte-identical; other SPEC sections changed (R39/R41 Core/PDF text, no message code), so tools/rebind_evidence.py refused on the whole-file pathspec. The reviewer ag/ag.effort confirmed: 'MAN-03 HOLDS for edc0ca6ba646a5eca990e9583e0197605b347951' (peerhub stream mdf-m03d)."
-  - "Rebound 2026-11-25 from 92ff82ecca5c2d495080ba261b78cc15216f5a78 to 0703db579152b41e5da136cc402783b51b728888: shell/src/pure/i18n.ts, docs/renewal/10_SPEC.md byte-identical"
+- 'Bilingual independent reviewer read the English and Korean strings side by side for every key: 54 engine diagnostics
+  (including both startup and runtime errors) and 239 shell keys, 293 EN/KO pairs. Checked the code families against
+  SPEC section 7.5. Reviewed migration semantics, key source, no-egress pending action versus dismissal, possible
+  repeated billing, file-level consent, cancel/retry/scope, class/status labels, legacy tool fallback, settings, and
+  setup instructions.'
+- Compared exact key sets and sorted interpolation names including multiplicity for every row; zero mismatches. Reviewed
+  the new disclosure label in both languages and its anchor in setup and provider settings. JT-SHL-19-01 and EN/KO
+  UI coverage passed in an independent local Jest run. No translation implies a broader authorization, automatic installation,
+  or different error recovery.
 verdict: PASS

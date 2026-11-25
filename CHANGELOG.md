@@ -3,6 +3,7 @@
 ## 2.0.2 — File picker directory review fix (2026-11-25)
 
 - Remove the inline style from the detached file input in file and folder selection.
+- Link setup and provider settings to the release README and disable native 1DS telemetry before engine initialization.
 - Check the Obsidian static style rule in candidate CI. Existing 2.0.x engines remain compatible.
 
 ## 2.0.1 — Settings save fix (2026-11-18)

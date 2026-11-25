@@ -11,6 +11,7 @@
  * No markitdown LLM settings exist (R29).
  */
 import { type App, Platform, type Plugin, PluginSettingTab, Setting } from 'obsidian';
+import { addDisclosureLink } from './disclosures';
 import { formatMessage, type UiLocale } from '../pure/i18n';
 import { isAbsolutePath } from '../pure/paths';
 import { isAcceptableBaseUrl, isSafeVaultRelativePath, type RunOptions, type SettingsV2 } from '../pure/settings';
@@ -172,6 +173,7 @@ export class ShellSettingsTab extends PluginSettingTab {
 
     // --- OCR provider -------------------------------------------------------------------------------------
     section('provider');
+    addDisclosureLink(containerEl, this.deps.locale());
     new Setting(containerEl).setName(t('shell.settings.provider')).setDesc(t('shell.settings.keyNote')).addDropdown((dropdown) => {
       dropdown.addOptions({ none: t('shell.settings.provider.none'), 'openai-compatible': t('shell.settings.provider.openai') }).setValue(current.provider.name).onChange((value) => {
         if (value === 'none' || value === 'openai-compatible') void update({ provider: { ...this.deps.settings().provider, name: value } });

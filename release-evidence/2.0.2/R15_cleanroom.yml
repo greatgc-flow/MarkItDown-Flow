@@ -1,0 +1,40 @@
+id: MAN-01
+implementer: Codex release implementer (/root); previous contributors recorded in the reviewed 2.0.1 MAN-01
+reviewer: release_reviewer/codex.independent/GPT-6
+date: '2026-11-25'
+commit: 5a21c3a71b0ede6877c345ff38d187e28a77e1be
+inputs:
+- Previously reviewed 2.0.1 R15 clean-room attestation for commit 92ff82ecca5c2d495080ba261b78cc15216f5a78, and the
+  complete v2 shell source, CSS and test diff from that commit to this candidate.
+- docs/renewal/20_SHELL.md REQ-SHL-01 and REQ-PKG-16; docs/renewal/25_PACKAGING.md; official Obsidian static style
+  rule and public HTMLElement.createEl/PluginSettingTab/Setting API shipped in obsidian 1.14.4.
+- Codex release implementer statement delivered separately to the independent reviewer, existing v2 implementation,
+  tests and release tools, public Obsidian review and API.
+checks:
+- id: implementer_and_reviewer_are_different_people
+  result: PASS
+- id: inputs_were_spec_and_public_obsidian_apis_only
+  result: PASS
+- id: v1_src_not_read
+  result: PASS
+- id: v1_styles_css_not_read
+  result: PASS
+- id: v1_tests_not_read
+  result: PASS
+- id: mit_credit_present_in_readme
+  result: PASS
+- id: mit_credit_present_in_license
+  result: PASS
+evidence:
+- Reviewed the existing named R15 PASS at evidence/2.0.1 and the author-provenance limitations it records for the
+  baseline. Independently inspected the full release delta. The picker removes a style assignment on a detached v2
+  input. The functional additions are a fixed environment opt-out and a localized, versioned README anchor using the
+  public DOM helper. Inherited setup sample versions and CSS version comment changed. No retired source/style/test
+  content appears in those changes.
+- The Codex release implementer explicitly confirmed use of v2 code, spec, tests, release tooling, 2.0.x fixtures,
+  official scanner/rule and public API, and no consultation or copying of the retired v1 shell sources, styles or
+  tests. The independent release_reviewer agent inspected the code and ran the clean-room regression.
+- README.md, Development and license retains the MIT notice and historical/Microsoft credit. LICENSE preserves the
+  MIT permission, conditions and Ethan Troy copyright. Inspected shell esbuild and TypeScript build inputs and tested
+  the retired-input guard independently.
+verdict: PASS
