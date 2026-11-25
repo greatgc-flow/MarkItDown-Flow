@@ -79,6 +79,8 @@ export function scrubEngineEnv(env: Env, provider: ProviderName): Record<string,
   };
   for (const name of BASELINE_ENV_VARS) copy(name);
   for (const name of TOOL_PATH_ENV_VARS) copy(name);
+  // Applies to probes and previously installed compatible 2.0.x engines as well.
+  out.ORT_DISABLE_TELEMETRY = '1';
   out.PYTHONUTF8 = '1';
   out.PYTHONIOENCODING = 'utf-8';
   if (provider === 'openai-compatible') {

@@ -1,5 +1,7 @@
 """PT-10, PT-16, PT-22 (mode A): traceability mutation self-test, README/network policy, terminal-launch env smoke."""
 from pathlib import Path
+import json
+import os
 import re
 import subprocess
 import sys
@@ -95,6 +97,28 @@ def readme_sections(text):
 
 @pytest.mark.req("REQ-PKG-16")
 @pytest.mark.cov("S0", "FM9")
+@pytest.mark.parametrize("inherited", [None, "0"])
+def test_PT_16_engine_disables_native_telemetry_before_core_import(inherited):
+    env = dict(os.environ)
+    env.pop("ORT_DISABLE_TELEMETRY", None)
+    if inherited is not None:
+        env["ORT_DISABLE_TELEMETRY"] = inherited
+    # The module and installed console script share this entry point.
+    setup = "" if env.get("MDFLOW_TEST_INSTALLED") == "1" else f"sys.path.insert(0, {str(REPO / 'engine/src')!r})"
+    program = f"""import os, sys
+{setup}
+def check(event, args):
+    if event == 'import' and args[0].split('.')[0] in ('onnxruntime', 'magika', 'markitdown'):
+        assert os.environ.get('ORT_DISABLE_TELEMETRY') == '1'
+sys.addaudithook(check)
+import mdflow.__main__
+assert os.environ.get('ORT_DISABLE_TELEMETRY') == '1'
+"""
+    subprocess.run([sys.executable, "-I", "-c", program], env=env, check=True, timeout=30)
+
+
+@pytest.mark.req("REQ-PKG-16")
+@pytest.mark.cov("S0", "FM9")
 def test_PT_16_readme_has_the_five_disclosures_and_code_has_no_telemetry_or_unplanned_sockets():
     readme = (REPO / "README.md").read_text(encoding="utf-8")
     sections = readme_sections(readme)
@@ -125,6 +149,11 @@ def test_PT_16_readme_has_the_five_disclosures_and_code_has_no_telemetry_or_unpl
             # The LibreOffice profile's XML namespace is a schema identifier,
             # not a destination; retain the network-host checks for other URLs.
             text = text.replace('xmlns:oor="http://openoffice.org/2001/registry"', '')
+            # Only the user-clicked documentation link may point at the release README.
+            if relative == "shell/src/ui/disclosures.ts":
+                version = json.loads((REPO / "manifest.json").read_text(encoding="utf-8"))["version"]
+                readme = f"https://github.com/greatgc-flow/MarkItDown-Flow/blob/{version}/README.md#network-services-and-purpose"
+                text = text.replace(f"href: '{readme}',", "", 1)
             for host in re.findall(r"https?://([^/\s\"'`)<>\]:]+)", text):
                 if host.lower() not in ALLOWED_HOSTS:
                     problems.append(f"{relative}: unplanned host {host}")
