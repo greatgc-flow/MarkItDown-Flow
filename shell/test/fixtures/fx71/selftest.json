@@ -1,1 +1,1 @@
-{"ok": true, "exiftool": {"status": "ok", "version": "13.59", "metadata": true}}
+{"ok": true, "exiftool": {"status": "not_found", "version": null, "metadata": false}}

@@ -178,10 +178,10 @@
         "source_id": "p2",
         "page": 2,
         "status": "eligible",
-        "raster_sha256": "b1e4da256260c21ea37de42fcb4b8219583dfb6913284c1244911f60fc2e3411",
+        "raster_sha256": "9c7426b0040eefa798d55c3f47deb5208791cc925508616f1453c67a3a8aabba",
         "dpi": 200,
         "mime": "image/png",
-        "bytes": 26762,
+        "bytes": 26784,
         "priority": "normal",
         "priority_core": "high"
       },
@@ -190,10 +190,10 @@
         "source_id": "p4",
         "page": 4,
         "status": "eligible",
-        "raster_sha256": "b1e4da256260c21ea37de42fcb4b8219583dfb6913284c1244911f60fc2e3411",
+        "raster_sha256": "9c7426b0040eefa798d55c3f47deb5208791cc925508616f1453c67a3a8aabba",
         "dpi": 200,
         "mime": "image/png",
-        "bytes": 26762,
+        "bytes": 26784,
         "priority": "normal",
         "priority_core": "high"
       }
@@ -221,7 +221,7 @@
     "uninspected_pages": 0,
     "frames_total": null
   },
-  "plan_hash": "eed7ac2d62ccc8bf56d938c28d9bb79bd32d05d497eedf70639c651aa4af0b0a"
+  "plan_hash": "0ffd00b039c24b4db01e0e2ad53c60c1a02ddb350a73089e0e0b80e949768b3d"
 }
 {
   "v": 1,
@@ -260,10 +260,10 @@
         "source_id": "p1",
         "page": 1,
         "status": "eligible",
-        "raster_sha256": "b1e4da256260c21ea37de42fcb4b8219583dfb6913284c1244911f60fc2e3411",
+        "raster_sha256": "9c7426b0040eefa798d55c3f47deb5208791cc925508616f1453c67a3a8aabba",
         "dpi": 200,
         "mime": "image/png",
-        "bytes": 26762,
+        "bytes": 26784,
         "priority": "normal",
         "priority_core": "high"
       },
@@ -272,10 +272,10 @@
         "source_id": "p2",
         "page": 2,
         "status": "eligible",
-        "raster_sha256": "b1e4da256260c21ea37de42fcb4b8219583dfb6913284c1244911f60fc2e3411",
+        "raster_sha256": "9c7426b0040eefa798d55c3f47deb5208791cc925508616f1453c67a3a8aabba",
         "dpi": 200,
         "mime": "image/png",
-        "bytes": 26762,
+        "bytes": 26784,
         "priority": "normal",
         "priority_core": "high"
       },
@@ -284,10 +284,10 @@
         "source_id": "p3",
         "page": 3,
         "status": "eligible",
-        "raster_sha256": "b1e4da256260c21ea37de42fcb4b8219583dfb6913284c1244911f60fc2e3411",
+        "raster_sha256": "9c7426b0040eefa798d55c3f47deb5208791cc925508616f1453c67a3a8aabba",
         "dpi": 200,
         "mime": "image/png",
-        "bytes": 26762,
+        "bytes": 26784,
         "priority": "normal",
         "priority_core": "high"
       }
@@ -315,5 +315,5 @@
     "uninspected_pages": 0,
     "frames_total": null
   },
-  "plan_hash": "8c4e9526cab4253327b71bb1bb8ba7fe98ec8d305f4e7077d3dbfd007365e72e"
+  "plan_hash": "89f9b1097973dcf34a23219e4ac43bad09044238dd1832a946c2914a232cff05"
 }

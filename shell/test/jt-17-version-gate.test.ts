@@ -47,9 +47,9 @@ it(R('JT-17 the actual packaged version response passes the complete gate and ma
   expect(gate.info.triage_schema).toBe(1);
   // R27: renderer/Pillow are compatibility ranges, not exact lock pins; the recorded CI identity lies inside them
   // and the exact installed versions are still carried in `info` for diagnosis.
-  expect(gate.info.pypdfium2).toBe('5.15.1');
+  expect(gate.info.pypdfium2).toBe('5.15.2');
   expect(gate.info.pillow).toBe('13.0.0');
-  expect(releaseSegment(gate.info.pypdfium2)).toEqual([5, 15, 1]);
+  expect(releaseSegment(gate.info.pypdfium2)).toEqual([5, 15, 2]);
   expect(releaseSegment(gate.info.pillow)).toEqual([13, 0, 0]);
   expect(RELEASE_LOCK.pypdfium2Min).toEqual([5, 0, 0]);
   expect(RELEASE_LOCK.pypdfium2MaxExclusive).toEqual([6, 0, 0]);
