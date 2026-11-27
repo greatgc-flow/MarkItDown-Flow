@@ -280,7 +280,9 @@ export class ShellCoordinator {
 
     this.isActive = true;
     this.cancelled = false;
-    this.deps.progress?.begin(snapshot.provider.name !== 'none' ? 'plan' : 'run');
+    const mode = selection.action?.mode;
+    this.deps.progress?.begin(mode === 'preview' ? 'preview' : mode === 'extract-text' ? 'extract' :
+      snapshot.provider.name !== 'none' ? 'plan' : 'run');
     const execute = this.deps.strictResults ? this.strictJob(snapshot, selection.action ?? {mode:'run'}) : this.runJob(snapshot, entry);
     this.job = execute.finally(() => {
       this.isActive = false;

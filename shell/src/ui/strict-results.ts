@@ -11,7 +11,7 @@ const resultLabels: Record<string, [string, string]> = {
   limit:['Inspection limit reached','검사 한도 도달'], limited:['Incomplete coverage','일부만 검사됨'],
   corrupt:['Damaged file','손상된 파일'], read_failed:['Could not read the source','원본 읽기 실패'],
   write_failed:['Could not write the output','결과 저장 실패'], source_changed:['Source changed','원본 변경됨'],
-  edited_output:['Existing file has different contents','기존 파일의 내용이 다름'],
+  edited_output:['Output path conflict','출력 경로 충돌'],
   conversion_failed:['Conversion failed','변환 실패'], saved:['Saved','저장됨'], reused:['Already saved','기존 결과 재사용'],
   no_usable_text:['No existing text to extract','추출할 텍스트 없음'], unavailable:['Unavailable','사용할 수 없음'],
   use_standard_conversion:['Use normal conversion','일반 변환 가능'], not_found:['ExifTool not installed','ExifTool 미설치'],
@@ -46,6 +46,13 @@ export function references(rows: FileRow[], includeLocalPaths = false): string {
   return [headings, ...records].map(cols => cols.map(field).join(',')).join('\r\n');
 }
 
+const photoFieldNames: Record<string, [string, string]> = {
+  ImageWidth:['Image width','사진 너비'], ImageHeight:['Image height','사진 높이'],
+  DateTimeOriginal:['Date taken','촬영 일시'], Make:['Device maker','기기 제조사'],
+  Model:['Device model','기기 모델'], Artist:['Author','작성자'], SerialNumber:['Device serial number','기기 일련번호'],
+  GPSLatitude:['GPS latitude','GPS 위도'], GPSLongitude:['GPS longitude','GPS 경도'],
+};
+
 class PhotoFields extends Modal {
   private selected = new Set(['ImageWidth', 'ImageHeight', 'DateTimeOriginal']);
   constructor(app: App, private row: FileRow, private actions: Actions, private ko: boolean) { super(app); }
@@ -54,8 +61,8 @@ class PhotoFields extends Modal {
     const preview = this.contentEl.createDiv();
     let values = '';
     let revision = 0;
-    for (const field of ['ImageWidth','ImageHeight','DateTimeOriginal','Make','Model','Artist','SerialNumber','GPSLatitude','GPSLongitude']) {
-      new Setting(this.contentEl).setName(field).addToggle(t => t.setValue(this.selected.has(field)).onChange(on => {
+    for (const [field,names] of Object.entries(photoFieldNames)) {
+      new Setting(this.contentEl).setName(names[this.ko ? 1 : 0]).addToggle(t => t.setValue(this.selected.has(field)).onChange(on => {
         if (on) this.selected.add(field); else this.selected.delete(field);
         revision++;
         values = '';

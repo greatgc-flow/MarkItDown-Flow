@@ -30,7 +30,7 @@ import { HistoryModal } from './ui/history-modal';
 import { JobStatusBar } from './ui/progress';
 import { ResultsModal } from './ui/results-modal';
 import { StrictResultsModal } from './ui/strict-results';
-import { launchLines, type FileRow, type StrictResult } from './process/strict';
+import { launchLines, type FileRow, type SourceAction, type StrictResult } from './process/strict';
 import { snapshotJob, type JobSnapshot } from './process/launcher';
 import { resolveDestination } from './ui/output-path';
 import { SetupModal } from './ui/setup-modal';
@@ -134,7 +134,7 @@ export default class MarkItDownFlowPlugin extends Plugin {
 
     const coordinator = new ShellCoordinator({
       beginJournal: apis.beginJournal,
-      strictResults: (result, snapshot) => this.showStrict(result, snapshot),
+      strictResults: (result, snapshot, action) => this.showStrict(result, snapshot, action),
       spawner: apis.spawner,
       fs: apis.fs,
       spoolFs,
@@ -234,7 +234,7 @@ export default class MarkItDownFlowPlugin extends Plugin {
           }
           const snapshot = snapshotJob({settings:this.settings, inputs:saved.inputs, cwd:this.probeCwd(),
             outDir:saved.outDir, cacheDir:joinPath(apis.platform,apis.homeDir(),'.mdflow','cache')});
-          this.showStrict(saved.result,snapshot);
+          this.showStrict(saved.result, snapshot, {mode:saved.mode});
         } catch { this.notify('shell.PROTOCOL'); }
       }});
     registerEntryPoints(this, coordinator, this.settings, picker, this.locale);
@@ -335,7 +335,7 @@ export default class MarkItDownFlowPlugin extends Plugin {
     return probe;
   }
 
-  private showStrict(result: StrictResult, snapshot: JobSnapshot): void {
+  private showStrict(result: StrictResult, snapshot: JobSnapshot, action: SourceAction): void {
     const apis = this.apis;
     if (!apis) return;
     const utility = async (row: FileRow, command: string, extra: string[]) => {
@@ -355,7 +355,7 @@ export default class MarkItDownFlowPlugin extends Plugin {
       },
       clipboard: text => apis.writeClipboard(text),
       retry: async () => {
-        await this.coord?.submit({kind:'files', paths:snapshot.inputs, action:{mode:'run'}}, 'command');
+        await this.coord?.submit({kind:'files', paths:snapshot.inputs, action}, 'command');
       },
       run: async (row, mode) => {
         await this.coord?.submit({kind:'files', paths:[row.source.path], action:{mode, sha:row.source.sha256, member:row.source.member ?? undefined}}, 'command');

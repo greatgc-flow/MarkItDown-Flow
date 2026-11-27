@@ -93,7 +93,7 @@ export function summarizeProgress(events: readonly ProgressEvent[]): ProgressSum
 }
 
 /** `check`: admission is waiting on the engine version gate; the item and its Cancel exist from then on (M7-02). */
-export type JobPhase = 'check' | 'plan' | 'consent' | 'run';
+export type JobPhase = 'check' | 'plan' | 'consent' | 'run' | 'preview' | 'extract';
 
 /** What the coordinator reports to the UI for the life of one job. */
 export interface ProgressSink {
@@ -182,6 +182,10 @@ export class JobStatusBar implements ProgressSink {
     this.textEl.setText(this.t(`shell.progress.phase.${this.currentPhase}`));
     this.el.setAttr('data-mdflow-phase', this.currentPhase);
     if (!this.detailsEl) return;
+    if (this.currentPhase === 'preview' || this.currentPhase === 'extract') {
+      this.detailsEl.setText('');
+      return;
+    }
     const s = this.summary;
     this.detailsEl.setText(
       this.t('shell.progress.details', {

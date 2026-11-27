@@ -401,3 +401,29 @@ it(R16('JT-16 read-only preview runs when the configured output destination need
   expect(h.spawner.requests[0].args).toContain('--dry-run');
   expect(h.history).toHaveLength(0);
 });
+
+it.each(['preview', 'extract-text'] as const)(R16('JT-16 retry preserves the original %s operation and selected archive member'), async mode => {
+  const apis = fakeApis(request => {
+    const command = subcommandOf(request);
+    if (command === 'run' || command === 'extract-text') return {exit:{code:2, signal:null}};
+    return defaultScript(request);
+  });
+  const {plugin} = await loadPluginWith(jest.mocked(loadNodeApis), settingsV2(), apis);
+  await tick();
+  const coord = plugin.coordinator!;
+  const action = {mode, sha:'a'.repeat(64), member:'document.pdf'};
+  await coord.submit({kind:'files', paths:[abs(INPUT_ROOT,'archive.zip')], action}, 'command');
+  await coord.current;
+  const dialog = mockState.openModals.at(-1)!;
+  const retry = asFake(dialog.contentEl).findAll(e => e.tagName === 'button' && e.textContent === 'Retry original selection')[0];
+  expect(retry).toBeDefined();
+  retry.click();
+  await tick();
+  await coord.current;
+  const requests = apis.spawner.requests.filter(r => ['run','extract-text'].includes(subcommandOf(r) ?? ''));
+  expect(requests).toHaveLength(2);
+  expect(requests[1].args).toEqual(requests[0].args);
+  expect(requests[1].args).toContain('document.pdf');
+  expect(requests[1].args.includes('--dry-run')).toBe(mode === 'preview');
+  plugin.unload();
+});

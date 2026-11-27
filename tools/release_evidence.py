@@ -180,7 +180,7 @@ def validate_extra(filename: str, data, expected_commit: str, *, root: Path, exe
                 problems.append('candidate-bound successful install required')
             items = run.get('report', {}).get('install', [])
             core = [i.get('metadata', {}) for i in items if i.get('metadata', {}).get('name') == 'markitdown-gc']
-            if len(core) != 1 or not re.fullmatch(r'0\.3\.(?:[7-9]|[1-9][0-9]+)', core[0].get('version', '')):
+            if len(core) != 1 or not re.fullmatch(r'0\.3\.[1-9][0-9]+', core[0].get('version', '')):
                 problems.append('resolved compatible markitdown-gc required')
             for item in items:
                 metadata, download = item.get('metadata', {}), item.get('download_info', {})
