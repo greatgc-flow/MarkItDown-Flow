@@ -1,0 +1,66 @@
+id: MAN-02
+reviewer: privacy-peer/codex/gpt-6
+date: '2026-11-28'
+commit: 5cf5d6f214ee04a75b6f44f5a0bab1e48aa65016
+inputs:
+- 'Candidate README.md including #network-services-and-purpose, #outside-vault-access, #telemetry, #account-api-key-and-cost,
+  #migration-and-limits and #convert-inspect-or-hand-off.'
+- shell/src/{main.ts,process/strict.ts,process/node-apis.ts,ui/coordinator.ts,ui/strict-results.ts,ui/setup-modal.ts,ui/settings-tab.ts,ui/disclosures.ts,pure/env.ts,pure/history.ts,pure/persist.ts};
+  engine/src/mdflow/{cli.py,strict_workflow.py,source_actions.py,convert.py,__init__.py,providers}; published markitdown-gc
+  0.3.10 photo_metadata and document_inspection.
+checks:
+- id: network_services_and_purpose
+  readme_anchor: '#network-services-and-purpose'
+  result: PASS
+- id: outside_vault_access
+  readme_anchor: '#outside-vault-access'
+  result: PASS
+- id: no_client_telemetry
+  readme_anchor: '#telemetry'
+  result: PASS
+- id: account_key_cost
+  readme_anchor: '#account-api-key-and-cost'
+  result: PASS
+- id: migration_and_operation
+  readme_anchor: '#migration-and-limits'
+  result: PASS
+- id: setup_and_provider_ui_link_to_disclosures
+  readme_anchor: '#network-services-and-purpose'
+  result: PASS
+evidence:
+- Inspected plugin command registration and strictJob/runStrict/launchLines. Strict operations scrub the environment
+  with provider none, use an argv array, and dispatch run/extract-text, handoff-copy or photo-info before CLI provider
+  construction. Local Core conversion receives immutable streams, enable_plugins=False and no remote service options.
+  Default legacy provider none has no egress. Only separately configured legacy OpenAI-compatible requests send selected
+  image data. The trusted CLI command runs as a subprocess with caller-declared egress.
+- 'Traced shell/src/process/node-apis.ts: a temporary 0600 input list is cleaned in finally; run journals store selected
+  absolute inputs, destination, logical paths, source and member hashes, and outcome rows under ~/.mdflow/jobs/<vault
+  digest>. Exclusive files use 0600 and new journal directories use 0700 on POSIX. The write bound is 128 MiB per journal;
+  on successful close only the newest eight completed journals are retained per vault. Interrupted files remain. Coordinator
+  writes run and partial summaries to plugin data.json; first input and output paths under home are shortened. Migration
+  may retain sanitized data.v1.json. The optional log limits are five files of 1 MiB.'
+- Verified photo-info bounds selected source bytes and digest-checks them; Core photo_metadata uses a private temporary
+  image, passes only allowed tags to ExifTool, and filters stdout by the requested fields. Shell photo toggles initially
+  select ImageWidth, ImageHeight and DateTimeOriginal. GPS, author, make, model and serial are off. Changing a toggle
+  clears stale preview/clipboard data. Copy displayed fields writes to the OS clipboard only on click. The strict handoff
+  publishes original bytes to External-OCR after rechecking identity. CSV excludes machine-local absolute paths unless
+  the user enables their column.
+- 'Read strict_workflow.process/partial_body: preview uses include_text=False and returns facts, without publishing a
+  note or creating a shell journal/history record. extract-text uses per-page text only in the intentional partial-note
+  body, marks omitted visual/unresolved content and reports an output path while leaving the source excluded. A changed
+  output is preserved. Flow engine tests T-CLI-09..11 passed, including the 99-text/1-scan fixture, digest-checked copy,
+  dry-run no-write, and refusal of provider flags. Core test_selected_fields_only_and_original_remains_intact passed.
+  Jest jt-strict-results, jt-06-env and jt-r32-ui-polish passed, 23 tests.'
+- 'Inspected SetupModal, ShellSettingsTab and addDisclosureLink in source plus renderer tests. Setup and strict settings
+  offer the same versioned README link to #network-services-and-purpose. Strict settings hide the historical provider
+  controls; the legacy CLI provider and historical README are identified in the current README. engine/BOOTSTRAP.md covers
+  version-matched installation, upgrade and rollback. This is an independent source and fixture review; real desktop/sync,
+  clipboard-manager behavior and OS-specific install rehearsals are outside these observations.'
+- Rechecked the final commit and reran T-CLI-09..11, native telemetry ordering test PT-16 (four combined tests passed)
+  and three Jest suites (23 passed). Source-level MAN-02; a separate bundle inspection can add its artifact id and hashes.
+- Engine initialization sets ORT_DISABLE_TELEMETRY before loading ONNX Runtime and calls the native Python disable_telemetry_events
+  API before Core creates inference sessions. Shell also sets the pre-import flag for all children. Searched shell and
+  engine production callsites for remote clients; network-capable provider dispatch is confined to explicit legacy mode.
+  Compared with ONNX Runtime official Windows telemetry guidance at https://onnxruntime.ai/docs/get-started/with-c.html#telemetry
+  .
+verdict: PASS

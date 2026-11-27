@@ -1,0 +1,19 @@
+{
+  "reviewer": "privacy-peer/codex/gpt-6",
+  "date": "2026-11-28",
+  "commit": "5cf5d6f214ee04a75b6f44f5a0bab1e48aa65016",
+  "evidence": [
+    "Read the official 0.3.10 versioned PyPI JSON and matched sizes and SHA-256 against both reviewed local copies of the published bytes. markitdown_gc-0.3.10-py3-none-any.whl: 145491 bytes, 73f6f585b4a9af5b909670456af2ab6d6a9d924fc22edda2f129a3432d5cdf7b. markitdown_gc-0.3.10.tar.gz: 118325 bytes, c6ac4735c15b1a09a70e6b0c69c6c4dcf7d4b6c8bb099f360046940f3bddc5d4. https://pypi.org/pypi/markitdown-gc/0.3.10/json",
+    "Read wheel markitdown_gc-0.3.10.dist-info/METADATA and sdist markitdown_gc-0.3.10/PKG-INFO. Both name markitdown-gc version 0.3.10, License-Expression MIT and License-File LICENSE plus ThirdPartyNotices.md. Wheel .dist-info/licenses/ and sdist package root actually contain both files.",
+    "Both LICENSE copies are byte-identical (SHA-256 c2cfccb812fe482101a8f04597dfc5a9991a6b2748266c47ac91b6a5aae15383), with Microsoft copyright, MIT permission, preservation requirement, and warranty disclaimer. Both ThirdPartyNotices.md files are byte-identical (63e3b6f993facc3954aac2c9cee9f64eacde26102900ddb6ecf8a5f5a1701831), identify incorporated dwml files and formatting changes, and include the Apache License 2.0 text. engine/pyproject.toml requires markitdown-gc>=0.3.10,<0.4. This peer check covers the published Core distributions."
+  ],
+  "verdict": "PASS",
+  "package": "markitdown-gc",
+  "version": "0.3.10",
+  "source": "https://pypi.org/pypi/markitdown-gc/0.3.10/json",
+  "artifacts": [],
+  "install_reports": [],
+  "checks": {
+    "artifact_licenses": "PASS"
+  }
+}

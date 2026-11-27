@@ -1,0 +1,90 @@
+{
+  "reviewer": "privacy-peer/codex/gpt-6",
+  "date": "2026-11-28",
+  "commit": "5cf5d6f214ee04a75b6f44f5a0bab1e48aa65016",
+  "evidence": [
+    "Independently compared all six uses with the section 4 table across .github/workflows/ci.yml, evidence.yml and release.yml. GitHub REST public repository owner.login was actions and GET /repos/actions/{name}/commits/{release-tag} resolved to the listed 40-hex SHA for all six. https://github.com/actions",
+    "CI push, pull_request and reusable tests have contents:read. Dispatch-only evidence adds actions:read to fetch cross-run receipts. All checkouts disable persisted credentials. Ordinary release jobs use read scopes. Only release.attest requests OIDC and attestation writes; only release.publish requests contents:write, downstream of acceptance. Reviewed job steps, effective scopes and artifact destinations."
+  ],
+  "verdict": "PASS",
+  "actions": [
+    {
+      "action": "actions/checkout",
+      "sha": "3d3c42e5aac5ba805825da76410c181273ba90b1",
+      "checks": {
+        "ownership": "PASS",
+        "workflow_permissions": "PASS"
+      },
+      "evidence": [
+        "https://api.github.com/repos/actions/checkout (owner.login actions), https://api.github.com/repos/actions/checkout/commits/v7.0.1 (3d3c42e5aac5ba805825da76410c181273ba90b1)",
+        "Every checkout in CI, evidence and release sets persist-credentials:false. Read permits fetch. The two jobs with write permissions use them for provenance and release publication respectively."
+      ],
+      "verification": {}
+    },
+    {
+      "action": "actions/setup-python",
+      "sha": "6d4fd22b20465ccc0f7354476588e8df7c9ca0e0",
+      "checks": {
+        "ownership": "PASS",
+        "workflow_permissions": "PASS"
+      },
+      "evidence": [
+        "https://api.github.com/repos/actions/setup-python (owner.login actions), https://api.github.com/repos/actions/setup-python/commits/v7.1.0 (6d4fd22b20465ccc0f7354476588e8df7c9ca0e0)",
+        "Used in CI tests, evidence preparation and read-only release verification; no packaging credentials or publishing permissions were supplied to setup-python."
+      ],
+      "verification": {}
+    },
+    {
+      "action": "actions/setup-node",
+      "sha": "949feb2413d6458794dcd2491c4babbbce0c15c1",
+      "checks": {
+        "ownership": "PASS",
+        "workflow_permissions": "PASS"
+      },
+      "evidence": [
+        "https://api.github.com/repos/actions/setup-node (owner.login actions), https://api.github.com/repos/actions/setup-node/commits/v7.1.0 (949feb2413d6458794dcd2491c4babbbce0c15c1)",
+        "Only ci.candidate and ci.jest set up Node to build/test the shell, both with contents:read."
+      ],
+      "verification": {}
+    },
+    {
+      "action": "actions/upload-artifact",
+      "sha": "cf430e030ddbb5b0abf93d22962f4752f3646cd9",
+      "checks": {
+        "ownership": "PASS",
+        "workflow_permissions": "PASS"
+      },
+      "evidence": [
+        "https://api.github.com/repos/actions/upload-artifact (owner.login actions), https://api.github.com/repos/actions/upload-artifact/commits/v7.0.2 (cf430e030ddbb5b0abf93d22962f4752f3646cd9)",
+        "Uploads to named same-run artifacts via Actions artifact service. CI uploads use contents:read; cross-run evidence has contents/actions reads. No extra repository write permission is granted for uploads. release.attest uses its job-level writes to create attestations."
+      ],
+      "verification": {}
+    },
+    {
+      "action": "actions/download-artifact",
+      "sha": "9000827ccba6bdab643e8b6fd33ac0654aef8333",
+      "checks": {
+        "ownership": "PASS",
+        "workflow_permissions": "PASS"
+      },
+      "evidence": [
+        "https://api.github.com/repos/actions/download-artifact (owner.login actions), https://api.github.com/repos/actions/download-artifact/commits/v8.0.2 (9000827ccba6bdab643e8b6fd33ac0654aef8333)",
+        "CI and release reconstruct known named/patterned artifacts. Cross-run downloads of named-release-evidence in verify-release and accept-release use actions:read. No PAT supplied. publish downloads gated assets from its own run."
+      ],
+      "verification": {}
+    },
+    {
+      "action": "actions/attest",
+      "sha": "1e69f48acb82d1966a394da916b4c1698aa569d6",
+      "checks": {
+        "ownership": "PASS",
+        "workflow_permissions": "PASS"
+      },
+      "evidence": [
+        "https://api.github.com/repos/actions/attest (owner.login actions), https://api.github.com/repos/actions/attest/commits/v4.2.2 (1e69f48acb82d1966a394da916b4c1698aa569d6)",
+        "Only release.attest runs this action. It receives each verified pre-frozen file under build/candidate; contents:read, id-token:write and attestations:write are job-scoped. No contents write, registry login, or package push."
+      ],
+      "verification": {}
+    }
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "reviewer": "language-peer/codex/gpt-6",
+  "date": "2026-11-27",
+  "commit": "5cf5d6f214ee04a75b6f44f5a0bab1e48aa65016",
+  "evidence": [
+    "Identity. Compared manifest.json against the published 2.0.2 source at b9cc63551e79e8ee0038fbadcdadd610f3206a65 and the public directory entry. The existing id markitdown-flow, display name MarkItDown Flow and author greatgc-flow match. https://community.obsidian.md/plugins/markitdown-flow and https://docs.obsidian.md/Reference/Manifest",
+    "Versions. manifest.json, shell/package.json and engine/pyproject.toml declare 2.1.0. versions.json appends 2.1.0 mapped to 1.14.4 and retains all prior mappings. The manifest minimum matches the packaged shell development API 1.14.4. Candidate metadata reviewed under https://docs.obsidian.md/Reference/Versions and https://docs.obsidian.md/Plugins/Releasing/Submit%20your%20plugin",
+    "Listing text. manifest.json has an 81-character action sentence ending in a period and correctly capitalizes Markdown and OCR. docs/renewal/LISTING_COPY.md and docs/renewal/25_PACKAGING.md match the manifest. The About text describes direct conversion, manual external handoff, partial export and optional photo information. https://docs.obsidian.md/community-directory/submission-requirements-for-plugins",
+    "Commands. shell/src/ui/commands.ts retains the six established local IDs. shell/src/main.ts adds inspect-documents, extract-existing-text and reopen-document-results. I checked all nine names and IDs for host-added prefix, uniqueness and agreement with the documented operations. https://docs.obsidian.md/community-directory/submission-requirements-for-plugins",
+    "Platform. manifest.json declares isDesktopOnly true. shell/src/main.ts checks Platform.isDesktop before Node access and command registration. README.md describes the separate virtual environment, interpreter and desktop host. https://docs.obsidian.md/Reference/Manifest",
+    "Public disclosures. README.md#network-services-and-purpose identifies the release host and package index and explains local strict workflows. #outside-vault-access, #telemetry, #account-api-key-and-cost and #migration-and-limits disclose external paths, retained records, the clipboard, optional tools, legacy provider transmission, accounts, costs and potentially secret-bearing backups. #development-and-license and LICENSE preserve Ethan Troy’s MIT attribution. The README links version-pinned historical CLI details. https://docs.obsidian.md/community-directory/developer-policies",
+    "I reviewed the candidate and public submission guidance as a named model-based peer. Owner authentication, publication freshness, authenticated scanner status and install-via-listing are reserved for the publication and post-release checks. https://docs.obsidian.md/Plugins/Releasing/Submit%20your%20plugin"
+  ],
+  "verdict": "PASS",
+  "listing": {
+    "id": "markitdown-flow",
+    "version": "2.1.0"
+  },
+  "checks": {
+    "identity": "PASS",
+    "manifest_versions": "PASS",
+    "description": "PASS",
+    "commands": "PASS",
+    "desktop_only": "PASS",
+    "readme_disclosures": "PASS"
+  }
+}

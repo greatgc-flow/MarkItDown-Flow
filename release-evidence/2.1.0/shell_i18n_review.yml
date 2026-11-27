@@ -1,0 +1,47 @@
+id: MAN-03
+reviewer: language-peer/codex/gpt-6
+date: '2026-11-27'
+commit: 5cf5d6f214ee04a75b6f44f5a0bab1e48aa65016
+inputs:
+- Exact Git archive of 5cf5d6f214ee04a75b6f44f5a0bab1e48aa65016. Candidate docs/renewal/10_SPEC.md §7.5 active Code cells,
+  docs/renewal/20_SHELL.md §6, shell/src/pure/codes.ts, shell/src/pure/i18n.ts and shell/src/pure/settings.ts.
+- Strict UI and dispatch in shell/src/ui/strict-results.ts, coordinator.ts, progress.ts, setup-modal.ts, settings-tab.ts
+  and shell/src/main.ts. Consent, results, history and drop modals for keyed interpolation. engine/src/mdflow/strict_workflow.py,
+  source_actions.py and the strict result stream.
+- Named review criteria and validators in docs/renewal/MANUAL_REVIEW_GUIDE.md, docs/renewal/manual-templates/shell_i18n_review.yml
+  and tools/trace.py.
+checks:
+- id: reviewer_reads_english_and_korean
+  result: PASS
+- id: english_meaning_correct_for_every_row
+  result: PASS
+- id: korean_meaning_correct_for_every_row
+  result: PASS
+- id: korean_equivalent_to_english_for_every_row
+  result: PASS
+- id: placeholders_and_parameters_preserved_in_both_languages
+  result: PASS
+evidence:
+- I compared every English/Korean pair side by side. The active §7.5 Code cells produce 54 distinct engine diagnostics.
+  E_PROVIDER_CONFIG appears in both startup and runtime scopes. All 54 have both translations. The 241 other keyed messages
+  include the unknown-engine fallback and shell diagnostics, migration, consent, classification, progress, results, history,
+  setup, settings and commands. Total 295 pairs. Technical names and counts retain the same meaning.
+- I checked all 24 parameterized rows, 39 argument occurrences per language, against their caller objects and the literal
+  replacement callback. Examples include consent.scope, whose Korean wording places total before selected, six progress.details
+  values and the four forms of file counts in results/consent/history/drop. I executed formatMessage over all 590 locale
+  rows with distinct English/Korean, dollar and brace sentinel values. All 78 argument occurrences were preserved literally
+  in one pass.
+- I inspected all 34 paired strict result/status/reason/role/area labels, nine localized ExifTool choice labels and the
+  inline controls. Complete/eligible/excluded, direct text, external OCR, partial or missing coverage, interruption,
+  re-use, and output-path conflict convey the corresponding engine outcomes. Measured and inspected pages retain distinct
+  counts. GPS, author and device identifiers start unchecked. Literal file paths, user-selected metadata values and stable
+  export field IDs remain intact.
+- I traced the new migration wording to strict output paths, local operation and the explicit external transcription
+  workflow. Both languages distinguish the .md complete output and .text-only.md partial export, correctly scope LibreOffice
+  to the legacy CLI, and use release-neutral audio/video wording. Preview and extraction have distinct translated progress
+  phases; retry preserves the requested operation, digest and archive member.
+- At this SHA I ran the candidate Jest suites jt-shl-19-01-i18n, jt-strict-results and jt-16-cancel-ui against its archived
+  source on Node 24.22.3. All 26 tests passed, including the two preview/extract retry routes and preview with an invalid
+  output setting. This is an independent bilingual model-based source review and focused harness execution. An installed
+  Obsidian desktop rehearsal belongs to MAN-04.
+verdict: PASS
