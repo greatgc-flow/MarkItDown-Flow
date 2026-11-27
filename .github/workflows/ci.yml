@@ -25,7 +25,7 @@ jobs:
           architecture: x64
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: '24.22.2'
+          node-version: '24.22.3'
       - run: python -m pip install "--only-binary=:all:" -r engine/requirements-build.txt
       - name: Build candidate once (publication uses these exact bytes)
         run: python tools/build_release.py --tag "$(python -c "import json;print(json.load(open('manifest.json'))['version'])")"
@@ -160,7 +160,7 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: '24.22.2'
+          node-version: '24.22.3'
           architecture: ${{ matrix.os == 'macos-26' && 'arm64' || 'x64' }}
       - name: Obsidian static style rule
         if: matrix.os == 'ubuntu-24.04'

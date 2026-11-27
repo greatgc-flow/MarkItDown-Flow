@@ -1,6 +1,6 @@
 # Core input to tools/build_engine.py reference compilation, not a full closure.
-# PyPI 2026-11-11: https://pypi.org/pypi/markitdown-gc/0.3.9/json
+# PyPI 2026-11-27: https://pypi.org/pypi/markitdown-gc/0.3.10/json
 # Wheel, then sdist; release installs still require --only-binary=:all:.
-markitdown-gc==0.3.9 \
-    --hash=sha256:c6c13487fc3b5f4e52331e2f584a7bf5efb0c38132eb53815e5a69cc035733e6 \
-    --hash=sha256:4d0fdc6784f6dde250be518a460824967bea25d267d38219691cf9d7df20d251
+markitdown-gc==0.3.10 \
+    --hash=sha256:73f6f585b4a9af5b909670456af2ab6d6a9d924fc22edda2f129a3432d5cdf7b \
+    --hash=sha256:c6ac4735c15b1a09a70e6b0c69c6c4dcf7d4b6c8bb099f360046940f3bddc5d4

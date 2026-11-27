@@ -11,7 +11,7 @@ dependencies or updates.
 Install a supported Python with venv support yourself: [Windows/macOS downloads](https://www.python.org/downloads/),
 or [Ubuntu Python documentation](https://documentation.ubuntu.com/ubuntu-for-developers/howto/python-setup/).
 Use Python 3.10-3.14 after the corresponding release target checks pass; 3.15 is
-experimental. Only x64 targets are claimed by this baseline. On Ubuntu, install
+experimental. The release matrix covers Windows and Linux x64 and macOS arm64. On Ubuntu, install
 the matching venv prerequisite through your OS administrator/package manager.
 
 Windows PowerShell (replace both quoted directory paths):

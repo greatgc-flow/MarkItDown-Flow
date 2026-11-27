@@ -24,8 +24,8 @@ def test_T_META_91_m3_reference_core_and_normative_dependency_hook_are_current()
     reference = (REPO / 'engine/requirements-reference.txt').read_text(encoding='utf-8')
     assert 'requirements-reference.txt' in builder and 'Core 0.3.10' in builder
     assert 'markitdown-gc==0.3.10' in reference
-    assert '--hash=sha256:c6c13487fc3b5f4e52331e2f584a7bf5efb0c38132eb53815e5a69cc035733e6' in reference
-    assert '--hash=sha256:4d0fdc6784f6dde250be518a460824967bea25d267d38219691cf9d7df20d251' in reference
+    assert '--hash=sha256:73f6f585b4a9af5b909670456af2ab6d6a9d924fc22edda2f129a3432d5cdf7b' in reference
+    assert '--hash=sha256:c6ac4735c15b1a09a70e6b0c69c6c4dcf7d4b6c8bb099f360046940f3bddc5d4' in reference
     bootstrap = (REPO / 'engine/BOOTSTRAP.md').read_text(encoding='utf-8')
     packaging = (REPO / 'docs/renewal/25_PACKAGING.md').read_text(encoding='utf-8')
     assert 'Core 0.3.10' in bootstrap and 'exact Core 0.3.10' in packaging
