@@ -3,6 +3,7 @@ import argparse
 import json
 import os
 from pathlib import Path
+import re
 import subprocess
 import tempfile
 from build_release import SUBJECTS, sha, verify, versions
@@ -10,6 +11,13 @@ from trace import publication_problems
 
 def gh(*args, **kwargs):
     return subprocess.run(['gh', *map(str, args)], check=True, **kwargs)
+
+def release_notes(tag: str) -> str:
+    changelog = (Path(__file__).resolve().parents[1] / "CHANGELOG.md").read_text(encoding="utf-8")
+    section = re.search(rf"^## {re.escape(tag)}(?= |$)[^\n]*\n(.*?)(?=^## |\Z)", changelog, re.M | re.S)
+    if section is None or not section[1].strip():
+        raise ValueError(f"Missing changelog entry for {tag}")
+    return f"MarkItDown Flow {tag}\n\n{section[1].strip()}\n"
 
 def main():
     p = argparse.ArgumentParser(description=__doc__)
@@ -29,13 +37,7 @@ def main():
     version = subprocess.check_output(['gh', '--version'], text=True).splitlines()[0]
     candidate['verifier'] = {'gh': version, 'source_digest': commit, 'signer_workflow': candidate['signer_workflow']}
     (folder / 'release-candidate.json').write_text(json.dumps(candidate, indent=2) + '\n')
-    notes = (f'MarkItDown Flow {tag}\n\n'
-             'Fix the Obsidian directory review error in the file and folder picker. '
-             'Link settings to privacy disclosures and disable native 1DS telemetry before engine startup. '
-             'Add official static-style lint and picker regression coverage. '
-             'Existing compatible 2.0.x engines continue to work. '
-             'For fresh installs and upgrades from 1.x, follow BOOTSTRAP.md and the migration instructions '
-             'in README.md. Retain the sanitized v1 snapshot and verified 1.0.8 assets for rollback.\n')
+    notes = release_notes(tag)
     with tempfile.TemporaryDirectory(prefix='mdflow-release-') as temp:
         work = Path(temp)
         body = work / 'notes.md'

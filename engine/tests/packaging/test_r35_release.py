@@ -172,6 +172,11 @@ def test_PT_28_r35_gate_seals_deferral_publisher_enforces_it_and_rehearsal_stays
     publisher = load_py(REPO / 'tools/publish_release.py', 'r35_publisher')
     schema = load_py(REPO / 'tools/release_evidence.py', 'r35_schema')
     tests = load_py(REPO / 'engine/tests/packaging/test_pt_evidence.py', 'r35_evidence_tests')
+    notes = publisher.release_notes("2.1.0")
+    assert "Upgrade both the shell and engine" in notes and "markitdown-gc 0.3.10" in notes
+    assert "Existing 2.0.x engines remain compatible" not in notes
+    with pytest.raises(ValueError, match="changelog"):
+        publisher.release_notes("0.0.0")
     # The rollback observation belongs to the owner's real-app MAN-04, not this tooling gate.
     try:
         tests.test_PT_20_rollback_rehearsal_schema_validator(schema, tmp_path)
