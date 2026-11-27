@@ -53,9 +53,9 @@ def test_T_CLI_02_version_contract_and_rejected_core_before_input_read(tmp_path,
     proc = cli_probe.run("version", expected=0)
     value = json.loads(proc.stdout)
     assert set(value) == {"mdflow", "markitdown-gc", "pypdfium2", "pillow", "python", "platform",
-                          "protocol", "triage_schema", "exiftool", "exiftool_status", "exiftool_source",
+                          "protocol", "triage_schema", "strict_policy", "report_schema", "exiftool", "exiftool_status", "exiftool_source",
                           "libreoffice", "libreoffice_status", "libreoffice_source"}
-    assert value["protocol"] == value["triage_schema"] == 1
+    assert (value["protocol"], value["triage_schema"], value["strict_policy"], value["report_schema"]) == (2, 1, "strict-v1", 2)
     for field in ("mdflow", "markitdown-gc", "pypdfium2", "pillow", "python", "platform"):
         assert isinstance(value[field], str) and value[field]
     for package in ("markitdown-gc", "pypdfium2", "pillow"):
@@ -87,7 +87,7 @@ builtins.open = _track_open(builtins.open)
 io.open = _track_open(io.open)
 os.open = _track_open(os.open)
 '''
-    rejected = cli_probe.run("run", source, "-o", tmp_path / "out", prelude=prelude, expected=1)
+    rejected = cli_probe.run("legacy-run", source, "-o", tmp_path / "out", prelude=prelude, expected=1)
     assert "E_CORE_VERSION" in rejected.stdout + rejected.stderr
     assert "Traceback" not in rejected.stderr and not touched.exists()
     assert not (tmp_path / "out").exists() and list(cli_probe.temp.iterdir()) == []
@@ -138,13 +138,13 @@ def test_T_CLI_04_invalid_options_exit_one_with_usage_before_processing(tmp_path
     source = tmp_path / "source.txt"
     source.write_bytes(gen.txt_utf8())
     out, cache = tmp_path / "out", tmp_path / "cache"
-    proc = cli_probe.run("run", source, "-o", out, "--cache", cache, *extra, expected=1)
+    proc = cli_probe.run("legacy-run", source, "-o", out, "--cache", cache, *extra, expected=1)
     assert "E_USAGE" in proc.stdout + proc.stderr
     assert "Traceback" not in proc.stderr
     assert not list(out.rglob("*.md")) and not list(cache.rglob("*"))
     assert not cli_probe.attempts.exists()
     if extra == ["--unknown"]:
-        for command in (("run", source), ("run", "-o", out), ("plan",), ("classify",), ("unknown-command",)):
+        for command in (("legacy-run", source), ("legacy-run", "-o", out), ("plan",), ("classify",), ("unknown-command",)):
             invalid = cli_probe.run(*command, expected=1)
             assert "E_USAGE" in invalid.stdout + invalid.stderr and "Traceback" not in invalid.stderr
 
@@ -156,7 +156,7 @@ def test_T_CLI_05_real_module_run_progress_order_report_file_and_quiet_mode(tmp_
     source = tmp_path / "한글 mixed.pdf"
     source.write_bytes(gen.pdf_mixed())
     out, cache, report = tmp_path / "out", tmp_path / "cache", tmp_path / "report.json"
-    args = ("run", source, "-o", out, "--cache", cache, "--report", report)
+    args = ("legacy-run", source, "-o", out, "--cache", cache, "--report", report)
     proc = cli_probe.run(*args, "--progress", "jsonl")
     value = cli_probe.report(proc, 0)
     assert json.loads(report.read_text(encoding="utf-8")) == value
@@ -224,7 +224,7 @@ def _exit_precedence(tmp_path, gen, cli_probe, mock_http):
     root.mkdir()
     (root / "a.png").write_bytes(gen.png_noise(seed=401))
     (root / "b.png").write_bytes(gen.png_noise(seed=402))
-    args = ("run", root, "-o", tmp_path / "precedence-out", "--cache", tmp_path / "precedence-cache",
+    args = ("legacy-run", root, "-o", tmp_path / "precedence-out", "--cache", tmp_path / "precedence-cache",
             "--provider", "openai-compatible", "--model", "test-model", "--progress", "jsonl")
     env = {"MDFLOW_API_KEY": "precedence-secret", "MDFLOW_BASE_URL": mock_http.base_url}
     initial = cli_probe.run(*args, env=env, allowed_hosts=("127.0.0.1",))
@@ -251,7 +251,7 @@ def _exit_precedence(tmp_path, gen, cli_probe, mock_http):
 @pytest.mark.req("REQ-SEC-10")
 @pytest.mark.cov("S0", "FM9")
 def test_T_SEC_10_trust_command_help_discloses_user_privileges_per_unit(cli_probe):
-    proc = cli_probe.run("run", "--help", expected=0)
+    proc = cli_probe.run("legacy-run", "--help", expected=0)
     text = " ".join(proc.stdout.split())
     assert "--trust-command" in text
     assert re.search(r"(?i)(user.s|your|current user.s) privileges", text)

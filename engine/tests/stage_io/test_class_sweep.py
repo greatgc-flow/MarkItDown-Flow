@@ -266,7 +266,7 @@ def test_T_GEN_85_class_sweep_reaches_exactly_the_stages_the_spec_prescribes(
     egress = {p for p, f in expect.items() if f["eligible"]}
     provider = ("--provider", "openai-compatible", "--model", "sweep-model")
     common = (root, "--cache", cache, *provider, *case.get("args", ()))
-    run_args = ("run", *common, "-o", out, "--progress", "jsonl")
+    run_args = ("legacy-run", *common, "-o", out, "--progress", "jsonl")
     sent_total = lambda: len(mock_http.requests)  # noqa: E731
 
     def check_run(report, label):

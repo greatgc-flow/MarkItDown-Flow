@@ -89,7 +89,7 @@ def test_T_GEN_02_core_outside_range_exits_one_before_any_file_is_read(tmp_path,
 
     def run(version, label):
         log = tmp_path / f"opened-{label}.json"
-        argv = cli_command("run", source.parent, "-o", tmp_path / f"out-{label}", "--cache", tmp_path / f"cache-{label}",
+        argv = cli_command("legacy-run", source.parent, "-o", tmp_path / f"out-{label}", "--cache", tmp_path / f"cache-{label}",
                            prelude=_PRELUDE.format(version=version, log=str(log)))
         done = subprocess.run(argv, cwd=tmp_path, env=env, capture_output=True, text=True, encoding="utf-8", timeout=120)
         opened = json.loads(log.read_text(encoding="utf-8")) if log.exists() else []

@@ -210,7 +210,7 @@ def process(data, sniff, mode, base, relative, original, original_hash, expected
     return row
 
 
-def run(paths, *, mode, out, emit, expected=None, exclude=()):
+def run(paths, *, mode, out, emit, expected=None, exclude=(), member=None):
     run_id = str(uuid.uuid4())
     common = dict(schema=SCHEMA, policy=POLICY, mode=mode, run_id=run_id)
     emit(dict(kind="header", **common))
@@ -236,6 +236,11 @@ def run(paths, *, mode, out, emit, expected=None, exclude=()):
                     items = [(m["sniff"], m["data"]) for m in expanded["members"]
                              if m["sniff"]["route"] != "CONTAINER" or barrier(m["sniff"])]
                     emit(dict(kind="container", path=sn["path"], members=len(items)))
+            if member:
+                selected = [(s, d) for s, d in items if s["path"] == sn["path"] + "/" + member]
+                if len(selected) != 1:
+                    raise OSError("Selected member disappeared")
+                items = selected
             for item, payload in items:
                 root = Path(paths[entry["root"]]).absolute()
                 folder = root if root.is_dir() else root.parent

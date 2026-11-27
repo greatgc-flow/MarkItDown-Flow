@@ -28,7 +28,7 @@ export interface VersionInfo {
   pillow: string;
   python: string;
   platform: string;
-  protocol: 1;
+  protocol: 1 | 2;
   triage_schema: 1;
   /**
    * Optional (R31): exiftool version text, or `null` when the engine reports none (its
@@ -82,7 +82,7 @@ export interface VersionPolicy {
   pypdfium2MaxExclusive: Semver;
   pillowMin: Semver;
   pillowMaxExclusive: Semver;
-  protocol: 1;
+  protocol: 1 | 2;
   triageSchema: 1;
 }
 
@@ -100,6 +100,11 @@ export const RELEASE_LOCK: VersionPolicy = {
   pillowMaxExclusive: [14, 0, 0],
   protocol: 1,
   triageSchema: 1,
+};
+
+export const STRICT_RELEASE_LOCK: VersionPolicy = {
+  ...RELEASE_LOCK, engineMin: [2, 1, 0], engineMaxExclusive: [2, 2, 0],
+  coreMin: [0, 3, 10], pypdfium2Min: [5, 15, 2], protocol: 2,
 };
 
 export type VersionGateReason =
@@ -195,6 +200,7 @@ export function evaluateVersionResponse(stdout: string, policy: VersionPolicy = 
   if (typeof raw.protocol !== 'number') return blocked('bad_type', 'protocol');
   if (typeof raw.triage_schema !== 'number') return blocked('bad_type', 'triage_schema');
   if (raw.protocol !== policy.protocol) return blocked('protocol', 'protocol');
+  if (policy.protocol === 2 && (raw.strict_policy !== 'strict-v1' || raw.report_schema !== 2)) return blocked('protocol', 'protocol');
   if (raw.triage_schema !== policy.triageSchema) return blocked('triage_schema', 'triage_schema');
   const info: VersionInfo = {
     mdflow: raw.mdflow as string,
@@ -203,7 +209,7 @@ export function evaluateVersionResponse(stdout: string, policy: VersionPolicy = 
     pillow: raw.pillow as string,
     python: raw.python as string,
     platform: raw.platform as string,
-    protocol: 1,
+    protocol: policy.protocol,
     triage_schema: 1,
   };
   // Optional tool status (R31 exiftool, R33 LibreOffice): a version string or null (the engine's `"unavailable"`

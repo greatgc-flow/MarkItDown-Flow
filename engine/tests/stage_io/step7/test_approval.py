@@ -10,7 +10,7 @@ def _remote(mock_http):
 
 
 def _args(root, tmp_path):
-    return ("run", root, "-o", tmp_path / "out", "--cache", tmp_path / "cache",
+    return ("legacy-run", root, "-o", tmp_path / "out", "--cache", tmp_path / "cache",
             "--provider", "openai-compatible", "--model", "test-model", "--cost-hint", "0.001",
             "--progress", "jsonl")
 

@@ -1,9 +1,7 @@
 """Explicit actions on a selected, digest-bound original or archive member."""
 import hashlib
-import json
 import os
 from pathlib import Path
-import tempfile
 
 from . import exiftool, orchestrate, sniff_io
 from .strict_workflow import LIMIT, barrier, digest, publish
@@ -54,17 +52,8 @@ def action(args):
         tool = exiftool.detect(exiftool.CONVERT_TIMEOUT_S)
         if not tool["available"]:
             return {"status": tool["status"], "fields": {}}
-        from markitdown.tools import run_tool
-        with tempfile.TemporaryDirectory(prefix="mdflow-photo-") as folder:
-            snapshot = Path(folder) / ("photo." + sniff["format"])
-            snapshot.write_bytes(data)
-            response = run_tool([tool["path"], "-j", *["-" + f for f in args.field], str(snapshot)],
-                                cwd=folder, timeout=exiftool.CONVERT_TIMEOUT_S)
-        if response.returncode:
-            return {"status": "unusable", "fields": {}}
-        row = json.loads(response.stdout)[0]
-        fields = {k: row[k] for k in args.field if isinstance(row.get(k), (str, int, float))}
-        return {"status": "ok" if fields else "no_metadata", "fields": fields}
+        from markitdown.photo_metadata import read_photo_info
+        return read_photo_info(data, fields=args.field, executable=tool["path"], timeout=exiftool.CONVERT_TIMEOUT_S)
     except (OSError, TimeoutError):
         return {"status": "read_failed"}
     except (ValueError, KeyError, IndexError) as exc:

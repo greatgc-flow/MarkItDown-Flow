@@ -1,9 +1,9 @@
 {
   "id": "markitdown-flow",
   "name": "MarkItDown Flow",
-  "version": "2.0.2",
+  "version": "2.1.0",
   "minAppVersion": "1.14.4",
-  "description": "Convert local documents to Markdown with OCR planning and selective transcription.",
+  "description": "Convert text documents to Markdown and identify originals that need external OCR.",
   "author": "greatgc-flow",
   "authorUrl": "https://github.com/greatgc-flow",
   "isDesktopOnly": true

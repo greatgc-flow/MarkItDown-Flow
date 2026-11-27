@@ -34,9 +34,9 @@ export interface BootstrapPaths {
 }
 
 /** Release wheel attached to the GitHub release (R27). */
-export const ENGINE_WHEEL = 'mdflow-2.0.2-py3-none-any.whl';
+export const ENGINE_WHEEL = 'mdflow-2.1.0-py3-none-any.whl';
 /** Declared Core policy, visible in the example even though the wheel metadata already declares it. */
-export const CORE_REQUIREMENT = 'markitdown-gc>=0.3.9,<0.4';
+export const CORE_REQUIREMENT = 'markitdown-gc>=0.3.10,<0.4';
 
 export interface SetupDiagnostics {
   enginePython: string | null;
@@ -76,8 +76,8 @@ export interface SetupDeps {
 }
 
 const DEFAULT_PATHS: Record<HostPlatform, BootstrapPaths> = {
-  win32: { downloadDir: 'C:\\Downloads\\mdflow-2.0.2', venvDir: 'C:\\mdflow-venvs\\2.0.2', bootstrapPython: 'py -3.14' },
-  posix: { downloadDir: '/path/to/mdflow-2.0.2', venvDir: '/path/to/mdflow-venvs/2.0.2', bootstrapPython: 'python3.14' },
+  win32: { downloadDir: 'C:\\Downloads\\mdflow-2.1.0', venvDir: 'C:\\mdflow-venvs\\2.1.0', bootstrapPython: 'py -3.14' },
+  posix: { downloadDir: '/path/to/mdflow-2.1.0', venvDir: '/path/to/mdflow-venvs/2.1.0', bootstrapPython: 'python3.14' },
 };
 
 /**

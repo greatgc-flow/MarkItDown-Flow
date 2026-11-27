@@ -447,7 +447,7 @@ def test_PT_08_packaged_engine_batch_consent_hash_stability_and_os_cancellation(
     slow = ["--provider", "command", "--command", gen_io.command_template(sleeper, shlex.quote(pidfile.as_posix())),
             "--command-egress", "true", "--trust-command", "--model", "pt-sleep", "--cache", str(base / "cache2")]
     slow_plan = json_objects(packaged_engine.run("plan", str(first / "sub"), *slow).stdout)[0]
-    spec = packaged_engine.popen_args(["run", str(first / "sub"), "-o", str(base / "out2"), *slow, "--yes",
+    spec = packaged_engine.popen_args(["legacy-run", str(first / "sub"), "-o", str(base / "out2"), *slow, "--yes",
                                        slow_plan["plan_hash"]], env={"MDFLOW_TIMEOUT_S": "60"})
     extra = {"creationflags": subprocess.CREATE_NEW_PROCESS_GROUP} if os.name == "nt" else {}
     proc = subprocess.Popen(**spec, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, encoding="utf-8", **extra)

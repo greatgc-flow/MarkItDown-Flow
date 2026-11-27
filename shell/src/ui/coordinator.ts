@@ -14,6 +14,7 @@ import { EngineRun, type EngineResult } from '../process/engine-process';
 import { APPROVED_BY_MODAL, type Authorization, buildSpawnRequest, engineWorkingDirectory, type JobSnapshot, renderYesFile, snapshotJob } from '../process/launcher';
 import type { RotatingLog } from '../process/log';
 import type { Clock, FileSystemOps, HostPlatform, Spawner } from '../process/types';
+import { runStrict, type SourceAction, type StrictResult } from '../process/strict';
 import type { VersionGate } from '../process/version-gate';
 import { buildConsentView, type ConsentDecision, type ConsentViewModel } from './consent-modal';
 import { type DirEntry, resolveDestination, selectImmediateFiles } from './output-path';
@@ -24,6 +25,7 @@ export type EntryPoint = 'command' | 'ribbon' | 'context-menu' | 'drop';
 
 export interface Selection {
   kind: 'files' | 'folder';
+  action?: SourceAction;
   /** Absolute paths exactly as selected, in selection order. */
   paths: readonly string[];
 }
@@ -42,6 +44,7 @@ export type SubmitResult =
   | { accepted: false; diagnostic: 'shell.BUSY' | 'shell.CANCELLED' | 'shell.DESTINATION' | 'shell.RUNTIME' | 'shell.SETTINGS' };
 
 export interface CoordinatorDeps {
+  strictResults?: (result: StrictResult, snapshot: JobSnapshot, action: SourceAction) => void;
   spawner: Spawner;
   fs: FileSystemOps;
   spoolFs: SpoolFs;
@@ -115,6 +118,7 @@ export class ShellCoordinator {
   /** Set by `cancel()`/`dispose()`; a pending admission re-checks it after each await and never launches (M4-V01). */
   private admissionCancelled = false;
   private cancelled = false;
+  private strictAbort: AbortController | null = null;
   private disposed = false;
   private engine: EngineRun<'plan'> | EngineRun<'report'> | null = null;
   private cancelWaiters: (() => void)[] = [];
@@ -254,11 +258,12 @@ export class ShellCoordinator {
     }
 
     // Remote work without an inherited key degrades to provider none (REQ-SHL-06).
-    const availability = providerAvailability(settings, this.deps.hostEnv);
+    const strictSettings = this.deps.strictResults ? {...settings, provider: defaultSettings().provider} : settings;
+    const availability = providerAvailability(strictSettings, this.deps.hostEnv);
     if (availability.remoteBlocked && availability.guidanceKey) this.deps.notify(availability.guidanceKey);
     const effective: SettingsV2 = availability.effectiveProvider === 'none' && settings.provider.name !== 'none'
       ? { ...settings, provider: defaultSettings().provider }
-      : settings;
+      : strictSettings;
 
     let snapshot: JobSnapshot;
     try {
@@ -270,7 +275,8 @@ export class ShellCoordinator {
     this.isActive = true;
     this.cancelled = false;
     this.deps.progress?.begin(snapshot.provider.name !== 'none' ? 'plan' : 'run');
-    this.job = this.runJob(snapshot, entry).finally(() => {
+    const execute = this.deps.strictResults ? this.strictJob(snapshot, selection.action ?? {mode:'run'}) : this.runJob(snapshot, entry);
+    this.job = execute.finally(() => {
       this.isActive = false;
       this.engine = null;
       this.deps.progress?.end();
@@ -291,6 +297,7 @@ export class ShellCoordinator {
   cancel(): void {
     this.cancelled = true;
     this.admissionCancelled = true;
+    this.strictAbort?.abort();
     this.engine?.cancel();
     for (const waiter of this.cancelWaiters.splice(0)) waiter();
   }
@@ -353,6 +360,22 @@ export class ShellCoordinator {
       success: outcome === 'complete',
       outcome,
     });
+  }
+
+  private async strictJob(snapshot: JobSnapshot, action: SourceAction): Promise<JobReport> {
+    const report: JobReport = {snapshot, plan:null, run:null, decision:null, pendingShown:false};
+    const controller = new AbortController();
+    this.strictAbort = controller;
+    try {
+      if (!await this.destinationStillValid(snapshot) || controller.signal.aborted) return report;
+      const result = await runStrict(this.deps.spawner, snapshot, this.deps.hostEnv, action, controller.signal);
+      if (action.mode !== 'preview') await this.record(snapshot, result.status === 'complete' ? 'complete' :
+        result.status === 'interrupted' ? 'cancelled' : 'partial_failure');
+      if (!this.disposed) this.deps.strictResults?.(result, snapshot, action);
+    } catch {
+      if (!this.disposed) this.deps.notify('shell.PROTOCOL');
+    } finally { this.strictAbort = null; }
+    return report;
   }
 
   private async runJob(snapshot: JobSnapshot, entry: EntryPoint): Promise<JobReport> {

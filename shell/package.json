@@ -1,6 +1,6 @@
 {
   "name": "markitdown-flow-shell",
-  "version": "2.0.2",
+  "version": "2.1.0",
   "private": true,
   "description": "Obsidian shell for MarkItDown-Flow v2 (clean-room, 20_SHELL.md).",
   "license": "MIT",
@@ -19,13 +19,12 @@
   },
   "devDependencies": {
     "@types/jest": "30.0.0",
-    "@types/node": "24.3.0",
+    "@types/node": "24.19.4",
     "esbuild": "0.28.2",
     "jest": "30.5.2",
     "jest-junit": "17.0.0",
     "obsidian": "1.14.4",
     "ts-jest": "29.4.15",
-    "typescript": "5.9.2"
-  },
-  "_comment": "Pins per orchestrator registry check 2026-11-09. typescript stays 5.9.x because ts-jest 29.x declares peer typescript >=4.3 <6 (TS 7 unsupported). @types/node stays on the 24.x line to match the pinned Node 24 runtime (REQ-PKG-09); @types/jest 30.0.0 is the latest 30.x line matching jest 30. obsidian 1.14.4 types => manifest minAppVersion 1.14.4."
+    "typescript": "6.0.3"
+  }
 }

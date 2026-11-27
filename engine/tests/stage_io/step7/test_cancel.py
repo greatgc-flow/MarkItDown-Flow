@@ -58,7 +58,7 @@ def test_T_GEN_09_cooperative_cancel_reports_130_removes_temp_and_command_child(
         "time.sleep(1)\nprint('completed mock request')\n", encoding="utf-8")
     template = gen.command_template(script, shlex.quote(marker.as_posix()), "{input}")
     report, out, cache = tmp_path / "cancelled.json", tmp_path / "out", tmp_path / "cache"
-    args = ("run", root, "-o", out, "--cache", cache, "--report", report, "--progress", "jsonl",
+    args = ("legacy-run", root, "-o", out, "--cache", cache, "--report", report, "--progress", "jsonl",
             "--provider", "command", "--model", "one-second", "--command", template,
             "--command-egress", "false", "--trust-command")
     cli_probe.env["MDFLOW_TIMEOUT_S"] = "2"
@@ -109,7 +109,7 @@ def blocked_replace(source, destination, *args, **kwargs):
     return _replace(source, destination, *args, **kwargs)
 os.replace = blocked_replace
 '''
-    args = ("run", source, "-o", out, "--cache", cache, "--report", report)
+    args = ("legacy-run", source, "-o", out, "--cache", cache, "--report", report)
     with _process(cli_probe, *args, prelude=prelude) as proc:
         ready = _wait_ready(proc, marker)
         temporary = Path(ready["temp"])

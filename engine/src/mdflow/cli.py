@@ -56,6 +56,7 @@ def _parser() -> argparse.ArgumentParser:
         cmd.add_argument("-o", "--out", type=Path)
         cmd.add_argument("--policy", choices=["strict-v1"], default="strict-v1")
         cmd.add_argument("--expected-sha256")
+        cmd.add_argument("--member")
         cmd.add_argument("--exclude", type=Path, action="append", default=[])
         if name == "run":
             cmd.add_argument("--dry-run", action="store_true")
@@ -118,9 +119,9 @@ def _check_core() -> None:
     except metadata.PackageNotFoundError:
         raise RuntimeError("markitdown-gc is not installed") from None
     match = re.fullmatch(r"0\.3\.(\d+)(.*)", version)
-    if not match or int(match[1]) < 9 or (int(match[1]) == 9 and match[2] and
+    if not match or int(match[1]) < 10 or (int(match[1]) == 10 and match[2] and
                                         not match[2].startswith((".post", "+"))):
-        raise RuntimeError("markitdown-gc must be >=0.3.9,<0.4")
+        raise RuntimeError("markitdown-gc must be >=0.3.10,<0.4")
 
 
 def _print(value: object, *, pretty: bool = False) -> None:
@@ -369,6 +370,8 @@ def main(argv: list[str] | None = None) -> int:
                 if not isinstance(data, list) or not all(isinstance(p, str) and Path(p).is_absolute() for p in data):
                     raise UsageError("Expected an array of absolute input paths.")
                 args.paths = list(map(Path, data))
+            if args.member and not args.expected_sha256:
+                raise UsageError("Selecting an archive member requires its recorded digest.")
             if not args.paths:
                 raise UsageError("Select at least one file or folder.")
             if args.expected_sha256 and (len(args.paths) != 1 or not SHA256_HEX.fullmatch(args.expected_sha256)):
@@ -378,7 +381,7 @@ def main(argv: list[str] | None = None) -> int:
             except ImportError:
                 return _error("E_CORE_VERSION", "Install markitdown-gc >=0.3.10,<0.4 for strict inspection.")
             return strict_workflow.run(args.paths, mode="preview" if preview else args.command_name,
-                                       out=args.out, emit=_print, expected=args.expected_sha256, exclude=args.exclude)
+                                       out=args.out, emit=_print, expected=args.expected_sha256, exclude=args.exclude, member=args.member)
         if args.command_name == "legacy-run":
             args.command_name = "run"
         opts = _options(args)

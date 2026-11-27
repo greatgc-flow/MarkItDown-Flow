@@ -11,10 +11,25 @@ import { type PickOutcome, pickWithDomInput, type PickerDocument, type PickerInp
 import { NodeSpawner } from './node-spawner';
 import type { FileSystemOps, Spawner } from './types';
 
+/** Create a private, short-lived UTF-8 manifest for selections that exceed the OS argv budget. */
+export async function withInputList<T>(inputs: readonly string[], run: (args: string[]) => Promise<T>): Promise<T> {
+  if (inputs.reduce((n,p) => n + p.length + 3, 0) <= 12000) return run(['--', ...inputs]);
+  const fs = require('node:fs/promises') as typeof import('node:fs/promises');
+  const path = require('node:path') as typeof import('node:path');
+  const os = require('node:os') as typeof import('node:os');
+  const folder = await fs.mkdtemp(path.join(os.tmpdir(), 'mdflow-inputs-'));
+  try {
+    const list = path.join(folder, 'selection.json');
+    await fs.writeFile(list, JSON.stringify(inputs), {mode:0o600, flag:'wx'});
+    return await run(['--input-list', list]);
+  } finally { await fs.rm(folder, {recursive:true,force:true}); }
+}
+
 export interface NodeApis {
   spawner: Spawner;
   fs: FileSystemOps;
   /** Reveal a folder in the OS file manager (Electron shell); never executes files. */
+  revealFile?(path: string): Promise<void>;
   openFolder(path: string): Promise<void>;
   /** Clipboard text write for SetupModal copy buttons. */
   writeClipboard(text: string): Promise<void>;
@@ -34,7 +49,7 @@ type FsPromises = typeof import('node:fs/promises');
 type OsModule = typeof import('node:os');
 
 interface ElectronLike {
-  shell?: { openPath(path: string): Promise<string> };
+  shell?: { showItemInFolder?(path: string): void; openPath(path: string): Promise<string> };
   clipboard?: { writeText(text: string): void };
   webUtils?: { getPathForFile(file: unknown): string };
 }
@@ -163,6 +178,10 @@ export function loadNodeApis(): NodeApis {
   cached = {
     spawner: new NodeSpawner(),
     fs: new NodeFs(fsp),
+    async revealFile(path: string): Promise<void> {
+      if (!electron?.shell?.showItemInFolder) throw Error('File manager unavailable');
+      electron.shell.showItemInFolder(path);
+    },
     async openFolder(path: string): Promise<void> {
       if (electron?.shell) await electron.shell.openPath(path);
     },

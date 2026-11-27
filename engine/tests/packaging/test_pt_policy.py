@@ -184,7 +184,7 @@ def test_PT_22_terminal_launched_key_reaches_the_engine_child_but_no_diagnostic_
     outputs.append(plan)
     assert plan.returncode in (0, 3), plan.stderr  # SPEC 8.4: plan may announce missing consent (exit 3)
     plan_hash = json_objects(plan.stdout)[0]["plan_hash"]
-    run = through_terminal("run", source.parent.name, "-o", "out", *flags, "--yes", plan_hash, "--progress", "jsonl")
+    run = through_terminal("legacy-run", source.parent.name, "-o", "out", *flags, "--yes", plan_hash, "--progress", "jsonl")
     outputs.append(run)
     assert run.returncode == 0, (run.stdout, run.stderr)
     posts = [r for r in mock_http.requests if r["method"] == "POST"]
@@ -198,7 +198,7 @@ def test_PT_22_terminal_launched_key_reaches_the_engine_child_but_no_diagnostic_
               if p.is_file() and SENTINEL.encode() in p.read_bytes()]
     assert not leaked, f"credential persisted in {leaked}"
     # Without the key the remote provider is refused at startup while the default provider stays usable.
-    missing = source_engine.run("run", source.parent.name, "-o", "out2", *flags, env={"MDFLOW_BASE_URL": mock_http.base_url})
+    missing = source_engine.run("legacy-run", source.parent.name, "-o", "out2", *flags, env={"MDFLOW_BASE_URL": mock_http.base_url})
     assert missing.returncode == 1 and "E_PROVIDER_CONFIG" in missing.stderr
-    local = source_engine.run("run", source.parent.name, "-o", "out3", "--cache", "cache3")
+    local = source_engine.run("legacy-run", source.parent.name, "-o", "out3", "--cache", "cache3")
     assert local.returncode == 0, local.stderr
