@@ -369,8 +369,7 @@ export default class MarkItDownFlowPlugin extends Plugin {
       },
       photo: async (row, fields) => {
         const response = await utility(row, 'photo-info', fields.flatMap(f => ['--field', f]));
-        if (response.status === 'ok' && response.fields) await apis.writeClipboard(Object.entries(response.fields).map(([k,v])=>k + ': ' + String(v)).join('\n'));
-        return response.status!;
+        return {status: response.status!, fields: response.fields ?? {}};
       }
     }).open();
   }

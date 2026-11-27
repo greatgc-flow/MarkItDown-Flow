@@ -19,7 +19,8 @@ OSES = ("windows", "macos", "linux")
 CHANNELS = ("minimum", "current")
 ASSETS = SUBJECTS
 REHEARSAL_CHECKS = ("fresh_install", "upgrade_from_1_0_8", "rollback", "consent_dismiss", "consent_approve",
-                    "mixed_document_mock_ocr", "warm_rerun", "cancel_restart", "terminal_env_launch", "commands", "en_ko")
+                    "mixed_document_mock_ocr", "strict_mixed_exclusion", "preview_no_writes", "partial_omissions",
+                    "handoff_copy_integrity", "optional_photo_fields", "warm_rerun", "cancel_restart", "terminal_env_launch", "commands", "en_ko")
 POSTDEPLOY_CHECKS = ("install_via_listing", "version_check", "sanitized_migration", "local_conversion",
                      "offline_mock_ocr", "restart", "pending_failure_display", "warm_rerun")
 HEX = "ab" * 32

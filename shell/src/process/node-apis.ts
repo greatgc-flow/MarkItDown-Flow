@@ -42,15 +42,27 @@ function jobDirectory(home: string, vault: string): string {
   return path.join(home, '.mdflow', 'jobs', createHash('sha256').update(vault).digest('hex'));
 }
 
-function beginJournal(home: string, vault: string, inputs: readonly string[], mode: Mode, outDir: string): JobJournal {
+const JOURNAL_VIEW_LIMIT = 128 * 1024 * 1024;
+const COMPLETED_JOBS = 8;
+let lastStart = 0;
+
+export function beginJournal(home: string, vault: string, inputs: readonly string[], mode: Mode, outDir: string): JobJournal {
   const fs = require('node:fs') as typeof import('node:fs');
   const path = require('node:path') as typeof import('node:path');
   const {randomUUID} = require('node:crypto') as typeof import('node:crypto');
   const folder = jobDirectory(home, vault);
   fs.mkdirSync(folder, {recursive:true, mode:0o700});
-  const file = path.join(folder, Date.now() + '-' + randomUUID() + '.jsonl');
+  lastStart = Math.max(Date.now(), lastStart + 1);
+  const file = path.join(folder, lastStart + '-' + randomUUID() + '.jsonl');
   const fd = fs.openSync(file, 'wx', 0o600);
-  const append = (value: unknown) => fs.writeFileSync(fd, JSON.stringify(value) + '\n');
+  let size = 0;
+  const append = (value: unknown) => {
+    const record = JSON.stringify(value) + '\n';
+    const bytes = Buffer.byteLength(record);
+    if (size + bytes > JOURNAL_VIEW_LIMIT) throw Error('Job exceeds the view limit');
+    fs.writeFileSync(fd, record);
+    size += bytes;
+  };
   try { append({kind:'job', version:1, inputs, mode, outDir}); }
   catch(e) { fs.closeSync(fd); throw e; }
   let stopped = false;
@@ -63,22 +75,27 @@ function beginJournal(home: string, vault: string, inputs: readonly string[], mo
         if (result) append({kind:'end', status:result.status, skipped:result.skipped, count:result.rows.length});
         fs.fsyncSync(fd);
       } finally { fs.closeSync(fd); }
+      if (result?.status === 'complete') {
+        fs.renameSync(file, file.replace(/\.jsonl$/, '.complete.jsonl'));
+        const finished = fs.readdirSync(folder).filter(name => /^\d+-[0-9a-f-]{36}\.complete\.jsonl$/.test(name)).sort();
+        for (const old of finished.slice(0, -COMPLETED_JOBS)) fs.rmSync(path.join(folder, old), {force:true});
+      }
     },
   };
 }
 
-async function lastJob(home: string, vault: string): Promise<SavedJob | null> {
+export async function lastJob(home: string, vault: string): Promise<SavedJob | null> {
   const fs = require('node:fs/promises') as typeof import('node:fs/promises');
   const path = require('node:path') as typeof import('node:path');
   const folder = jobDirectory(home,vault);
   let names;
   try { names = await fs.readdir(folder); }
   catch (e) { if ((e as NodeJS.ErrnoException).code === 'ENOENT') return null; throw e; }
-  const name = names.filter(n => /^\d+-[0-9a-f-]{36}\.jsonl$/.test(n)).sort().pop();
+  const name = names.filter(n => /^\d+-[0-9a-f-]{36}(?:\.complete)?\.jsonl$/.test(n)).sort().pop();
   if (!name) return null;
   const file = path.join(folder, name);
   const info = await fs.lstat(file);
-  if (!info.isFile() || info.size > 128 * 1024 * 1024) throw Error('Job exceeds the view limit');
+  if (!info.isFile() || info.size > JOURNAL_VIEW_LIMIT) throw Error('Job exceeds the view limit');
   const lines = (await fs.readFile(file,'utf8')).split('\n');
   lines.pop(); // Ignore an incomplete trailing record after interruption.
   if (!lines.length) return null;

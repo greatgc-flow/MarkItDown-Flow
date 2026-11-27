@@ -44,7 +44,12 @@ runs:
       rollback: TODO
       consent_dismiss: TODO
       consent_approve: TODO
-      mixed_document_mock_ocr: TODO
+      mixed_document_mock_ocr: TODO  # Legacy CLI compatibility
+      strict_mixed_exclusion: TODO
+      preview_no_writes: TODO
+      partial_omissions: TODO
+      handoff_copy_integrity: TODO
+      optional_photo_fields: TODO
       warm_rerun: TODO
       cancel_restart: TODO
       terminal_env_launch: TODO
@@ -72,7 +77,12 @@ runs:
       rollback: TODO
       consent_dismiss: TODO
       consent_approve: TODO
-      mixed_document_mock_ocr: TODO
+      mixed_document_mock_ocr: TODO  # Legacy CLI compatibility
+      strict_mixed_exclusion: TODO
+      preview_no_writes: TODO
+      partial_omissions: TODO
+      handoff_copy_integrity: TODO
+      optional_photo_fields: TODO
       warm_rerun: TODO
       cancel_restart: TODO
       terminal_env_launch: TODO
@@ -100,7 +110,12 @@ runs:
       rollback: TODO
       consent_dismiss: TODO
       consent_approve: TODO
-      mixed_document_mock_ocr: TODO
+      mixed_document_mock_ocr: TODO  # Legacy CLI compatibility
+      strict_mixed_exclusion: TODO
+      preview_no_writes: TODO
+      partial_omissions: TODO
+      handoff_copy_integrity: TODO
+      optional_photo_fields: TODO
       warm_rerun: TODO
       cancel_restart: TODO
       terminal_env_launch: TODO
@@ -128,7 +143,12 @@ runs:
       rollback: TODO
       consent_dismiss: TODO
       consent_approve: TODO
-      mixed_document_mock_ocr: TODO
+      mixed_document_mock_ocr: TODO  # Legacy CLI compatibility
+      strict_mixed_exclusion: TODO
+      preview_no_writes: TODO
+      partial_omissions: TODO
+      handoff_copy_integrity: TODO
+      optional_photo_fields: TODO
       warm_rerun: TODO
       cancel_restart: TODO
       terminal_env_launch: TODO
@@ -156,7 +176,12 @@ runs:
       rollback: TODO
       consent_dismiss: TODO
       consent_approve: TODO
-      mixed_document_mock_ocr: TODO
+      mixed_document_mock_ocr: TODO  # Legacy CLI compatibility
+      strict_mixed_exclusion: TODO
+      preview_no_writes: TODO
+      partial_omissions: TODO
+      handoff_copy_integrity: TODO
+      optional_photo_fields: TODO
       warm_rerun: TODO
       cancel_restart: TODO
       terminal_env_launch: TODO
@@ -184,7 +209,12 @@ runs:
       rollback: TODO
       consent_dismiss: TODO
       consent_approve: TODO
-      mixed_document_mock_ocr: TODO
+      mixed_document_mock_ocr: TODO  # Legacy CLI compatibility
+      strict_mixed_exclusion: TODO
+      preview_no_writes: TODO
+      partial_omissions: TODO
+      handoff_copy_integrity: TODO
+      optional_photo_fields: TODO
       warm_rerun: TODO
       cancel_restart: TODO
       terminal_env_launch: TODO

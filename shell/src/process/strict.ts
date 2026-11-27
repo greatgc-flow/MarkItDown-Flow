@@ -8,7 +8,7 @@ export interface FileRow {
   kind: 'file';
   outcome: string;
   reason: string;
-  source: { path: string; relativePath: string; originalRelative?: string; format?: string; sha256: string; originalSha256?: string; member?: string | null };
+  source: { path: string; relativePath: string; root?: number; originalRelative?: string; format?: string; sha256: string; originalSha256?: string; member?: string | null };
   inspection?: { area_percent?: Record<string, number> | null; inspected_pages?: number; total_pages?: number; measured_pages?: number; pages?: { number: number; role: string }[] };
   action?: string;
   output?: string;

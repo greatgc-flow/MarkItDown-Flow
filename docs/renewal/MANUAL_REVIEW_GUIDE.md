@@ -203,3 +203,5 @@ Cleanup requires successful post-deploy verification plus the seven-day rollback
 PT-21); retain the dry-run/removal log and protected files. Failed MAN-04 or critical post-deploy checks
 require REQ-PKG-20 rollback: preserve 1.0.8 assets and sanitized v1 snapshot, never feed schema-2 settings
 to v1, validate the rollback record. Missing/failed rehearsal cannot produce 100/100.
+
+For the 2.1 desktop rehearsal, use a 100-page PDF with the single scan at page 100. Check the external queue and absence of complete notes, preview coverage, partial omission marker, copy digest and explicit metadata field selection. Exercise historical provider consent checks through the legacy CLI with a local mock. Record the actual host for each result.

@@ -13,7 +13,7 @@ Use an isolated Python environment and the matching desktop plugin bundle. The 2
 | Convert a folder | Run **Convert folder to Markdown**, or use the ribbon, context menu or confirmed drop | Qualified sources create notes under `Complete/`. Each excluded original has its own reason. |
 | Inspect composition | Run **Inspect document composition** or choose **Inspect** in the results | Shows how many pages were inspected and measured, their roles, and estimated text, image, background and other area. Preview writes no note. |
 | Save partial text | Choose **Extract existing text** for a mixed PDF | Creates a separate `Partial/*.text-only.md` with page locations and omission markers. The source remains excluded. |
-| Hand off to another tool | Filter results by **External OCR needed** | Reveal the original, copy the list as CSV or make a byte-identical copy under `External-OCR/`. |
+| Hand off to another tool | Filter results by **External OCR needed** | Reveal the original, select individual rows or all filtered results, copy their relative paths as CSV, or make byte-identical copies under `External-OCR/`. |
 | Copy photo information | Select a standalone JPG/JPEG/PNG and choose **Photo information** | If ExifTool is available, copy selected fields. GPS, author and device identifiers require explicit selection. |
 | Retry or inspect a conflict | Review the per-file result and rerun after correcting the cause | Identical output can be reused. A note with different bytes is preserved and reported as a conflict. |
 
@@ -38,7 +38,7 @@ The GitHub release host supplies plugin assets. The Python package index supplie
 
 ## Outside-vault access
 
-The desktop plugin launches the configured virtual-environment interpreter, reads selected files and folders, and stages transient parser data or large input selections in private temporary directories. Durable job results stay under ~/.mdflow/jobs. The legacy CLI cache lives under ~/.mdflow/cache. LibreOffice can be probed for legacy CLI use. The optional ExifTool process receives a private copy of the selected image for a bounded, field-scoped read. Local original copies preserve the source file's own metadata, including GPS or Artist when present.
+The desktop plugin launches the configured virtual-environment interpreter, reads selected files and folders, and stages transient parser data or large input selections in private temporary directories. Durable job results stay under ~/.mdflow/jobs. Each vault retains its eight most recent completed conversions. Interrupted records remain available locally. Each journal is limited to 128 MiB. The legacy CLI cache lives under ~/.mdflow/cache. LibreOffice can be probed for legacy CLI use. The optional ExifTool process receives a private copy of the selected image for a bounded, field-scoped read. Local original copies preserve the source file's own metadata, including GPS or Artist when present.
 
 ## Telemetry
 
