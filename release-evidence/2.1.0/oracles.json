@@ -1,0 +1,16 @@
+{
+  "reviewer": "cleanroom-peer/codex/GPT-6",
+  "date": "2026-11-27",
+  "commit": "dc067838e8f71ff5d3c07d18ab675eb89a5f7e71",
+  "evidence": [
+    "Candidate push workflow 46041458332 for dc067838e8f71ff5d3c07d18ab675eb89a5f7e71. I independently read the physical JUnit XML, execution registries and full expanded collections from the six required engine artifacts (15220238563, 15220298435, 15221251747, 15220452770, 15220862929, 15221317031) and three shell artifacts (15221410024, 15219887561, 15220481232). I checked each commit, registry v3 and collection v1, exact scope, collection SHA256, suite-source SHA256 recalculated from the candidate, unique node identity and test ID, and the match of the complete selected set to JUnit. I rejected skipped, failed, missing, duplicate and unexpected cases in my independent check. I then compared the candidate receipt evaluator’s three PASS summaries, complete source lists, exact test-ID lists and acceptance expectations with my results.",
+    "G-03. The catalog and acceptance row selected 27 classification/contract/CLI/meta IDs. Each of Windows 2022, Ubuntu 24.04 and macOS 26, on Python 3.10 and 3.14, passed 108 of 108 selected expanded cases (648 total). These include all fourteen separately parameterized issue-policy cases on each target, the named golden classification comparison and V1–V4 precedence tests. Sampled expected data include FX-03/classification.json and its independent review, whose NATIVE/PARTIAL/M and convert_and_ocr fields agree. Matched the six junit-engine XML files and both JSON companions across all six targets. Candidate engine suite digest f5839e4b3f8b5f703a79cca632dd414077204cea1522872aed256b85293f26d8.",
+    "G-11. On each of the three OSes I matched the same five planned IDs JT-03 through JT-07 to all 142 registered/selected and successful JUnit parameters (426 total). I inspected cases for the 21-key migration, omitted credential sentinels, preservation of original bytes on a denied snapshot write and the stable 105-to-100 history cap. All three platform-specific shell JUnit XML files match their own registry and full collection, with suite digest 92ef96a388c58aac5c1f850f78e781fcb164857fe8ee13e37b8962d286c3ed9c.",
+    "G-16. The single planned ID JT-SHL-19-01 expanded to ten selected and successful cases per OS (30 total), including equal English/Korean engine-code suffixes and active SPEC 7.5 codes excluding UNKNOWN, duplicate-row rejection and identical placeholders. Inspected the registered assertions in shell/test/jt-shl-19-01-i18n.test.ts and matched them to each physical JUnit/registry/collection triplet. The candidate evaluator reported one ID and three source receipts. This verifies parity; language meaning has its own MAN-03 review."
+  ],
+  "spot_checks": [
+    "G-03",
+    "G-11",
+    "G-16"
+  ]
+}
