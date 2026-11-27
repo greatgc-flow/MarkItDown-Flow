@@ -19,7 +19,7 @@ import { loadNodeApis, type NodeApis } from './process/node-apis';
 import { systemClock } from './process/node-spawner';
 import { runSelftest } from './process/selftest';
 import { DirectorySpoolFs } from './process/spool-fs';
-import { isTransientGate, probeVersion, type VersionGate } from './process/version-gate';
+import { isTransientGate, probeVersion, RELEASE_LOCK, type VersionGate } from './process/version-gate';
 import { registerCommands } from './ui/commands';
 import { ConsentModal } from './ui/consent-modal';
 import { type Selection, ShellCoordinator, SPOOL_DIR_NAME } from './ui/coordinator';
@@ -29,6 +29,10 @@ import { type FilePicker, registerEntryPoints } from './ui/entry-points';
 import { HistoryModal } from './ui/history-modal';
 import { JobStatusBar } from './ui/progress';
 import { ResultsModal } from './ui/results-modal';
+import { StrictResultsModal } from './ui/strict-results';
+import { launchLines, type FileRow, type SourceAction, type StrictResult } from './process/strict';
+import { snapshotJob, type JobSnapshot } from './process/launcher';
+import { resolveDestination } from './ui/output-path';
 import { SetupModal } from './ui/setup-modal';
 import { ShellSettingsTab } from './ui/settings-tab';
 
@@ -73,6 +77,7 @@ export default class MarkItDownFlowPlugin extends Plugin {
   /** In-flight version probe; jobs await it instead of `onload` (REQ-SHL-10/17). */
   private gateProbe: Promise<VersionGate | null> | null = null;
   private jobsBlocked = false;
+  private actionController = new AbortController();
   /** REQ-SHL-03/05: a newer schema or a failed migration leaves the disk file untouched by every later save. */
   private settingsReadOnly = false;
   private locale: UiLocale = 'en';
@@ -93,6 +98,7 @@ export default class MarkItDownFlowPlugin extends Plugin {
     if (this.active) return;
     if (!Platform.isDesktop) return;
 
+    this.actionController = new AbortController();
     const apis = loadNodeApis();
     this.apis = apis;
     const platform = apis.platform;
@@ -127,6 +133,8 @@ export default class MarkItDownFlowPlugin extends Plugin {
     });
 
     const coordinator = new ShellCoordinator({
+      beginJournal: apis.beginJournal,
+      strictResults: (result, snapshot, action) => this.showStrict(result, snapshot, action),
       spawner: apis.spawner,
       fs: apis.fs,
       spoolFs,
@@ -207,6 +215,28 @@ export default class MarkItDownFlowPlugin extends Plugin {
       this.locale,
     );
 
+    for (const mode of ['preview', 'extract-text'] as const) {
+      this.addCommand({id: mode === 'preview' ? 'inspect-documents' : 'extract-existing-text',
+        name: this.locale === 'ko' ? (mode === 'preview' ? '문서 구성 미리보기' : '복합 PDF에서 텍스트만 추출') :
+          (mode === 'preview' ? 'Inspect document composition' : 'Extract existing text from mixed PDFs'),
+        callback: async () => {
+          const paths = await picker.pickFiles();
+          if (paths?.length) await coordinator.submit({kind:'files', paths, action:{mode}}, 'command');
+        }});
+    }
+    this.addCommand({id:'reopen-document-results', name:this.locale === 'ko' ? '최근 변환 결과 열기' : 'Reopen last conversion results',
+      callback: async () => {
+        try {
+          const saved = await apis.lastJob?.(this.vaultRoot);
+          if (!saved || !this.settings.enginePython) {
+            new Notice(this.locale === 'ko' ? '저장된 결과 또는 설정된 엔진이 없습니다.' : 'No saved job or configured engine.');
+            return;
+          }
+          const snapshot = snapshotJob({settings:this.settings, inputs:saved.inputs, cwd:this.probeCwd(),
+            outDir:saved.outDir, cacheDir:joinPath(apis.platform,apis.homeDir(),'.mdflow','cache')});
+          this.showStrict(saved.result, snapshot, {mode:saved.mode});
+        } catch { this.notify('shell.PROTOCOL'); }
+      }});
     registerEntryPoints(this, coordinator, this.settings, picker, this.locale);
 
     this.addSettingTab(
@@ -225,6 +255,7 @@ export default class MarkItDownFlowPlugin extends Plugin {
         },
         openSetup: () => this.openSetup(),
         locale: () => this.locale,
+        strict: true,
         readOnly: () => this.settingsReadOnly,
         notify: (key) => this.notify(key),
         gate: () => this.gate,
@@ -235,6 +266,7 @@ export default class MarkItDownFlowPlugin extends Plugin {
   }
 
   override onunload(): void {
+    this.actionController.abort();
     this.coord?.dispose();
     this.coord = null;
     this.active = false;
@@ -290,7 +322,7 @@ export default class MarkItDownFlowPlugin extends Plugin {
     }
     const apis = this.apis;
     const enginePython = this.settings.enginePython;
-    const probe = probeVersion(enginePython, { spawner: apis.spawner, clock: systemClock, hostEnv: process.env, cwd: engineWorkingDirectory(apis.platform, enginePython) })
+    const probe = probeVersion(enginePython, { policy: RELEASE_LOCK, spawner: apis.spawner, clock: systemClock, hostEnv: process.env, cwd: engineWorkingDirectory(apis.platform, enginePython) })
       .then((gate) => {
         // A later interpreter change supersedes this probe's result.
         if (this.settings.enginePython === enginePython) this.gate = gate;
@@ -303,10 +335,50 @@ export default class MarkItDownFlowPlugin extends Plugin {
     return probe;
   }
 
+  private showStrict(result: StrictResult, snapshot: JobSnapshot, action: SourceAction): void {
+    const apis = this.apis;
+    if (!apis) return;
+    const utility = async (row: FileRow, command: string, extra: string[]) => {
+      if (this.actionController.signal.aborted || !this.active || !row.source.originalSha256) throw Error('Unavailable source');
+      const args = [command, row.source.path, '--sha256', row.source.sha256, '--original-sha256', row.source.originalSha256, ...extra];
+      if (row.source.member) args.push('--member', row.source.member);
+      const result: {status?: string; fields?: Record<string, unknown>} = {};
+      const code = await launchLines(apis.spawner, snapshot, process.env, args, this.actionController.signal,
+        line => Object.assign(result, JSON.parse(line)));
+      if (code === null || !result.status) throw Error('Incomplete action');
+      return result;
+    };
+    new StrictResultsModal(this.app, result, this.locale, {
+      open: async row => {
+        if (!apis.revealFile) throw Error('File manager unavailable');
+        await apis.revealFile(row.source.path);
+      },
+      clipboard: text => apis.writeClipboard(text),
+      retry: async () => {
+        await this.coord?.submit({kind:'files', paths:snapshot.inputs, action}, 'command');
+      },
+      run: async (row, mode) => {
+        await this.coord?.submit({kind:'files', paths:[row.source.path], action:{mode, sha:row.source.sha256, member:row.source.member ?? undefined}}, 'command');
+      },
+      copy: async row => {
+        const dir = await resolveDestination(this.vaultRoot, this.settings.outputPath, {platform:apis.platform,
+          realpath:p=>apis.fs.realpath(p), isDirectory:p=>apis.fs.isDirectory(p), isSymlink:p=>apis.fs.isSymlink(p)});
+        if (!dir.ok || dir.absolute !== snapshot.outDir) throw Error('Destination changed');
+        const response = await utility(row, 'handoff-copy', ['-o', dir.absolute, '--relative', row.source.originalRelative ?? row.source.relativePath]);
+        return response.status!;
+      },
+      photo: async (row, fields) => {
+        const response = await utility(row, 'photo-info', fields.flatMap(f => ['--field', f]));
+        return {status: response.status!, fields: response.fields ?? {}};
+      }
+    }).open();
+  }
+
   private openSetup(): void {
     if (!this.apis) return;
     const apis = this.apis;
     new SetupModal(this.app, {
+      policy: RELEASE_LOCK,
       spawner: apis.spawner,
       clock: systemClock,
       hostEnv: process.env,

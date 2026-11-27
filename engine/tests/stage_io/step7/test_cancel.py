@@ -50,18 +50,19 @@ def test_T_GEN_09_cooperative_cancel_reports_130_removes_temp_and_command_child(
     root.mkdir()
     (root / "a-bad.pdf").write_bytes(gen.pdf_corrupt())  # cancellation overrides an earlier exit-2 issue
     (root / "b-scan.png").write_bytes(gen.png_noise(seed=63))
-    marker, script = tmp_path / "request-ready.json", tmp_path / "one_second_request.py"
+    marker, script = tmp_path / "request-ready.json", tmp_path / "blocked_request.py"
     script.write_text(
         "import json, os, sys, time\n"
         "with open(sys.argv[1], 'w', encoding='utf-8') as f:\n"
         "    json.dump({'pid': os.getpid(), 'raster': sys.argv[2]}, f)\n"
-        "time.sleep(1)\nprint('completed mock request')\n", encoding="utf-8")
+        "time.sleep(60)\nraise RuntimeError('test request survived cancellation')\n", encoding="utf-8")
     template = gen.command_template(script, shlex.quote(marker.as_posix()), "{input}")
     report, out, cache = tmp_path / "cancelled.json", tmp_path / "out", tmp_path / "cache"
-    args = ("run", root, "-o", out, "--cache", cache, "--report", report, "--progress", "jsonl",
-            "--provider", "command", "--model", "one-second", "--command", template,
+    args = ("legacy-run", root, "-o", out, "--cache", cache, "--report", report, "--progress", "jsonl",
+            "--provider", "command", "--model", "blocked-request", "--command", template,
             "--command-egress", "false", "--trust-command")
-    cli_probe.env["MDFLOW_TIMEOUT_S"] = "2"
+    # Keep the request active beyond the test deadline even on a busy Windows runner.
+    cli_probe.env["MDFLOW_TIMEOUT_S"] = "30"
     child = None
     try:
         with _process(cli_probe, *args) as proc:
@@ -109,7 +110,7 @@ def blocked_replace(source, destination, *args, **kwargs):
     return _replace(source, destination, *args, **kwargs)
 os.replace = blocked_replace
 '''
-    args = ("run", source, "-o", out, "--cache", cache, "--report", report)
+    args = ("legacy-run", source, "-o", out, "--cache", cache, "--report", report)
     with _process(cli_probe, *args, prelude=prelude) as proc:
         ready = _wait_ready(proc, marker)
         temporary = Path(ready["temp"])

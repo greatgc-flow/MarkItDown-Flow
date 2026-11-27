@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.1.0 — Strict local Markdown conversion
+
+- Inspect each PDF for existing text and route the entire document to external OCR when any page needs it. Explicit partial exports preserve physical page numbers and omission markers.
+- Inspect estimated page composition without writing notes. Filter the batch results, copy selected originals, or export a CSV. Preview and copy chosen photo metadata with optional ExifTool.
+- Reopen the latest desktop job after interruption. Existing outputs with different bytes are preserved.
+- Upgrade both the shell and engine. The strict local workflow uses protocol 2 and markitdown-gc 0.3.10. Legacy CLI users can explicitly invoke `mdflow legacy-run`. Follow the attached `BOOTSTRAP.md` for a fresh install or upgrade. Keep the previous engine environment and matching plugin assets together for rollback.
+
 ## 2.0.2 — File picker directory review fix (2026-11-25)
 
 - Remove the inline style from the detached file input in file and folder selection.

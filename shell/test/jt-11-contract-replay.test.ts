@@ -82,7 +82,7 @@ it(R('JT-11 every recorded FX-71 invocation and every shell-built invocation use
       continue;
     }
     const args = fx71Args(name);
-    expect(['plan', 'run', 'version', 'selftest', 'providers', 'classify', 'cache']).toContain(args[0]);
+    expect(['plan', 'run', 'legacy-run', 'version', 'selftest', 'providers', 'classify', 'cache']).toContain(args[0]);
     for (let i = 1; i < args.length; i++) {
       const token = args[i];
       if (!token.startsWith('-')) continue;

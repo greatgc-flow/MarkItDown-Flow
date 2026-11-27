@@ -286,6 +286,9 @@ Cell = primary `S<stage>:FM<n>` (section 5).
 | T-CLI-02 | REQ-GEN-02 (`version` exact keys; out-of-range exit 1) | - | S0:FM10 |
 | T-CLI-03 | REQ-CLS-05 (`selftest` exit 0 on bundled goldens) | - | S0:FM0 |
 | T-CLI-04 | REQ-RPT-03 (unknown flag -> exit 1; `--max-bytes` > cap) | - | S0:FM1 |
+| T-CLI-09 | REQ-CLS-05, REQ-RPT-01 | Strict conversion, immutable preview, explicit partial export. |
+| T-CLI-10 | REQ-CLS-05, REQ-RPT-01 | 99 direct pages and a final scan; digest-verified handoff and edit preservation. |
+| T-CLI-11 | REQ-CLS-05, REQ-RPT-01 | Strict entry points reject provider flags; all-scan partial exports produce no file. |
 | T-CLI-05 | REQ-RPT-01, REQ-GEN-09 (real subprocess `python -m mdflow`) | FX-03 | S13:FM0 |
 
 (REQ-SEC-05 -> T-WRT-01; REQ-SEC-07 -> T-TRX-04, per SPEC 11 aliases.)

@@ -40,15 +40,9 @@ def test_T_META_93_handoff_changelog_readme_and_counts_match_round_9():
     raw = (REPO / 'README.md').read_bytes()
     assert b'\r' not in raw, 'README follows the repository LF policy (.gitattributes: * text=auto eol=lf)'
     readme = raw.decode('utf-8')
-    classification = re.search(r'^## Classification \(T, S, M\)\n(.*?)(?=^## )', readme, re.M | re.S)[1]
-    for item in ('Remote OCR', 'Closing the dialog converts nothing', 'only reported',
-                 '`python -I -m mdflow classify <PATH>`'):
-        assert item in classification, item
-    assert 'every class' not in classification and 'no usable text layer' not in classification
-    limits = re.search(r'^## Known limitations\n(.*?)(?=^## )', readme, re.M | re.S)[1]
-    assert all(f'#{n}' in limits for n in (68, 69, 70, 71)) and '0.3.8' in limits
-    assert 'XML' in limits and 'PDF headings' in limits and 'NaN' not in limits  # fixed items are gone
-    assert 'standalone `png`, `jpg` and `jpeg`' in limits
+    for disclosure in ('single scanned page', 'partial note', 'Preview writes no note', 'legacy-run',
+                       'prior configuration for rollback', 'measured-page coverage', 'external transcription'):
+        assert disclosure in readme, disclosure
 
     spec = read('docs/renewal/10_SPEC.md')
     section = spec.split('### 7.5 ')[1].split('\n\n')[0]

@@ -5,7 +5,7 @@ import pytest
 @pytest.mark.req('REQ-PLN-07', 'REQ-RPT-01', 'REQ-GEN-06')
 @pytest.mark.cov('S0', 'FM10')
 @pytest.mark.fx('FX-02')
-@pytest.mark.parametrize('command', ['plan', 'run'])
+@pytest.mark.parametrize('command', ['plan', 'legacy-run'])
 def test_T_CLI_84_native_core_diagnostics_cannot_corrupt_protocol(tmp_path, gen, cli_probe, command):
     source = tmp_path / 'scan.pdf'
     source.write_bytes(gen.pdf_scan(1))
@@ -22,7 +22,7 @@ class NoisyCoreImport(importlib.abc.MetaPathFinder):
 sys.meta_path.insert(0, NoisyCoreImport())
 '''
     args = [command, str(source)]
-    if command == 'run':
+    if command == 'legacy-run':
         args += ['-o', str(tmp_path / 'out'), '--progress', 'jsonl']
     result = cli_probe.run(*args, prelude=prelude, expected=0)
     assert len(cli_probe.objects(result.stdout)) == 1

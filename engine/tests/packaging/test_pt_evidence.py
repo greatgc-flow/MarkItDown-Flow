@@ -19,7 +19,8 @@ OSES = ("windows", "macos", "linux")
 CHANNELS = ("minimum", "current")
 ASSETS = SUBJECTS
 REHEARSAL_CHECKS = ("fresh_install", "upgrade_from_1_0_8", "rollback", "consent_dismiss", "consent_approve",
-                    "mixed_document_mock_ocr", "warm_rerun", "cancel_restart", "terminal_env_launch", "commands", "en_ko")
+                    "mixed_document_mock_ocr", "strict_mixed_exclusion", "preview_no_writes", "partial_omissions",
+                    "handoff_copy_integrity", "optional_photo_fields", "warm_rerun", "cancel_restart", "terminal_env_launch", "commands", "en_ko")
 POSTDEPLOY_CHECKS = ("install_via_listing", "version_check", "sanitized_migration", "local_conversion",
                      "offline_mock_ocr", "restart", "pending_failure_display", "warm_rerun")
 HEX = "ab" * 32
@@ -96,7 +97,7 @@ def check_artifacts(data: dict) -> list[str]:
 @pytest.mark.req("REQ-PKG-04")
 @pytest.mark.cov("S0", "FM10")
 def test_PT_04_public_artifact_license_and_target_wheel_evidence(attest_dir):
-    report = {'version': '1', 'install': [{'metadata': {'name': 'markitdown-gc', 'version': '0.3.9', 'license': 'MIT'},
+    report = {'version': '1', 'install': [{'metadata': {'name': 'markitdown-gc', 'version': '0.3.10', 'license': 'MIT'},
               'download_info': {'url': 'https://files.pythonhosted.org/x.whl', 'archive_info': {'hashes': {'sha256': HEX}}}}]}
     good = {"checked_by": "Reviewer", "date": "2026-11-09", "commit": "a" * 40,
             "checks": {"artifact_licenses": "PASS"},
@@ -123,11 +124,11 @@ def test_PT_04_public_artifact_license_and_target_wheel_evidence(attest_dir):
 
 def rehearsal_sample():
     runs = [{"os": o, "obsidian_channel": c, "obsidian_version": "1.8.9" if c == "current" else "1.6.0",
-             "python": "3.14.0", "engine": "2.0.2", "core": "0.3.9",
+             "python": "3.14.0", "engine": "2.1.0", "core": "0.3.10",
              "downloads": [{"asset": a, "sha256": HEX} for a in ASSETS],
              "checks": {name: "PASS" for name in REHEARSAL_CHECKS}} for o in OSES for c in CHANNELS]
     return {"id": "MAN-04", "reviewer": "Named Reviewer", "date": "2026-11-09", "commit": "a" * 40,
-            "candidate_tag": "2.0.2", "manifest_version": "2.0.2", "versions_json_entry": "2.0.2",
+            "candidate_tag": "2.1.0", "manifest_version": "2.1.0", "versions_json_entry": "2.1.0",
             "runs": runs, "verdict": "PASS"}
 
 
@@ -164,7 +165,7 @@ def test_PT_18_rehearsal_checklist_schema_and_draft_release_is_the_tested_bytes(
 def postdeploy_sample():
     environments = [{"os": o, "vault": v, "app_version": "1.8.9", "python": "3.14.0", "unexpected_egress": 0,
                      "checks": {name: "PASS" for name in POSTDEPLOY_CHECKS}} for o in OSES for v in ("clean", "upgrade")]
-    return {"listing": {"id": "markitdown-flow", "version": "2.0.2"}, "commit": "a" * 40,
+    return {"listing": {"id": "markitdown-flow", "version": "2.1.0"}, "commit": "a" * 40,
             "installed_assets": [{"asset": a, "sha256": HEX, "matches_release": True} for a in ASSETS[:-1]],
             "environments": environments, "critical_failed": False, "rollback_triggered": False}
 

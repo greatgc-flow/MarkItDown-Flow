@@ -448,7 +448,7 @@ def test_T_SEC_11_base_url_validation_is_a_startup_config_error(tmp_path, gen, s
     source.write_bytes(gen.txt_utf8())
     environment = dict(os.environ, MDFLOW_API_KEY=gen.KEY, MDFLOW_BASE_URL="https://user:pw@api.example.test/v1")
     proc = subprocess.run(
-        cli_command("run", source, "-o", tmp_path / "out",
+        cli_command("legacy-run", source, "-o", tmp_path / "out",
                     "--provider", "openai-compatible", "--model", "m"),
         capture_output=True, text=True, timeout=60, env=environment)
     text = proc.stdout + proc.stderr

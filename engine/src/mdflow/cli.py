@@ -49,10 +49,21 @@ def _nonnegative(text: str) -> int:
 def _parser() -> argparse.ArgumentParser:
     parser = _Parser(prog="mdflow", description="Local document conversion and selective OCR.", epilog=_DISCLOSURE)
     commands = parser.add_subparsers(dest="command_name", required=True)
-    for name in ("run", "plan"):
+    for name in ("run", "extract-text"):
+        cmd = commands.add_parser(name, description="Inspect and convert local files without OCR.")
+        cmd.add_argument("paths", nargs="*", type=Path)
+        cmd.add_argument("--input-list", type=Path)
+        cmd.add_argument("-o", "--out", type=Path)
+        cmd.add_argument("--policy", choices=["strict-v1"], default="strict-v1")
+        cmd.add_argument("--expected-sha256")
+        cmd.add_argument("--member")
+        cmd.add_argument("--exclude", type=Path, action="append", default=[])
+        if name == "run":
+            cmd.add_argument("--dry-run", action="store_true")
+    for name in ("legacy-run", "plan"):
         cmd = commands.add_parser(name, description=_DISCLOSURE)
         cmd.add_argument("paths", nargs="+", type=Path)
-        cmd.add_argument("-o", "--out", type=Path, required=name == "run")
+        cmd.add_argument("-o", "--out", type=Path, required=name == "legacy-run")
         cmd.add_argument("--provider", choices=providers.NAMES, default="none")
         cmd.add_argument("--model")
         cmd.add_argument("--dpi", type=int, choices=(200, 300), default=200)
@@ -78,6 +89,18 @@ def _parser() -> argparse.ArgumentParser:
         cmd.add_argument("--trust-command", action="store_true",
                          help="The command runs with your privileges on every OCR unit.")
         cmd.add_argument("--cost-hint")
+    from .source_actions import PHOTO_FIELDS
+    for name in ("handoff-copy", "photo-info"):
+        cmd = commands.add_parser(name)
+        cmd.add_argument("path", type=Path)
+        cmd.add_argument("--sha256", required=True)
+        cmd.add_argument("--original-sha256", required=True)
+        cmd.add_argument("--member")
+        if name == "handoff-copy":
+            cmd.add_argument("-o", "--out", type=Path, required=True)
+            cmd.add_argument("--relative")
+        else:
+            cmd.add_argument("--field", choices=PHOTO_FIELDS, action="append", required=True)
     cmd = commands.add_parser("classify")
     cmd.add_argument("path", type=Path)
     cmd.add_argument('--preconvert-legacy', action='store_true')
@@ -96,9 +119,9 @@ def _check_core() -> None:
     except metadata.PackageNotFoundError:
         raise RuntimeError("markitdown-gc is not installed") from None
     match = re.fullmatch(r"0\.3\.(\d+)(.*)", version)
-    if not match or int(match[1]) < 9 or (int(match[1]) == 9 and match[2] and
+    if not match or int(match[1]) < 10 or (int(match[1]) == 10 and match[2] and
                                         not match[2].startswith((".post", "+"))):
-        raise RuntimeError("markitdown-gc must be >=0.3.9,<0.4")
+        raise RuntimeError("markitdown-gc must be >=0.3.10,<0.4")
 
 
 def _print(value: object, *, pretty: bool = False) -> None:
@@ -304,7 +327,7 @@ def main(argv: list[str] | None = None) -> int:
         core_guard.check()
         if args.command_name == "version":
             value = dict(orchestrate.tools(), python=platform.python_version(), platform=platform.platform(),
-                         protocol=1, triage_schema=1)
+                         protocol=2, triage_schema=1, strict_policy="strict-v1", report_schema=2)
             value.update(_optional_tool_versions())
             _print(value)
             return 0
@@ -312,6 +335,11 @@ def main(argv: list[str] | None = None) -> int:
             _check_core()
         except RuntimeError as exc:
             return _error("E_CORE_VERSION", str(exc))
+        if args.command_name in {"handoff-copy", "photo-info"}:
+            from .source_actions import action
+            value = action(args)
+            _print(value)
+            return 2 if value["status"] in {"read_failed", "source_changed", "write_failed", "edited_output", "unusable"} else 0
         if args.command_name == "providers":
             _print(providers.describe())
             return 0
@@ -330,6 +358,32 @@ def main(argv: list[str] | None = None) -> int:
                 files = [p for p in cache.rglob("*") if p.is_file() and not p.is_symlink()] if cache.exists() else []
                 _print({"files": len(files), "bytes": sum(p.stat().st_size for p in files)})
             return 0
+        if args.command_name in {"run", "extract-text"}:
+            from . import strict_workflow
+            preview = getattr(args, "dry_run", False)
+            if preview == bool(args.out):
+                raise UsageError("Preview takes no output directory. Conversion and partial export require -o.")
+            if args.input_list is not None:
+                if args.paths or args.input_list.stat().st_size > 16 * 1024 * 1024:
+                    raise UsageError("Use either positional inputs or one bounded UTF-8 JSON list.")
+                data = json.loads(args.input_list.read_text(encoding="utf-8"))
+                if not isinstance(data, list) or not all(isinstance(p, str) and Path(p).is_absolute() for p in data):
+                    raise UsageError("Expected an array of absolute input paths.")
+                args.paths = list(map(Path, data))
+            if args.member and not args.expected_sha256:
+                raise UsageError("Selecting an archive member requires its recorded digest.")
+            if not args.paths:
+                raise UsageError("Select at least one file or folder.")
+            if args.expected_sha256 and (len(args.paths) != 1 or not SHA256_HEX.fullmatch(args.expected_sha256)):
+                raise UsageError("Digest verification requires a single source and lowercase SHA-256.")
+            try:
+                from markitdown.document_inspection import inspect_pdf
+            except ImportError:
+                return _error("E_CORE_VERSION", "Install markitdown-gc >=0.3.10,<0.4 for strict inspection.")
+            return strict_workflow.run(args.paths, mode="preview" if preview else args.command_name,
+                                       out=args.out, emit=_print, expected=args.expected_sha256, exclude=args.exclude, member=args.member)
+        if args.command_name == "legacy-run":
+            args.command_name = "run"
         opts = _options(args)
         provider = providers.build_provider(opts["provider"], **{k: opts[k] for k in
             ("model", "cost_hint", "command", "command_egress", "command_env", "trust_command")})
@@ -367,5 +421,7 @@ def main(argv: list[str] | None = None) -> int:
         return _error("E_PROVIDER_CONFIG", str(exc))
     except (OSError, ValueError) as exc:
         return _error("E_USAGE", f"Command could not complete ({type(exc).__name__}).")
+    except KeyboardInterrupt:
+        return 130
     except SystemExit as exc:
         return int(exc.code or 0)

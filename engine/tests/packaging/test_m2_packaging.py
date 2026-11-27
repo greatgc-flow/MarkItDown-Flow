@@ -23,8 +23,8 @@ def test_T_GEN_80_m2_installed_import_accepts_repo_local_venv_and_rejects_source
 @pytest.mark.cov('S0', 'FM10')
 def test_T_GEN_81_m2_package_runtime_policy_rejects_experimental_and_renderer_mismatches():
     release = load_py(REPO / 'engine/tests/packaging/test_pt_release.py', 'm2_pt_release')
-    value = dict(mdflow='2.0.0', **{'markitdown-gc': '0.3.9'}, python='3.14.0', platform='test',
-                 protocol=1, triage_schema=1, pypdfium2='5.15.1', pillow='13.0.0')
+    value = dict(mdflow='2.1.0', **{'markitdown-gc': '0.3.10'}, python='3.14.0', platform='test',
+                 protocol=2, strict_policy='strict-v1', report_schema=2, triage_schema=1, pypdfium2='5.15.2', pillow='13.0.0')
     assert release.gate(value) == []
     for field, bad in [('python', '3.15.0'), ('pypdfium2', '6.0.0'), ('pypdfium2', '4.30.0'),
                        ('pillow', '14.0.0'), ('pillow', '10.0.0')]:

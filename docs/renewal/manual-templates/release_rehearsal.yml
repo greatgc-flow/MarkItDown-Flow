@@ -1,6 +1,6 @@
 # MAN-04  Post-release owner rehearsal on real desktops (R35).   Validated by:
 #   python tools/trace.py attest MAN-04      (also runs tools/release_evidence.py validate_rehearsal)
-# Copy to release-evidence/2.0.2/release_rehearsal.yml, then replace every angle-bracket placeholder and every
+# Copy to release-evidence/2.1.0/release_rehearsal.yml, then replace every angle-bracket placeholder and every
 # unfilled result value (use PASS only for a check you performed and saw succeed; FAIL requires REQ-PKG-20 rollback).
 # Exactly six runs are required: windows, macos and linux, each with Obsidian "minimum" and "current".
 # Always quote version numbers and digests so YAML keeps them as text. Each run installs from the downloaded
@@ -9,9 +9,9 @@ id: MAN-04
 reviewer: <REVIEWER NAME>
 date: <YYYY-MM-DD>
 commit: <CANDIDATE COMMIT SHA 40 HEX>
-candidate_tag: "2.0.2"
-manifest_version: "2.0.2"
-versions_json_entry: "2.0.2"
+candidate_tag: "2.1.0"
+manifest_version: "2.1.0"
+versions_json_entry: "2.1.0"
 inputs:
   - <FROZEN CANDIDATE RUN ID OR ARTIFACT USED>
 checks:
@@ -26,13 +26,13 @@ runs:
     obsidian_channel: minimum
     obsidian_version: "<OBSIDIAN MINIMUM VERSION>"
     python: "<PYTHON VERSION>"
-    engine: "2.0.2"
-    core: "0.3.9"
+    engine: "2.1.0"
+    core: "0.3.10"
     downloads:
       - {asset: main.js, sha256: "<SHA256 OF DOWNLOADED ASSET>"}
       - {asset: manifest.json, sha256: "<SHA256 OF DOWNLOADED ASSET>"}
       - {asset: styles.css, sha256: "<SHA256 OF DOWNLOADED ASSET>"}
-      - {asset: mdflow-2.0.2-py3-none-any.whl, sha256: "<SHA256 OF DOWNLOADED ASSET>"}
+      - {asset: mdflow-2.1.0-py3-none-any.whl, sha256: "<SHA256 OF DOWNLOADED ASSET>"}
       - {asset: reference-requirements.txt, sha256: "<SHA256 OF DOWNLOADED ASSET>"}
       - {asset: BOOTSTRAP.md, sha256: "<SHA256 OF DOWNLOADED ASSET>"}
       - {asset: NOTICE.txt, sha256: "<SHA256 OF DOWNLOADED ASSET>"}
@@ -44,7 +44,12 @@ runs:
       rollback: TODO
       consent_dismiss: TODO
       consent_approve: TODO
-      mixed_document_mock_ocr: TODO
+      mixed_document_mock_ocr: TODO  # Legacy CLI compatibility
+      strict_mixed_exclusion: TODO
+      preview_no_writes: TODO
+      partial_omissions: TODO
+      handoff_copy_integrity: TODO
+      optional_photo_fields: TODO
       warm_rerun: TODO
       cancel_restart: TODO
       terminal_env_launch: TODO
@@ -54,13 +59,13 @@ runs:
     obsidian_channel: current
     obsidian_version: "<OBSIDIAN CURRENT VERSION>"
     python: "<PYTHON VERSION>"
-    engine: "2.0.2"
-    core: "0.3.9"
+    engine: "2.1.0"
+    core: "0.3.10"
     downloads:
       - {asset: main.js, sha256: "<SHA256 OF DOWNLOADED ASSET>"}
       - {asset: manifest.json, sha256: "<SHA256 OF DOWNLOADED ASSET>"}
       - {asset: styles.css, sha256: "<SHA256 OF DOWNLOADED ASSET>"}
-      - {asset: mdflow-2.0.2-py3-none-any.whl, sha256: "<SHA256 OF DOWNLOADED ASSET>"}
+      - {asset: mdflow-2.1.0-py3-none-any.whl, sha256: "<SHA256 OF DOWNLOADED ASSET>"}
       - {asset: reference-requirements.txt, sha256: "<SHA256 OF DOWNLOADED ASSET>"}
       - {asset: BOOTSTRAP.md, sha256: "<SHA256 OF DOWNLOADED ASSET>"}
       - {asset: NOTICE.txt, sha256: "<SHA256 OF DOWNLOADED ASSET>"}
@@ -72,7 +77,12 @@ runs:
       rollback: TODO
       consent_dismiss: TODO
       consent_approve: TODO
-      mixed_document_mock_ocr: TODO
+      mixed_document_mock_ocr: TODO  # Legacy CLI compatibility
+      strict_mixed_exclusion: TODO
+      preview_no_writes: TODO
+      partial_omissions: TODO
+      handoff_copy_integrity: TODO
+      optional_photo_fields: TODO
       warm_rerun: TODO
       cancel_restart: TODO
       terminal_env_launch: TODO
@@ -82,13 +92,13 @@ runs:
     obsidian_channel: minimum
     obsidian_version: "<OBSIDIAN MINIMUM VERSION>"
     python: "<PYTHON VERSION>"
-    engine: "2.0.2"
-    core: "0.3.9"
+    engine: "2.1.0"
+    core: "0.3.10"
     downloads:
       - {asset: main.js, sha256: "<SHA256 OF DOWNLOADED ASSET>"}
       - {asset: manifest.json, sha256: "<SHA256 OF DOWNLOADED ASSET>"}
       - {asset: styles.css, sha256: "<SHA256 OF DOWNLOADED ASSET>"}
-      - {asset: mdflow-2.0.2-py3-none-any.whl, sha256: "<SHA256 OF DOWNLOADED ASSET>"}
+      - {asset: mdflow-2.1.0-py3-none-any.whl, sha256: "<SHA256 OF DOWNLOADED ASSET>"}
       - {asset: reference-requirements.txt, sha256: "<SHA256 OF DOWNLOADED ASSET>"}
       - {asset: BOOTSTRAP.md, sha256: "<SHA256 OF DOWNLOADED ASSET>"}
       - {asset: NOTICE.txt, sha256: "<SHA256 OF DOWNLOADED ASSET>"}
@@ -100,7 +110,12 @@ runs:
       rollback: TODO
       consent_dismiss: TODO
       consent_approve: TODO
-      mixed_document_mock_ocr: TODO
+      mixed_document_mock_ocr: TODO  # Legacy CLI compatibility
+      strict_mixed_exclusion: TODO
+      preview_no_writes: TODO
+      partial_omissions: TODO
+      handoff_copy_integrity: TODO
+      optional_photo_fields: TODO
       warm_rerun: TODO
       cancel_restart: TODO
       terminal_env_launch: TODO
@@ -110,13 +125,13 @@ runs:
     obsidian_channel: current
     obsidian_version: "<OBSIDIAN CURRENT VERSION>"
     python: "<PYTHON VERSION>"
-    engine: "2.0.2"
-    core: "0.3.9"
+    engine: "2.1.0"
+    core: "0.3.10"
     downloads:
       - {asset: main.js, sha256: "<SHA256 OF DOWNLOADED ASSET>"}
       - {asset: manifest.json, sha256: "<SHA256 OF DOWNLOADED ASSET>"}
       - {asset: styles.css, sha256: "<SHA256 OF DOWNLOADED ASSET>"}
-      - {asset: mdflow-2.0.2-py3-none-any.whl, sha256: "<SHA256 OF DOWNLOADED ASSET>"}
+      - {asset: mdflow-2.1.0-py3-none-any.whl, sha256: "<SHA256 OF DOWNLOADED ASSET>"}
       - {asset: reference-requirements.txt, sha256: "<SHA256 OF DOWNLOADED ASSET>"}
       - {asset: BOOTSTRAP.md, sha256: "<SHA256 OF DOWNLOADED ASSET>"}
       - {asset: NOTICE.txt, sha256: "<SHA256 OF DOWNLOADED ASSET>"}
@@ -128,7 +143,12 @@ runs:
       rollback: TODO
       consent_dismiss: TODO
       consent_approve: TODO
-      mixed_document_mock_ocr: TODO
+      mixed_document_mock_ocr: TODO  # Legacy CLI compatibility
+      strict_mixed_exclusion: TODO
+      preview_no_writes: TODO
+      partial_omissions: TODO
+      handoff_copy_integrity: TODO
+      optional_photo_fields: TODO
       warm_rerun: TODO
       cancel_restart: TODO
       terminal_env_launch: TODO
@@ -138,13 +158,13 @@ runs:
     obsidian_channel: minimum
     obsidian_version: "<OBSIDIAN MINIMUM VERSION>"
     python: "<PYTHON VERSION>"
-    engine: "2.0.2"
-    core: "0.3.9"
+    engine: "2.1.0"
+    core: "0.3.10"
     downloads:
       - {asset: main.js, sha256: "<SHA256 OF DOWNLOADED ASSET>"}
       - {asset: manifest.json, sha256: "<SHA256 OF DOWNLOADED ASSET>"}
       - {asset: styles.css, sha256: "<SHA256 OF DOWNLOADED ASSET>"}
-      - {asset: mdflow-2.0.2-py3-none-any.whl, sha256: "<SHA256 OF DOWNLOADED ASSET>"}
+      - {asset: mdflow-2.1.0-py3-none-any.whl, sha256: "<SHA256 OF DOWNLOADED ASSET>"}
       - {asset: reference-requirements.txt, sha256: "<SHA256 OF DOWNLOADED ASSET>"}
       - {asset: BOOTSTRAP.md, sha256: "<SHA256 OF DOWNLOADED ASSET>"}
       - {asset: NOTICE.txt, sha256: "<SHA256 OF DOWNLOADED ASSET>"}
@@ -156,7 +176,12 @@ runs:
       rollback: TODO
       consent_dismiss: TODO
       consent_approve: TODO
-      mixed_document_mock_ocr: TODO
+      mixed_document_mock_ocr: TODO  # Legacy CLI compatibility
+      strict_mixed_exclusion: TODO
+      preview_no_writes: TODO
+      partial_omissions: TODO
+      handoff_copy_integrity: TODO
+      optional_photo_fields: TODO
       warm_rerun: TODO
       cancel_restart: TODO
       terminal_env_launch: TODO
@@ -166,13 +191,13 @@ runs:
     obsidian_channel: current
     obsidian_version: "<OBSIDIAN CURRENT VERSION>"
     python: "<PYTHON VERSION>"
-    engine: "2.0.2"
-    core: "0.3.9"
+    engine: "2.1.0"
+    core: "0.3.10"
     downloads:
       - {asset: main.js, sha256: "<SHA256 OF DOWNLOADED ASSET>"}
       - {asset: manifest.json, sha256: "<SHA256 OF DOWNLOADED ASSET>"}
       - {asset: styles.css, sha256: "<SHA256 OF DOWNLOADED ASSET>"}
-      - {asset: mdflow-2.0.2-py3-none-any.whl, sha256: "<SHA256 OF DOWNLOADED ASSET>"}
+      - {asset: mdflow-2.1.0-py3-none-any.whl, sha256: "<SHA256 OF DOWNLOADED ASSET>"}
       - {asset: reference-requirements.txt, sha256: "<SHA256 OF DOWNLOADED ASSET>"}
       - {asset: BOOTSTRAP.md, sha256: "<SHA256 OF DOWNLOADED ASSET>"}
       - {asset: NOTICE.txt, sha256: "<SHA256 OF DOWNLOADED ASSET>"}
@@ -184,7 +209,12 @@ runs:
       rollback: TODO
       consent_dismiss: TODO
       consent_approve: TODO
-      mixed_document_mock_ocr: TODO
+      mixed_document_mock_ocr: TODO  # Legacy CLI compatibility
+      strict_mixed_exclusion: TODO
+      preview_no_writes: TODO
+      partial_omissions: TODO
+      handoff_copy_integrity: TODO
+      optional_photo_fields: TODO
       warm_rerun: TODO
       cancel_restart: TODO
       terminal_env_launch: TODO

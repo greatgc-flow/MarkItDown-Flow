@@ -13,7 +13,8 @@ from urllib.request import urlopen
 from build_engine import SUBJECTS, VERSION
 OSES = {'windows', 'macos', 'linux'}
 REHEARSAL = {'fresh_install', 'upgrade_from_1_0_8', 'rollback', 'consent_dismiss', 'consent_approve',
-             'mixed_document_mock_ocr', 'warm_rerun', 'cancel_restart', 'terminal_env_launch', 'commands', 'en_ko'}
+             'mixed_document_mock_ocr', 'strict_mixed_exclusion', 'preview_no_writes', 'partial_omissions',
+             'handoff_copy_integrity', 'optional_photo_fields', 'warm_rerun', 'cancel_restart', 'terminal_env_launch', 'commands', 'en_ko'}
 POSTDEPLOY = {'install_via_listing', 'version_check', 'sanitized_migration', 'local_conversion',
               'offline_mock_ocr', 'restart', 'pending_failure_display', 'warm_rerun'}
 EXTRA_FILES = ('oracles.json', 'actions-review.json', 'pkg04_core_artifacts.json', 'listing-review.json')
@@ -141,9 +142,9 @@ def validate_extra(filename: str, data, expected_commit: str, *, root: Path, exe
             problems.append('wrong candidate listing identity/version')
         checks(data, LISTING_CHECKS, problems)
     else:
-        if data.get('package') != 'markitdown-gc' or data.get('version') != '0.3.9':
-            problems.append('exact reference Core 0.3.9 required')
-        if data.get('source') != 'https://pypi.org/pypi/markitdown-gc/0.3.9/json':
+        if data.get('package') != 'markitdown-gc' or data.get('version') != '0.3.10':
+            problems.append('exact reference Core 0.3.10 required')
+        if data.get('source') != 'https://pypi.org/pypi/markitdown-gc/0.3.10/json':
             problems.append('official PyPI JSON source required')
         artifacts = data.get('artifacts')
         if not isinstance(artifacts, list) or not artifacts:
@@ -179,7 +180,7 @@ def validate_extra(filename: str, data, expected_commit: str, *, root: Path, exe
                 problems.append('candidate-bound successful install required')
             items = run.get('report', {}).get('install', [])
             core = [i.get('metadata', {}) for i in items if i.get('metadata', {}).get('name') == 'markitdown-gc']
-            if len(core) != 1 or not re.fullmatch(r'0\.3\.(?:[7-9]|[1-9][0-9]+)', core[0].get('version', '')):
+            if len(core) != 1 or not re.fullmatch(r'0\.3\.[1-9][0-9]+', core[0].get('version', '')):
                 problems.append('resolved compatible markitdown-gc required')
             for item in items:
                 metadata, download = item.get('metadata', {}), item.get('download_info', {})
@@ -248,10 +249,10 @@ def produce_extras(root: Path, source: Path, output: Path, expected_commit: str,
             raise ValueError(f'GitHub action SHA differs: {action}')
         row['verification'] = dict(command=f'gh api {endpoint}', stdout={'sha': actual['sha']}, exit=0)
     pkg = records['pkg04_core_artifacts.json']
-    catalog = pypi_json('0.3.9')
-    if catalog['info']['name'] != 'markitdown-gc' or catalog['info']['version'] != '0.3.9':
+    catalog = pypi_json('0.3.10')
+    if catalog['info']['name'] != 'markitdown-gc' or catalog['info']['version'] != '0.3.10':
         raise ValueError('PyPI returned another Core')
-    pkg.update(package='markitdown-gc', version='0.3.9', source='https://pypi.org/pypi/markitdown-gc/0.3.9/json',
+    pkg.update(package='markitdown-gc', version='0.3.10', source='https://pypi.org/pypi/markitdown-gc/0.3.10/json',
                artifacts=[dict(filename=i['filename'], url=i['url'], sha256=i['digests']['sha256'],
                                size=i['size'], packagetype=i['packagetype'], yanked=i['yanked']) for i in catalog['urls']])
     pkg['install_reports'] = []
@@ -368,7 +369,7 @@ def validate_rehearsal(data: dict, *, minimum_version=None) -> list[str]:
         cells.append((run.get('os'), run.get('obsidian_channel')))
         if minimum_version and run.get('obsidian_channel') == 'minimum' and run.get('obsidian_version') != minimum_version:
             problems.append('MAN-04 minimum Obsidian version differs from candidate manifest')
-        if run.get('engine') != VERSION or run.get('core') != '0.3.9':
+        if run.get('engine') != VERSION or run.get('core') != '0.3.10':
             problems.append('rehearsal must use the exact engine/Core')
         assets(run.get('downloads'), SUBJECTS, problems)
         checks(run, REHEARSAL, problems)

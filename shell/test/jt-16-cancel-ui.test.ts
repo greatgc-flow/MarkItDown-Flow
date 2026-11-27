@@ -63,6 +63,7 @@ function harness(
   consent: (view: unknown) => Promise<ConsentDecision> = async () => ({ approved: false }),
   showDetails = true,
   gate: CoordinatorDeps['gate'] = () => ENABLED_GATE,
+  strictResults?: CoordinatorDeps['strictResults'],
 ): Harness {
   const fs = new FakeFs({ directories: [VAULT_ROOT, OUT, INPUT_ROOT, PLUGIN_DIR] });
   const spawner = new FakeSpawner(script);
@@ -77,6 +78,7 @@ function harness(
   });
   const deps: CoordinatorDeps = {
     spawner,
+    strictResults,
     fs,
     spoolFs: new FakeSpoolFs(fs, abs(PLUGIN_DIR, 'spool')),
     clock: new FakeClock(),
@@ -356,7 +358,7 @@ it(R16('JT-16 the loaded plugin owns one status-bar Cancel control wired to its 
   expect(buttons).toHaveLength(1);
   buttons[0].click();
   const report = await (coordinator.current as Promise<JobReport>);
-  expect(report.run?.outcome).toBe('cancelled');
+  expect(report.strict?.status).toBe('interrupted');
   expect(apis.spawner.children.every((c) => !c.alive)).toBe(true);
   expect(cancelButtons(asFake(items[0]))).toEqual([]);
   plugin.unload();
@@ -388,3 +390,40 @@ it(R7('JT-07 a multi-input job records one history entry with the input count an
 const _sinkShape: ProgressSink = { begin: () => undefined, phase: () => undefined, event: () => undefined, end: () => undefined };
 void _sinkShape;
 void createApp;
+
+it(R16('JT-16 read-only preview runs when the configured output destination needs repair'), async () => {
+  const settings = {...settingsV2(), outputPath:'../invalid'};
+  const h = harness(settings, () => ({exit:{code:0, signal:null}}), undefined, true, undefined, () => {});
+  const file = {kind:'files' as const, paths:[abs(INPUT_ROOT,'example.pdf')]};
+  expect((await h.coordinator.submit(file, 'command')).accepted).toBe(false);
+  expect((await h.coordinator.submit({...file, action:{mode:'preview'}}, 'command')).accepted).toBe(true);
+  await h.coordinator.current;
+  expect(h.spawner.requests[0].args).toContain('--dry-run');
+  expect(h.history).toHaveLength(0);
+});
+
+it.each(['preview', 'extract-text'] as const)(R16('JT-16 retry preserves the original %s operation and selected archive member'), async mode => {
+  const apis = fakeApis(request => {
+    const command = subcommandOf(request);
+    if (command === 'run' || command === 'extract-text') return {exit:{code:2, signal:null}};
+    return defaultScript(request);
+  });
+  const {plugin} = await loadPluginWith(jest.mocked(loadNodeApis), settingsV2(), apis);
+  await tick();
+  const coord = plugin.coordinator!;
+  const action = {mode, sha:'a'.repeat(64), member:'document.pdf'};
+  await coord.submit({kind:'files', paths:[abs(INPUT_ROOT,'archive.zip')], action}, 'command');
+  await coord.current;
+  const dialog = mockState.openModals.at(-1)!;
+  const retry = asFake(dialog.contentEl).findAll(e => e.tagName === 'button' && e.textContent === 'Retry original selection')[0];
+  expect(retry).toBeDefined();
+  retry.click();
+  await tick();
+  await coord.current;
+  const requests = apis.spawner.requests.filter(r => ['run','extract-text'].includes(subcommandOf(r) ?? ''));
+  expect(requests).toHaveLength(2);
+  expect(requests[1].args).toEqual(requests[0].args);
+  expect(requests[1].args).toContain('document.pdf');
+  expect(requests[1].args.includes('--dry-run')).toBe(mode === 'preview');
+  plugin.unload();
+});

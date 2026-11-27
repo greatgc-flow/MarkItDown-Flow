@@ -40,10 +40,10 @@ it(R('JT-17 the actual packaged version response passes the complete gate and ma
   if (!gate.enabled) return;
   expect(gate.info).toMatchObject(Object.fromEntries(VERSION_REQUIRED_FIELDS.map((key) => [key, fx71Manifest().engine[key]])));
   // Supported recording host (M4 P-03): Python 3.14.x inside the 3.10-3.14 policy, Core 0.3.9 reference baseline.
-  expect(releaseSegment(gate.info.python)).toEqual([3, 14, expect.any(Number)]);
-  expect(gate.info['markitdown-gc']).toBe('0.3.9');
+  expect(releaseSegment(gate.info.python)).toEqual(releaseSegment(fx71Manifest().engine.python as string));
+  expect(gate.info['markitdown-gc']).toBe('0.3.10');
   expect(evaluateVersionResponse(fx71Text('version.json')).enabled).toBe(true);
-  expect(gate.info.protocol).toBe(1);
+  expect(gate.info.protocol).toBe(2);
   expect(gate.info.triage_schema).toBe(1);
   // R27: renderer/Pillow are compatibility ranges, not exact lock pins; the recorded CI identity lies inside them
   // and the exact installed versions are still carried in `info` for diagnosis.
@@ -51,7 +51,7 @@ it(R('JT-17 the actual packaged version response passes the complete gate and ma
   expect(gate.info.pillow).toBe('13.0.0');
   expect(releaseSegment(gate.info.pypdfium2)).toEqual([5, 15, 2]);
   expect(releaseSegment(gate.info.pillow)).toEqual([13, 0, 0]);
-  expect(RELEASE_LOCK.pypdfium2Min).toEqual([5, 0, 0]);
+  expect(RELEASE_LOCK.pypdfium2Min).toEqual([5, 15, 2]);
   expect(RELEASE_LOCK.pypdfium2MaxExclusive).toEqual([6, 0, 0]);
   expect(RELEASE_LOCK.pillowMin).toEqual([11, 0, 0]);
   expect(RELEASE_LOCK.pillowMaxExclusive).toEqual([14, 0, 0]);
@@ -60,8 +60,8 @@ it(R('JT-17 the actual packaged version response passes the complete gate and ma
 it(R('JT-17 R27 range-resolved renderer/Pillow installs are admitted inside the compatibility ranges and blocked outside them'), () => {
   const base = JSON.parse(fx71Text('version.json')) as Record<string, unknown>;
   const withField = (key: string, value: unknown): string => JSON.stringify({ ...base, [key]: value });
-  for (const good of ['5.0.0', '5.15.1', '5.99.9']) expect(evaluateVersionResponse(withField('pypdfium2', good), RELEASE_LOCK).enabled).toBe(true);
-  for (const bad of ['4.30.0', '6.0.0', '6.15.1', 'latest']) expect(blocked(evaluateVersionResponse(withField('pypdfium2', bad), RELEASE_LOCK))).toEqual({ reason: 'pypdfium2', field: 'pypdfium2' });
+  for (const good of ['5.15.2', '5.99.9']) expect(evaluateVersionResponse(withField('pypdfium2', good), RELEASE_LOCK).enabled).toBe(true);
+  for (const bad of ['4.30.0', '5.15.1', '6.0.0', '6.15.1', 'latest']) expect(blocked(evaluateVersionResponse(withField('pypdfium2', bad), RELEASE_LOCK))).toEqual({ reason: 'pypdfium2', field: 'pypdfium2' });
   for (const good of ['11.0.0', '12.1.0', '13.0.0', '13.9.9']) expect(evaluateVersionResponse(withField('pillow', good), RELEASE_LOCK).enabled).toBe(true);
   for (const bad of ['10.4.0', '14.0.0', '15.0.0', '']) expect(blocked(evaluateVersionResponse(withField('pillow', bad), RELEASE_LOCK))).toEqual({ reason: 'pillow', field: 'pillow' });
 });
@@ -86,7 +86,7 @@ it(R('JT-17 each missing required field blocks and names the field; an additiona
 
 it(R('JT-17 protocol 2, schema 2, string protocol, wrong Pillow, wrong renderer and out-of-range Core each block with the exact reason'), () => {
   const cases: [string, string, string | undefined][] = [
-    ['version.protocol-2.json', 'protocol', 'protocol'],
+    ['version.protocol-1.json', 'protocol', 'protocol'],
     ['version.schema-2.json', 'triage_schema', 'triage_schema'],
     ['version.protocol-string.json', 'bad_type', 'protocol'],
     ['version.wrong-pillow.json', 'pillow', 'pillow'],
@@ -104,11 +104,11 @@ it(R('JT-17 protocol 2, schema 2, string protocol, wrong Pillow, wrong renderer 
 it(R('JT-17 engine and Core ranges follow SPEC (engine >=2.0,<2.1 on the release segment; Core >=0.3.9,<0.4); malformed text blocks'), () => {
   const base = JSON.parse(fx71Text('version.json')) as Record<string, unknown>;
   const withField = (key: string, value: unknown): string => JSON.stringify({ ...base, [key]: value });
-  expect(evaluateVersionResponse(withField('mdflow', '2.0.0'), RELEASE_LOCK).enabled).toBe(true);
-  expect(evaluateVersionResponse(withField('mdflow', '2.0.3'), RELEASE_LOCK).enabled).toBe(true);
-  expect(evaluateVersionResponse(withField('mdflow', '2.0.0.dev0'), RELEASE_LOCK).enabled).toBe(true);
-  for (const bad of ['2.1.0', '1.9.9', '3.0.0', 'latest']) expect(blocked(evaluateVersionResponse(withField('mdflow', bad), RELEASE_LOCK)).reason).toBe('engine');
-  expect(evaluateVersionResponse(withField('markitdown-gc', '0.3.9'), RELEASE_LOCK).enabled).toBe(true);
+  expect(evaluateVersionResponse(withField('mdflow', '2.1.0'), RELEASE_LOCK).enabled).toBe(true);
+  expect(evaluateVersionResponse(withField('mdflow', '2.1.3'), RELEASE_LOCK).enabled).toBe(true);
+  expect(evaluateVersionResponse(withField('mdflow', '2.1.0.dev0'), RELEASE_LOCK).enabled).toBe(true);
+  for (const bad of ['2.0.2', '2.2.0', '1.9.9', '3.0.0', 'latest']) expect(blocked(evaluateVersionResponse(withField('mdflow', bad), RELEASE_LOCK)).reason).toBe('engine');
+  expect(evaluateVersionResponse(withField('markitdown-gc', '0.3.10'), RELEASE_LOCK).enabled).toBe(true);
   for (const bad of ['0.3.4', '0.3.5', '0.3.6', '0.3.7', '0.3.8', '0.4.0', '1.0.0']) expect(blocked(evaluateVersionResponse(withField('markitdown-gc', bad), RELEASE_LOCK)).reason).toBe('core');
   expect(blocked(evaluateVersionResponse(withField('platform', ''), RELEASE_LOCK)).reason).toBe('platform');
   expect(blocked(evaluateVersionResponse(withField('pillow', 13), RELEASE_LOCK))).toEqual({ reason: 'bad_type', field: 'pillow' });
@@ -127,7 +127,7 @@ it(R('JT-17 version syntax matches both steps of the package gate (test_pt_relea
     ['1.2.3a1.dev4', [1, 2, 3]],
     ['3.14.0rc1', [3, 14, 0]],
     ['0.3.6rc1', [0, 3, 6]],
-    ['5.15.1-1', [5, 15, 1]], // implicit post release
+    ['5.15.2-1', [5, 15, 2]], // implicit post release
     ['5.15.1.post', [5, 15, 1]], // implicit post number
     ['5.15.1rc', [5, 15, 1]], // implicit pre-release number
     ['5.15.1b2.post1.dev3+ubuntu.1', [5, 15, 1]],
@@ -152,10 +152,10 @@ it(R('JT-17 version syntax matches both steps of the package gate (test_pt_relea
   const reasonOf: Record<string, string> = { python: 'python', mdflow: 'engine', 'markitdown-gc': 'core', pypdfium2: 'pypdfium2', pillow: 'pillow' };
   const tGen96: [string, string, boolean][] = [
     ['python', '3.14garbage', false], ['python', '3.14.0rc1', true],
-    ['mdflow', '2.0.0???', false], ['mdflow', '2.0.0.dev0', true],
-    ['markitdown-gc', '0.3.6???', false], ['markitdown-gc', '0.3.9rc1', true],
+    ['mdflow', '2.0.0???', false], ['mdflow', '2.1.0.dev0', true],
+    ['markitdown-gc', '0.3.6???', false], ['markitdown-gc', '0.3.10rc1', true],
     ['pypdfium2', '5.15.1???', false], ['pypdfium2', ' 5.15.1', false],
-    ['pypdfium2', '5.15.1rc1', true], ['pypdfium2', '5.15.1.post1', true],
+    ['pypdfium2', '5.15.2rc1', true], ['pypdfium2', '5.15.2.post1', true],
     ['pillow', '13.0.0???', false], ['pillow', '13.0.0+local', true],
   ];
   for (const [field, value, enabled] of tGen96) {
@@ -166,7 +166,7 @@ it(R('JT-17 version syntax matches both steps of the package gate (test_pt_relea
   for (const [field, value] of [['pypdfium2', '5.15.1abc'], ['pillow', '13.0.0..1'], ['mdflow', '2.0.0+'], ['markitdown-gc', '0.3.6a1b2'], ['python', '3.14.2garbage']]) {
     expect(blocked(evaluateVersionResponse(withField(field, value)))).toEqual({ reason: reasonOf[field], field });
   }
-  for (const [field, value] of [['pypdfium2', '5.15.1-1'], ['pillow', '13.0.0+local'], ['mdflow', '2.0.0rc1'], ['markitdown-gc', '0.3.9.post1'], ['python', '3.14.0rc1']]) {
+  for (const [field, value] of [['pypdfium2', '5.15.2-1'], ['pillow', '13.0.0+local'], ['mdflow', '2.1.0rc1'], ['markitdown-gc', '0.3.10.post1'], ['python', '3.14.0rc1']]) {
     expect({ field, value, enabled: evaluateVersionResponse(withField(field, value)).enabled }).toEqual({ field, value, enabled: true });
   }
 });
@@ -215,7 +215,7 @@ it(R('JT-17 a blocked gate yields zero conversions: submit is refused with shell
     pluginDir: PLUGIN_DIR,
     homeDir: HOME,
     settings: () => settingsV2(),
-    gate: () => evaluateVersionResponse(fx71Text('version.protocol-2.json'), RELEASE_LOCK),
+    gate: () => evaluateVersionResponse(fx71Text('version.protocol-1.json'), RELEASE_LOCK),
     consent: async () => ({ approved: false }),
     notify: (key) => {
       notices.push(key);

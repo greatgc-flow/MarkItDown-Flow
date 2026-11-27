@@ -6,17 +6,11 @@ separate from README.md; committing this file does not update them.
 
 ## Short description
 
-Convert local documents to Markdown, with selective OCR planning and explicit
-approval for remote transcription. Desktop only; requires a separately installed
-Python engine.
+Convert text documents to Markdown and identify originals that need external OCR.
 
 ## About
 
-MarkItDown Flow is a desktop Obsidian plugin backed by the `mdflow` Python engine
-and `markitdown-gc`. It converts local documents to Markdown, classifies OCR needs,
-and lets you review selected pages and images before sending them to a configured
-OpenAI-compatible endpoint. Local conversion is the default. Remote transcription
-can incur provider charges.
+MarkItDown Flow is an Obsidian desktop plugin for local direct-text conversion. A scanned page excludes the whole PDF from complete Markdown. Inspect page composition, save existing text as an explicitly partial note, or copy selected originals for external transcription. Optional ExifTool support lets you preview and copy selected photo fields.
 
 Install the engine in a separate virtual environment using BOOTSTRAP.md, then
 select its interpreter in the plugin settings. The plugin does not install Python

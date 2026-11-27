@@ -32,7 +32,7 @@ def test_T_GEN_88_fx71_records_current_engine_with_honest_host_policy_and_replay
     fixtures = REPO / 'shell/test/fixtures/fx71'
     manifest = json.loads((fixtures / 'manifest.json').read_text(encoding='utf-8'))
     actual = json.loads((fixtures / 'version.json').read_text(encoding='utf-8'))
-    assert actual['mdflow'] == mdflow.__version__ == '2.0.2'
+    assert actual['mdflow'] == mdflow.__version__ == '2.1.0'
     assert manifest['engine'] == actual
     assert actual['python'] == manifest['recording_host']['python']
     # Host compatibility is diagnosed, never rewritten to make a recording pass.

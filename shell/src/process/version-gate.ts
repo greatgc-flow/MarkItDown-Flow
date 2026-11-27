@@ -22,13 +22,15 @@ export type ToolStatus = (typeof TOOL_STATUSES)[number];
 export type ToolSource = string | null;
 
 export interface VersionInfo {
+  strict_policy?: 'strict-v1';
+  report_schema?: 2;
   mdflow: string;
   'markitdown-gc': string;
   pypdfium2: string;
   pillow: string;
   python: string;
   platform: string;
-  protocol: 1;
+  protocol: 1 | 2;
   triage_schema: 1;
   /**
    * Optional (R31): exiftool version text, or `null` when the engine reports none (its
@@ -82,7 +84,7 @@ export interface VersionPolicy {
   pypdfium2MaxExclusive: Semver;
   pillowMin: Semver;
   pillowMaxExclusive: Semver;
-  protocol: 1;
+  protocol: 1 | 2;
   triageSchema: 1;
 }
 
@@ -90,15 +92,15 @@ export interface VersionPolicy {
 export const RELEASE_LOCK: VersionPolicy = {
   pythonMin: [3, 10, 0],
   pythonMaxExclusive: [3, 15, 0],
-  engineMin: [2, 0, 0],
-  engineMaxExclusive: [2, 1, 0],
-  coreMin: [0, 3, 9],
+  engineMin: [2, 1, 0],
+  engineMaxExclusive: [2, 2, 0],
+  coreMin: [0, 3, 10],
   coreMaxExclusive: [0, 4, 0],
-  pypdfium2Min: [5, 0, 0],
+  pypdfium2Min: [5, 15, 2],
   pypdfium2MaxExclusive: [6, 0, 0],
   pillowMin: [11, 0, 0],
   pillowMaxExclusive: [14, 0, 0],
-  protocol: 1,
+  protocol: 2,
   triageSchema: 1,
 };
 
@@ -195,6 +197,7 @@ export function evaluateVersionResponse(stdout: string, policy: VersionPolicy = 
   if (typeof raw.protocol !== 'number') return blocked('bad_type', 'protocol');
   if (typeof raw.triage_schema !== 'number') return blocked('bad_type', 'triage_schema');
   if (raw.protocol !== policy.protocol) return blocked('protocol', 'protocol');
+  if (policy.protocol === 2 && (raw.strict_policy !== 'strict-v1' || raw.report_schema !== 2)) return blocked('protocol', 'protocol');
   if (raw.triage_schema !== policy.triageSchema) return blocked('triage_schema', 'triage_schema');
   const info: VersionInfo = {
     mdflow: raw.mdflow as string,
@@ -203,9 +206,10 @@ export function evaluateVersionResponse(stdout: string, policy: VersionPolicy = 
     pillow: raw.pillow as string,
     python: raw.python as string,
     platform: raw.platform as string,
-    protocol: 1,
+    protocol: policy.protocol,
     triage_schema: 1,
   };
+  if (policy.protocol === 2) Object.assign(info, {strict_policy:'strict-v1', report_schema:2});
   // Optional tool status (R31 exiftool, R33 LibreOffice): a version string or null (the engine's `"unavailable"`
   // reads as null); status/source only in their closed vocabularies. Any other shape is an ignored optional field.
   for (const tool of ['exiftool', 'libreoffice'] as const) {

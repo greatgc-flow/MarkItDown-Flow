@@ -26,9 +26,9 @@ THIRD_PARTY_OK = {"mdflow", "markitdown", "PIL", "pypdfium2"}
 def _imports(tree):
     for node in ast.walk(tree):
         if isinstance(node, ast.Import):
-            yield from ((alias.name, node.lineno) for alias in node.names)
+            yield from ((alias.name, node) for alias in node.names)
         elif isinstance(node, ast.ImportFrom) and node.level == 0 and node.module:
-            yield node.module, node.lineno
+            yield node.module, node
 
 
 @pytest.mark.req("REQ-GEN-01")
@@ -46,10 +46,16 @@ def test_T_GEN_01_pure_python_with_declared_runtime_dependencies():
     assert not native, f"native or compiled sources in the mdflow package: {native}"
     foreign = {}
     for path in sorted(ENGINE_SRC.rglob("*.py")):
-        for module, line in _imports(ast.parse(path.read_text(encoding="utf-8"))):
+        for module, node in _imports(ast.parse(path.read_text(encoding="utf-8"))):
+            # PT-16 verifies this optional privacy API runs before model construction
+            # and that conversion also works when the runtime is absent.
+            if (path == ENGINE_SRC / "convert.py" and module == "onnxruntime"
+                    and isinstance(node, ast.ImportFrom)
+                    and [(a.name, a.asname) for a in node.names] == [("disable_telemetry_events", None)]):
+                continue
             top = module.split(".")[0]
             if top not in sys.stdlib_module_names and top not in THIRD_PARTY_OK:
-                foreign.setdefault(top, f"{path.name}:{line}")
+                foreign.setdefault(top, f"{path.name}:{node.lineno}")
     assert not foreign, f"runtime imports beyond stdlib + markitdown-gc: {foreign}"
 
 
@@ -89,7 +95,7 @@ def test_T_GEN_02_core_outside_range_exits_one_before_any_file_is_read(tmp_path,
 
     def run(version, label):
         log = tmp_path / f"opened-{label}.json"
-        argv = cli_command("run", source.parent, "-o", tmp_path / f"out-{label}", "--cache", tmp_path / f"cache-{label}",
+        argv = cli_command("legacy-run", source.parent, "-o", tmp_path / f"out-{label}", "--cache", tmp_path / f"cache-{label}",
                            prelude=_PRELUDE.format(version=version, log=str(log)))
         done = subprocess.run(argv, cwd=tmp_path, env=env, capture_output=True, text=True, encoding="utf-8", timeout=120)
         opened = json.loads(log.read_text(encoding="utf-8")) if log.exists() else []
@@ -100,7 +106,7 @@ def test_T_GEN_02_core_outside_range_exits_one_before_any_file_is_read(tmp_path,
         assert done.returncode == 1 and "E_CORE_VERSION" in done.stdout + done.stderr, (version, done.stderr)
         assert wanted not in opened, f"{version}: input was opened before the version gate"
         assert not (tmp_path / f"out-{version}").exists() and not (tmp_path / f"cache-{version}").exists()
-    done, opened = run("0.3.9", "control")  # the spy does see the input when the gate passes
+    done, opened = run("0.3.10", "control")  # the spy does see the input when the gate passes
     assert done.returncode == 0, done.stderr
     assert wanted in opened, "control: the open spy did not observe the input file"
 

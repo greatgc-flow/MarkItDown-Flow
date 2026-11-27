@@ -239,7 +239,7 @@ def denied(path, *args, **kwargs):
     return _real_write(path, *args, **kwargs)
 write.atomic_write = denied
 '''
-    proc = cli_probe.run('run', root, '-o', tmp_path / 'out', '--cache', tmp_path / 'cache',
+    proc = cli_probe.run('legacy-run', root, '-o', tmp_path / 'out', '--cache', tmp_path / 'cache',
                          '--report', target, '--progress', 'jsonl', prelude=prelude)
     value, = cli_probe.objects(proc.stdout)
     events = cli_probe.events(proc)
@@ -293,7 +293,7 @@ def test_T_TRX_51_m1_v15_slow_drip_obeys_request_deadline(gen, monkeypatch):
 def test_T_CLI_50_m1_v16_exact_flags_and_provider_scope(tmp_path, gen, cli_probe, extra):
     source = tmp_path / 'note.txt'
     source.write_bytes(gen.txt_utf8())
-    proc = cli_probe.run('run', source, '-o', tmp_path / 'out', *extra)
+    proc = cli_probe.run('legacy-run', source, '-o', tmp_path / 'out', *extra)
     assert proc.returncode == 1 and 'E_USAGE' in proc.stderr and proc.stdout == ''
     assert not (tmp_path / 'out').exists()
 

@@ -119,6 +119,34 @@ assert os.environ.get('ORT_DISABLE_TELEMETRY') == '1'
 def test_PT_16_readme_has_the_five_disclosures_and_code_has_no_telemetry_or_unplanned_sockets():
     for inherited in (None, "0"):
         assert_native_telemetry_disabled_before_core_import(inherited)
+    setup = "" if os.environ.get("MDFLOW_TEST_INSTALLED") == "1" else f"sys.path.insert(0, {str(REPO / 'engine/src')!r})"
+    # Exercise the real construction boundary without starting a model or reading a document.
+    spy = f"""import os, sys, types
+{setup}
+calls = []
+def disable():
+    assert os.environ['ORT_DISABLE_TELEMETRY'] == '1'
+    calls.append('disable')
+class Converter:
+    def __init__(self, **kwargs):
+        calls.append('construct')
+    def convert_stream(self, data, **kwargs):
+        return types.SimpleNamespace(markdown=data.read().decode())
+import mdflow
+from mdflow import convert
+assert 'onnxruntime' not in sys.modules
+assert not calls
+sys.modules['markitdown'] = types.SimpleNamespace(MarkItDown=Converter)
+convert.core_guard.check = lambda: None
+sys.modules['onnxruntime'] = types.SimpleNamespace(disable_telemetry_events=disable)
+assert convert.core_convert(b'text', '.txt') == 'text'
+assert calls == ['disable', 'construct'], calls
+# Python 3.15 and minimal Core installs can have no model runtime.
+sys.modules['onnxruntime'] = None
+assert convert.core_convert(b'text', '.txt') == 'text'
+assert calls == ['disable', 'construct', 'construct'], calls
+"""
+    subprocess.run([sys.executable, "-I", "-c", spy], check=True, timeout=30)
     readme = (REPO / "README.md").read_text(encoding="utf-8")
     sections = readme_sections(readme)
     missing = []
@@ -184,7 +212,7 @@ def test_PT_22_terminal_launched_key_reaches_the_engine_child_but_no_diagnostic_
     outputs.append(plan)
     assert plan.returncode in (0, 3), plan.stderr  # SPEC 8.4: plan may announce missing consent (exit 3)
     plan_hash = json_objects(plan.stdout)[0]["plan_hash"]
-    run = through_terminal("run", source.parent.name, "-o", "out", *flags, "--yes", plan_hash, "--progress", "jsonl")
+    run = through_terminal("legacy-run", source.parent.name, "-o", "out", *flags, "--yes", plan_hash, "--progress", "jsonl")
     outputs.append(run)
     assert run.returncode == 0, (run.stdout, run.stderr)
     posts = [r for r in mock_http.requests if r["method"] == "POST"]
@@ -198,7 +226,7 @@ def test_PT_22_terminal_launched_key_reaches_the_engine_child_but_no_diagnostic_
               if p.is_file() and SENTINEL.encode() in p.read_bytes()]
     assert not leaked, f"credential persisted in {leaked}"
     # Without the key the remote provider is refused at startup while the default provider stays usable.
-    missing = source_engine.run("run", source.parent.name, "-o", "out2", *flags, env={"MDFLOW_BASE_URL": mock_http.base_url})
+    missing = source_engine.run("legacy-run", source.parent.name, "-o", "out2", *flags, env={"MDFLOW_BASE_URL": mock_http.base_url})
     assert missing.returncode == 1 and "E_PROVIDER_CONFIG" in missing.stderr
-    local = source_engine.run("run", source.parent.name, "-o", "out3", "--cache", "cache3")
+    local = source_engine.run("legacy-run", source.parent.name, "-o", "out3", "--cache", "cache3")
     assert local.returncode == 0, local.stderr

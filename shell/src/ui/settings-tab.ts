@@ -27,6 +27,7 @@ export function libreofficeSettingStatus(locale: UiLocale, info: VersionInfo | n
 }
 
 export interface SettingsTabDeps {
+  strict?: boolean;
   settings: () => SettingsV2;
   save: (next: SettingsV2) => Promise<void>;
   openSetup: () => void;
@@ -125,7 +126,7 @@ export class ShellSettingsTab extends PluginSettingTab {
     section('engine');
     new Setting(containerEl).setName(t('shell.settings.enginePython')).setDesc(t('shell.settings.enginePythonNote')).addText((text) => {
       // Example path in the user's OS form, matching the SetupModal's bootstrap recipe.
-      text.setPlaceholder(Platform.isWin ? 'C:\\mdflow-venvs\\2.0.2\\Scripts\\python.exe' : '/path/to/mdflow-venvs/2.0.2/bin/python');
+      text.setPlaceholder(Platform.isWin ? 'C:\\mdflow-venvs\\2.1.0\\Scripts\\python.exe' : '/path/to/mdflow-venvs/2.1.0/bin/python');
       text.setValue(current.enginePython ?? '');
       this.committed(text, () => saved().enginePython ?? '', (value) => {
         const trimmed = value.trim();
@@ -158,7 +159,7 @@ export class ShellSettingsTab extends PluginSettingTab {
     // which LibreOffice the engine detected (version/source, missing, or not reported), from the last version probe.
     const gate = this.deps.gate?.() ?? null;
     const status = libreofficeSettingStatus(this.deps.locale(), gate?.enabled ? gate.info : null);
-    toggle('enableLegacyPreconvert', ['shell.settings.enableLegacyPreconvertNote'], formatMessage(this.deps.locale(), 'shell.settings.libreofficeStatus', { status }));
+    if (!this.deps.strict) toggle('enableLegacyPreconvert', ['shell.settings.enableLegacyPreconvertNote'], formatMessage(this.deps.locale(), 'shell.settings.libreofficeStatus', { status }));
     // Registrations made once at load (context menu, drop listener, command names) apply after a reload (M3 N-09);
     // the drop toggle also states its trade-off: every local-file drop converts instead of attaching (M3 N-08).
     toggle('enableContextMenu', ['shell.settings.reloadNote']);
@@ -172,6 +173,10 @@ export class ShellSettingsTab extends PluginSettingTab {
     });
 
     // --- OCR provider -------------------------------------------------------------------------------------
+    if (this.deps.strict) {
+      addDisclosureLink(containerEl, this.deps.locale());
+      return;
+    }
     section('provider');
     addDisclosureLink(containerEl, this.deps.locale());
     new Setting(containerEl).setName(t('shell.settings.provider')).setDesc(t('shell.settings.keyNote')).addDropdown((dropdown) => {

@@ -12,8 +12,8 @@ from _support import REPO, load_py
 @pytest.mark.parametrize('platform', ['', '   '])
 def test_T_GEN_90_m3_package_gate_requires_nonempty_platform(platform):
     release = load_py(REPO / 'engine/tests/packaging/test_pt_release.py', 'm3_runtime_gate')
-    response = dict(mdflow='2.0.0', **{'markitdown-gc': '0.3.9'}, python='3.14.0', platform=platform,
-                    protocol=1, triage_schema=1, pypdfium2='5.15.1', pillow='13.0.0')
+    response = dict(mdflow='2.1.0', **{'markitdown-gc': '0.3.10'}, python='3.14.0', platform=platform,
+                    protocol=2, strict_policy='strict-v1', report_schema=2, triage_schema=1, pypdfium2='5.15.2', pillow='13.0.0')
     assert release.gate(response) == ['platform']
 
 
@@ -22,14 +22,14 @@ def test_T_GEN_90_m3_package_gate_requires_nonempty_platform(platform):
 def test_T_META_91_m3_reference_core_and_normative_dependency_hook_are_current():
     builder = (REPO / 'tools/build_engine.py').read_text(encoding='utf-8')
     reference = (REPO / 'engine/requirements-reference.txt').read_text(encoding='utf-8')
-    assert 'requirements-reference.txt' in builder and 'Core 0.3.9' in builder
-    assert 'markitdown-gc==0.3.9' in reference
-    assert '--hash=sha256:c6c13487fc3b5f4e52331e2f584a7bf5efb0c38132eb53815e5a69cc035733e6' in reference
-    assert '--hash=sha256:4d0fdc6784f6dde250be518a460824967bea25d267d38219691cf9d7df20d251' in reference
+    assert 'requirements-reference.txt' in builder and 'Core 0.3.10' in builder
+    assert 'markitdown-gc==0.3.10' in reference
+    assert '--hash=sha256:73f6f585b4a9af5b909670456af2ab6d6a9d924fc22edda2f129a3432d5cdf7b' in reference
+    assert '--hash=sha256:c6ac4735c15b1a09a70e6b0c69c6c4dcf7d4b6c8bb099f360046940f3bddc5d4' in reference
     bootstrap = (REPO / 'engine/BOOTSTRAP.md').read_text(encoding='utf-8')
     packaging = (REPO / 'docs/renewal/25_PACKAGING.md').read_text(encoding='utf-8')
-    assert 'Core 0.3.9' in bootstrap and 'exact Core 0.3.9' in packaging
-    assert 'markitdown-gc>=0.3.9,<0.4' in builder or 'pyproject.toml' in builder
+    assert 'Core 0.3.10' in bootstrap and 'exact Core 0.3.10' in packaging
+    assert 'markitdown-gc>=0.3.10,<0.4' in builder or 'pyproject.toml' in builder
     spec = (REPO / 'docs/renewal/10_SPEC.md').read_text(encoding='utf-8')
     hook = next(line for line in spec.splitlines() if line.startswith('| GEN-01 |'))
     assert all(name in hook for name in ('markitdown-gc', 'pypdfium2', 'Pillow'))
@@ -41,7 +41,7 @@ def test_T_META_91_m3_reference_core_and_normative_dependency_hook_are_current()
 @pytest.mark.cov('S0', 'FM10')
 def test_T_META_92_m3_handoff_and_plan_catalog_match_current_ownership():
     handoff = (REPO / 'docs/renewal/HANDOFF.md').read_text(encoding='utf-8')
-    assert 'M3_ENGINE_FIXES.md' in handoff and 'Core 0.3.9' in handoff
+    assert 'M3_ENGINE_FIXES.md' in handoff and 'Core 0.3.10' in handoff
     assert 'X-14 `version` must not fail' not in handoff
     plan = (REPO / 'docs/renewal/30_TESTPLAN.md').read_text(encoding='utf-8')
     row = next(line for line in plan.splitlines() if line.startswith('| T-PLN-55 |'))
@@ -52,12 +52,12 @@ def test_T_META_92_m3_handoff_and_plan_catalog_match_current_ownership():
 @pytest.mark.cov('S2', 'FM10')
 @pytest.mark.fx('all')
 @pytest.mark.scope('schema')
-@pytest.mark.parametrize('endpoint', ['0.3.9', '0.3.99'])
+@pytest.mark.parametrize('endpoint', ['0.3.10', '0.3.19'])
 def test_T_META_94_m3_minimum_core_can_check_the_reference_seal_without_relabelling(monkeypatch, endpoint):
     golden = load_py(REPO / 'tools/golden.py', 'm3_reference_golden')
     version = golden.importlib.metadata.version
     monkeypatch.setattr(golden.importlib.metadata, 'version', lambda name: endpoint if name == 'markitdown-gc' else version(name))
-    assert golden.verify(REPO)['core_version'] == '0.3.9'
+    assert golden.verify(REPO)['core_version'] == '0.3.10'
 
 
 @pytest.mark.req('REQ-PKG-09', 'REQ-PKG-01')

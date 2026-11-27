@@ -89,7 +89,7 @@ def check_workflow():
     assert triggers(flow) == {"workflow_dispatch"}, "evidence.yml must be dispatch-only"
     on = flow.get("on", flow.get(True))
     inputs = on["workflow_dispatch"]["inputs"]
-    assert inputs["path"]["default"] == "release-evidence/2.0.2"
+    assert inputs["path"]["default"] == "release-evidence/2.1.0"
     assert flow.get("permissions") == {"contents": "read", "actions": "read"}
     assert 'permissions' not in job, 'no job-level elevation'
     WORKFLOW_TEXT = (REPO / WORKFLOW).read_text(encoding="utf-8")
@@ -207,8 +207,8 @@ def check_rehearsal_template(template):
         assert [d["asset"] for d in run["downloads"]] == list(SUBJECTS)
         assert set(run["checks"]) == set(tool.REHEARSAL), "template must list exactly the required rehearsal checks"
         assert set(run["checks"].values()) == {"TODO"}
-        assert run["engine"] == "2.0.2" and run["core"] == "0.3.9"
-    assert {template[k] for k in ("candidate_tag", "manifest_version", "versions_json_entry")} == {"2.0.2"}
+        assert run["engine"] == "2.1.0" and run["core"] == "0.3.10"
+    assert {template[k] for k in ("candidate_tag", "manifest_version", "versions_json_entry")} == {"2.1.0"}
     assert tool.validate_rehearsal(template), "the unfilled rehearsal must fail the schema validator"
     assert tool.validate_rehearsal(fill(deepcopy(template))) == []
 
@@ -218,9 +218,12 @@ def check_rehearsal_template(template):
 def check_guide():
     assert GUIDE.is_file(), "docs/renewal/MANUAL_REVIEW_GUIDE.md is missing"
     text = GUIDE.read_text(encoding="utf-8")
-    assert re.search(r"[가-힣]", text[:1500]), "a Korean summary must open the guide"
+    overview = text.split("## Before publication", 1)[0]
+    assert "93 automated points" in overview and "independent of the implementer" in overview
+    assert "99/100" in overview and "100/100" in overview and "REQ-PKG-20" in overview
+    assert not re.search(r"[\uac00-\ud7a3]", overview), "the release guide opens in English"
     for needle in ("MAN-01", "MAN-02", "MAN-03", "MAN-04", "implementer", "frozen-candidate", "evidence.yml",
-                   "release-evidence/2.0.2", "named-release-evidence", "gh workflow run release.yml",
+                   "release-evidence/2.1.0", "named-release-evidence", "gh workflow run release.yml",
                    "evidence-run", "minimum", "current", "manual-templates", *MANUAL_FILES.values()):
         assert needle in text, f"guide does not mention {needle!r}"
     for name in MANUAL_FILES.values():
