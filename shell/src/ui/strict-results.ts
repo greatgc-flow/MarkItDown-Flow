@@ -2,6 +2,27 @@ import { App, Modal, Notice, Setting } from 'obsidian';
 import type { FileRow, Mode, StrictResult } from '../process/strict';
 import type { UiLocale } from '../pure/i18n';
 
+const resultLabels: Record<string, [string, string]> = {
+  complete:['Complete','완료'], excluded:['Excluded','제외'], eligible:['Eligible','변환 가능'],
+  failed:['Failed','실패'], interrupted:['Interrupted','중단'], empty:['Empty','빈 문서'],
+  direct:['Direct text','직접 추출 가능'], ocr_required:['External OCR needed','외부 OCR 필요'],
+  undetermined:['Needs inspection','확인 필요'], protected:['Password or access protection','암호 또는 접근 제한'],
+  unsupported:['Unsupported format','지원하지 않는 형식'], legacy:['Legacy format','구형 형식'],
+  limit:['Inspection limit reached','검사 한도 도달'], limited:['Incomplete coverage','일부만 검사됨'],
+  corrupt:['Damaged file','손상된 파일'], read_failed:['Could not read the source','원본 읽기 실패'],
+  write_failed:['Could not write the output','결과 저장 실패'], source_changed:['Source changed','원본 변경됨'],
+  edited_output:['Existing file has different contents','기존 파일의 내용이 다름'],
+  conversion_failed:['Conversion failed','변환 실패'], saved:['Saved','저장됨'], reused:['Already saved','기존 결과 재사용'],
+  no_usable_text:['No existing text to extract','추출할 텍스트 없음'], unavailable:['Unavailable','사용할 수 없음'],
+  use_standard_conversion:['Use normal conversion','일반 변환 가능'], not_found:['ExifTool not installed','ExifTool 미설치'],
+  too_old:['Update ExifTool','ExifTool 업데이트 필요'], unusable:['ExifTool could not read this image','ExifTool로 이미지를 읽을 수 없음'],
+  text:['Text','텍스트'], image:['Image','이미지'], mixed:['Text and scan','텍스트와 스캔'],
+  blank:['Blank','빈 공간'], other:['Other','기타'], ocr:['Scanned','스캔'],
+};
+function describe(value: string, locale: UiLocale): string {
+  return resultLabels[value]?.[locale === 'ko' ? 1 : 0] ?? value;
+}
+
 type Actions = {
   retry(): Promise<void>;
   open(row: FileRow): Promise<void>;
@@ -53,7 +74,7 @@ class PhotoFields extends Modal {
         if (values) preview.createEl('pre', {text: values});
         else preview.createEl('p', {text: response.status === 'no_metadata'
           ? (this.ko ? '이 파일에 선택한 정보가 없습니다.' : 'The selected fields are absent from this file.')
-          : (this.ko ? '사진 정보를 읽을 수 없습니다. ' : 'Photo information unavailable. ') + response.status});
+          : (this.ko ? '사진 정보를 읽을 수 없습니다. ' : 'Photo information unavailable. ') + describe(response.status,this.ko ? 'ko' : 'en')});
       } catch {
         if (revision === request) new Notice(this.ko ? '사진 정보를 읽지 못했습니다.' : 'Could not read photo information.');
       }
@@ -80,7 +101,7 @@ export class StrictResultsModal extends Modal {
   private async perform(action: () => Promise<unknown>): Promise<void> {
     if (this.busy) return;
     this.busy = true;
-    try { const message = await action(); if (typeof message === 'string') new Notice(message); }
+    try { const message = await action(); if (typeof message === 'string') new Notice(describe(message, this.locale)); }
     catch { new Notice(this.t('Action failed. Check the source and output directory.', '작업에 실패했습니다. 원본과 출력 폴더를 확인하세요.')); }
     finally { this.busy = false; }
   }
@@ -88,19 +109,14 @@ export class StrictResultsModal extends Modal {
     const el = this.contentEl;
     el.empty();
     this.setTitle(this.t('Document results', '문서 처리 결과'));
-    const label: Record<string, string> = {
-      complete:this.t('Complete','완료'), excluded:this.t('Excluded','제외'), eligible:this.t('Eligible','변환 가능'),
-      failed:this.t('Failed','실패'), ocr_required:this.t('External OCR needed','외부 OCR 필요'),
-      undetermined:this.t('Needs inspection','확인 필요'), interrupted:this.t('Interrupted','중단'),
-      direct:this.t('Direct text','텍스트'), empty:this.t('Empty','빈 문서'),
-    };
+    const label = (value: string) => describe(value, this.locale);
     const counts = new Map<string, number>();
     for (const r of this.result.rows) counts.set(r.outcome, (counts.get(r.outcome) ?? 0) + 1);
-    el.createEl('p', {text: [label[this.result.status] ?? this.result.status,
-      ...[...counts].map(([k,n]) => (label[k] ?? k) + ' ' + n), this.t('Skipped ', '건너뜀 ') + this.result.skipped].join(' · ')});
+    el.createEl('p', {text: [label(this.result.status),
+      ...[...counts].map(([k,n]) => label(k) + ' ' + n), this.t('Skipped ', '건너뜀 ') + this.result.skipped].join(' · ')});
     new Setting(el).setName(this.t('Show','표시')).addDropdown(d => {
-      d.addOptions({all:this.t('All','전체'), ocr_required:label.ocr_required, excluded:label.excluded,
-        undetermined:label.undetermined, failed:label.failed, complete:label.complete}).setValue(this.filter).onChange(v => {
+      d.addOptions({all:this.t('All','전체'), ocr_required:label('ocr_required'), excluded:label('excluded'),
+        undetermined:label('undetermined'), failed:label('failed'), complete:label('complete')}).setValue(this.filter).onChange(v => {
           this.filter=v; this.page=0; this.selected.clear(); this.render();
         });
     });
@@ -130,11 +146,11 @@ export class StrictResultsModal extends Modal {
           try { status = await this.actions.copy(row); } catch { status = 'failed'; }
           counts.set(status, (counts.get(status) ?? 0) + 1);
         }
-        return [...counts].map(([status,n]) => status + ' ' + n).join(' · ');
+        return [...counts].map(([status,n]) => label(status) + ' ' + n).join(' · ');
       })));
     for (const row of rows.slice(start,start+25)) {
-      const item = new Setting(el).setName(row.source.relativePath).setDesc([label[row.outcome] ?? row.outcome,
-        label[row.reason] ?? row.reason, row.action].filter(Boolean).join(' · '));
+      const item = new Setting(el).setName(row.source.relativePath).setDesc([label(row.outcome),
+        label(row.reason), row.action && label(row.action)].filter(Boolean).join(' · '));
       item.addToggle(toggle => toggle.setValue(this.selected.has(row)).onChange(checked => {
         if (checked) this.selected.add(row); else this.selected.delete(row);
         this.render();
@@ -156,9 +172,9 @@ export class StrictResultsModal extends Modal {
         const roles: Record<string, number> = {};
         for (const p of f.pages) roles[p.role] = (roles[p.role] ?? 0) + 1;
         el.createEl('p',{text:this.t('Pages inspected ','검사한 페이지 ') + f.inspected_pages + '/' + f.total_pages + ' · ' +
-          Object.entries(roles).map(([k,v]) => k + ' ' + v).join(' · ')});
+          Object.entries(roles).map(([k,v]) => label(k) + ' ' + v).join(' · ')});
         el.createEl('p',{text:this.t('Measured area ','면적을 측정한 페이지 ') + f.measured_pages + '/' + f.total_pages + ' · ' +
-          (f.area_percent ? Object.entries(f.area_percent).map(([k,v]) => k + ' ≈' + v + '%').join(' · ') : this.t('Unavailable','측정 불가'))});
+          (f.area_percent ? Object.entries(f.area_percent).map(([k,v]) => label(k) + ' ≈' + v + '%').join(' · ') : this.t('Unavailable','측정 불가'))});
       }
     }
   }
