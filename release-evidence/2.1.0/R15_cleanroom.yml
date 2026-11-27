@@ -2,7 +2,7 @@ id: MAN-01
 implementer: codex-primary/codex/GPT-6
 reviewer: cleanroom-peer/codex/GPT-6
 date: '2026-11-27'
-commit: 9419264cb0c57d01564825f2d85dd1e841449152
+commit: dc067838e8f71ff5d3c07d18ab675eb89a5f7e71
 inputs:
   - The product requirements in docs/strict-markdown/PRE_TDD_SPEC_EN.md and the maintained v2 shell contract in docs/renewal/20_SHELL.md (REQ-SHL-01), with protocol definitions in docs/renewal/10_SPEC.md.
   - Public Obsidian API types in the candidate's pinned obsidian 1.14.4 package. Verified declarations for App, Modal, Notice, Setting, FileSystemAdapter and Plugin against their imports in shell/src/main.ts and shell/src/ui/strict-results.ts.
@@ -25,4 +25,5 @@ evidence:
   - This verdict addresses the seven MAN-01 source and authorship checks and the supporting local JT-01 check in 90_ACCEPTANCE section 3. Hosted cross-platform raw receipt checks and tagged frozen-asset provenance are separate release evidence (E-13 and E-15).
   - "Fresh review for source 33f97dda2b6a5fd88c803d5374d6be9e40e85f79 after 5cf5d6f214ee04a75b6f44f5a0bab1e48aa65016: git diff --quiet over shell/src, shell/styles.css, shell/esbuild.config.mjs, README.md, LICENSE and the implementer declaration returned 0. None of the test source files under shell/test changed. I verified and replayed the updated fixture corpus (25 recorded plus 28 derived, bound to the 32-file engine source digest 9870683e2a42ed8ffdcc67ae8c7d90f4582bc86818787a8784129e03071e9ece), checked the amended packaging tests for optional ONNX startup and installed-interpreter admission and reran the full shell suite, local three-position scan/partial and unequal-page area fixtures and 113 selected engine tests."
   - "Rebound 2026-11-27 from 33f97dda2b6a5fd88c803d5374d6be9e40e85f79 to 9419264cb0c57d01564825f2d85dd1e841449152: shell/src, shell/styles.css byte-identical"
+  - "Rebound 2026-11-27 from 9419264cb0c57d01564825f2d85dd1e841449152 to dc067838e8f71ff5d3c07d18ab675eb89a5f7e71: shell/src, shell/styles.css byte-identical"
 verdict: PASS

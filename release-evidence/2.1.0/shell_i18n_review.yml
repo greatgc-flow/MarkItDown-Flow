@@ -1,9 +1,9 @@
 id: MAN-03
 reviewer: language-peer/codex/gpt-6
 date: '2026-11-27'
-commit: 9419264cb0c57d01564825f2d85dd1e841449152
+commit: dc067838e8f71ff5d3c07d18ab675eb89a5f7e71
 inputs:
-- Exact Git archive of 9419264cb0c57d01564825f2d85dd1e841449152. Candidate docs/renewal/10_SPEC.md §7.5 active Code cells,
+- Exact Git archive of dc067838e8f71ff5d3c07d18ab675eb89a5f7e71. Candidate docs/renewal/10_SPEC.md §7.5 active Code cells,
   docs/renewal/20_SHELL.md §6, shell/src/pure/codes.ts, shell/src/pure/i18n.ts and shell/src/pure/settings.ts.
 - Strict UI and dispatch in shell/src/ui/strict-results.ts, coordinator.ts, progress.ts, setup-modal.ts, settings-tab.ts
   and shell/src/main.ts. Consent, results, history and drop modals for keyed interpolation. engine/src/mdflow/strict_workflow.py,
@@ -40,6 +40,12 @@ evidence:
   validated against the candidate engine-source digest. I compared the 14 changed recorded streams/reports by parsing
   JSON objects. Only event timestamps, elapsed milliseconds, run start/end and approval timestamps changed. The Korean
   filename 보고서/3분기 결산.pdf remains present in six recorded progress streams.
+- English project documentation. I compared the former Korean opening of docs/renewal/MANUAL_REVIEW_GUIDE.md with the
+  new English paragraphs in this commit. The automated score, three named reviews, MAN-01 independence, postpublication
+  owner rehearsal, score change and rollback consequences are preserved. I inspected all twelve Markdown files changed
+  from the prior 2.0.2 release for script and headings. All twelve use English and contain no Hangul. This documentation
+  change leaves Korean product messages and Korean-path fixture cases intact. The revised guide and manual-evidence criteria
+  passed the candidate packaging tests.
 - I traced the new migration wording to strict output paths, local operation and the explicit external transcription
   workflow. Both languages distinguish the .md complete output and .text-only.md partial export, correctly scope LibreOffice
   to the legacy CLI, and use release-neutral audio/video wording. Preview and extraction have distinct translated progress

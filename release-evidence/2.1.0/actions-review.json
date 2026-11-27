@@ -1,7 +1,7 @@
 {
   "reviewer": "privacy-peer/codex/gpt-6",
   "date": "2026-11-28",
-  "commit": "9419264cb0c57d01564825f2d85dd1e841449152",
+  "commit": "dc067838e8f71ff5d3c07d18ab675eb89a5f7e71",
   "evidence": [
     "Independently compared all six uses with the section 4 table across .github/workflows/ci.yml, evidence.yml and release.yml. GitHub REST public repository owner.login was actions and GET /repos/actions/{name}/commits/{release-tag} resolved to the listed 40-hex SHA for all six. https://github.com/actions",
     "CI push, pull_request and reusable tests have contents:read. Dispatch-only evidence adds actions:read to fetch cross-run receipts. All checkouts disable persisted credentials. Ordinary release jobs use read scopes. Only release.attest requests OIDC and attestation writes; only release.publish requests contents:write, downstream of acceptance. Reviewed job steps, effective scopes and artifact destinations."

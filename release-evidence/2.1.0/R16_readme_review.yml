@@ -1,7 +1,7 @@
 id: MAN-02
 reviewer: privacy-peer/codex/gpt-6
 date: '2026-11-28'
-commit: 9419264cb0c57d01564825f2d85dd1e841449152
+commit: dc067838e8f71ff5d3c07d18ab675eb89a5f7e71
 inputs:
 - 'Candidate README.md including #network-services-and-purpose, #outside-vault-access, #telemetry, #account-api-key-and-cost,
   #migration-and-limits and #convert-inspect-or-hand-off.'
@@ -56,11 +56,14 @@ evidence:
   controls; the legacy CLI provider and historical README are identified in the current README. engine/BOOTSTRAP.md covers
   version-matched installation, upgrade and rollback. This is an independent source and fixture review; real desktop/sync,
   clipboard-manager behavior and OS-specific install rehearsals are outside these observations.'
-- Reviewed the candidate changelog and exact tag-section release note generation. Instructions identify protocol 2, Core
-  0.3.10, paired shell and engine upgrade, the attached bootstrap and rollback assets. README, reviewed Flow/Core call
-  sites, workflows and dependency declarations are byte-identical to the previous source review. Reran the five engine
-  checks and the four mixed-PDF operations with published Core on 9419264. No older artifact is being attributed to this
-  source review.
+- Independently matched official push run 46041458332, release-candidate artifact 15220107324, to archive SHA-256 e5b4beb77d082b3fa21cabf0d7b6cfb081baef37bf65a35c4f530e9ca28237ee
+  and embedded commit dc067838e8f71ff5d3c07d18ab675eb89a5f7e71. Verified all eight SHA256SUMS subjects, all 32 packaged
+  Python modules against the exact Git tree, 11 compiled UI/privacy markers, and Core notices. main.js SHA-256 0137a4a870e9a8babb4e07aa2695ac4012d0dc91de3127d61b766f9acd090660;
+  mdflow wheel 27e9deb9b1275f6cc3c738c6985d12aefd6f91aed12ef0f6243bef1f7e2b0c1c. Using this exact packaged wheel with
+  published Core 0.3.10, a synthetic three-text-pages/one-scan PDF produced zero page text in preview/result JSON, a
+  separate marked partial only on explicit request, and a byte-identical original copy. Observed zero Python socket audit
+  events over the four operations. Five targeted engine tests and six release-guide/evidence tests passed at this revision.
+  The English guide preserves the named-review, owner rehearsal and rollback requirements.
 - Engine initialization sets ORT_DISABLE_TELEMETRY. The conversion path calls the optional native Python disable_telemetry_events
   API immediately before constructing the Core converter, the sole path where Core instantiates Magika. Verified startup
   and the version command leave both model runtime modules unloaded. Shell also sets the pre-import flag for all children.
