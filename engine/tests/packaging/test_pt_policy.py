@@ -120,16 +120,31 @@ def test_PT_16_readme_has_the_five_disclosures_and_code_has_no_telemetry_or_unpl
     for inherited in (None, "0"):
         assert_native_telemetry_disabled_before_core_import(inherited)
     setup = "" if os.environ.get("MDFLOW_TEST_INSTALLED") == "1" else f"sys.path.insert(0, {str(REPO / 'engine/src')!r})"
+    # Exercise the real construction boundary without starting a model or reading a document.
     spy = f"""import os, sys, types
 {setup}
 calls = []
 def disable():
     assert os.environ['ORT_DISABLE_TELEMETRY'] == '1'
-    assert not any(name in sys.modules for name in ('markitdown', 'magika'))
     calls.append('disable')
-sys.modules['onnxruntime'] = types.SimpleNamespace(disable_telemetry_events=disable)
+class Converter:
+    def __init__(self, **kwargs):
+        calls.append('construct')
+    def convert_stream(self, data, **kwargs):
+        return types.SimpleNamespace(markdown=data.read().decode())
 import mdflow
-assert calls == ['disable'], calls
+from mdflow import convert
+assert 'onnxruntime' not in sys.modules
+assert not calls
+sys.modules['markitdown'] = types.SimpleNamespace(MarkItDown=Converter)
+convert.core_guard.check = lambda: None
+sys.modules['onnxruntime'] = types.SimpleNamespace(disable_telemetry_events=disable)
+assert convert.core_convert(b'text', '.txt') == 'text'
+assert calls == ['disable', 'construct'], calls
+# Python 3.15 and minimal Core installs can have no model runtime.
+sys.modules['onnxruntime'] = None
+assert convert.core_convert(b'text', '.txt') == 'text'
+assert calls == ['disable', 'construct', 'construct'], calls
 """
     subprocess.run([sys.executable, "-I", "-c", spy], check=True, timeout=30)
     readme = (REPO / "README.md").read_text(encoding="utf-8")

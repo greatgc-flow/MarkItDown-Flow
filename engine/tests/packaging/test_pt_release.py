@@ -343,14 +343,23 @@ def test_PT_06_packaged_version_and_selftest_follow_declared_compatibility_polic
     assert set(real) == {"mdflow", "markitdown-gc", "pypdfium2", "pillow", "python", "platform", "protocol", "triage_schema",
                          "strict_policy", "report_schema", "exiftool", "exiftool_status", "exiftool_source",
                          "libreoffice", "libreoffice_status", "libreoffice_source"}  # Optional tool diagnostics
-    assert gate(real) == [], "the packaged engine fails its own gate"
+    # CI exercises experimental Python as well. Match the real interpreter that
+    # created this venv to the desktop's documented admission policy.
+    assert version_tuple(real["python"])[:2] == sys.version_info[:2]
+    expected = [] if (3, 10) <= sys.version_info[:2] < (3, 15) else ["Python range"]
+    assert gate(real) == expected, "desktop compatibility differs from the installed interpreter"
     assert packaged_engine.run("selftest").returncode == 0
     record = load_py(REPO / "tools/record_protocol.py", "mdflow_pt_record_protocol")
     real_bytes = done.stdout.encode("utf-8")
     for name in record.VERSION_VARIANTS:
         variant = json.loads(record.version_variant(name, real_bytes))
         problems = gate(variant)
-        assert bool(problems) == (name not in {"unknown-optional-field"}), f"{name}: gate verdict {problems}"
+        if name == "unknown-optional-field":
+            assert problems == expected
+        elif name == "python-3.15":
+            assert problems == ["Python range"]
+        else:
+            assert set(problems) - set(expected), f"{name}: gate verdict {problems}"
     fx71 = REPO / "shell/test/fixtures/fx71"
     assert (fx71 / "manifest.json").is_file(), "FX-71 not recorded: run python tools/record_protocol.py"
     assert record.verify(fx71) == 0, "FX-71 fixtures were edited or no longer match their parents"

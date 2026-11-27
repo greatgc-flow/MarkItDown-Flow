@@ -64,6 +64,16 @@ def core_convert(
     core_guard.check()
     import markitdown
 
+    # Magika may load ONNX Runtime when the Core converter is constructed. Opt out
+    # before that point, including on Windows. Minimal Core installs omit this runtime.
+    try:
+        from onnxruntime import disable_telemetry_events
+    except ModuleNotFoundError as error:
+        if error.name != "onnxruntime":
+            raise
+    else:
+        disable_telemetry_events()
+
     # R29/R34: only local tool settings; no Core LLM or remote-document options.
     init = dict(enable_plugins=False, exiftool_path=exiftool_path)
     if libreoffice_path is not None:
