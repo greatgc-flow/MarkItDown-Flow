@@ -23,7 +23,7 @@ const context = await esbuild.context({
   treeShaking: true,
   minify: false,
   external: ['obsidian', 'electron', ...builtinModules, ...builtinModules.map((name) => `node:${name}`)],
-  banner: { js: '/* MarkItDown Flow 2.0.2 shell: clean-room build from shell/src (MIT). */' },
+  banner: { js: '/* MarkItDown Flow 2 shell: clean-room build from shell/src (MIT). */' },
 });
 
 if (production) {
