@@ -1,7 +1,7 @@
 id: MAN-02
 reviewer: privacy-peer/codex/gpt-6
 date: '2026-11-28'
-commit: 5cf5d6f214ee04a75b6f44f5a0bab1e48aa65016
+commit: 9419264cb0c57d01564825f2d85dd1e841449152
 inputs:
 - 'Candidate README.md including #network-services-and-purpose, #outside-vault-access, #telemetry, #account-api-key-and-cost,
   #migration-and-limits and #convert-inspect-or-hand-off.'
@@ -56,11 +56,15 @@ evidence:
   controls; the legacy CLI provider and historical README are identified in the current README. engine/BOOTSTRAP.md covers
   version-matched installation, upgrade and rollback. This is an independent source and fixture review; real desktop/sync,
   clipboard-manager behavior and OS-specific install rehearsals are outside these observations.'
-- Rechecked the final commit and reran T-CLI-09..11, native telemetry ordering test PT-16 (four combined tests passed)
-  and three Jest suites (23 passed). Source-level MAN-02; a separate bundle inspection can add its artifact id and hashes.
-- Engine initialization sets ORT_DISABLE_TELEMETRY before loading ONNX Runtime and calls the native Python disable_telemetry_events
-  API before Core creates inference sessions. Shell also sets the pre-import flag for all children. Searched shell and
-  engine production callsites for remote clients; network-capable provider dispatch is confined to explicit legacy mode.
-  Compared with ONNX Runtime official Windows telemetry guidance at https://onnxruntime.ai/docs/get-started/with-c.html#telemetry
+- Reviewed the candidate changelog and exact tag-section release note generation. Instructions identify protocol 2, Core
+  0.3.10, paired shell and engine upgrade, the attached bootstrap and rollback assets. README, reviewed Flow/Core call
+  sites, workflows and dependency declarations are byte-identical to the previous source review. Reran the five engine
+  checks and the four mixed-PDF operations with published Core on 9419264. No older artifact is being attributed to this
+  source review.
+- Engine initialization sets ORT_DISABLE_TELEMETRY. The conversion path calls the optional native Python disable_telemetry_events
+  API immediately before constructing the Core converter, the sole path where Core instantiates Magika. Verified startup
+  and the version command leave both model runtime modules unloaded. Shell also sets the pre-import flag for all children.
+  Searched shell and engine production callsites for remote clients; network-capable provider dispatch is confined to
+  explicit legacy mode. Compared with ONNX Runtime official Windows telemetry guidance at https://onnxruntime.ai/docs/get-started/with-c.html#telemetry
   .
 verdict: PASS

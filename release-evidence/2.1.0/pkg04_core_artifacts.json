@@ -1,7 +1,7 @@
 {
   "reviewer": "privacy-peer/codex/gpt-6",
   "date": "2026-11-28",
-  "commit": "5cf5d6f214ee04a75b6f44f5a0bab1e48aa65016",
+  "commit": "9419264cb0c57d01564825f2d85dd1e841449152",
   "evidence": [
     "Read the official 0.3.10 versioned PyPI JSON and matched sizes and SHA-256 against both reviewed local copies of the published bytes. markitdown_gc-0.3.10-py3-none-any.whl: 145491 bytes, 73f6f585b4a9af5b909670456af2ab6d6a9d924fc22edda2f129a3432d5cdf7b. markitdown_gc-0.3.10.tar.gz: 118325 bytes, c6ac4735c15b1a09a70e6b0c69c6c4dcf7d4b6c8bb099f360046940f3bddc5d4. https://pypi.org/pypi/markitdown-gc/0.3.10/json",
     "Read wheel markitdown_gc-0.3.10.dist-info/METADATA and sdist markitdown_gc-0.3.10/PKG-INFO. Both name markitdown-gc version 0.3.10, License-Expression MIT and License-File LICENSE plus ThirdPartyNotices.md. Wheel .dist-info/licenses/ and sdist package root actually contain both files.",
