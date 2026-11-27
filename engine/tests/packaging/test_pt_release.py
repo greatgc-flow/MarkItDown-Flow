@@ -262,7 +262,7 @@ def test_PT_05_bootstrap_commands_run_unchanged_after_placeholder_substitution(r
     assert re.search(r"package index|PyPI", before, re.I) and re.search(r"network|download", before, re.I), \
         "index/network use must be shown before the setup commands"
     assert re.search(r"(plugin|Obsidian)[^.\n]*(never|does not|doesn't)[^.\n]*install|your own terminal", text, re.I)
-    assert "MDFLOW_API_KEY" in text and re.search(r"quit", text, re.I), "terminal-launch guidance missing"
+    assert "strict CLI need no account" in text and "legacy-run" in text, "local and legacy setup guidance missing"
     root_placeholder = re.search(r"(?:Set-Location -LiteralPath|\bcd)\s+'([^']+)'", block)[1]
     venv_placeholder = re.search(r"-m venv\s+'([^']+)'", block)[1]
     venv = tmp_path / "venv 한글" / "2.1.0"
@@ -274,7 +274,7 @@ def test_PT_05_bootstrap_commands_run_unchanged_after_placeholder_substitution(r
     done = subprocess.run(command, env=dict(os.environ, PYTHONUTF8="1"),
                           capture_output=True, text=True, encoding="utf-8", timeout=2400)
     assert done.returncode == 0, f"{done.stdout[-1500:]}\n{done.stderr[-1500:]}"
-    assert json.loads(done.stdout.strip().splitlines()[-1])["protocol"] == 1, "the last command is `mdflow version`"
+    assert json.loads(done.stdout.strip().splitlines()[-1])["protocol"] == 2, "the last command is `mdflow version`"
     # Inspect process command/argv fields, not the terminal recipes rendered by setup.ts.
     # JT-10 also checks the actual injected spawner receives version probes only.
     for source in (REPO / "shell/src").rglob("*.ts"):
@@ -341,7 +341,7 @@ def test_PT_06_packaged_version_and_selftest_follow_declared_compatibility_polic
     assert done.returncode == 0, done.stderr
     real = json.loads(done.stdout)
     assert set(real) == {"mdflow", "markitdown-gc", "pypdfium2", "pillow", "python", "platform", "protocol", "triage_schema",
-                         "exiftool", "exiftool_status", "exiftool_source",
+                         "strict_policy", "report_schema", "exiftool", "exiftool_status", "exiftool_source",
                          "libreoffice", "libreoffice_status", "libreoffice_source"}  # Optional tool diagnostics
     assert gate(real) == [], "the packaged engine fails its own gate"
     assert packaged_engine.run("selftest").returncode == 0

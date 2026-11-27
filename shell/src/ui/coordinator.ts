@@ -235,12 +235,15 @@ export class ShellCoordinator {
     if (!gate || !gate.enabled) return this.refuse('shell.RUNTIME');
 
     const { fs, platform } = this.deps;
-    const outDir = await this.validateDestination(settings.outputPath);
+    const request = this.buildRequest(selection);
+    const configuredOutput = await this.validateDestination(settings.outputPath);
+    const preview = this.deps.strictResults && selection.action?.mode === 'preview';
+    // Preview never publishes files. Its required snapshot path can point to the already excluded cache.
+    const outDir = configuredOutput ?? (preview ? request.cacheDir : null);
     const afterDestination = this.admissionInterrupted();
     if (afterDestination) return afterDestination;
     if (outDir === null) return this.refuse('shell.DESTINATION');
 
-    const request = this.buildRequest(selection);
     let inputs = request.inputs;
     if (selection.kind === 'folder' && !request.recursive) {
       inputs = [];
@@ -371,7 +374,8 @@ export class ShellCoordinator {
     this.strictAbort = controller;
     let journal: JobJournal | undefined;
     try {
-      if (!await this.destinationStillValid(snapshot) || controller.signal.aborted) return report;
+      if (action.mode !== 'preview' && !await this.destinationStillValid(snapshot)) return report;
+      if (controller.signal.aborted) return report;
       if (action.mode === 'run') journal = this.deps.beginJournal?.(this.deps.vaultRoot, snapshot.inputs, action.mode, snapshot.outDir);
       let count = 0;
       let lastUpdate = 0;

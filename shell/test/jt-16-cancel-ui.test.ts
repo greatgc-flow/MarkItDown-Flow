@@ -63,6 +63,7 @@ function harness(
   consent: (view: unknown) => Promise<ConsentDecision> = async () => ({ approved: false }),
   showDetails = true,
   gate: CoordinatorDeps['gate'] = () => ENABLED_GATE,
+  strictResults?: CoordinatorDeps['strictResults'],
 ): Harness {
   const fs = new FakeFs({ directories: [VAULT_ROOT, OUT, INPUT_ROOT, PLUGIN_DIR] });
   const spawner = new FakeSpawner(script);
@@ -77,6 +78,7 @@ function harness(
   });
   const deps: CoordinatorDeps = {
     spawner,
+    strictResults,
     fs,
     spoolFs: new FakeSpoolFs(fs, abs(PLUGIN_DIR, 'spool')),
     clock: new FakeClock(),
@@ -388,3 +390,14 @@ it(R7('JT-07 a multi-input job records one history entry with the input count an
 const _sinkShape: ProgressSink = { begin: () => undefined, phase: () => undefined, event: () => undefined, end: () => undefined };
 void _sinkShape;
 void createApp;
+
+it(R16('JT-16 read-only preview runs when the configured output destination needs repair'), async () => {
+  const settings = {...settingsV2(), outputPath:'../invalid'};
+  const h = harness(settings, () => ({exit:{code:0, signal:null}}), undefined, true, undefined, () => {});
+  const file = {kind:'files' as const, paths:[abs(INPUT_ROOT,'example.pdf')]};
+  expect((await h.coordinator.submit(file, 'command')).accepted).toBe(false);
+  expect((await h.coordinator.submit({...file, action:{mode:'preview'}}, 'command')).accepted).toBe(true);
+  await h.coordinator.current;
+  expect(h.spawner.requests[0].args).toContain('--dry-run');
+  expect(h.history).toHaveLength(0);
+});
