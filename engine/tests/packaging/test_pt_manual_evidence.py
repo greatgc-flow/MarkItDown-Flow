@@ -218,7 +218,10 @@ def check_rehearsal_template(template):
 def check_guide():
     assert GUIDE.is_file(), "docs/renewal/MANUAL_REVIEW_GUIDE.md is missing"
     text = GUIDE.read_text(encoding="utf-8")
-    assert re.search(r"[가-힣]", text[:1500]), "a Korean summary must open the guide"
+    overview = text.split("## Before publication", 1)[0]
+    assert "93 automated points" in overview and "independent of the implementer" in overview
+    assert "99/100" in overview and "100/100" in overview and "REQ-PKG-20" in overview
+    assert not re.search(r"[\uac00-\ud7a3]", overview), "the release guide opens in English"
     for needle in ("MAN-01", "MAN-02", "MAN-03", "MAN-04", "implementer", "frozen-candidate", "evidence.yml",
                    "release-evidence/2.1.0", "named-release-evidence", "gh workflow run release.yml",
                    "evidence-run", "minimum", "current", "manual-templates", *MANUAL_FILES.values()):

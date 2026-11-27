@@ -1,10 +1,8 @@
 # R36 release review guide
 
-출시 전에는 자동 검사 93/93과 이름이 명시된 동료의 MAN-01..03 검토가 필요합니다.
-reviewer에는 동료/프로필/모델을 기록합니다(예: `cx/cx.effort/gpt-6.1-sol`). MAN-01의 구현자와
-검토자는 서로 달라야 합니다. 출시 점수는 99/100이며 MAN-04는 `deferred: post-release (R35)`로
-명시합니다. 실제 Obsidian 검증(MAN-04)은 출시 후 소유자가 수행합니다. 통과하면 100/100,
-실패하면 REQ-PKG-20 롤백 절차를 실행합니다. 파일 형식 검증은 검토 내용의 진실을 증명하지 않습니다.
+Publication requires all 93 automated points and named peer reviews for MAN-01 through MAN-03. Each reviewer records their identity, profile and model (for example, `cx/cx.effort/gpt-6.1-sol`). The MAN-01 reviewer must be independent of the implementer.
+
+A qualified release earns 99/100 with MAN-04 recorded as `deferred: post-release (R35)`. After publication, the owner runs MAN-04 in Obsidian Desktop. A pass raises the score to 100/100. A failure triggers the REQ-PKG-20 rollback procedure. Reviewers must verify the underlying evidence themselves because file validation checks only the structure of each record.
 
 ## Before publication
 
