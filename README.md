@@ -34,26 +34,28 @@ For a selected source, use `handoff-copy` or `photo-info` with its path, `--sha2
 
 ## Network services and purpose
 
-Strict conversion, inspection, partial export, handoff and photo metadata are local operations. The user chooses any external transcription tool and initiates uploads separately. Installing a package or downloading a plugin release requires the selected package registry or GitHub. Open external documentation links only when you choose to do so.
+The GitHub release host supplies plugin assets. The Python package index supplies engine dependencies. The legacy CLI defaults to provider none and can explicitly select openai-compatible. Strict conversion, inspection, partial export, handoff and photo metadata are local operations. The user chooses any external transcription tool and initiates uploads separately. Installing a package or downloading a plugin release requires the selected package registry or GitHub. Open external documentation links only when you choose to do so.
 
 ## Outside-vault access
 
-The desktop plugin launches the configured virtual-environment interpreter, reads selected files and folders, and stages transient parser data or large input selections in private temporary directories. The optional ExifTool process receives a private copy of the selected image for a bounded, field-scoped read. Local original copies preserve the source file's own metadata.
+The desktop plugin launches the configured virtual-environment interpreter, reads selected files and folders, and stages transient parser data or large input selections in private temporary directories. Durable job results stay under ~/.mdflow/jobs. The legacy CLI cache lives under ~/.mdflow/cache. LibreOffice can be probed for legacy CLI use. The optional ExifTool process receives a private copy of the selected image for a bounded, field-scoped read. Local original copies preserve the source file's own metadata, including GPS or Artist when present.
 
 ## Telemetry
 
-Flow disables ONNX Runtime telemetry for engine operations. Diagnostics and composition previews contain no transcribed page text. Source paths appear in results so you can reopen the original. Exporting a list or copying metadata to the clipboard is an explicit action.
+Flow sends no client telemetry. Flow disables ONNX Runtime telemetry for engine operations. Diagnostics and composition previews contain no transcribed page text. Source paths appear in results so you can reopen the original. Exporting a list or copying metadata to the clipboard is an explicit action.
 
 ## Account, API key and cost
 
-The strict workflow requires no API key or paid transcription provider. Prior selective-OCR CLI automations can explicitly use `mdflow legacy-run` on the new engine. That entry point can contact a configured provider and incur charges under its historical approval and cache policy. The legacy plan and provider commands are intended for those callers. [Historical CLI and provider disclosures](https://github.com/greatgc-flow/MarkItDown-Flow/blob/b9cc63551e79e8ee0038fbadcdadd610f3206a65/README.md)
+A legacy CLI caller can pass MDFLOW_API_KEY in its environment. The strict workflow requires no API key or paid transcription provider. Prior selective-OCR CLI automations can explicitly use `mdflow legacy-run` on the new engine. That entry point can contact a configured provider and incur charges under its historical approval and cache policy. The legacy plan and provider commands are intended for those callers. [Historical CLI and provider disclosures](https://github.com/greatgc-flow/MarkItDown-Flow/blob/b9cc63551e79e8ee0038fbadcdadd610f3206a65/README.md)
 
 ## Migration and limits
 
-Install the shell and engine as a matched pair. A 2.0 environment uses the old protocol. Keep its environment and plugin assets together for rollback. Reliable page geometry and partial export are available for PDF. Missing evidence, ambiguous media, unreadable text layers and limited inspection produce a separate outcome. The preview shows measured-page coverage so missing pages do not inflate area estimates.
+Install the shell and its virtual environment as a matched pair. Keep a snapshot of the prior configuration for rollback. A 2.0 environment uses the old protocol. Keep its environment and plugin assets together for rollback. Reliable page geometry and partial export are available for PDF. Missing evidence, ambiguous media, unreadable text layers and limited inspection produce a separate outcome. The preview shows measured-page coverage so missing pages do not inflate area estimates.
 
 The [English product specification](docs/strict-markdown/PRE_TDD_SPEC_EN.md) records the acceptance criteria. The [packaging verification guide](docs/renewal/PACKAGING_VERIFICATION.md) describes the evidence required before distribution.
 
+Use **Reopen last conversion results** to revisit a completed or interrupted local job. Re-running the original selection rechecks source bytes and existing outputs.
+
 ## Development and license
 
-Use Python for the engine and Node 24 for the shell. Run pytest under `engine/` and run `npm ci`, `npm run typecheck`, `npm test` and `npm run build` under `shell/`. See [LICENSE](LICENSE).
+Required CI targets include Windows x64, Ubuntu x64 and macOS arm64. Use Python for the engine and Node 24 for the shell. Run pytest under `engine/` and run `npm ci`, `npm run typecheck`, `npm test` and `npm run build` under `shell/`. See [LICENSE](LICENSE).

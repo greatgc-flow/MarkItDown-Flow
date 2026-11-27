@@ -113,8 +113,8 @@ def test_PT_27_r35_extra_evidence_has_validated_templates_and_automatic_facts(tm
             if endpoint == f'repos/{action}/commits/{sha}':
                 return {'sha': sha}
         raise AssertionError(endpoint)
-    catalog = {'info': {'name': 'markitdown-gc', 'version': '0.3.9', 'license': 'MIT'}, 'urls': [
-        {'filename': 'markitdown_gc-0.3.9-py3-none-any.whl', 'url': 'https://files.pythonhosted.org/core.whl',
+    catalog = {'info': {'name': 'markitdown-gc', 'version': '0.3.10', 'license': 'MIT'}, 'urls': [
+        {'filename': 'markitdown_gc-0.3.10-py3-none-any.whl', 'url': 'https://files.pythonhosted.org/core.whl',
          'digests': {'sha256': 'ab' * 32}, 'packagetype': 'bdist_wheel', 'size': 123, 'yanked': False}]}
     monkeypatch.setattr(tool, 'gh_json', gh_json)
     monkeypatch.setattr(tool, 'pypi_json', lambda version: deepcopy(catalog))
@@ -126,7 +126,7 @@ def test_PT_27_r35_extra_evidence_has_validated_templates_and_automatic_facts(tm
         for py in ('3.10', '3.14'):
             (executions / f'runtime-{runner}-py{py}.json').write_text(json.dumps(dict(commit=COMMIT, installed=True)))
             (executions / f'install-{platform}-py{py}-compat-env.json').write_text(json.dumps({'install': [
-                {'metadata': {'name': 'markitdown-gc', 'version': '0.3.9'}, 'download_info': {
+                {'metadata': {'name': 'markitdown-gc', 'version': '0.3.10'}, 'download_info': {
                     'url': catalog['urls'][0]['url'], 'archive_info': {'hashes': {'sha256': 'ab' * 32}}}}]}))
     output = tmp_path / 'output'
     tool.produce_extras(candidate_root, reviews, output, COMMIT, executions=executions)
@@ -184,7 +184,7 @@ def test_PT_28_r35_gate_seals_deferral_publisher_enforces_it_and_rehearsal_stays
                 for i, w in enumerate((3, 2, 1, 1), 1)],
         post_release=[dict(id='MAN-04', status=DEFERRED), dict(id='REQ-PKG-19', status='pending: post-release'),
                       dict(id='REQ-PKG-21', status='pending: post-release')])
-    candidate = dict(commit=COMMIT, repo='owner/repo', tag='2.0.2')
+    candidate = dict(commit=COMMIT, repo='owner/repo', tag='2.1.0')
     folder = tmp_path / 'candidate'
     folder.mkdir()
     manual = tmp_path / 'manual'
@@ -193,7 +193,7 @@ def test_PT_28_r35_gate_seals_deferral_publisher_enforces_it_and_rehearsal_stays
     evidence.mkdir()
     for name in schema.EXTRA_FILES:
         (manual / name).write_text('{}')
-    for key, value in dict(GITHUB_REF_TYPE='tag', GITHUB_REF_NAME='2.0.2', GITHUB_SHA=COMMIT,
+    for key, value in dict(GITHUB_REF_TYPE='tag', GITHUB_REF_NAME='2.1.0', GITHUB_SHA=COMMIT,
                            GITHUB_REPOSITORY='owner/repo', GITHUB_RUN_ID='123').items():
         monkeypatch.setenv(key, value)
     monkeypatch.setattr(gate, 'verify', lambda path: deepcopy(candidate))

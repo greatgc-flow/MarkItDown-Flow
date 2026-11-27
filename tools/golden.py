@@ -15,7 +15,7 @@ import json
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-REFERENCE_CORE = '0.3.9'
+REFERENCE_CORE = '0.3.10'
 
 
 def recipes(root):

@@ -100,6 +100,7 @@ export interface ProgressSink {
   begin(phase: JobPhase): void;
   phase(phase: JobPhase): void;
   event(event: ProgressEvent): void;
+  files?(count: number): void;
   end(): void;
 }
 
@@ -160,6 +161,10 @@ export class JobStatusBar implements ProgressSink {
     if (this.currentPhase === null) return;
     applyProgressEvent(this.summary, event);
     this.render();
+  }
+
+  files(count: number): void {
+    if (this.detailsEl) this.detailsEl.setText(this.deps.locale() === 'ko' ? count + '개 처리' : count + ' files processed');
   }
 
   end(): void {

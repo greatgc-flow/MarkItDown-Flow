@@ -99,7 +99,7 @@ it(R4('JT-04 setup and provider settings link to the release disclosures in Engl
 
 // ----------------------------------------------------------------------------- JT-04 settings sections
 
-it(R4('JT-04 the settings tab groups every control under five headings (Engine, Conversion, OCR provider, Consent & privacy, Advanced) with short descriptions (R32)'), async () => {
+it(R4('JT-04 the settings tab groups every control under the Engine and Conversion headings with short descriptions (R32)'), async () => {
   const { plugin } = await loadPluginWith(mocked, settingsV2());
   const tab = asMockPlugin(plugin).settingTabs[0];
   tab.display();
@@ -108,7 +108,7 @@ it(R4('JT-04 the settings tab groups every control under five headings (Engine, 
   const nameOf = (item: FakeElement): string => item.findAll((n) => n.hasClass('setting-item-name'))[0]?.textContent ?? '';
   const descOf = (item: FakeElement): string => item.findAll((n) => n.hasClass('setting-item-description'))[0]?.textContent ?? '';
   const headings = items.filter((e) => e.hasClass('setting-item-heading'));
-  const sectionKeys = ['engine', 'conversion', 'provider', 'consent', 'advanced'];
+  const sectionKeys = ['engine', 'conversion'];
   expect(headings.map(nameOf)).toEqual(sectionKeys.map((k) => EN[`shell.settings.section.${k}`]));
   for (const heading of headings) expect(descOf(heading).trim().length).toBeGreaterThan(0);
   // The first item is a heading: no control floats above its section.
@@ -123,10 +123,7 @@ it(R4('JT-04 the settings tab groups every control under five headings (Engine, 
   };
   const expected: Record<string, number> = {
     enginePython: 0, openSetup: 0,
-    outputPath: 1, enableRecursiveConversion: 1, enableLegacyPreconvert: 1, enableContextMenu: 1, enableDragDrop: 1, enableBatchProgress: 1, locale: 1,
-    provider: 2, model: 2, baseUrl: 2,
-    approveThreshold: 3, sensitive: 3,
-    dpi: 4, minPriority: 4, maxUnits: 4,
+    outputPath: 1, enableRecursiveConversion: 1, enableContextMenu: 1, enableDragDrop: 1, enableBatchProgress: 1, locale: 1,
   };
   for (const [key, section] of Object.entries(expected)) {
     expect({ key, section: sectionOf(EN[`shell.settings.${key}`]) }).toEqual({ key, section });
@@ -154,8 +151,7 @@ it(R4('JT-04 every path and numeric setting says what it does, not only when it 
     return item?.findAll((n) => n.hasClass('setting-item-description'))[0]?.textContent ?? '';
   };
   const notes: [string, string][] = [
-    ['enginePython', 'enginePythonNote'], ['outputPath', 'outputPathNote'], ['dpi', 'dpiNote'],
-    ['minPriority', 'minPriorityNote'], ['maxUnits', 'maxUnitsNote'], ['approveThreshold', 'approveThresholdNote'],
+    ['enginePython', 'enginePythonNote'], ['outputPath', 'outputPathNote'],
   ];
   for (const [setting, note] of notes) {
     expect({ setting, desc: descOf(EN[`shell.settings.${setting}`]).includes(EN[`shell.settings.${note}`]) }).toEqual({ setting, desc: true });

@@ -158,10 +158,12 @@ export class SetupModal extends Modal {
       }
 
       this.heading(contentEl, 'shell.setup.section.environment');
-      contentEl.createEl('p', { text: this.t('shell.setup.apiKey', { presence: this.presenceText(d.apiKey) }) });
-      contentEl.createEl('p', { cls: 'mdflow-muted', text: this.t('shell.setup.providerEnv') });
-      const envList = contentEl.createDiv({ cls: 'mdflow-setup-env' });
-      for (const [name, presence] of Object.entries(d.providerEnv)) this.keyValue(envList, name, this.presenceText(presence));
+      if (this.deps.policy?.protocol !== 2) {
+        contentEl.createEl('p', { text: this.t('shell.setup.apiKey', { presence: this.presenceText(d.apiKey) }) });
+        contentEl.createEl('p', { cls: 'mdflow-muted', text: this.t('shell.setup.providerEnv') });
+        const envList = contentEl.createDiv({ cls: 'mdflow-setup-env' });
+        for (const [name, presence] of Object.entries(d.providerEnv)) this.keyValue(envList, name, this.presenceText(presence));
+      }
       contentEl.createEl('p', { cls: 'mdflow-muted', text: this.t('shell.setup.toolEnv') });
       const toolList = contentEl.createDiv({ cls: 'mdflow-setup-env mdflow-setup-tool-env' });
       for (const [name, presence] of Object.entries(d.toolEnv)) this.keyValue(toolList, name, this.presenceText(presence));

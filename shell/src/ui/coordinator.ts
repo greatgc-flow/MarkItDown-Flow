@@ -15,6 +15,7 @@ import { APPROVED_BY_MODAL, type Authorization, buildSpawnRequest, engineWorking
 import type { RotatingLog } from '../process/log';
 import type { Clock, FileSystemOps, HostPlatform, Spawner } from '../process/types';
 import { runStrict, type SourceAction, type StrictResult } from '../process/strict';
+import type { JobJournal, NodeApis } from '../process/node-apis';
 import type { VersionGate } from '../process/version-gate';
 import { buildConsentView, type ConsentDecision, type ConsentViewModel } from './consent-modal';
 import { type DirEntry, resolveDestination, selectImmediateFiles } from './output-path';
@@ -44,6 +45,7 @@ export type SubmitResult =
   | { accepted: false; diagnostic: 'shell.BUSY' | 'shell.CANCELLED' | 'shell.DESTINATION' | 'shell.RUNTIME' | 'shell.SETTINGS' };
 
 export interface CoordinatorDeps {
+  beginJournal?: NodeApis['beginJournal'];
   strictResults?: (result: StrictResult, snapshot: JobSnapshot, action: SourceAction) => void;
   spawner: Spawner;
   fs: FileSystemOps;
@@ -73,6 +75,7 @@ export interface CoordinatorDeps {
 }
 
 export interface JobReport {
+  strict?: StrictResult;
   snapshot: JobSnapshot;
   plan: EngineResult<Plan[]> | null;
   run: EngineResult<RunReport> | null;
@@ -366,15 +369,29 @@ export class ShellCoordinator {
     const report: JobReport = {snapshot, plan:null, run:null, decision:null, pendingShown:false};
     const controller = new AbortController();
     this.strictAbort = controller;
+    let journal: JobJournal | undefined;
     try {
       if (!await this.destinationStillValid(snapshot) || controller.signal.aborted) return report;
-      const result = await runStrict(this.deps.spawner, snapshot, this.deps.hostEnv, action, controller.signal);
+      if (action.mode === 'run') journal = this.deps.beginJournal?.(this.deps.vaultRoot, snapshot.inputs, action.mode, snapshot.outDir);
+      let count = 0;
+      let lastUpdate = 0;
+      const result = await runStrict(this.deps.spawner, snapshot, this.deps.hostEnv, action, controller.signal, row => {
+        journal?.append(row);
+        count++;
+        const now = this.deps.clock.now();
+        if (count === 1 || now - lastUpdate >= 120) {
+          this.deps.progress?.files?.(count);
+          lastUpdate = now;
+        }
+      });
+      report.strict = result;
+      journal?.close(result);
       if (action.mode !== 'preview') await this.record(snapshot, result.status === 'complete' ? 'complete' :
         result.status === 'interrupted' ? 'cancelled' : 'partial_failure');
       if (!this.disposed) this.deps.strictResults?.(result, snapshot, action);
     } catch {
       if (!this.disposed) this.deps.notify('shell.PROTOCOL');
-    } finally { this.strictAbort = null; }
+    } finally { journal?.close(); this.strictAbort = null; }
     return report;
   }
 

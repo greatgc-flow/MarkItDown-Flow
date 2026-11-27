@@ -70,11 +70,11 @@ beforeEach(() => {
   simulateDesktop();
 });
 
-it(R('JT-02 desktop registration snapshot equals the six inventory ids with no embedded plugin prefix; manifest keeps id and isDesktopOnly'), async () => {
+it(R('JT-02 desktop registration snapshot equals the strict desktop command inventory with no embedded plugin prefix; manifest keeps id and isDesktopOnly'), async () => {
   const { plugin } = await loadPlugin();
   const registered = asMockPlugin(plugin).commands.map((c) => c.id);
-  expect([...registered].sort()).toEqual([...COMMAND_IDS].sort());
-  expect(registered).toHaveLength(6);
+  expect([...registered].sort()).toEqual([...COMMAND_IDS, 'inspect-documents', 'extract-existing-text', 'reopen-document-results'].sort());
+  expect(registered).toHaveLength(9);
   for (const id of registered) {
     expect(id.startsWith('markitdown-flow:')).toBe(false);
     expect(id).not.toContain(':');
@@ -85,7 +85,7 @@ it(R('JT-02 desktop registration snapshot equals the six inventory ids with no e
   const manifest = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, 'manifest.json'), 'utf8')) as { id: string; isDesktopOnly: boolean; version: string };
   expect(manifest.id).toBe('markitdown-flow');
   expect(manifest.isDesktopOnly).toBe(true);
-  expect(manifest.version).toBe('2.0.2');
+  expect(manifest.version).toBe('2.1.0');
   plugin.onunload();
 });
 
@@ -180,7 +180,7 @@ it(R('JT-02 unload removes every registration and leaves no owned engine; a relo
   expect(mock.app.workspace.listenerCount('file-menu')).toBe(0);
   expect(apis.spawner.children.every((c) => !c.alive)).toBe(true);
   const second = await loadPlugin();
-  expect(asMockPlugin(second.plugin).commands).toHaveLength(6);
+  expect(asMockPlugin(second.plugin).commands).toHaveLength(9);
   expect(asMockPlugin(second.plugin).ribbons).toHaveLength(1);
   second.plugin.onunload();
 });

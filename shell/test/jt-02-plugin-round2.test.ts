@@ -164,24 +164,11 @@ it(R10('JT-10 the interpreter field never saves or probes while typing; it commi
   plugin.unload();
 });
 
-it(R4('JT-04 the Base URL field accepts https and loopback http only; a non-loopback http value is refused in the tab instead of failing at job time (M3 N-07)'), async () => {
+it(R4('JT-04 strict settings leave the stored legacy endpoint untouched'), async () => {
   const { plugin } = await loadPluginWith(mocked, settingsV2());
   const container = displayTab(plugin);
-  const input = controlFor(container, EN['shell.settings.baseUrl']);
-  input.value = 'http://127.0.0.1:11434/v1';
-  input.dispatchEvent({ type: 'blur' });
-  await tick();
-  expect(persisted().provider.baseUrl).toBe('http://127.0.0.1:11434/v1');
-  for (const refused of ['http://proxy.example/v1', 'https://user:pw@api.openai.com/v1', 'https://api.openai.com/v1?x=1', 'ftp://x/v1', 'nonsense']) {
-    input.value = refused;
-    input.dispatchEvent({ type: 'blur' });
-    await tick();
-    expect({ refused, persisted: persisted().provider.baseUrl }).toEqual({ refused, persisted: 'http://127.0.0.1:11434/v1' });
-  }
-  input.value = 'https://proxy.example/v1';
-  input.dispatchEvent({ type: 'blur' });
-  await tick();
-  expect(persisted().provider.baseUrl).toBe('https://proxy.example/v1');
+  expect(container.textContent).not.toContain(EN['shell.settings.baseUrl']);
+  expect(persisted().provider.baseUrl).toBe('https://api.openai.com/v1');
   plugin.unload();
 });
 
@@ -194,9 +181,6 @@ it(R4('JT-04 a refused text commit is never silent: one shell.settings.rejected 
   const cases: [string, string, string[]][] = [
     [EN['shell.settings.enginePython'], ENGINE_PYTHON, ['venv/bin/python', 'python']],
     [EN['shell.settings.outputPath'], 'markitdown-output', ['../outside', '/abs/out', 'C:\\vault\\out']],
-    [EN['shell.settings.baseUrl'], 'https://api.openai.com/v1', ['http://proxy.example/v1', 'http://127.1:11434/v1', 'nonsense']],
-    [EN['shell.settings.maxUnits'], '200', ['abc', '0', '-3', '1.5']],
-    [EN['shell.settings.approveThreshold'], '20', ['x', '-1']],
   ];
   let expected = 0;
   for (const [label, persistedText, badValues] of cases) {
@@ -227,13 +211,13 @@ it(R4('JT-04 a refused text commit is never silent: one shell.settings.rejected 
   // A refused interpreter is never probed.
   expect(apis.spawner.requests).toHaveLength(baselineSpawns);
   // An accepted commit produces no rejection notice and keeps its text.
-  const maxUnits = controlFor(container, EN['shell.settings.maxUnits']);
-  maxUnits.value = '50';
-  maxUnits.dispatchEvent({ type: 'blur' });
+  const destination = controlFor(container, EN['shell.settings.outputPath']);
+  destination.value = 'notes';
+  destination.dispatchEvent({ type: 'blur' });
   await tick();
   expect(rejected()).toBe(expected);
-  expect(maxUnits.value).toBe('50');
-  expect(persisted().runOptions.maxUnits).toBe(50);
+  expect(destination.value).toBe('notes');
+  expect(persisted().outputPath).toBe('notes');
   for (const locale of ['en', 'ko'] as const) expect(dictionary(locale)['shell.settings.rejected']?.length).toBeGreaterThan(0);
   plugin.unload();
 });
@@ -299,49 +283,12 @@ it(R10('JT-10 the output folder commits on blur with vault-relative validation a
   plugin.unload();
 });
 
-it(R4('JT-04 run options are editable in the settings tab with SPEC 10.2 validation: dpi, priority, max units, threshold and sensitive globs'), async () => {
-  const { plugin } = await loadPluginWith(mocked, settingsV2());
+it(R4('JT-04 strict UI offers no provider, approval or OCR controls'), async () => {
+  const {plugin} = await loadPluginWith(mocked, settingsV2());
   const container = displayTab(plugin);
-  const dpi = controlFor(container, EN['shell.settings.dpi']);
-  expect(dpi.tagName).toBe('select');
-  dpi.value = '300';
-  dpi.dispatchEvent({ type: 'change' });
-  await tick();
-  expect(persisted().runOptions.dpi).toBe(300);
-  const priority = controlFor(container, EN['shell.settings.minPriority']);
-  priority.value = 'normal';
-  priority.dispatchEvent({ type: 'change' });
-  await tick();
-  expect(persisted().runOptions.minPriority).toBe('normal');
-  const maxUnits = controlFor(container, EN['shell.settings.maxUnits']);
-  maxUnits.value = '50';
-  maxUnits.dispatchEvent({ type: 'blur' });
-  await tick();
-  expect(persisted().runOptions.maxUnits).toBe(50);
-  maxUnits.value = '-5';
-  maxUnits.dispatchEvent({ type: 'blur' });
-  await tick();
-  expect(persisted().runOptions.maxUnits).toBe(50);
-  const threshold = controlFor(container, EN['shell.settings.approveThreshold']);
-  threshold.value = '0';
-  threshold.dispatchEvent({ type: 'blur' });
-  await tick();
-  expect(persisted().runOptions.approveThreshold).toBe(0);
-  threshold.value = 'ten';
-  threshold.dispatchEvent({ type: 'blur' });
-  await tick();
-  expect(persisted().runOptions.approveThreshold).toBe(0);
-  const sensitive = controlFor(container, EN['shell.settings.sensitive']);
-  sensitive.value = ' */hr/* \n*.key,  ';
-  sensitive.dispatchEvent({ type: 'blur' });
-  await tick();
-  expect(persisted().runOptions.sensitive).toEqual(['*/hr/*', '*.key']);
-  sensitive.value = '';
-  sensitive.dispatchEvent({ type: 'blur' });
-  await tick();
-  expect(persisted().runOptions.sensitive).toEqual([]);
-  // Persisted keys stay the schema-2 allowlist; nothing else was added.
-  expect(Object.keys(persisted().runOptions).sort()).toEqual(['approveThreshold', 'dpi', 'maxUnits', 'minPriority', 'sensitive']);
+  for (const key of ['dpi','minPriority','maxUnits','approveThreshold','sensitive','provider','model']) {
+    expect(container.textContent).not.toContain(EN['shell.settings.' + key]);
+  }
   plugin.unload();
 });
 
@@ -377,7 +324,7 @@ it(R2('JT-02 onload completes and registers every command while the version prob
   const started = Date.now();
   const { plugin } = await loadPluginWith(mocked, settingsV2(), apis);
   expect(Date.now() - started).toBeLessThan(1000);
-  expect(asMockPlugin(plugin).commands).toHaveLength(6);
+  expect(asMockPlugin(plugin).commands).toHaveLength(9);
   expect(apis.spawner.commands).toEqual(['version']);
   expect(apis.spawner.children[0].alive).toBe(true);
   apis.spawner.children[0].terminate();

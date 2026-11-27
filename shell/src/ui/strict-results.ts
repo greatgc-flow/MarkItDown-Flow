@@ -3,6 +3,7 @@ import type { FileRow, Mode, StrictResult } from '../process/strict';
 import type { UiLocale } from '../pure/i18n';
 
 type Actions = {
+  retry(): Promise<void>;
   open(row: FileRow): Promise<void>;
   run(row: FileRow, mode: Mode): Promise<void>;
   copy(row: FileRow): Promise<string>;
@@ -70,6 +71,8 @@ export class StrictResultsModal extends Modal {
     });
     const rows = this.result.rows.filter(r => this.filter === 'all' || this.filter === r.outcome || this.filter === r.reason);
     const start = this.page * 25;
+    if (this.result.status !== 'complete') new Setting(el).addButton(b => b.setButtonText(this.t('Retry original selection','원래 선택 항목 다시 실행'))
+      .onClick(() => this.perform(() => this.actions.retry())));
     const controls = new Setting(el).setName(rows.length ? (start+1) + '–' + Math.min(start+25, rows.length) + ' / ' + rows.length : '0');
     controls.addButton(b => b.setButtonText('‹').setTooltip(this.t('Previous page','이전 페이지')).setDisabled(!this.page).onClick(() => {this.page--;this.render();}));
     controls.addButton(b => b.setButtonText('›').setTooltip(this.t('Next page','다음 페이지')).setDisabled(start+25 >= rows.length).onClick(() => {this.page++;this.render();}));

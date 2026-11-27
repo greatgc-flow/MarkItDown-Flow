@@ -107,41 +107,12 @@ async function displayedTab(version: string, data = settingsV2()): Promise<{ ite
   return { items: settingItems(asFake(tab.containerEl)), unload: () => plugin.unload() };
 }
 
-it(R4('JT-04 the Conversion section shows a "Legacy formats (LibreOffice)" toggle, off by default, with a one-line explanation and the detected LibreOffice status (R33)'), async () => {
-  const label = EN['shell.settings.enableLegacyPreconvert'];
-  expect(label.toLowerCase()).toContain('libreoffice');
-  for (const key of ['shell.settings.enableLegacyPreconvert', 'shell.settings.enableLegacyPreconvertNote', 'shell.settings.libreofficeStatus', 'shell.settings.libreofficeFound', 'shell.settings.libreofficeMissing', 'shell.settings.libreofficeUnknown']) {
-    expect(EN[key]?.length).toBeGreaterThan(0);
-    expect(KO[key]?.length).toBeGreaterThan(0);
+it(R4('JT-04 a detected LibreOffice and old preferences cannot enable strict preconversion'), async () => {
+  for (const response of [LIBREOFFICE_FOUND, LIBREOFFICE_MISSING, {}]) {
+    const found = await displayedTab(versionResponse(response), settingsV2({enableLegacyPreconvert:true}));
+    expect(found.items.some(e => e.name === EN['shell.settings.enableLegacyPreconvert'])).toBe(false);
+    found.unload();
   }
-  const found = await displayedTab(versionResponse(LIBREOFFICE_FOUND));
-  let section = -1;
-  let seen: ReturnType<typeof settingItems>[number] | undefined;
-  for (const entry of found.items) {
-    if (entry.heading) section += 1;
-    else if (entry.name === label) {
-      seen = entry;
-      break;
-    }
-  }
-  if (!seen) throw new Error('legacy toggle missing');
-  expect(section).toBe(1); // Conversion
-  expect(seen.desc).toContain(EN['shell.settings.enableLegacyPreconvertNote']);
-  expect(seen.desc).toContain(formatMessage('en', 'shell.settings.libreofficeStatus', { status: formatMessage('en', 'shell.settings.libreofficeFound', { version: '24.8.2.1' }) }));
-  // Off by default: the toggle reflects the persisted value, never a guessed one.
-  const toggle = seen.item.findAll((e) => e.hasClass('setting-item-control'))[0];
-  expect(toggle).toBeDefined();
-  found.unload();
-
-  const missing = await displayedTab(versionResponse(LIBREOFFICE_MISSING));
-  const missingEntry = missing.items.find((e) => e.name === label);
-  expect(missingEntry?.desc).toContain(EN['shell.settings.libreofficeMissing']);
-  missing.unload();
-
-  const unknown = await displayedTab(versionResponse({}));
-  const unknownEntry = unknown.items.find((e) => e.name === label);
-  expect(unknownEntry?.desc).toContain(EN['shell.settings.libreofficeUnknown']);
-  unknown.unload();
 });
 
 // ----------------------------------------------------------------------------- JT-11/12 flag and env

@@ -22,6 +22,8 @@ export type ToolStatus = (typeof TOOL_STATUSES)[number];
 export type ToolSource = string | null;
 
 export interface VersionInfo {
+  strict_policy?: 'strict-v1';
+  report_schema?: 2;
   mdflow: string;
   'markitdown-gc': string;
   pypdfium2: string;
@@ -90,21 +92,16 @@ export interface VersionPolicy {
 export const RELEASE_LOCK: VersionPolicy = {
   pythonMin: [3, 10, 0],
   pythonMaxExclusive: [3, 15, 0],
-  engineMin: [2, 0, 0],
-  engineMaxExclusive: [2, 1, 0],
-  coreMin: [0, 3, 9],
+  engineMin: [2, 1, 0],
+  engineMaxExclusive: [2, 2, 0],
+  coreMin: [0, 3, 10],
   coreMaxExclusive: [0, 4, 0],
-  pypdfium2Min: [5, 0, 0],
+  pypdfium2Min: [5, 15, 2],
   pypdfium2MaxExclusive: [6, 0, 0],
   pillowMin: [11, 0, 0],
   pillowMaxExclusive: [14, 0, 0],
-  protocol: 1,
+  protocol: 2,
   triageSchema: 1,
-};
-
-export const STRICT_RELEASE_LOCK: VersionPolicy = {
-  ...RELEASE_LOCK, engineMin: [2, 1, 0], engineMaxExclusive: [2, 2, 0],
-  coreMin: [0, 3, 10], pypdfium2Min: [5, 15, 2], protocol: 2,
 };
 
 export type VersionGateReason =
@@ -212,6 +209,7 @@ export function evaluateVersionResponse(stdout: string, policy: VersionPolicy = 
     protocol: policy.protocol,
     triage_schema: 1,
   };
+  if (policy.protocol === 2) Object.assign(info, {strict_policy:'strict-v1', report_schema:2});
   // Optional tool status (R31 exiftool, R33 LibreOffice): a version string or null (the engine's `"unavailable"`
   // reads as null); status/source only in their closed vocabularies. Any other shape is an ignored optional field.
   for (const tool of ['exiftool', 'libreoffice'] as const) {

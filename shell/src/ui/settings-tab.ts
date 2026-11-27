@@ -173,7 +173,10 @@ export class ShellSettingsTab extends PluginSettingTab {
     });
 
     // --- OCR provider -------------------------------------------------------------------------------------
-    if (this.deps.strict) return;
+    if (this.deps.strict) {
+      addDisclosureLink(containerEl, this.deps.locale());
+      return;
+    }
     section('provider');
     addDisclosureLink(containerEl, this.deps.locale());
     new Setting(containerEl).setName(t('shell.settings.provider')).setDesc(t('shell.settings.keyNote')).addDropdown((dropdown) => {

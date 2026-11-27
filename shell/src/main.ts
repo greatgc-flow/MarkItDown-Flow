@@ -19,7 +19,7 @@ import { loadNodeApis, type NodeApis } from './process/node-apis';
 import { systemClock } from './process/node-spawner';
 import { runSelftest } from './process/selftest';
 import { DirectorySpoolFs } from './process/spool-fs';
-import { isTransientGate, probeVersion, STRICT_RELEASE_LOCK, type VersionGate } from './process/version-gate';
+import { isTransientGate, probeVersion, RELEASE_LOCK, type VersionGate } from './process/version-gate';
 import { registerCommands } from './ui/commands';
 import { ConsentModal } from './ui/consent-modal';
 import { type Selection, ShellCoordinator, SPOOL_DIR_NAME } from './ui/coordinator';
@@ -31,7 +31,7 @@ import { JobStatusBar } from './ui/progress';
 import { ResultsModal } from './ui/results-modal';
 import { StrictResultsModal } from './ui/strict-results';
 import { launchLines, type FileRow, type StrictResult } from './process/strict';
-import type { JobSnapshot } from './process/launcher';
+import { snapshotJob, type JobSnapshot } from './process/launcher';
 import { resolveDestination } from './ui/output-path';
 import { SetupModal } from './ui/setup-modal';
 import { ShellSettingsTab } from './ui/settings-tab';
@@ -133,6 +133,7 @@ export default class MarkItDownFlowPlugin extends Plugin {
     });
 
     const coordinator = new ShellCoordinator({
+      beginJournal: apis.beginJournal,
       strictResults: (result, snapshot) => this.showStrict(result, snapshot),
       spawner: apis.spawner,
       fs: apis.fs,
@@ -223,6 +224,19 @@ export default class MarkItDownFlowPlugin extends Plugin {
           if (paths?.length) await coordinator.submit({kind:'files', paths, action:{mode}}, 'command');
         }});
     }
+    this.addCommand({id:'reopen-document-results', name:this.locale === 'ko' ? '최근 변환 결과 열기' : 'Reopen last conversion results',
+      callback: async () => {
+        try {
+          const saved = await apis.lastJob?.(this.vaultRoot);
+          if (!saved || !this.settings.enginePython) {
+            new Notice(this.locale === 'ko' ? '저장된 결과 또는 설정된 엔진이 없습니다.' : 'No saved job or configured engine.');
+            return;
+          }
+          const snapshot = snapshotJob({settings:this.settings, inputs:saved.inputs, cwd:this.probeCwd(),
+            outDir:saved.outDir, cacheDir:joinPath(apis.platform,apis.homeDir(),'.mdflow','cache')});
+          this.showStrict(saved.result,snapshot);
+        } catch { this.notify('shell.PROTOCOL'); }
+      }});
     registerEntryPoints(this, coordinator, this.settings, picker, this.locale);
 
     this.addSettingTab(
@@ -308,7 +322,7 @@ export default class MarkItDownFlowPlugin extends Plugin {
     }
     const apis = this.apis;
     const enginePython = this.settings.enginePython;
-    const probe = probeVersion(enginePython, { policy: STRICT_RELEASE_LOCK, spawner: apis.spawner, clock: systemClock, hostEnv: process.env, cwd: engineWorkingDirectory(apis.platform, enginePython) })
+    const probe = probeVersion(enginePython, { policy: RELEASE_LOCK, spawner: apis.spawner, clock: systemClock, hostEnv: process.env, cwd: engineWorkingDirectory(apis.platform, enginePython) })
       .then((gate) => {
         // A later interpreter change supersedes this probe's result.
         if (this.settings.enginePython === enginePython) this.gate = gate;
@@ -340,6 +354,9 @@ export default class MarkItDownFlowPlugin extends Plugin {
         await apis.revealFile(row.source.path);
       },
       clipboard: text => apis.writeClipboard(text),
+      retry: async () => {
+        await this.coord?.submit({kind:'files', paths:snapshot.inputs, action:{mode:'run'}}, 'command');
+      },
       run: async (row, mode) => {
         await this.coord?.submit({kind:'files', paths:[row.source.path], action:{mode, sha:row.source.sha256, member:row.source.member ?? undefined}}, 'command');
       },
@@ -362,7 +379,7 @@ export default class MarkItDownFlowPlugin extends Plugin {
     if (!this.apis) return;
     const apis = this.apis;
     new SetupModal(this.app, {
-      policy: STRICT_RELEASE_LOCK,
+      policy: RELEASE_LOCK,
       spawner: apis.spawner,
       clock: systemClock,
       hostEnv: process.env,

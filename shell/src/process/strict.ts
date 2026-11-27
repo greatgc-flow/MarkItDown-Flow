@@ -105,7 +105,9 @@ export async function runStrict(spawner: Spawner, snapshot: JobSnapshot, host: E
   else args.push('-o', snapshot.outDir);
   if (action.sha) args.push('--expected-sha256', action.sha);
   if (action.member) args.push('--member', action.member);
-  const code = await withInputList(snapshot.inputs, inputs =>
-    launchLines(spawner, snapshot, host, [...args, ...inputs], signal, line => stream.accept(line)));
+  const start = (inputs: readonly string[]) =>
+    launchLines(spawner, snapshot, host, [...args, ...inputs], signal, line => stream.accept(line));
+  const code = snapshot.inputs.reduce((n,p) => n+p.length+3, 0) <= 12000
+    ? await start(['--', ...snapshot.inputs]) : await withInputList(snapshot.inputs, start);
   return stream.finish(code);
 }

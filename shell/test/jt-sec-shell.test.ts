@@ -57,7 +57,7 @@ it(R12('JT-12 R38 the plugin cache defaults to the engine default ~/.mdflow/cach
   expect(under(PLUGIN_DIR, ENGINE_CACHE)).toBe(false);
 });
 
-it(R12('JT-12 R38 the loaded plugin passes ~/.mdflow/cache as --cache to the run spawn; no cache setting exists'), async () => {
+it(R12('JT-12 R38 the loaded plugin passes ~/.mdflow/cache as an excluded directory to the strict run; no cache setting exists'), async () => {
   const { plugin, apis } = await loadPluginWith(mocked, settingsV2());
   await tick();
   const coordinator = plugin.coordinator;
@@ -68,8 +68,9 @@ it(R12('JT-12 R38 the loaded plugin passes ~/.mdflow/cache as --cache to the run
   await coordinator.current;
   const run = apis.spawner.requests.filter((r) => subcommandOf(r) === 'run');
   expect(run).toHaveLength(1);
-  expect(run[0].args[run[0].args.indexOf('--cache') + 1]).toBe(ENGINE_CACHE);
-  expect(under(VAULT_ROOT, run[0].args[run[0].args.indexOf('--cache') + 1])).toBe(false);
+  expect(run[0].args).not.toContain('--cache');
+  expect(run[0].args.some((s,i) => s === '--exclude' && run[0].args[i+1] === ENGINE_CACHE)).toBe(true);
+  expect(under(VAULT_ROOT, ENGINE_CACHE)).toBe(false);
   const stored = JSON.parse(dataJsonText() ?? 'null') as Record<string, unknown>;
   expect(Object.keys(stored).filter((k) => /cache/i.test(k))).toEqual([]);
   plugin.unload();

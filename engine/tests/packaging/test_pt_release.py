@@ -4,7 +4,7 @@ Every test here asks for ``release_bundle`` (or a fixture built on it) and there
 explicit reason* until CI supplies ``$MDFLOW_RELEASE_BUNDLE``. They never pass without the real bytes.
 
 release-candidate.json (inside the bundle; REQ-PKG-17 candidate manifest):
-    {"repo": "owner/name", "commit": "<40 hex>", "tag": "2.0.2", "signer_workflow": "owner/name/.github/workflows/release.yml",
+    {"repo": "owner/name", "commit": "<40 hex>", "tag": "2.1.0", "signer_workflow": "owner/name/.github/workflows/release.yml",
      "reference_sha256": "<64 hex>", "required_jobs": [{"name", "os", "python", "result": "success"}] x6,
      "shell_jobs": [{"name", "os", "result": "success"}] x3,
      "acceptance": {"score": "SCORE 99/100 (automated 93/93, manual 6/7); MAN-04 deferred: post-release (R35)", "gates": [{"id": "G-01", "result": "PASS"}, ...]},
@@ -169,14 +169,14 @@ def test_PT_01_direct_wheel_inventory_wheel_metadata_and_run_outside_the_source_
 @pytest.mark.fx("FX-72")
 def test_PT_02_reference_is_exact_hash_checked_wheel_only_and_a_changed_wheel_fails(release_bundle, tmp_path, cli_command):
     lock = (release_bundle / "reference-requirements.txt").read_text(encoding="utf-8")
-    assert 'Linux x64' in lock and 'CPython 3.14' in lock and 'Core 0.3.9' in lock
+    assert 'Linux x64' in lock and 'CPython 3.14' in lock and 'Core 0.3.10' in lock
     assert sys.platform == 'linux' and sys.version_info[:2] == (3, 14), 'PT-02 runs on the reference target only'
     wheel_name, wheel = engine_wheel(release_bundle)
     entries = parse_lock(lock)
     assert entries
-    engine = [e for e in entries if "mdflow-2.0.2-py3-none-any.whl" in e[0]]
+    engine = [e for e in entries if "mdflow-2.1.0-py3-none-any.whl" in e[0]]
     assert len(engine) == 1 and re.match(r"^(mdflow\s*@\s*)?\./mdflow-2\.0\.2-py3-none-any\.whl$", engine[0][0]), \
-        "the engine must be the local wheel path ./mdflow-2.0.2-py3-none-any.whl"
+        "the engine must be the local wheel path ./mdflow-2.1.0-py3-none-any.whl"
     assert engine[0][1] == [sha(wheel)], "locked engine hash differs from the attached release wheel"
     problems = []
     for requirement, hashes in entries:
@@ -190,15 +190,15 @@ def test_PT_02_reference_is_exact_hash_checked_wheel_only_and_a_changed_wheel_fa
             problems.append(f"no --hash: {requirement}")
     assert not problems, "\n".join(problems)
     pins = lock_pins(lock)
-    assert pins.get("markitdown-gc") == "0.3.9"
+    assert pins.get("markitdown-gc") == "0.3.10"
     assert "pillow" in pins and "pypdfium2" in pins, "renderer and Pillow must be exact lock entries"
     # A changed wheel fails hash-mode installation; the real one installs.
     good, bad = tmp_path / "good" / "wheels", tmp_path / "bad" / "wheels"
     for folder, payload in ((good, wheel), (bad, wheel + b"\0")):
         folder.mkdir(parents=True)
-        (folder / "mdflow-2.0.2-py3-none-any.whl").write_bytes(payload)
+        (folder / "mdflow-2.1.0-py3-none-any.whl").write_bytes(payload)
         (folder.parent / "req.txt").write_text(
-            f"./wheels/mdflow-2.0.2-py3-none-any.whl --hash=sha256:{sha(wheel)}\n", encoding="utf-8")
+            f"./wheels/mdflow-2.1.0-py3-none-any.whl --hash=sha256:{sha(wheel)}\n", encoding="utf-8")
     def install(folder):
         return subprocess.run([sys.executable, "-m", "pip", "install", "--require-hashes", "--no-deps", "--no-index",
                                "--target", str(folder.parent / "site"), "-r", "req.txt"], cwd=folder.parent,
@@ -218,8 +218,8 @@ def test_T_GEN_52_m1_v32_offline_dependency_hash_mutation_control(tmp_path, cli_
     bundle = tmp_path / 'bundle'
     bundle.mkdir()
     members, requirements = {}, []
-    packages = [('mdflow', '2.0.2', 'markitdown-gc>=0.3.9,<0.4'),
-                ('markitdown_gc', '0.3.9', 'm1-dependency>=1'), ('m1_dependency', '1.0', None)]
+    packages = [('mdflow', '2.1.0', 'markitdown-gc>=0.3.10,<0.4'),
+                ('markitdown_gc', '0.3.10', 'm1-dependency>=1'), ('m1_dependency', '1.0', None)]
     for name, version, dependency in packages:
         stream = io.BytesIO()
         info = f'{name}-{version}.dist-info'
@@ -255,7 +255,7 @@ def test_PT_05_bootstrap_commands_run_unchanged_after_placeholder_substitution(r
     blocks = [body for lang, body in fences if lang in languages and "pip install" in body]
     assert blocks, "BOOTSTRAP.md has no install block for this OS"
     block = blocks[0]
-    for needle in ("--only-binary=:all:", "./mdflow-2.0.2-py3-none-any.whl", "markitdown-gc>=0.3.9,<0.4", "https://pypi.org/simple", "-m mdflow selftest",
+    for needle in ("--only-binary=:all:", "./mdflow-2.1.0-py3-none-any.whl", "markitdown-gc>=0.3.10,<0.4", "https://pypi.org/simple", "-m mdflow selftest",
                    "pip check", "-m mdflow version", "-m venv"):
         assert needle in block, f"install block lacks {needle!r}"
     before = text[:text.index(block)]
@@ -265,7 +265,7 @@ def test_PT_05_bootstrap_commands_run_unchanged_after_placeholder_substitution(r
     assert "MDFLOW_API_KEY" in text and re.search(r"quit", text, re.I), "terminal-launch guidance missing"
     root_placeholder = re.search(r"(?:Set-Location -LiteralPath|\bcd)\s+'([^']+)'", block)[1]
     venv_placeholder = re.search(r"-m venv\s+'([^']+)'", block)[1]
-    venv = tmp_path / "venv 한글" / "2.0.2"
+    venv = tmp_path / "venv 한글" / "2.1.0"
     script = block.replace(root_placeholder, str(bootstrap_root)).replace(venv_placeholder, str(venv))
     interpreter = sys.executable
     script = re.sub(r"(?m)^(\s*)(py -3\.\d+|python3\.\d+)\b",
@@ -302,7 +302,7 @@ def gate(response: dict) -> list[str]:
         return problems
     if not response['platform'].strip():
         problems.append('platform')
-    if response["protocol"] != 1:
+    if response["protocol"] != 2 or response.get("strict_policy") != "strict-v1" or response.get("report_schema") != 2:
         problems.append("protocol")
     if response["triage_schema"] != 1:
         problems.append("triage_schema")
@@ -315,9 +315,9 @@ def gate(response: dict) -> list[str]:
             return True
         except InvalidVersion:
             return False
-    if not valid(response['mdflow']) or not (2, 0, 0) <= version_tuple(response["mdflow"]) < (2, 1, 0):
+    if not valid(response['mdflow']) or not (2, 1, 0) <= version_tuple(response["mdflow"]) < (2, 2, 0):
         problems.append("engine range")
-    if not valid(response['markitdown-gc']) or not (0, 3, 9) <= version_tuple(response["markitdown-gc"]) < (0, 4):
+    if not valid(response['markitdown-gc']) or not (0, 3, 10) <= version_tuple(response["markitdown-gc"]) < (0, 4):
         problems.append("Core range")
     if not valid(response['python']) or not (3, 10) <= version_tuple(response["python"])[:2] < (3, 15):
         problems.append("Python range")
@@ -325,7 +325,7 @@ def gate(response: dict) -> list[str]:
         if not valid(response[key]):
             problems.append(f"{key} version is malformed")
         else:
-            low, high = ((11, 0), (14, 0)) if key == 'pillow' else ((5, 0), (6, 0))
+            low, high = ((11, 0), (14, 0)) if key == 'pillow' else ((5, 15, 2), (6, 0))
             if not low <= version_tuple(response[key]) < high:
                 problems.append(f'{key} range')
     return problems
@@ -390,7 +390,7 @@ def test_PT_08_packaged_engine_batch_consent_hash_stability_and_os_cancellation(
     needing = {path: p for path, p in plans.items() if p["status"]["requests_to_send"] > 0}
     assert len(needing) >= 3
 
-    pending = packaged_engine.run("run", *roots, "-o", str(base / "out"), *flags, "--progress", "jsonl")
+    pending = packaged_engine.run("legacy-run", *roots, "-o", str(base / "out"), *flags, "--progress", "jsonl")
     assert pending.returncode == 3 and not calls.exists(), (pending.stdout, pending.stderr)
     required = {e["file"]: e for e in progress_events(pending.stderr) if e["ev"] == "approve_required"}
     assert set(required) == set(needing)
@@ -407,7 +407,7 @@ def test_PT_08_packaged_engine_batch_consent_hash_stability_and_os_cancellation(
         assert shown == expected and "units" not in event, path
 
     yes = [item for p in needing.values() for item in ("--yes", p["plan_hash"])]
-    done = packaged_engine.run("run", *roots, "-o", str(base / "out"), *flags, *yes, "--approved-by", "plugin:modal",
+    done = packaged_engine.run("legacy-run", *roots, "-o", str(base / "out"), *flags, *yes, "--approved-by", "plugin:modal",
                                "--progress", "jsonl")
     assert done.returncode == 0, (done.stdout, done.stderr)
     report = json_objects(done.stdout)[0]
@@ -436,7 +436,7 @@ def test_PT_08_packaged_engine_batch_consent_hash_stability_and_os_cancellation(
     stale = {p["approved"]["file"]["path"]: p for p in json_objects(packaged_engine.run("plan", *roots, *flags).stdout)}["new image.png"]
     image.write_bytes(gen_core.image_bytes("PNG", seed=42))
     sent = len(calls.read_text())
-    again = packaged_engine.run("run", *roots, "-o", str(base / "out"), *flags, "--yes", stale["plan_hash"],
+    again = packaged_engine.run("legacy-run", *roots, "-o", str(base / "out"), *flags, "--yes", stale["plan_hash"],
                                 "--progress", "jsonl")
     assert again.returncode == 3 and len(calls.read_text()) == sent, "stale approval sent data"
     assert "W_APPROVAL_UNUSED" in {e.get("code") for e in progress_events(again.stderr)}
@@ -540,11 +540,11 @@ def test_PT_15_checklist_machine_rows_and_human_evidence_rows(release_bundle, ca
     manifest = json.loads((release_bundle / "manifest.json").read_text(encoding="utf-8"))
     assert manifest["id"] == "markitdown-flow" and manifest["isDesktopOnly"] is True
     package = json.loads((REPO / "shell/package.json").read_text(encoding="utf-8"))
-    engine_wheel(release_bundle)  # exactly one mdflow-2.0.2 attached release wheel
-    assert manifest["version"] == package["version"] == candidate["tag"] == "2.0.2", "version fields disagree"
+    engine_wheel(release_bundle)  # exactly one mdflow-2.1.0 attached release wheel
+    assert manifest["version"] == package["version"] == candidate["tag"] == "2.1.0", "version fields disagree"
     assert not candidate["tag"].startswith("v")
     versions = json.loads((REPO / "versions.json").read_text(encoding="utf-8"))
-    assert versions.get("2.0.2") == manifest["minAppVersion"], "versions.json lacks the 2.0.2 entry"
+    assert versions.get("2.1.0") == manifest["minAppVersion"], "versions.json lacks the 2.1.0 entry"
     assert all(versions.get(k) == v for k, v in PRIOR_VERSIONS.items()), "prior versions.json entries not preserved"
     description = manifest["description"]
     assert len(description) <= 250 and description.endswith(".")
@@ -573,7 +573,7 @@ def test_PT_15_checklist_machine_rows_and_human_evidence_rows(release_bundle, ca
 @pytest.mark.cov("S0", "FM10")
 @pytest.mark.fx("FX-72")
 def test_PT_17_candidate_manifest_binds_commit_lock_required_runs_and_binary_acceptance(release_bundle, candidate, trace_module):
-    assert SHA40.fullmatch(candidate["commit"]) and candidate["tag"] == "2.0.2"
+    assert SHA40.fullmatch(candidate["commit"]) and candidate["tag"] == "2.1.0"
     assert candidate["reference_sha256"] == sha((release_bundle / "reference-requirements.txt").read_bytes())
     # A test contributing to acceptance must not demand its own final score.
     evidence = Path(os.environ.get('MDFLOW_EXECUTION_EVIDENCE', REPO / 'build/trace'))

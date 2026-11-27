@@ -356,7 +356,7 @@ it(R16('JT-16 the loaded plugin owns one status-bar Cancel control wired to its 
   expect(buttons).toHaveLength(1);
   buttons[0].click();
   const report = await (coordinator.current as Promise<JobReport>);
-  expect(report.run?.outcome).toBe('cancelled');
+  expect(report.strict?.status).toBe('interrupted');
   expect(apis.spawner.children.every((c) => !c.alive)).toBe(true);
   expect(cancelButtons(asFake(items[0]))).toEqual([]);
   plugin.unload();

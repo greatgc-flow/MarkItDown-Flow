@@ -199,7 +199,7 @@ def t_triage_extra(parent: bytes) -> bytes:
 
 VERSION_KEYS = ("mdflow", "markitdown-gc", "pypdfium2", "pillow", "python", "platform", "protocol", "triage_schema")
 # variant -> field overrides ("wrong-*": first excluded versions, independent of the resolved supported endpoint)
-VERSION_OVERRIDES = {"protocol-2": {"protocol": 2}, "schema-2": {"triage_schema": 2},
+VERSION_OVERRIDES = {"protocol-1": {"protocol": 1}, "schema-2": {"triage_schema": 2},
                      "wrong-pillow": {"pillow": "14.0.0"}, "wrong-renderer": {"pypdfium2": "6.0.0"},
                      "core-out-of-range": {"markitdown-gc": "0.4.0"}, "core-unavailable": {"markitdown-gc": "unavailable"},
                      "python-3.15": {"python": "3.15.2"}, "unknown-optional-field": {"future_optional": {"ignored": True}}}
@@ -413,7 +413,7 @@ class Recorder:
         self.version = json.loads(self.entry_bytes("version.json"))
         self.record("providers", ["providers"], expect=0, stdout="providers.json")
         self.record("selftest", ["selftest"], expect=0, stdout="selftest.json")
-        self.record("usage-error", ["run", "inputs", "-o", "out-usage", "--no-such-flag"], expect=1, stdout=None,
+        self.record("usage-error", ["legacy-run", "inputs", "-o", "out-usage", "--no-such-flag"], expect=1, stdout=None,
                     progress="usage-error.stderr.json")
 
         self.record("plan-mixed", ["plan", "inputs", "--cache", "cache-plan", *remote], expect=(0, 3), env=key,
@@ -423,14 +423,14 @@ class Recorder:
         self.record("plan-large", ["plan", "large", "--cache", "cache-plan", *remote], expect=(0, 3), env=key,
                     stdout="plan-large.stdout.json",
                     note=f"one {LARGE_PAGES}-page file: the full Plan exceeds 64 KiB, valid only as plan stdout")
-        self.record("run-mixed", ["run", "inputs", "bad", "-o", "out-mixed", "--cache", "cache-mixed",
+        self.record("run-mixed", ["legacy-run", "inputs", "bad", "-o", "out-mixed", "--cache", "cache-mixed",
                                   "--progress", "jsonl"], expect=2,
                     stdout="run-mixed.stdout.json", progress="run-mixed.progress.jsonl",
                     note="provider none; hidden file skipped; corrupt and empty PDFs; exit 2")
-        self.record("run-corrupt", ["run", "bad", "-o", "out-corrupt", "--cache", "cache-corrupt",
+        self.record("run-corrupt", ["legacy-run", "bad", "-o", "out-corrupt", "--cache", "cache-corrupt",
                                     "--progress", "jsonl"], expect=2,
                     stdout="run-corrupt.stdout.json", progress="run-corrupt.progress.jsonl")
-        self.record("run-approve", ["run", "inputs", "large", "-o", "out-approve", "--cache", "cache-approve",
+        self.record("run-approve", ["legacy-run", "inputs", "large", "-o", "out-approve", "--cache", "cache-approve",
                                     "--progress", "jsonl", *remote], expect=3, env=key,
                     stdout="approve-required.stdout.json", progress="approve-required.progress.jsonl",
                     note="no --yes: one approve_required summary event per file needing consent; exit 3")
@@ -446,9 +446,9 @@ class Recorder:
         # instead of being satisfied from the shared ledger.
         first = next(p for p in needing if p["approved"]["file"]["format"] == "docx")
         self.write_yes("consent-yes-1.txt", [first])
-        self.record("cmd-run-pending", ["run", "inputs", "-o", "out-cmd", *command, "--progress", "jsonl"], expect=3,
+        self.record("cmd-run-pending", ["legacy-run", "inputs", "-o", "out-cmd", *command, "--progress", "jsonl"], expect=3,
                     stdout="consent-2-pending.stdout.json", progress="consent-2-pending.progress.jsonl")
-        self.record("cmd-run-partial", ["run", "inputs", "-o", "out-cmd", *command, "--progress", "jsonl",
+        self.record("cmd-run-partial", ["legacy-run", "inputs", "-o", "out-cmd", *command, "--progress", "jsonl",
                                         "--yes-file", "consent-yes-1.txt", "--approved-by", "plugin:modal"], expect=3,
                     stdout="consent-3-partial.stdout.json", progress="consent-3-partial.progress.jsonl",
                     note="one file approved and executed; the rest stay pending (exit 3)")
@@ -458,10 +458,10 @@ class Recorder:
             assert warm[path]["plan_hash"] == plan["plan_hash"], f"plan_hash changed after cache warming: {path}"
         assert warm[first["approved"]["file"]["path"]]["status"]["requests_to_send"] == 0, "cache was not warmed"
         self.write_yes("consent-yes-2.txt", needing)
-        self.record("cmd-run-all", ["run", "inputs", "-o", "out-cmd", *command, "--progress", "jsonl",
+        self.record("cmd-run-all", ["legacy-run", "inputs", "-o", "out-cmd", *command, "--progress", "jsonl",
                                     "--yes-file", "consent-yes-2.txt", "--approved-by", "plugin:modal"], expect=0,
                     stdout="consent-5-approved.stdout.json", progress="consent-5-approved.progress.jsonl")
-        self.record("cmd-run-warm", ["run", "inputs", "-o", "out-cmd", *command, "--progress", "jsonl"], expect=0,
+        self.record("cmd-run-warm", ["legacy-run", "inputs", "-o", "out-cmd", *command, "--progress", "jsonl"], expect=0,
                     stdout="consent-6-warm.stdout.json", progress="consent-6-warm.progress.jsonl",
                     note="warm rerun without --yes: no approve_required, provider_calls 0")
 

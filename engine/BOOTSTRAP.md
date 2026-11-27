@@ -45,28 +45,11 @@ Set `enginePython` to the resulting absolute `Scripts/python.exe` or `bin/python
 path. Activation is unnecessary. Keep the venv at its creation location; recreate
 it after moving it or removing its base interpreter. Create another venv for an
 upgrade and retain the previous one for rollback. Do not use global fallback
-packages. The mdflow wheel is pure Python; dependencies can contain native code. Its metadata declares Core >=0.3.10,<0.4, pypdfium2 >=5,<6 and Pillow >=11,<14, matching the released shell gate. Core may impose tighter constraints; pip check and selftest verify the resolved environment.
+packages. The mdflow wheel is pure Python; dependencies can contain native code. Its metadata declares Core >=0.3.10,<0.4, pypdfium2 >=5.15.2,<6 and Pillow >=11,<14, matching the released shell gate. Core may impose tighter constraints; pip check and selftest verify the resolved environment.
 
-## Optional remote OCR
+## External transcription
 
-Provider `none` requires no key. For remote OCR, fully quit Obsidian first, then
-set `MDFLOW_API_KEY` in the terminal and launch your actual installed executable.
-The following paths are examples; verify the installed path yourself. Desktop
-launch/inheritance results remain pending the named per-OS rehearsal.
-
-PowerShell: `$env:MDFLOW_API_KEY = '<your key>'`, then
-`& "$env:LOCALAPPDATA\Obsidian\Obsidian.exe"` (or your actual installed path).
-
-macOS: `export MDFLOW_API_KEY='<your key>'`, then
-`'/Applications/Obsidian.app/Contents/MacOS/Obsidian'`.
-
-Linux: `export MDFLOW_API_KEY='<your key>'`, then
-`'/path/to/Obsidian.AppImage'` (or the actual installed executable).
-
-Do not save the key in settings, command arguments or a checked-in file. Finder,
-Dock and shortcut launches may not inherit the terminal environment. A running
-Obsidian instance will not gain variables by activating an engine venv. The UI
-shows presence only. Read the README network and cost disclosures before consent.
+The desktop plugin and the strict CLI need no account or provider configuration. Use the results to reveal or copy the original for your own transcription tool. Optional ExifTool metadata is read only after selecting photo fields. For legacy CLI automations, use the separate legacy-run command and its original disclosure and approval rules.
 
 ## Reference reproduction (Linux x64 / CPython 3.14 only)
 

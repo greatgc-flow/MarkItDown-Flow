@@ -1,15 +1,17 @@
 {
-  "mdflow": "2.0.2",
-  "markitdown-gc": "0.3.9",
+  "mdflow": "2.1.0",
+  "markitdown-gc": "0.3.10",
   "pypdfium2": "5.15.2",
   "pillow": "13.0.0",
-  "python": "3.14.10",
+  "python": "3.12.14",
   "platform": "Linux-6.18.57-x86_64-with-glibc2.41",
   "triage_schema": 1,
+  "strict_policy": "strict-v1",
+  "report_schema": 2,
   "exiftool": "unavailable",
   "exiftool_status": "not_found",
   "exiftool_source": null,
-  "libreoffice": "unavailable",
-  "libreoffice_status": "not_found",
-  "libreoffice_source": null
+  "libreoffice": "26.8.0.0",
+  "libreoffice_status": "ok",
+  "libreoffice_source": "PATH"
 }

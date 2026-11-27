@@ -8,12 +8,12 @@
  * `webUtils.getPathForFile` with the legacy `File.path` as fallback.
  */
 import { type PickOutcome, pickWithDomInput, type PickerDocument, type PickerInput } from './dom-picker';
+import type { FileRow, Mode, StrictResult } from './strict';
 import { NodeSpawner } from './node-spawner';
 import type { FileSystemOps, Spawner } from './types';
 
 /** Create a private, short-lived UTF-8 manifest for selections that exceed the OS argv budget. */
 export async function withInputList<T>(inputs: readonly string[], run: (args: string[]) => Promise<T>): Promise<T> {
-  if (inputs.reduce((n,p) => n + p.length + 3, 0) <= 12000) return run(['--', ...inputs]);
   const fs = require('node:fs/promises') as typeof import('node:fs/promises');
   const path = require('node:path') as typeof import('node:path');
   const os = require('node:os') as typeof import('node:os');
@@ -25,7 +25,81 @@ export async function withInputList<T>(inputs: readonly string[], run: (args: st
   } finally { await fs.rm(folder, {recursive:true,force:true}); }
 }
 
+export interface SavedJob {
+  result: StrictResult;
+  inputs: string[];
+  mode: Mode;
+  outDir: string;
+}
+export interface JobJournal {
+  append(row: FileRow): void;
+  close(result?: StrictResult): void;
+}
+
+function jobDirectory(home: string, vault: string): string {
+  const {createHash} = require('node:crypto') as typeof import('node:crypto');
+  const path = require('node:path') as typeof import('node:path');
+  return path.join(home, '.mdflow', 'jobs', createHash('sha256').update(vault).digest('hex'));
+}
+
+function beginJournal(home: string, vault: string, inputs: readonly string[], mode: Mode, outDir: string): JobJournal {
+  const fs = require('node:fs') as typeof import('node:fs');
+  const path = require('node:path') as typeof import('node:path');
+  const {randomUUID} = require('node:crypto') as typeof import('node:crypto');
+  const folder = jobDirectory(home, vault);
+  fs.mkdirSync(folder, {recursive:true, mode:0o700});
+  const file = path.join(folder, Date.now() + '-' + randomUUID() + '.jsonl');
+  const fd = fs.openSync(file, 'wx', 0o600);
+  const append = (value: unknown) => fs.writeFileSync(fd, JSON.stringify(value) + '\n');
+  try { append({kind:'job', version:1, inputs, mode, outDir}); }
+  catch(e) { fs.closeSync(fd); throw e; }
+  let stopped = false;
+  return {
+    append: row => { if (!stopped) append(row); },
+    close: result => {
+      if (stopped) return;
+      stopped = true;
+      try {
+        if (result) append({kind:'end', status:result.status, skipped:result.skipped, count:result.rows.length});
+        fs.fsyncSync(fd);
+      } finally { fs.closeSync(fd); }
+    },
+  };
+}
+
+async function lastJob(home: string, vault: string): Promise<SavedJob | null> {
+  const fs = require('node:fs/promises') as typeof import('node:fs/promises');
+  const path = require('node:path') as typeof import('node:path');
+  const folder = jobDirectory(home,vault);
+  let names;
+  try { names = await fs.readdir(folder); }
+  catch (e) { if ((e as NodeJS.ErrnoException).code === 'ENOENT') return null; throw e; }
+  const name = names.filter(n => /^\d+-[0-9a-f-]{36}\.jsonl$/.test(n)).sort().pop();
+  if (!name) return null;
+  const file = path.join(folder, name);
+  const info = await fs.lstat(file);
+  if (!info.isFile() || info.size > 128 * 1024 * 1024) throw Error('Job exceeds the view limit');
+  const lines = (await fs.readFile(file,'utf8')).split('\n');
+  lines.pop(); // Ignore an incomplete trailing record after interruption.
+  if (!lines.length) return null;
+  const header = JSON.parse(lines.shift()!);
+  if (header.kind !== 'job' || header.version !== 1 || !['run','extract-text'].includes(header.mode) ||
+      !Array.isArray(header.inputs) || !header.inputs.every((v: unknown) => typeof v === 'string' && path.isAbsolute(v)) ||
+      typeof header.outDir !== 'string') throw Error('Invalid saved job');
+  const result: StrictResult = {rows:[], status:'interrupted', skipped:0};
+  for (const line of lines) {
+    const row = JSON.parse(line);
+    if (row.kind === 'file' && typeof row.source?.relativePath === 'string' && typeof row.source?.path === 'string') result.rows.push(row);
+    else if (row.kind === 'end' && row.count === result.rows.length && ['complete','interrupted','failed'].includes(row.status)) {
+      result.status = row.status; result.skipped = row.skipped;
+    } else throw Error('Invalid saved record');
+  }
+  return {result, inputs:header.inputs, mode:header.mode, outDir:header.outDir};
+}
+
 export interface NodeApis {
+  beginJournal?(vault: string, inputs: readonly string[], mode: Mode, out: string): JobJournal;
+  lastJob?(vault: string): Promise<SavedJob | null>;
   spawner: Spawner;
   fs: FileSystemOps;
   /** Reveal a folder in the OS file manager (Electron shell); never executes files. */
@@ -177,6 +251,8 @@ export function loadNodeApis(): NodeApis {
     : null;
   cached = {
     spawner: new NodeSpawner(),
+    beginJournal: (vault,inputs,mode,out) => beginJournal(os.homedir(),vault,inputs,mode,out),
+    lastJob: vault => lastJob(os.homedir(),vault),
     fs: new NodeFs(fsp),
     async revealFile(path: string): Promise<void> {
       if (!electron?.shell?.showItemInFolder) throw Error('File manager unavailable');
