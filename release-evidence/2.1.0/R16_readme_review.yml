@@ -3,11 +3,8 @@ reviewer: privacy-peer/codex/gpt-6
 date: '2026-11-28'
 commit: dc067838e8f71ff5d3c07d18ab675eb89a5f7e71
 inputs:
-- 'Candidate README.md including #network-services-and-purpose, #outside-vault-access, #telemetry, #account-api-key-and-cost,
-  #migration-and-limits and #convert-inspect-or-hand-off.'
-- shell/src/{main.ts,process/strict.ts,process/node-apis.ts,ui/coordinator.ts,ui/strict-results.ts,ui/setup-modal.ts,ui/settings-tab.ts,ui/disclosures.ts,pure/env.ts,pure/history.ts,pure/persist.ts};
-  engine/src/mdflow/{cli.py,strict_workflow.py,source_actions.py,convert.py,__init__.py,providers}; published markitdown-gc
-  0.3.10 photo_metadata and document_inspection.
+- 'Candidate README.md including #network-services-and-purpose, #outside-vault-access, #telemetry, #account-api-key-and-cost, #migration-and-limits and #convert-inspect-or-hand-off.'
+- shell/src/{main.ts,process/strict.ts,process/node-apis.ts,ui/coordinator.ts,ui/strict-results.ts,ui/setup-modal.ts,ui/settings-tab.ts,ui/disclosures.ts,pure/env.ts,pure/history.ts,pure/persist.ts}; engine/src/mdflow/{cli.py,strict_workflow.py,source_actions.py,convert.py,__init__.py,providers}; published markitdown-gc 0.3.10 photo_metadata and document_inspection.
 checks:
 - id: network_services_and_purpose
   readme_anchor: '#network-services-and-purpose'
@@ -28,46 +25,11 @@ checks:
   readme_anchor: '#network-services-and-purpose'
   result: PASS
 evidence:
-- Inspected plugin command registration and strictJob/runStrict/launchLines. Strict operations scrub the environment
-  with provider none, use an argv array, and dispatch run/extract-text, handoff-copy or photo-info before CLI provider
-  construction. Local Core conversion receives immutable streams, enable_plugins=False and no remote service options.
-  Default legacy provider none has no egress. Only separately configured legacy OpenAI-compatible requests send selected
-  image data. The trusted CLI command runs as a subprocess with caller-declared egress.
-- 'Traced shell/src/process/node-apis.ts: a temporary 0600 input list is cleaned in finally; run journals store selected
-  absolute inputs, destination, logical paths, source and member hashes, and outcome rows under ~/.mdflow/jobs/<vault
-  digest>. Exclusive files use 0600 and new journal directories use 0700 on POSIX. The write bound is 128 MiB per journal;
-  on successful close only the newest eight completed journals are retained per vault. Interrupted files remain. Coordinator
-  writes run and partial summaries to plugin data.json; first input and output paths under home are shortened. Migration
-  may retain sanitized data.v1.json. The optional log limits are five files of 1 MiB.'
-- Verified photo-info bounds selected source bytes and digest-checks them; Core photo_metadata uses a private temporary
-  image, passes only allowed tags to ExifTool, and filters stdout by the requested fields. Shell photo toggles initially
-  select ImageWidth, ImageHeight and DateTimeOriginal. GPS, author, make, model and serial are off. Changing a toggle
-  clears stale preview/clipboard data. Copy displayed fields writes to the OS clipboard only on click. The strict handoff
-  publishes original bytes to External-OCR after rechecking identity. CSV excludes machine-local absolute paths unless
-  the user enables their column.
-- 'Read strict_workflow.process/partial_body: preview uses include_text=False and returns facts, without publishing a
-  note or creating a shell journal/history record. extract-text uses per-page text only in the intentional partial-note
-  body, marks omitted visual/unresolved content and reports an output path while leaving the source excluded. A changed
-  output is preserved. Flow engine tests T-CLI-09..11 passed, including the 99-text/1-scan fixture, digest-checked copy,
-  dry-run no-write, and refusal of provider flags. Core test_selected_fields_only_and_original_remains_intact passed.
-  Jest jt-strict-results, jt-06-env and jt-r32-ui-polish passed, 23 tests.'
-- 'Inspected SetupModal, ShellSettingsTab and addDisclosureLink in source plus renderer tests. Setup and strict settings
-  offer the same versioned README link to #network-services-and-purpose. Strict settings hide the historical provider
-  controls; the legacy CLI provider and historical README are identified in the current README. engine/BOOTSTRAP.md covers
-  version-matched installation, upgrade and rollback. This is an independent source and fixture review; real desktop/sync,
-  clipboard-manager behavior and OS-specific install rehearsals are outside these observations.'
-- Independently matched official push run 46041458332, release-candidate artifact 15220107324, to archive SHA-256 e5b4beb77d082b3fa21cabf0d7b6cfb081baef37bf65a35c4f530e9ca28237ee
-  and embedded commit dc067838e8f71ff5d3c07d18ab675eb89a5f7e71. Verified all eight SHA256SUMS subjects, all 32 packaged
-  Python modules against the exact Git tree, 11 compiled UI/privacy markers, and Core notices. main.js SHA-256 0137a4a870e9a8babb4e07aa2695ac4012d0dc91de3127d61b766f9acd090660;
-  mdflow wheel 27e9deb9b1275f6cc3c738c6985d12aefd6f91aed12ef0f6243bef1f7e2b0c1c. Using this exact packaged wheel with
-  published Core 0.3.10, a synthetic three-text-pages/one-scan PDF produced zero page text in preview/result JSON, a
-  separate marked partial only on explicit request, and a byte-identical original copy. Observed zero Python socket audit
-  events over the four operations. Five targeted engine tests and six release-guide/evidence tests passed at this revision.
-  The English guide preserves the named-review, owner rehearsal and rollback requirements.
-- Engine initialization sets ORT_DISABLE_TELEMETRY. The conversion path calls the optional native Python disable_telemetry_events
-  API immediately before constructing the Core converter, the sole path where Core instantiates Magika. Verified startup
-  and the version command leave both model runtime modules unloaded. Shell also sets the pre-import flag for all children.
-  Searched shell and engine production callsites for remote clients; network-capable provider dispatch is confined to
-  explicit legacy mode. Compared with ONNX Runtime official Windows telemetry guidance at https://onnxruntime.ai/docs/get-started/with-c.html#telemetry
-  .
+- Inspected plugin command registration and strictJob/runStrict/launchLines. Strict operations scrub the environment with provider none, use an argv array, and dispatch run/extract-text, handoff-copy or photo-info before CLI provider construction. Local Core conversion receives immutable streams, enable_plugins=False and no remote service options. Default legacy provider none has no egress. Only separately configured legacy OpenAI-compatible requests send selected image data. The trusted CLI command runs as a subprocess with caller-declared egress.
+- 'Traced shell/src/process/node-apis.ts: a temporary 0600 input list is cleaned in finally; run journals store selected absolute inputs, destination, logical paths, source and member hashes, and outcome rows under ~/.mdflow/jobs/<vault digest>. Exclusive files use 0600 and new journal directories use 0700 on POSIX. The write bound is 128 MiB per journal; on successful close only the newest eight completed journals are retained per vault. Interrupted files remain. Coordinator writes run and partial summaries to plugin data.json; first input and output paths under home are shortened. Migration may retain sanitized data.v1.json. The optional log limits are five files of 1 MiB.'
+- Verified photo-info bounds selected source bytes and digest-checks them; Core photo_metadata uses a private temporary image, passes only allowed tags to ExifTool, and filters stdout by the requested fields. Shell photo toggles initially select ImageWidth, ImageHeight and DateTimeOriginal. GPS, author, make, model and serial are off. Changing a toggle clears stale preview/clipboard data. Copy displayed fields writes to the OS clipboard only on click. The strict handoff publishes original bytes to External-OCR after rechecking identity. CSV excludes machine-local absolute paths unless the user enables their column.
+- 'Read strict_workflow.process/partial_body: preview uses include_text=False and returns facts, without publishing a note or creating a shell journal/history record. extract-text uses per-page text only in the intentional partial-note body, marks omitted visual/unresolved content and reports an output path while leaving the source excluded. A changed output is preserved. Flow engine tests T-CLI-09..11 passed, including the 99-text/1-scan fixture, digest-checked copy, dry-run no-write, and refusal of provider flags. Core test_selected_fields_only_and_original_remains_intact passed. Jest jt-strict-results, jt-06-env and jt-r32-ui-polish passed, 23 tests.'
+- 'Inspected SetupModal, ShellSettingsTab and addDisclosureLink in source plus renderer tests. Setup and strict settings offer the same versioned README link to #network-services-and-purpose. Strict settings hide the historical provider controls; the legacy CLI provider and historical README are identified in the current README. engine/BOOTSTRAP.md covers version-matched installation, upgrade and rollback. This is an independent source and fixture review; real desktop/sync, clipboard-manager behavior and OS-specific install rehearsals are outside these observations.'
+- Independently matched official push run 46041458332, release-candidate artifact 15220107324, to archive SHA-256 e5b4beb77d082b3fa21cabf0d7b6cfb081baef37bf65a35c4f530e9ca28237ee and embedded commit dc067838e8f71ff5d3c07d18ab675eb89a5f7e71. Verified all eight SHA256SUMS subjects, all 32 packaged Python modules against the exact Git tree, 11 compiled UI/privacy markers, and Core notices. main.js SHA-256 0137a4a870e9a8babb4e07aa2695ac4012d0dc91de3127d61b766f9acd090660; mdflow wheel 27e9deb9b1275f6cc3c738c6985d12aefd6f91aed12ef0f6243bef1f7e2b0c1c. Using this exact packaged wheel with published Core 0.3.10, a synthetic three-text-pages/one-scan PDF produced zero page text in preview/result JSON, a separate marked partial only on explicit request, and a byte-identical original copy. Observed zero Python socket audit events over the four operations. Five targeted engine tests and six release-guide/evidence tests passed at this revision. The English guide preserves the named-review, owner rehearsal and rollback requirements.
+- Engine initialization sets ORT_DISABLE_TELEMETRY. The conversion path calls the optional native Python disable_telemetry_events API immediately before constructing the Core converter, the sole path where Core instantiates Magika. Verified startup and the version command leave both model runtime modules unloaded. Shell also sets the pre-import flag for all children. Searched shell and engine production callsites for remote clients; network-capable provider dispatch is confined to explicit legacy mode. Compared with ONNX Runtime official Windows telemetry guidance at https://onnxruntime.ai/docs/get-started/with-c.html#telemetry .
 verdict: PASS
